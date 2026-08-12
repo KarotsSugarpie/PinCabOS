@@ -1,0 +1,8 @@
+PINCABOS_SUNSHINE_STAGE_V1
+date=2026-07-03T16:35:50-04:00
+binary=/opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/sunshine.AppImage
+release_metadata=/opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/release.json
+sha256=d0ee0a9cfb66f27869b559455f84622d21615047ccf3443c9a2f572ca971c7a2
+service_started=no
+capture_started=no
+network_ports_opened=no

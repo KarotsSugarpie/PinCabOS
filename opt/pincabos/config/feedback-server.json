@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "name": "PinCabOS Dev Feedback Server",
+  "feedback_url": "https://dev.pincabos.cc",
+  "status_url": "https://dev.pincabos.cc/",
+  "submit_url": "https://dev.pincabos.cc/pincabos-feedback/submit",
+  "ssh_host": "192.168.254.55",
+  "ssh_user": "root",
+  "webroot": "/var/www/html"
+}

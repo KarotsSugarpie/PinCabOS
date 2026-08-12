@@ -1,0 +1,23 @@
+abi <abi/5.0>,
+
+include <tunables/global>
+
+@{arg1}=/**/*.so
+profile ipa_verify /usr/bin/ipa_verify {
+    include <abstractions/base>
+    # Until we can replace arg1 above with real arg parsing
+    include <abstractions/private-files-strict>
+
+    @{exec_path} mr,
+    
+    # Probably enumerated by libcamera initialization but not needed for this tool's functionality
+    deny /sys/devices/system/node/ r,
+    # The tool is passed an argument to an IPA module (shared object) whose signature to check
+    @{arg1} r,
+    @{arg1}.sign r,
+    
+    # ipa_verify uses the LTTng tracing framework
+    /dev/shm/lttng-ust-wait-* rw,
+    
+    include if exists <local/ipa_verify>
+}

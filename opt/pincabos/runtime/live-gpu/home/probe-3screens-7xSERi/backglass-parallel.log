@@ -1,0 +1,3 @@
+gsr warning: your FFmpeg version is known to be buggy (it doesn't have working hybrid_fragmented movflags). If you experience stutter in the mp4 file then update your FFmpeg to at least version 8 or record to a mkv file
+gsr error: gsr_capture_nvfbc_start failed: This hardware does not support NvFBC
+gsr error: gsr_capture_start failed

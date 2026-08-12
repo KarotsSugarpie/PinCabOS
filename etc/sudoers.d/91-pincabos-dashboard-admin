@@ -1,0 +1,21 @@
+# PinCabOS Dashboard Lobby V13 — narrow dashboard actions only
+pinball ALL=(root) NOPASSWD: \
+  /usr/local/sbin/pincabos-dashboard-admin service vpinfe start, \
+  /usr/local/sbin/pincabos-dashboard-admin service vpinfe stop, \
+  /usr/local/sbin/pincabos-dashboard-admin service vpinfe restart, \
+  /usr/local/sbin/pincabos-dashboard-admin service vpinfe freeze, \
+  /usr/local/sbin/pincabos-dashboard-admin service vpinfe thaw, \
+  /usr/local/sbin/pincabos-dashboard-admin service webapp restart, \
+  /usr/local/sbin/pincabos-dashboard-admin service chrony start, \
+  /usr/local/sbin/pincabos-dashboard-admin service chrony restart, \
+  /usr/local/sbin/pincabos-dashboard-admin service vpx stop, \
+  /usr/local/sbin/pincabos-dashboard-admin service vpx restart, \
+  /usr/local/sbin/pincabos-dashboard-admin capture 0, \
+  /usr/local/sbin/pincabos-dashboard-admin capture 1, \
+  /usr/local/sbin/pincabos-dashboard-admin capture 2, \
+  /usr/local/sbin/pincabos-dashboard-admin time sync-google, \
+  /usr/local/sbin/pincabos-dashboard-admin time timezone *, \
+  /usr/local/sbin/pincabos-dashboard-admin time set *
+
+# PinCabOS — application ponctuelle de la topologie écrans
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-dashboard-admin service screens apply

@@ -1,0 +1,3 @@
+# PinCabOs-File created by Karots Sugarpie
+# PinCabOS install script sync check
+pinball ALL=(root) NOPASSWD: /opt/pincabos/scripts/pincabos-install-sync-check.sh

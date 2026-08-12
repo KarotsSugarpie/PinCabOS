@@ -1,0 +1,532 @@
+/* PinCabOS-File created by Karots Sugarpie */
+/* PinCabOS final header layout */
+
+/* Header container */
+.top {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 10px 14px !important;
+  margin-bottom: 12px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+}
+
+/* Menu principal à gauche */
+.nav {
+  order: 1 !important;
+  flex: 1 1 auto !important;
+  max-width: calc(100% - 230px) !important;
+  text-align: left !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+}
+
+.pincabos-nav {
+  margin: 0 !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+}
+
+.nav-row,
+.nav-pages,
+.nav-tools-clean,
+.nav-tools {
+  justify-content: flex-start !important;
+  align-items: center !important;
+  text-align: left !important;
+  width: auto !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 6px !important;
+  gap: 5px !important;
+}
+
+/* Boutons menu plus petits, texte conservé */
+.nav a,
+.pincabos-nav a,
+.pincabos-nav button,
+.nav-row a,
+.nav-row button,
+.nav-tools-clean a,
+.nav-tools-clean button,
+.nav-tools a,
+.nav-tools button,
+.nav-inline-form button {
+  padding: 4px 7px !important;
+  min-height: 28px !important;
+  line-height: 1.1 !important;
+  font-size: 13px !important;
+  margin: 0 3px 4px 0 !important;
+  border-radius: 8px !important;
+}
+
+/* Slot à droite : langue à la place du logo */
+.brand-left,
+.brand-language-slot {
+  order: 2 !important;
+  flex: 0 0 220px !important;
+  width: 220px !important;
+  max-width: 220px !important;
+  min-width: 220px !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-end !important;
+  text-align: right !important;
+}
+
+/* Widget langue dans le slot droit */
+.top-language-widget {
+  position: static !important;
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+  width: auto !important;
+  max-width: 220px !important;
+  margin: 0 !important;
+  padding: 6px !important;
+  border-radius: 14px !important;
+  background: rgba(10, 0, 20, 0.82) !important;
+  border: 1px solid rgba(255, 122, 0, 0.45) !important;
+  box-shadow: 0 0 18px rgba(255, 122, 0, 0.20) !important;
+  text-align: right !important;
+  z-index: auto !important;
+}
+
+.top-language-widget span {
+  font-size: 13px !important;
+  white-space: nowrap !important;
+  margin: 0 !important;
+}
+
+.top-language-widget select,
+#pincabos_language_select {
+  min-width: 115px !important;
+  max-width: 150px !important;
+  height: 28px !important;
+  font-size: 13px !important;
+  padding: 3px 6px !important;
+  border-radius: 8px !important;
+}
+
+/* Google Translate invisible, mais fonctionnel */
+#google_translate_element {
+  display: inline-block !important;
+  width: 1px !important;
+  height: 1px !important;
+  max-width: 1px !important;
+  max-height: 1px !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Enlever logo et textes de l'entête */
+.brand-left img.logo,
+.brand-left img[src*="pincabos-logo"],
+.brand-title,
+.brand-subtitle,
+.subtitle,
+.pincabos-header-subtitle {
+  display: none !important;
+}
+
+/* Dashboard : carte Système avec logo */
+.dashboard-system-card {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+}
+
+.dashboard-system-text {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.dashboard-system-logo {
+  flex: 0 0 120px !important;
+  width: 120px !important;
+  height: 120px !important;
+  max-width: 120px !important;
+  max-height: 120px !important;
+  object-fit: contain !important;
+  margin: 0 0 0 10px !important;
+  filter: drop-shadow(0 0 16px rgba(255,122,0,0.45));
+}
+
+/* Responsive */
+@media (max-width: 850px) {
+  .top {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .nav {
+    order: 1 !important;
+    max-width: 100% !important;
+    text-align: center !important;
+  }
+
+  .pincabos-nav,
+  .nav-row,
+  .nav-pages,
+  .nav-tools-clean,
+  .nav-tools {
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .brand-left,
+  .brand-language-slot {
+    order: 2 !important;
+    width: auto !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .top-language-widget {
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .dashboard-system-card {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .dashboard-system-logo {
+    width: 110px !important;
+    height: 100px !important;
+    max-width: 110px !important;
+    max-height: 100px !important;
+    margin: 8px auto 0 auto !important;
+  }
+}
+
+/* Dashboard system logo 250x250 */
+.dashboard-system-logo {
+  flex: 0 0 250px !important;
+  width: 250px !important;
+  height: 250px !important;
+  max-width: 250px !important;
+  max-height: 250px !important;
+  min-width: 250px !important;
+  min-height: 250px !important;
+  object-fit: contain !important;
+}
+
+/* Mobile dashboard logo */
+@media (max-width: 850px) {
+  .dashboard-system-logo {
+    flex: 0 0 180px !important;
+    width: 180px !important;
+    height: 180px !important;
+    max-width: 180px !important;
+    max-height: 180px !important;
+    min-width: 180px !important;
+    min-height: 180px !important;
+  }
+}
+
+/* PinCabOS logo/background no stretch */
+.logo,
+.pincabos-logo,
+img[src*="pincabos-logo"],
+.dashboard-system-logo {
+  object-fit: contain !important;
+  object-position: center !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  image-rendering: auto !important;
+}
+
+/* Si le logo est utilisé comme background */
+.pincabos-logo-bg,
+.logo-bg,
+.header-logo-bg {
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+/* Dashboard système final : logo à gauche, infos à droite */
+.dashboard-system-card {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 22px !important;
+}
+
+.dashboard-system-card .dashboard-system-logo {
+  order: 1 !important;
+  flex: 0 0 230px !important;
+  width: 230px !important;
+  height: 230px !important;
+  min-width: 230px !important;
+  min-height: 230px !important;
+  max-width: 230px !important;
+  max-height: 230px !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  margin: 4px 0 0 0 !important;
+}
+
+.dashboard-system-card .dashboard-system-text {
+  order: 2 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 850px) {
+  .dashboard-system-card {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .dashboard-system-card .dashboard-system-logo {
+    width: 170px !important;
+    height: 170px !important;
+    min-width: 170px !important;
+    min-height: 170px !important;
+    max-width: 170px !important;
+    max-height: 170px !important;
+    margin: 8px auto 0 auto !important;
+  }
+
+  .dashboard-system-card .dashboard-system-text {
+    width: 100% !important;
+  }
+}
+
+/* ===== Navigation VPinFE + PlayField + BackGlass ===== */
+
+.nav-tools-clean{
+    width:100% !important;
+    display:flex !important;
+    justify-content:space-between !important;
+    align-items:center !important;
+    flex-wrap:nowrap !important;
+    box-sizing:border-box !important;
+}
+
+.nav-tools-clean > a.nav-action{
+    margin-right:auto !important;
+}
+
+.nav-tools-clean .nav-inline-form{
+    margin-left:6px !important;
+}
+
+
+/* ===== PinCabOS - largeur identique haut/bas ===== */
+
+.nav-pages,
+.nav-tools-clean {
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.nav-pages {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+}
+
+.nav-tools-clean {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+}
+
+
+/* ===== PinCabOS - boutons uniformes ===== */
+
+.nav-pages a,
+.nav-tools-clean a,
+.nav-tools-clean button,
+.nav-inline-form button {
+    width: 150px !important;
+    min-width: 150px !important;
+    max-width: 150px !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    text-align: center !important;
+    white-space: nowrap !important;
+}
+
+/* ===== Réduire largeur globale navigation ===== */
+
+.nav {
+    max-width: 70% !important;
+}
+
+.pincabos-nav {
+    width: 100% !important;
+}
+
+.nav-pages,
+.nav-tools-clean {
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+
+/* ===== PinCabOS - boutons compacts ===== */
+
+.nav-pages a,
+.nav-tools-clean a,
+.nav-tools-clean button,
+.nav-inline-form button {
+    width: 110px !important;
+    min-width: 110px !important;
+    max-width: 110px !important;
+
+    font-size: 12px !important;
+    font-weight: 400 !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+}
+
+
+/* === PinCabOS hidden Google Translate widget hard guard === */
+/* Created by Karots Sugarpie */
+html,
+body {
+  top: 0 !important;
+}
+
+body {
+  position: static !important;
+}
+
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.goog-te-banner-frame,
+iframe.goog-te-menu-frame,
+.skiptranslate iframe,
+body > .skiptranslate,
+.goog-logo-link,
+.goog-te-gadget span,
+.goog-te-balloon-frame {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+#google_translate_element {
+  display: block !important;
+  position: fixed !important;
+  left: -99999px !important;
+  top: -99999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+.goog-te-combo {
+  position: absolute !important;
+  left: -99999px !important;
+  top: -99999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+}
+
+
+/* ============================================================
+   PINCABOS_CONTENT_RAIL_V1
+   Menu principal aligne sur le rail des cartes centrales.
+   ============================================================ */
+
+:root {
+  --pco-content-rail-width: min(1850px, calc(100vw - 60px));
+}
+
+@media (min-width: 851px) {
+  html body .top {
+    width: 100% !important;
+    max-width: var(--pco-content-rail-width) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+@media (max-width: 850px) {
+  html body .top {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* PINCABOS_HIDE_GOOGLE_TRANSLATE_FLOATING_BUBBLE_V2 */
+#google_translate_element,
+#google_translate_element *,
+.goog-te-gadget,
+.goog-te-gadget *,
+.goog-te-gadget-icon,
+.goog-logo-link,
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.goog-te-banner-frame,
+iframe.goog-te-menu-frame,
+iframe.skiptranslate,
+.goog-te-balloon-frame,
+.VIpgJd-ZVi9od-xl07Ob-lTBxed,
+.VIpgJd-ZVi9od-xl07Ob-lTBxed *,
+.VIpgJd-ZVi9od-ORHb-OEVmcd,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+.VIpgJd-yAWNEb-L7lbkb,
+.VIpgJd-yAWNEb-hvhgNd,
+.VIpgJd-ZVi9od-aZ2wEe-OiiCO,
+.VIpgJd-ZVi9od-aZ2wEe {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
+body {
+  top: 0 !important;
+}

@@ -1,0 +1,12 @@
+# ------------------------------------------------------------------
+#
+#    Copyright (C) 2024 Canonical Ltd.
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#
+# ------------------------------------------------------------------
+# allow standard XDG media paths by default
+@{rygel_media_dirs}=@{HOME}/@{XDG_MUSIC_DIR} @{HOME}/@{XDG_VIDEOS_DIR} @{HOME}/@{XDG_PICTURES_DIR}
+
+include if exists <tunables/rygel.d>

@@ -1,0 +1,133 @@
+/* PinCabOS-File created by Karots Sugarpie */
+.screen-toggle-btn {
+  min-width: 125px !important;
+  font-weight: 700 !important;
+  border-radius: 999px !important;
+  padding: 8px 13px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+}
+
+.screen-toggle-on {
+  background: linear-gradient(135deg, #ff8c00, #ffb347) !important;
+  color: #1a1000 !important;
+  border-color: rgba(255,180,70,.95) !important;
+}
+
+.screen-toggle-off {
+  background: linear-gradient(135deg, #5b2b8a, #7b3fc8) !important;
+  color: #ffffff !important;
+  border-color: rgba(170,120,255,.85) !important;
+}
+
+/* PINCABOS_WEBAPP_SCREEN_GLOW_V3_BEGIN */
+/* Glow uniquement lorsque l'écran correspondant est activé. */
+.screen-toggle-btn {
+  transition:
+    filter 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease !important;
+}
+
+.screen-toggle-btn.screen-toggle-on {
+  background: linear-gradient(135deg, #ff8c00, #ffb347) !important;
+  color: #1a1000 !important;
+  border-color: rgba(255, 193, 100, 0.98) !important;
+  box-shadow:
+    0 0 11px rgba(255, 145, 0, 0.95),
+    0 0 27px rgba(255, 122, 0, 0.66),
+    inset 0 0 9px rgba(255, 241, 197, 0.52) !important;
+  animation: pincabos-screen-glow-v3 1.15s ease-in-out infinite alternate !important;
+}
+
+.screen-toggle-btn.screen-toggle-off {
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+@keyframes pincabos-screen-glow-v3 {
+  from {
+    filter: brightness(1);
+    transform: translateY(0);
+  }
+  to {
+    filter: brightness(1.18);
+    transform: translateY(-1px);
+  }
+}
+/* PINCABOS_WEBAPP_SCREEN_GLOW_V3_END */
+
+/* =============================================================
+   PINCABOS_APPEARANCE_HEADER_MENU_V1
+   Dernière couche : menu haut et accès rapides suivent Apparence.
+   ============================================================= */
+
+/* Conteneur principal du menu */
+html body .top {
+  background: var(--pco-appearance-nav-panel-bg) !important;
+  border-color: var(--pco-appearance-nav-panel-border) !important;
+}
+
+/* Les deux cartes horizontales du menu */
+html body .pincabos-nav .nav-row {
+  background: var(--pco-appearance-card-bg) !important;
+  background-image: none !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+/* Carte logo et sélecteur de langue */
+html body .pincabos-nav .pco-menu-logo-rail,
+html body .top-language-widget {
+  background: var(--pco-appearance-card-bg) !important;
+  background-image: none !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+/* Navigation principale et boutons secondaires */
+html body .pincabos-nav .nav-pages > a,
+html body .pincabos-nav .nav-tools-clean .nav-action,
+html body .pincabos-nav .pco-menu-pin-btn,
+html body .pincabos-nav .screen-toggle-btn.screen-toggle-off {
+  background: var(--pco-appearance-secondary-bg) !important;
+  background-image: none !important;
+  color: var(--pco-appearance-secondary-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: none !important;
+}
+
+/* Actions principales : Explorer et Console */
+html body .pincabos-nav .nav-tools-clean .pco-topbar-tool-copy {
+  background: var(--pco-appearance-button-bg) !important;
+  background-image: none !important;
+  color: var(--pco-appearance-button-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: none !important;
+}
+
+/* Pages actives, hover, bouton épinglé et écran affiché */
+html body .pincabos-nav .nav-pages > a.active,
+html body .pincabos-nav .nav-pages > a:hover,
+html body .pincabos-nav .nav-tools-clean .nav-action:hover,
+html body .pincabos-nav .nav-tools-clean .pco-topbar-tool-copy:hover,
+html body .pincabos-nav .pco-menu-pin-btn.pco-pinned,
+html body .pincabos-nav .screen-toggle-btn.screen-toggle-on {
+  background: var(--pco-appearance-nav-active-bg) !important;
+  background-image: none !important;
+  color: var(--pco-appearance-nav-active-text) !important;
+  border-color: var(--pco-appearance-accent) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+/* Bouton fermer : conserve une sémantique d'action dangereuse */
+html body .pincabos-nav .pco-menu-close-btn {
+  background: var(--pco-appearance-bad) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
+
+/* Textes du second rang */
+html body .pincabos-nav .nav-label {
+  color: var(--pco-appearance-muted-text) !important;
+}

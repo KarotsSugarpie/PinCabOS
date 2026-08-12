@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# needrestart - Restart daemons after library updates.
+#
+# Restart SysV's init.
+#
+
+# enable xtrace if we should be verbose
+if [ "$NR_VERBOSE" = '1' ]; then
+    set -x
+fi
+
+exec telinit u

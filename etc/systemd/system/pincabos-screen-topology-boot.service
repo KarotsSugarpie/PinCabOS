@@ -1,0 +1,14 @@
+[Unit]
+Description=PinCabOS X11 screen topology preflight before VPinFE
+After=display-manager.service
+Wants=display-manager.service
+Before=pincabos-vpinfe.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/pincabos/pincabos-screen-topology-preflight.sh
+TimeoutStartSec=100
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target

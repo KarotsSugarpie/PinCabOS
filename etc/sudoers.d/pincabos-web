@@ -1,0 +1,72 @@
+# PinCabOs-File created by Karots Sugarpie
+# PinCabOS WebApp sudo permissions
+# User: pinball
+# Purpose: allow approved PinCabOS WebApp actions through sudo -n without interactive password.
+
+Cmnd_Alias PINCABOS_TOOLS = \
+    /opt/pincabos/tools/pincabos-cleanup.sh, \
+    /opt/pincabos/tools/pincabos-cleanup.sh *, \
+    /opt/pincabos/install/99-clean-depot.sh, \
+    /opt/pincabos/install/99-clean-depot.sh *, \
+    /opt/pincabos/tools/publy.sh, \
+    /opt/pincabos/tools/publy.sh *, \
+    /opt/pincabos/tools/publish.sh, \
+    /opt/pincabos/tools/publish.sh *, \
+    /opt/pincabos/tools/pincabos-publish.sh, \
+    /opt/pincabos/tools/pincabos-publish.sh *, \
+    /opt/pincabos/tools/pincabos-publish-tree.sh, \
+    /opt/pincabos/tools/pincabos-publish-tree.sh *, \
+    /opt/pincabos/tools/pincabos-update.sh, \
+    /opt/pincabos/tools/pincabos-update.sh *, \
+    /opt/pincabos/tools/firstrun-network-detect.sh, \
+    /opt/pincabos/tools/firstrun-network-detect.sh *, \
+    /opt/pincabos/tools/detect-gpu.sh, \
+    /opt/pincabos/tools/detect-gpu.sh *, \
+    /opt/pincabos/tools/update-gpu-drivers.sh, \
+    /opt/pincabos/tools/update-gpu-drivers.sh *, \
+    /opt/pincabos/tools/auto-detect-screens.sh, \
+    /opt/pincabos/tools/auto-detect-screens.sh *, \
+    /opt/pincabos/tools/detect-screens.sh, \
+    /opt/pincabos/tools/detect-screens.sh *, \
+    /opt/pincabos/tools/apply-screens.sh, \
+    /opt/pincabos/tools/apply-screens.sh *, \
+    /opt/pincabos/tools/audio-ssf-apply.sh, \
+    /opt/pincabos/tools/audio-ssf-apply.sh *, \
+    /opt/pincabos/tools/run-console.sh, \
+    /opt/pincabos/tools/run-console.sh *
+
+Cmnd_Alias PINCABOS_SYSTEMCTL = \
+    /usr/bin/systemctl status pincabos-web.service, \
+    /usr/bin/systemctl start pincabos-web.service, \
+    /usr/bin/systemctl stop pincabos-web.service, \
+    /usr/bin/systemctl restart pincabos-web.service, \
+    /usr/bin/systemctl status pincabos-console.service, \
+    /usr/bin/systemctl start pincabos-console.service, \
+    /usr/bin/systemctl stop pincabos-console.service, \
+    /usr/bin/systemctl restart pincabos-console.service, \
+    /usr/bin/systemctl status pincabos-vpinfe.service, \
+    /usr/bin/systemctl start pincabos-vpinfe.service, \
+    /usr/bin/systemctl stop pincabos-vpinfe.service, \
+    /usr/bin/systemctl restart pincabos-vpinfe.service, \
+    /usr/bin/systemctl status nginx, \
+    /usr/bin/systemctl start nginx, \
+    /usr/bin/systemctl stop nginx, \
+    /usr/bin/systemctl restart nginx
+
+Cmnd_Alias PINCABOS_POWER = \
+    /usr/sbin/reboot, \
+    /sbin/reboot
+
+pinball ALL=(root) NOPASSWD: PINCABOS_TOOLS, PINCABOS_SYSTEMCTL, PINCABOS_POWER
+
+# PinCabOS dashboard legacy frontend service controls
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl status pincabos-frontend.service
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl is-active pincabos-frontend.service
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl is-enabled pincabos-frontend.service
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl start pincabos-frontend.service
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl stop pincabos-frontend.service
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl restart pincabos-frontend.service
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl enable pincabos-frontend.service
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl disable pincabos-frontend.service
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl enable --now pincabos-frontend.service
+pinball ALL=(root) NOPASSWD: /usr/bin/systemctl disable --now pincabos-frontend.service

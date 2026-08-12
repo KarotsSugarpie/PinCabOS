@@ -1,0 +1,1 @@
+/opt/pincabos/bin/pincabos-web-reboot.sh

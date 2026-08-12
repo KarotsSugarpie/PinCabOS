@@ -1,0 +1,21 @@
+[Unit]
+Description=PinCabOS conversion complète bibliothèque VPX vers PinCabOs
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=root
+WorkingDirectory=/root
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/local/sbin/pincabos-build-safe-batch --limit 0 --min-free-gib 20
+Restart=no
+TimeoutStartSec=infinity
+TimeoutStopSec=120
+KillSignal=SIGINT
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pincabos-safe-batch-full
+
+[Install]
+WantedBy=multi-user.target

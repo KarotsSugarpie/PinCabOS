@@ -1,0 +1,54 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+#
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile mosquitto /usr/sbin/mosquitto {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/hosts_access>
+
+  # If run as a root user, drop privileges to mosquitto/nobody/custom-user
+  capability setgid,
+  capability setuid,
+
+  network inet  stream,
+  network inet6 stream,
+  network inet  dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  file @{run}/.nscd_socket rw,
+  file @{run}/nscd/socket rw,
+
+  # nss can be configured to use libvirt in host resolution
+  file /var/lib/libvirt/dnsmasq/ r,
+  file /var/lib/libvirt/dnsmasq/*.status r,
+
+  file @{run}/systemd/notify w,
+  file /usr/sbin/mosquitto mr,
+  file @{run}/mosquitto/mosquitto.pid rw,
+
+  file @{etc_ro}/mosquitto/* r,
+  file @{etc_ro}/mosquitto/conf.d/ r,
+  file @{etc_ro}/mosquitto/conf.d/** r,
+  file @{etc_ro}/mosquitto/mosquitto.conf r,
+  file @{etc_ro}/mosquitto/ca_certificates/** r,
+  file @{etc_ro}/mosquitto/certs/** r,
+
+  file /var/lib/mosquitto/mosquitto.db rwk,
+  file /var/lib/mosquitto/mosquitto.db.new rwk,
+  file /var/log/mosquitto/mosquitto.log w,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/mosquitto>
+}
+

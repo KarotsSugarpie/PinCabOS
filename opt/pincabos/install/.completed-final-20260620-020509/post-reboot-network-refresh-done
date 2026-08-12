@@ -1,0 +1,5 @@
+name=post-reboot-network-refresh-done
+status=GO
+label=DHCP4/SSID refresh completed once directly by go-pincabos after RUN_01 reboot
+exit_code=0
+timestamp=2026-06-20 02:04:11

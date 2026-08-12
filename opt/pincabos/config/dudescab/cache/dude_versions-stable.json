@@ -1,0 +1,43 @@
+{
+  "channel": "stable",
+  "fetched_at": "2026-07-13T12:24:48+00:00",
+  "firmwares": [],
+  "http_status": 200,
+  "raw": {
+    "Configurator": {
+      "File": "DudesCabConfigWinInstaller_2_0_11.msi",
+      "Version": "2.0.11"
+    },
+    "ConfiguratorInstallArgsWin": "[package]",
+    "ConfiguratorInstallExeWin": "explorer.exe",
+    "DirectOutput": {
+      "File": "directoutput/directoutput_2_0_2.zip",
+      "Version": "2.0.2"
+    },
+    "DirectoutputOfficialSync": false,
+    "DirectoutputReleasesUrl": "https://github.com/mjrgh/DirectOutput/releases",
+    "Firmwares": [
+      {
+        "File": "firmwares/dude_firmware_1_1_2.uf2",
+        "Version": "1.1.2"
+      },
+      {
+        "File": "firmwares/dude_firmware_2_0_3.uf2",
+        "Version": "2.0.3"
+      },
+      {
+        "File": "firmwares/dude_firmware_2_0_4.uf2",
+        "Version": "2.0.4"
+      },
+      {
+        "File": "firmwares/dude_firmware_2_0_5.uf2",
+        "Version": "2.0.5"
+      }
+    ],
+    "Languages": {
+      "File": "languages.zip",
+      "Version": "1.0.0"
+    }
+  },
+  "url": "https://dude.arnoz.com/DudesCab/dude_versions.json"
+}

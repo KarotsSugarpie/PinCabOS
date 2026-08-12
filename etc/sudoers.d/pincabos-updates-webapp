@@ -1,0 +1,8 @@
+# PinCabOs-File created by Karots Sugarpie
+# PinCabOS WebApp - Updates only
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/update-vpinfe.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/update-vpx.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/update-system.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/update-gpu-drivers.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-apply-update.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-apply-update.sh *

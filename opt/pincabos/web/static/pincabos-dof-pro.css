@@ -1,0 +1,262 @@
+/* PinCabOS-File created by Karots Sugarpie */
+/* PinCabOS DOF Pro Layout - safe external CSS only */
+
+:root {
+  --pco-orange: #ffb000;
+  --pco-orange2: #ff7a00;
+  --pco-purple: #5f2a91;
+  --pco-bg-card: rgba(18, 18, 18, 0.92);
+  --pco-border: rgba(255, 176, 0, 0.22);
+}
+
+/* Ne pas remplacer le background global PinCabOS */
+body.pincabos-dof-pro {
+  background: inherit !important;
+}
+
+body.pincabos-dof-pro .card {
+  border-radius: 18px !important;
+  border: 1px solid var(--pco-border) !important;
+  background: var(--pco-bg-card) !important;
+  box-shadow: 0 10px 26px rgba(0,0,0,.18) !important;
+}
+
+body.pincabos-dof-pro .card h2 {
+  margin-top: 0 !important;
+  color: var(--pco-orange) !important;
+  letter-spacing: .2px;
+}
+
+body.pincabos-dof-pro .card h2::before {
+  content: "● ";
+  color: var(--pco-orange2);
+  font-size: 15px;
+}
+
+body.pincabos-dof-pro #pincabos-dof-import-manual-card {
+  background: rgba(14,14,14,.88) !important;
+  border: 1px solid rgba(255,176,0,.42) !important;
+}
+
+body.pincabos-dof-pro #pincabos-dof-import-manual-card h2,
+body.pincabos-dof-pro #pincabos-dof-import-manual-card h3 {
+  color: var(--pco-orange) !important;
+}
+
+body.pincabos-dof-pro #pincabos-dof-import-manual-card form {
+  background: rgba(0,0,0,.20);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 14px;
+  padding: 12px;
+  margin-top: 12px !important;
+}
+
+body.pincabos-dof-pro #pincabos-dof-import-manual-card input[type="file"],
+body.pincabos-dof-pro #pincabos-dof-import-manual-card input[type="text"],
+body.pincabos-dof-pro #pincabos-dof-import-manual-card input[type="password"] {
+  box-sizing: border-box;
+  width: 100% !important;
+  padding: 11px 12px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255,176,0,.36) !important;
+  background: #070707 !important;
+  color: #fff !important;
+}
+
+body.pincabos-dof-pro table {
+  width: 100%;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+body.pincabos-dof-pro th {
+  background: rgba(95,42,145,.35) !important;
+  color: var(--pco-orange) !important;
+  padding: 11px !important;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+body.pincabos-dof-pro td {
+  padding: 10px 11px !important;
+  border-bottom: 1px solid rgba(255,255,255,.08) !important;
+  vertical-align: top;
+}
+
+body.pincabos-dof-pro tr:nth-child(even) td {
+  background: rgba(255,255,255,.025);
+}
+
+body.pincabos-dof-pro code {
+  background: rgba(0,0,0,.38);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 7px;
+  padding: 2px 6px;
+}
+
+body.pincabos-dof-pro .warn {
+  border-left: 4px solid var(--pco-orange);
+  padding-left: 10px;
+}
+
+body.pincabos-dof-pro details {
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,.18);
+}
+
+body.pincabos-dof-pro details summary {
+  cursor: pointer;
+  color: var(--pco-orange);
+  font-weight: 700;
+}
+
+body.pincabos-dof-pro .button,
+body.pincabos-dof-pro button.button {
+  border-radius: 12px !important;
+  padding: 9px 13px !important;
+  box-shadow: 0 8px 18px rgba(0,0,0,.20);
+  transition: transform .08s ease, filter .12s ease;
+}
+
+body.pincabos-dof-pro .button:hover,
+body.pincabos-dof-pro button.button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+/* Carte cachée volontairement */
+body.pincabos-dof-pro .pco-dof-hidden-info-card {
+  display: none !important;
+}
+
+
+/* PINCABOS_DOF_NATIVE_COLORS_START */
+/* Revenir aux couleurs natives de la WebApp, garder seulement la disposition pro. */
+
+body.pincabos-dof-pro {
+  background: inherit !important;
+}
+
+body.pincabos-dof-pro .card {
+  background: inherit !important;
+  color: inherit !important;
+  border-color: rgba(255, 176, 0, 0.28) !important;
+  box-shadow: none !important;
+}
+
+body.pincabos-dof-pro .card h2,
+body.pincabos-dof-pro .card h3 {
+  color: inherit !important;
+}
+
+body.pincabos-dof-pro .card h2::before {
+  color: #ffb000 !important;
+}
+
+body.pincabos-dof-pro #pincabos-dof-import-manual-card {
+  background: inherit !important;
+  color: inherit !important;
+  border-color: rgba(255, 176, 0, 0.36) !important;
+  box-shadow: none !important;
+}
+
+body.pincabos-dof-pro #pincabos-dof-import-manual-card h2,
+body.pincabos-dof-pro #pincabos-dof-import-manual-card h3 {
+  color: inherit !important;
+}
+
+body.pincabos-dof-pro #pincabos-dof-import-manual-card form {
+  background: rgba(0, 0, 0, 0.10) !important;
+  border-color: rgba(255, 176, 0, 0.22) !important;
+}
+
+body.pincabos-dof-pro #pincabos-dof-import-manual-card input[type="file"],
+body.pincabos-dof-pro #pincabos-dof-import-manual-card input[type="text"],
+body.pincabos-dof-pro #pincabos-dof-import-manual-card input[type="password"] {
+  background: inherit !important;
+  color: inherit !important;
+  border-color: rgba(255, 176, 0, 0.32) !important;
+}
+
+body.pincabos-dof-pro table {
+  background: inherit !important;
+  border-color: rgba(255, 176, 0, 0.22) !important;
+}
+
+body.pincabos-dof-pro th {
+  background: rgba(255, 176, 0, 0.10) !important;
+  color: inherit !important;
+}
+
+body.pincabos-dof-pro td {
+  background: inherit !important;
+  color: inherit !important;
+}
+
+body.pincabos-dof-pro tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+body.pincabos-dof-pro code {
+  background: rgba(0, 0, 0, 0.20) !important;
+  color: inherit !important;
+  border-color: rgba(255, 176, 0, 0.20) !important;
+}
+
+body.pincabos-dof-pro details {
+  background: inherit !important;
+  color: inherit !important;
+  border-color: rgba(255, 176, 0, 0.22) !important;
+}
+
+body.pincabos-dof-pro details summary {
+  color: inherit !important;
+}
+
+body.pincabos-dof-pro .warn {
+  border-left-color: #ffb000 !important;
+}
+
+/* Garder le radius/layout moderne, mais pas les couleurs étrangères. */
+body.pincabos-dof-pro .card,
+body.pincabos-dof-pro table,
+body.pincabos-dof-pro details,
+body.pincabos-dof-pro #pincabos-dof-import-manual-card form {
+  border-radius: 14px !important;
+}
+/* PINCABOS_DOF_NATIVE_COLORS_END */
+
+
+/* PINCABOS-DOF-CARD-BACKGROUND-FIX-START
+   Force les cartes de la page Outputs / DOF à utiliser le même style
+   que les autres pages PinCabOS. Ne touche pas aux fonctions DOF.
+*/
+body .card,
+body #pincabos-dof-import-manual-card,
+body #dof-driver-pack-status-card,
+body #dof-live-panel {
+  background: rgba(29, 11, 46, 0.76) !important;
+  border: 1px solid #ff7a00 !important;
+  border-radius: 18px !important;
+  padding: 22px;
+  box-shadow: 0 0 25px rgba(255, 122, 0, 0.25) !important;
+}
+
+body .card h2,
+body #pincabos-dof-import-manual-card h2,
+body #dof-driver-pack-status-card h2,
+body #dof-live-panel h2 {
+  color: #ffb000 !important;
+}
+
+body .grid .card {
+  background: rgba(29, 11, 46, 0.76) !important;
+}
+/* PINCABOS-DOF-CARD-BACKGROUND-FIX-END */
+

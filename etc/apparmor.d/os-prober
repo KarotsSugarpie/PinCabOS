@@ -1,0 +1,55 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    Author: Maxime Bélair <maxime.belair@canonical.com>
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile os-prober /usr/bin/os-prober flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/private-files-strict>
+
+  capability dac_override dac_read_search sys_admin sys_module sys_rawio,
+
+  mount options=(rprivate, rw) -> /,
+  mount options=(rw, nosuid, nodev) -> /var/lib/os-prober/mount/,
+  umount,
+
+  # This may cause "apparmor mqueue disconnected TODO" messages on some kernels.
+  # This warning is not critical, and newer kernels will fix this issue
+  mqueue getattr,
+
+  # os-prober uses a lot of dependencies (dash, find, grep, head, kmod, ...)
+  # We allow everything in /usr/bin to avoid breakages on dependency updates
+  file /usr/bin/** ix,
+  file @{coreutil_dirs}* ix,
+
+  file /usr/lib/os-probes/** ix,
+  file /usr/lib/linux-boot-probes/** ix,
+  file /usr/sbin/blkid ix,
+  file /usr/sbin/lvm ix,
+  file /usr/sbin/grub-probe ix,
+
+  # os-prober may read the whole filesystem
+  file /{,**} r,
+
+  file /dev/fuse w,
+  file /dev/mapper/control w,
+  file /run/blkid/blkid.* wl,
+  file /run/lock/lvm/* wk,
+  file /run/lvm/hints wk,
+  file /tmp/os-prober.*/{,**} w,
+  file /var/lib/os-prober/mount/ w,
+  file /var/lib/os-prober/labels wl,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/os-prober>
+}

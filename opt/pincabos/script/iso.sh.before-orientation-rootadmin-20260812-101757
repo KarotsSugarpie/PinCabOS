@@ -1,0 +1,5859 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+clear
+echo "==============================================================="
+echo " PINCABOS — MASTER ISO BUILDER V8.1G ENGLISH"
+echo " Clean -> Payload -> ISO-ready -> Live installer -> Bootable ISO"
+echo "==============================================================="
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "ERROR: run as root"
+  exit 1
+fi
+
+VERSION="v8.1g"
+VERSION_UPPER="V8.1G"
+
+BASE_ISO_URL="https://releases.ubuntu.com/26.04/ubuntu-26.04-desktop-amd64.iso"
+BASE_SHA_URL="https://releases.ubuntu.com/26.04/SHA256SUMS"
+
+CACHE_DIR="/opt/pincabos/cache/iso-base"
+BASE_ISO="$CACHE_DIR/ubuntu-26.04-desktop-amd64.iso"
+
+BUILD_BASE="/opt/pincabos/build"
+WORK="$BUILD_BASE/live-v8.1g-english"
+PAYLOAD_FULL="$WORK/payload-full"
+PAYLOAD_ISO_READY="$WORK/iso-ready/pincabos-payload"
+ISO_DIR="$WORK/iso"
+ROOTFS_DIR="$WORK/squashfs-root"
+BOOT_WORK="$WORK/boot-work"
+
+OUT_DIR="$BUILD_BASE/output"
+OUT_ISO="$OUT_DIR/PinCabOS-beta-Installer.iso"
+VOLID="PINCABOS_V81G"
+
+LOG_DIR="$BUILD_BASE/logs"
+mkdir -p "$LOG_DIR"
+LOG="$LOG_DIR/iso-v8.1g-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee -a "$LOG") 2>&1
+
+echo
+echo "Log:"
+echo "$LOG"
+
+die() {
+  echo
+  echo "ERROR: $*"
+  exit 1
+}
+
+run() {
+  echo
+  echo ">>> $*"
+  "$@"
+}
+
+cleanup_mounts() {
+  set +e
+  for p in "$ROOTFS_DIR/dev" "$ROOTFS_DIR/proc" "$ROOTFS_DIR/sys" "$ROOTFS_DIR/run"; do
+    mountpoint -q "$p" && umount -R "$p"
+  done
+  set -e
+}
+trap cleanup_mounts EXIT
+
+echo
+echo "=== 1) Safety audit before cleanup ==="
+echo "Build base: $BUILD_BASE"
+echo "Work dir:   $WORK"
+echo "Output ISO: $OUT_ISO"
+df -h /
+du -sh "$BUILD_BASE" 2>/dev/null || true
+du -sh /root/pincabos-v8.1g-cab-payload 2>/dev/null || true
+du -sh /root/pincabos-v8.1g-iso-ready 2>/dev/null || true
+
+echo
+echo "=== 2) Cleanup obsolete/generated build files only ==="
+echo "Cleaning generated build work, old payloads and old ISOs."
+echo "The installed PinCabOS system is NOT touched."
+echo "PINCABOS_V81G_GENERATED_CLEANUP_V2"
+
+mkdir -p "$BUILD_BASE" "$OUT_DIR" "$CACHE_DIR"
+
+echo
+echo "--- Before cleanup ---"
+du -sh "$BUILD_BASE" "$OUT_DIR" /root/pincabos-v8* 2>/dev/null || true
+
+echo
+echo "--- Removing current/old generated live build work ---"
+rm -rf "$WORK"
+
+find "$BUILD_BASE" -mindepth 1 -maxdepth 1 -type d \( \
+  -name 'live-v8*' -o \
+  -name 'pincabos-v8*-cab-payload' -o \
+  -name 'pincabos-v8*-iso-ready' -o \
+  -name 'pincabos-v8*-payload' -o \
+  -name 'cab-payload-v8*' -o \
+  -name 'iso-ready-v8*' \
+\) -print -exec rm -rf {} + 2>/dev/null || true
+
+echo
+echo "--- Removing old generated ISO outputs ---"
+find "$OUT_DIR" -maxdepth 1 -type f \( \
+  -name 'PinCabOS-*.iso' -o \
+  -name 'PinCabOS-*.iso.sha256' -o \
+  -name '*.iso.part' \
+\) -print -delete 2>/dev/null || true
+
+echo
+echo "--- Removing old generated root payload directories only ---"
+find /root -maxdepth 1 -type d \( \
+  -name 'pincabos-v8*-cab-payload' -o \
+  -name 'pincabos-v8*-iso-ready' -o \
+  -name 'pincabos-v8*-payload' \
+\) -print -exec rm -rf {} + 2>/dev/null || true
+
+echo
+echo "--- Removing accidental root-level generated payload files only ---"
+echo "PINCABOS_ROOT_GENERATED_PAYLOAD_CLEANUP_V1"
+
+find / \
+  -maxdepth 1 \
+  -type f \
+  \( \
+    -name 'pincabos-rootfs-cab-*.tar.zst' -o \
+    -name 'pincabos-rootfs-cab-*.tar.zst.part-*' -o \
+    -name 'pincabos-rootfs-cab-*.sha256' -o \
+    -name 'pincabos-rootfs-cab-*.manifest.txt' -o \
+    -name 'pincabos-plymouth-theme-overlay-*.tar.zst' -o \
+    -name 'pincabos-plymouth-theme-overlay-*.tar.zst.part-*' -o \
+    -name 'pincabos-plymouth-theme-overlay-*.sha256' -o \
+    -name 'payload-file-list-python-webapp.txt' -o \
+    -name 'MANIFEST.txt' \
+  \) \
+  -print \
+  -delete \
+  2>/dev/null || true
+
+echo
+echo "--- Removing stale partial downloads only, preserving cached base ISO ---"
+find "$CACHE_DIR" -maxdepth 1 -type f -name '*.part' -print -delete 2>/dev/null || true
+
+echo
+echo "--- After cleanup ---"
+du -sh "$BUILD_BASE" "$OUT_DIR" /root/pincabos-v8* 2>/dev/null || true
+
+mkdir -p "$PAYLOAD_FULL" "$PAYLOAD_ISO_READY" "$ISO_DIR" "$ROOTFS_DIR" "$BOOT_WORK" "$OUT_DIR" "$CACHE_DIR"
+
+echo
+echo "=== 3) Install required host builder tools ==="
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  xorriso \
+  squashfs-tools \
+  rsync \
+  wget \
+  zstd \
+  ca-certificates \
+  parted \
+  dosfstools \
+  gdisk \
+  util-linux \
+  coreutils \
+  grub-pc-bin \
+  grub-efi-amd64-bin \
+  mtools \
+  e2fsprogs
+
+echo
+echo "=== 4) Validate source cabinet boot, modules, GRUB and Plymouth ==="
+test -d /boot || die "/boot missing"
+test -d /lib/modules || die "/lib/modules missing"
+test -f /etc/default/grub || die "/etc/default/grub missing"
+test -f /usr/share/plymouth/themes/pincabos/pincabos.plymouth || die "Plymouth pincabos theme missing"
+ls /boot/vmlinuz-* >/dev/null || die "No kernel in /boot"
+ls /boot/initrd.img-* >/dev/null || die "No initrd in /boot"
+ls /lib/modules/* >/dev/null || die "No modules in /lib/modules"
+
+echo "OK: source boot/modules/grub/plymouth present"
+
+echo
+echo "=== 5) Build lean PinCabOS payload from current cabinet ==="
+ARCHIVE="$PAYLOAD_FULL/pincabos-rootfs-cab-v8.1g.tar.zst"
+OVERLAY="$PAYLOAD_FULL/pincabos-plymouth-theme-overlay-v8.1g.tar.zst"
+MANIFEST="$PAYLOAD_FULL/pincabos-rootfs-cab-v8.1g.manifest.txt"
+
+{
+  echo "PinCabOS V8.1G LEAN CAB PAYLOAD"
+  echo "Generated: $(date -Is)"
+  echo
+  echo "Excluded:"
+  echo "/home/pinball/Tables"
+  echo "/opt/pincabos/build"
+  echo "/swap.img"
+  echo "/swapfile"
+  echo "venv/.venv/virtualenv preserved when needed for WebApp runtime"
+  echo "node_modules"
+  echo "__pycache__"
+  echo "/root old payloads"
+  echo "/opt/pincabos/cache"
+  echo "/opt/pincabos/logs"
+  echo "/var/tmp, /var/crash, /var/cache, /var/log, apt archives, journals"
+  echo
+  findmnt /
+  echo
+  ls -lah /boot/vmlinuz-* /boot/initrd.img-* 2>/dev/null || true
+  echo
+  ls -lah /lib/modules
+  echo
+  cat /etc/default/grub
+  echo
+  find /usr/share/plymouth/themes/pincabos -maxdepth 2 -type f | sort
+} > "$MANIFEST"
+
+sed -n '1,140p' "$MANIFEST"
+
+# PINCABOS_ISO_LEAN_EXCLUSIONS_V2
+# PINCABOS_PAYLOAD_LIVE_TAR_STABILITY_V2
+# PINCABOS_ISO_AUDIO_PRIVACY_V1
+#
+# Prépare une copie neutre des VPinballX.ini sans noms de cartes audio.
+# La configuration originale du cabinet source n'est jamais modifiée.
+
+AUDIO_SANITIZE_STAGE="/tmp/pincabos-audio-sanitize-$$"
+AUDIO_SANITIZE_LIST="/tmp/pincabos-audio-sanitize-list-$$"
+
+rm -rf "$AUDIO_SANITIZE_STAGE"
+rm -f "$AUDIO_SANITIZE_LIST"
+
+mkdir -p \
+  "$AUDIO_SANITIZE_STAGE/__PINCABOS_AUDIO_SANITIZED__"
+
+: > "$AUDIO_SANITIZE_LIST"
+
+python3 - \
+  "$AUDIO_SANITIZE_STAGE/__PINCABOS_AUDIO_SANITIZED__" \
+  "$AUDIO_SANITIZE_LIST" <<'PINCABOS_AUDIO_PRIVACY_PY'
+from pathlib import Path
+import os
+import re
+import shutil
+import sys
+
+stage = Path(sys.argv[1])
+list_file = Path(sys.argv[2])
+
+sources = []
+
+roots = [
+    Path("/home/pinball/.local/share/VPinballX"),
+    Path("/home/pinball/.vpinball"),
+]
+
+for root in roots:
+    if not root.exists():
+        continue
+
+    sources.extend(
+        candidate
+        for candidate in root.rglob("VPinballX.ini")
+        if candidate.is_file() and not candidate.is_symlink()
+    )
+
+hardware_audio_key = re.compile(
+    r"^\s*("
+    r"SoundDevice|"
+    r"SoundDeviceBG|"
+    r"MusicDevice|"
+    r"Sound3DDevice|"
+    r"AudioDevice|"
+    r"AudioDeviceBG"
+    r")\s*=.*$",
+    re.IGNORECASE,
+)
+
+archive_members = []
+
+for source in sorted(set(sources)):
+    relative = source.relative_to("/")
+
+    destination = stage / relative
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    original = source.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    lines = original.splitlines(keepends=True)
+
+    sanitized = "".join(
+        line
+        for line in lines
+        if not hardware_audio_key.match(line)
+    )
+
+    destination.write_text(
+        sanitized,
+        encoding="utf-8",
+    )
+
+    source_stat = source.stat()
+
+    os.chmod(
+        destination,
+        source_stat.st_mode & 0o7777,
+    )
+
+    os.chown(
+        destination,
+        source_stat.st_uid,
+        source_stat.st_gid,
+    )
+
+    archive_members.append(
+        "./__PINCABOS_AUDIO_SANITIZED__/"
+        + str(relative)
+    )
+
+list_file.write_text(
+    "".join(member + "\n" for member in archive_members),
+    encoding="utf-8",
+)
+
+print(
+    f"GO [√] VPinballX.ini neutralisés : "
+    f"{len(archive_members)}"
+)
+PINCABOS_AUDIO_PRIVACY_PY
+
+if [ "$?" -ne 0 ]; then
+  die "Unable to prepare sanitized VPX audio configuration"
+fi
+
+# PINCABOS_ROOT_GENERATED_PAYLOAD_EXCLUSIONS_V1
+echo "Creating live cabinet payload with controlled TAR status."
+
+set +e
+
+tar \
+  --checkpoint=10000 \
+  --checkpoint-action=echo='archived %u entries...' \
+  --acls \
+  --xattrs \
+  --numeric-owner \
+  --one-file-system \
+  --ignore-failed-read \
+  --warning=no-file-changed \
+  --exclude='./boot/efi' \
+  --exclude='./boot/efi/*' \
+  --exclude='./proc/*' \
+  --exclude='./sys/*' \
+  --exclude='./dev/*' \
+  --exclude='./run/*' \
+  --exclude='./tmp/*' \
+  --exclude='./mnt/*' \
+  --exclude='./media/*' \
+  --exclude='./cdrom/*' \
+  --exclude='./lost+found' \
+  --exclude='./swap.img' \
+  --exclude='./swapfile' \
+  --exclude='./home/pinball/Tables' \
+  --exclude='./home/pinball/Tables/*' \
+  --exclude='./home/pinball/Backups/*' \
+  --exclude='./home/pinball/Downloads/*' \
+  --exclude='./home/pinball/.cache' \
+  --exclude='./home/pinball/.cache/*' \
+  --exclude='./home/pinball/Exports' \
+  --exclude='./home/pinball/Exports/*' \
+  --exclude='./home/pinball/.ssh' \
+  --exclude='./home/pinball/.ssh/*' \
+  --exclude='./home/pinball/.config/gh' \
+  --exclude='./home/pinball/.config/gh/*' \
+  --exclude='./home/pinball/.config/google-chrome' \
+  --exclude='./home/pinball/.config/google-chrome/*' \
+  --exclude='./home/pinball/.config/vpinfe/cache' \
+  --exclude='./home/pinball/.config/vpinfe/cache/*' \
+  --exclude='./home/pinball/.config/vpinfe/updates' \
+  --exclude='./home/pinball/.config/vpinfe/updates/*' \
+  --exclude='./home/pinball/.config/vpinfe/vpinfe.log' \
+  --exclude='./home/pinball/.config/sunshine/credentials' \
+  --exclude='./home/pinball/.config/pincabos/smb' \
+  --exclude='./home/pinball/.config/pincabos/smb/*' \
+  --exclude='./home/pinball/.config/pincabos/smb-sessions' \
+  --exclude='./home/pinball/.config/pincabos/smb-sessions/*' \
+  --exclude='./home/pinball/.local/share/Trash/*' \
+  --exclude='./home/*/snap' \
+  --exclude='./home/*/snap/*' \
+  --exclude='./snap' \
+  --exclude='./snap/*' \
+  --exclude='./var/snap' \
+  --exclude='./var/snap/*' \
+  --exclude='./var/lib/snapd' \
+  --exclude='./var/lib/snapd/*' \
+  --exclude='./etc/asound.conf' \
+  --exclude='./var/lib/alsa' \
+  --exclude='./var/lib/alsa/*' \
+  --exclude='./var/lib/pipewire' \
+  --exclude='./var/lib/pipewire/*' \
+  --exclude='./home/pinball/.asoundrc' \
+  --exclude='./home/pinball/.config/pulse' \
+  --exclude='./home/pinball/.config/pulse/*' \
+  --exclude='./home/pinball/.config/pipewire' \
+  --exclude='./home/pinball/.config/pipewire/*' \
+  --exclude='./home/pinball/.config/wireplumber' \
+  --exclude='./home/pinball/.config/wireplumber/*' \
+  --exclude='./home/pinball/.local/state/pipewire' \
+  --exclude='./home/pinball/.local/state/pipewire/*' \
+  --exclude='./home/pinball/.local/state/wireplumber' \
+  --exclude='./home/pinball/.local/state/wireplumber/*' \
+  --exclude='./opt/pincabos/config/audio-router.json' \
+  --exclude='./opt/pincabos/config/audio.json' \
+  --exclude='./opt/pincabos/config/audio-ssf.json' \
+  --exclude='./opt/pincabos/config/ssf-commander.json' \
+  --exclude='./opt/pincabos/backups/*audio*' \
+  --exclude='./opt/pincabos/backups/*audio*/*' \
+  --exclude='./home/pinball/.local/share/VPinballX/*/VPinballX.ini' \
+  --exclude='./home/pinball/.vpinball/VPinballX.ini' \
+  --exclude='./opt/pincabos/config/screens/screens.json' \
+  --exclude='./opt/pincabos/config/screens/bindings.json' \
+  --exclude='./opt/pincabos/config/screens/display-bindings.json' \
+  --exclude='./home/pinball/.config/monitors.xml' \
+  --exclude='./var/log/journal/*' \
+  --exclude='./var/cache/apt/archives/*.deb' \
+  --exclude='./var/lib/apt/lists' \
+  --exclude='./var/lib/apt/lists/*' \
+  --exclude='./var/backups' \
+  --exclude='./var/backups/*' \
+  --exclude='./var/tmp/*' \
+  --exclude='./var/crash/*' \
+  --exclude='./root/.cache' \
+  --exclude='./root/.cache/*' \
+  --exclude='./root/*' \
+  --exclude='./pincabos-rootfs-cab-*.tar.zst' \
+  --exclude='./pincabos-rootfs-cab-*.tar.zst.part-*' \
+  --exclude='./pincabos-rootfs-cab-*.sha256' \
+  --exclude='./pincabos-rootfs-cab-*.manifest.txt' \
+  --exclude='./pincabos-plymouth-theme-overlay-*.tar.zst' \
+  --exclude='./pincabos-plymouth-theme-overlay-*.tar.zst.part-*' \
+  --exclude='./pincabos-plymouth-theme-overlay-*.sha256' \
+  --exclude='./payload-file-list-python-webapp.txt' \
+  --exclude='./MANIFEST.txt' \
+  --exclude='./var/lib/kdump' \
+  --exclude='./var/lib/kdump/*' \
+  --exclude='./var/lib/systemd/coredump' \
+  --exclude='./var/lib/systemd/coredump/*' \
+  --exclude='./home/pinball/.nv' \
+  --exclude='./home/pinball/.nv/*' \
+  --exclude='./home/pinball/.dbus' \
+  --exclude='./home/pinball/.dbus/*' \
+  --exclude='./opt/pincabos/runtime/live-gpu' \
+  --exclude='./opt/pincabos/runtime/live-gpu/*' \
+  --exclude='./opt/pincabos/script/*.bak' \
+  --exclude='./opt/pincabos/script/*.bak-*' \
+  --exclude='./opt/pincabos/script/*.backup' \
+  --exclude='./opt/pincabos/script/*.orig' \
+  --exclude='./opt/pincabos/script/*~' \
+  --exclude='./root/pincabos-v8.1-cab-payload' \
+  --exclude='./root/pincabos-v8.1-cab-payload/*' \
+  --exclude='./root/pincabos-v8.1f-iso-ready' \
+  --exclude='./root/pincabos-v8.1f-iso-ready/*' \
+  --exclude='./root/pincabos-v8.1g-cab-payload' \
+  --exclude='./root/pincabos-v8.1g-cab-payload/*' \
+  --exclude='./root/pincabos-v8.1g-iso-ready' \
+  --exclude='./root/pincabos-v8.1g-iso-ready/*' \
+  --exclude='./opt/pincabos/build' \
+  --exclude='./opt/pincabos/build/*' \
+  --exclude='./opt/pincabos/cache' \
+  --exclude='./opt/pincabos/cache/*' \
+  --exclude='./opt/pincabos/logs/*' \
+  --exclude='./var/cache/*' \
+  --exclude='./var/log/*' \
+  --exclude='*/node_modules' \
+  --exclude='*/node_modules/*' \
+  --exclude='*/__pycache__' \
+  --exclude='*/__pycache__/*' \
+  --exclude='./__pincabos_keep_webapp_venv_runtime_marker_never_matches__' \
+  -I 'zstd -T0 -10' \
+  -cpf "$ARCHIVE" \
+  --transform='s#^\./__PINCABOS_AUDIO_SANITIZED__$#.#' \
+  --transform='s#^\./__PINCABOS_AUDIO_SANITIZED__/#./#' \
+  -C / . \
+  -C "$AUDIO_SANITIZE_STAGE" -T "$AUDIO_SANITIZE_LIST"
+
+TAR_CREATE_RC="$?"
+
+rm -rf "$AUDIO_SANITIZE_STAGE"
+rm -f "$AUDIO_SANITIZE_LIST"
+set -e
+
+echo
+echo "=== Validate completed live payload archive ==="
+echo "TAR_CREATE_RC=$TAR_CREATE_RC"
+
+if [ "$TAR_CREATE_RC" -gt 1 ]; then
+  die "Payload TAR creation failed with fatal status $TAR_CREATE_RC"
+fi
+
+if [ ! -s "$ARCHIVE" ]; then
+  die "Payload archive is absent or empty: $ARCHIVE"
+fi
+
+echo "--- Zstandard integrity test ---"
+zstd -t "$ARCHIVE"
+
+echo "--- TAR stream readability test ---"
+tar -I zstd -tf "$ARCHIVE" >/dev/null
+
+# PINCABOS_ISO_AUDIO_PRIVACY_ARCHIVE_VALIDATION_V1
+
+AUDIO_PRIVACY_FORBIDDEN_RE='^\./etc/asound\.conf$|^\./var/lib/alsa/|^\./var/lib/pipewire/|^\./home/pinball/\.asoundrc$|^\./home/pinball/\.config/(pulse|pipewire|wireplumber)(/|$)|^\./home/pinball/\.local/state/(pipewire|wireplumber)(/|$)|^\./opt/pincabos/config/(audio-router|audio|audio-ssf|ssf-commander)\.json$'
+
+AUDIO_PRIVACY_FOUND="$(
+  tar -I zstd -tf "$ARCHIVE" |
+  grep -E "$AUDIO_PRIVACY_FORBIDDEN_RE" ||
+  true
+)"
+
+if [ -n "$AUDIO_PRIVACY_FOUND" ]; then
+  echo "$AUDIO_PRIVACY_FOUND"
+  die "Personal audio state found inside payload"
+fi
+
+AUDIO_DEVICE_KEY_RE='^[[:space:]]*(SoundDevice|SoundDeviceBG|MusicDevice|Sound3DDevice|AudioDevice|AudioDeviceBG)[[:space:]]*='
+
+while IFS= read -r VPX_INI_MEMBER; do
+  [ -n "$VPX_INI_MEMBER" ] || continue
+
+  if tar -I zstd -xOf "$ARCHIVE" "$VPX_INI_MEMBER" |
+     grep -Eiq "$AUDIO_DEVICE_KEY_RE"
+  then
+    echo "Hardware audio key found in: $VPX_INI_MEMBER"
+    die "Hardware-specific VPX audio configuration found"
+  fi
+done < <(
+  tar -I zstd -tf "$ARCHIVE" |
+  grep -E '/VPinballX\.ini$' ||
+  true
+)
+
+echo "GO [√] Payload audio privacy validation passed"
+
+
+echo "--- Completed live payload archive ---"
+ls -lh "$ARCHIVE"
+
+if [ "$TAR_CREATE_RC" -eq 1 ]; then
+  echo "WARNING: TAR returned status 1 during live capture."
+  echo "The completed archive passed both integrity tests."
+else
+  echo "OK: TAR completed with status 0."
+fi
+
+echo "GO [√] Live payload archive is structurally valid"
+
+
+echo
+echo "=== 6) Build Plymouth overlay ==="
+tar \
+  --acls \
+  --xattrs \
+  --numeric-owner \
+  -I 'zstd -T0 -10' \
+  -cpf "$OVERLAY" \
+  -C / \
+  usr/share/plymouth/themes/pincabos \
+  etc/plymouth
+
+echo
+echo "=== 7) Validate payload exclusions and boot contents ==="
+tar -I zstd -tf "$ARCHIVE" \
+  | grep -E '^./boot/(vmlinuz|initrd.img|grub)|^./lib/modules/' \
+  | sed -n '1,120p'
+
+if tar -I zstd -tf "$ARCHIVE" | grep -q '^./home/pinball/Tables/'; then
+  die "Tables included in payload"
+fi
+echo "OK: Tables excluded"
+
+if tar -I zstd -tf "$ARCHIVE" | grep -q '^./opt/pincabos/build/'; then
+  die "/opt/pincabos/build included in payload"
+fi
+echo "OK: /opt/pincabos/build excluded"
+
+if tar -I zstd -tf "$ARCHIVE" | grep -Eq '^\./swap\.img$|^\./swapfile$'; then
+  echo "Bad swap entries:"
+  tar -I zstd -tf "$ARCHIVE" | grep -E '^\./swap\.img$|^\./swapfile$' | sed -n '1,80p'
+  die "swap included in payload"
+fi
+echo "OK: swap excluded"
+
+if tar -I zstd -tf "$ARCHIVE" | grep -Eq '/(venv|\.venv|virtualenv)(/|$)'; then
+  echo "NOTICE: venv/virtualenv entries present in payload; allowed for WebApp runtime"
+  tar -I zstd -tf "$ARCHIVE" | grep -E '/(venv|\.venv|virtualenv)(/|$)' | sed -n '1,80p'
+else
+  echo "NOTICE: no venv/virtualenv entries found; WebApp must use system Python or fallback"
+fi
+
+if tar -I zstd -tf "$ARCHIVE" | grep -q '^./root/pincabos-v8'; then
+  die "old /root payload included"
+fi
+echo "OK: old root payloads excluded"
+
+echo
+echo "=== Validate Python + PinCabOS WebApp in payload ==="
+echo "PINCABOS_PAYLOAD_PYTHON_WEBAPP_VALIDATE_V3_PIPEFAIL_SAFE"
+
+ARCHIVE_LIST_PYWEB="$WORK/payload-file-list-python-webapp.txt"
+echo "Creating payload file list:"
+echo "$ARCHIVE_LIST_PYWEB"
+tar -I zstd -tf "$ARCHIVE" > "$ARCHIVE_LIST_PYWEB"
+
+echo "--- Python entries detected in payload ---"
+grep -E '^\./usr/bin/python3($|[.0-9-])|^\./usr/lib/python3' "$ARCHIVE_LIST_PYWEB" | sed -n '1,80p' || true
+
+if grep -Eq '^\./usr/bin/python3$|^\./usr/bin/python3[.0-9]+$|^\./usr/lib/python3' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: Python runtime present in payload"
+else
+  die "Python runtime missing from payload"
+fi
+
+grep -q '^\./opt/pincabos/web/app.py$' "$ARCHIVE_LIST_PYWEB" \
+  || die "PinCabOS WebApp missing from payload: /opt/pincabos/web/app.py"
+
+if grep -Eq '^\./etc/systemd/system/pincabos-webapp.service$|^\./lib/systemd/system/pincabos-webapp.service$|^\./usr/lib/systemd/system/pincabos-webapp.service$' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: pincabos-webapp.service present in payload"
+else
+  die "pincabos-webapp.service missing from payload"
+fi
+
+if grep -Eq '^\./usr/sbin/nginx$|^\./etc/nginx/' "$ARCHIVE_LIST_PYWEB"; then
+  echo "NOTICE: nginx is present in payload"
+else
+  echo "NOTICE: nginx not present in payload; OK, PinCabOS WebApp runs direct without nginx"
+fi
+
+if grep -Eq '/(site-packages|dist-packages)/flask($|/)' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: Flask package present in payload"
+else
+  echo "WARNING: Flask package not detected in payload path scan"
+  echo "Fallback WebApp may rely on official service runtime only."
+fi
+
+echo "OK: Python + WebApp payload validation passed"
+
+echo
+echo "=== Validate VPX runtime in payload ==="
+echo "PINCABOS_PAYLOAD_VPX_VALIDATE_V1"
+
+if [ -z "${ARCHIVE_LIST_PYWEB:-}" ] || [ ! -s "$ARCHIVE_LIST_PYWEB" ]; then
+  ARCHIVE_LIST_PYWEB="$WORK/payload-file-list-python-webapp.txt"
+  tar -I zstd -tf "$ARCHIVE" > "$ARCHIVE_LIST_PYWEB"
+fi
+
+echo "--- VPX payload entries ---"
+grep -Ei 'VPinballX|VPinball|vpx\.sh|VPXlauncher|vpinball|PinMAME|VPinballX\.ini' "$ARCHIVE_LIST_PYWEB" | sed -n '1,240p' || true
+
+if grep -Eq '^\./opt/pincabos/bin/vpx\.sh$|^\./opt/pincabos/scripts/VPXlauncher\.sh$' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: VPX launcher present in payload"
+else
+  die "VPX launcher missing from payload: /opt/pincabos/bin/vpx.sh or /opt/pincabos/scripts/VPXlauncher.sh"
+fi
+
+if grep -Eq 'VPinballX_BGFX$|VPinballX$|/VPinballX_BGFX$|/VPinballX$' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: VPX executable present in payload"
+else
+  die "VPX executable missing from payload"
+fi
+
+if grep -Eq '^\./home/pinball/\.vpinball/VPinballX\.ini$|^\./home/pinball/\.local/share/VPinballX/.*/VPinballX\.ini$' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: VPX INI present in payload"
+else
+  echo "WARNING: VPX INI not found at expected path"
+fi
+
+if grep -Eq '^\./opt/pincabos/apps/vpinball/PinMAME($|/)|^\./home/pinball/\.pinmame($|/)' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: PinMAME/runtime files present in payload"
+else
+  echo "WARNING: PinMAME/runtime path not detected in payload"
+fi
+
+if grep -q '^\./home/pinball/Tables/' "$ARCHIVE_LIST_PYWEB"; then
+  die "Tables were included unexpectedly"
+else
+  echo "OK: Tables still excluded"
+fi
+
+echo "OK: VPX payload validation passed"
+
+
+echo
+echo "=== Validate VPinFE packaged runtime in payload ==="
+echo "PINCABOS_PAYLOAD_VPINFE_PACKAGED_RUNTIME_VALIDATE_V1"
+
+if [ -z "${ARCHIVE_LIST_PYWEB:-}" ] || [ ! -s "$ARCHIVE_LIST_PYWEB" ]; then
+  ARCHIVE_LIST_PYWEB="$WORK/payload-file-list-python-webapp.txt"
+  tar -I zstd -tf "$ARCHIVE" > "$ARCHIVE_LIST_PYWEB"
+fi
+
+echo "--- VPinFE payload entries ---"
+grep -Ei '^\./home/pinball/vpinfe($|/)|^\./opt/pincabos/tools/run-vpinfe-systemd\.sh$|pincabos-vpinfe\.service' "$ARCHIVE_LIST_PYWEB" | sed -n '1,220p' || true
+
+grep -q '^\./home/pinball/vpinfe/' "$ARCHIVE_LIST_PYWEB" \
+  || die "VPinFE runtime missing from payload: /home/pinball/vpinfe"
+
+grep -q '^\./home/pinball/vpinfe/_internal/' "$ARCHIVE_LIST_PYWEB" \
+  || die "VPinFE packaged _internal runtime missing from payload"
+
+grep -q '^\./opt/pincabos/tools/run-vpinfe-systemd\.sh$' "$ARCHIVE_LIST_PYWEB" \
+  || die "VPinFE launcher missing from payload: /opt/pincabos/tools/run-vpinfe-systemd.sh"
+
+if grep -Eq '^\./etc/systemd/system/pincabos-vpinfe\.service$|^\./lib/systemd/system/pincabos-vpinfe\.service$|^\./usr/lib/systemd/system/pincabos-vpinfe\.service$' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: pincabos-vpinfe.service present in payload"
+else
+  die "pincabos-vpinfe.service missing from payload"
+fi
+
+echo "OK: VPinFE packaged runtime validation passed"
+
+
+echo
+echo "=== Validate WebApp runtime dependencies in payload ==="
+echo "PINCABOS_PAYLOAD_WEBAPP_RUNTIME_VALIDATE_V3_PIPEFAIL_SAFE"
+
+if [ -z "${ARCHIVE_LIST_PYWEB:-}" ] || [ ! -s "$ARCHIVE_LIST_PYWEB" ]; then
+  ARCHIVE_LIST_PYWEB="$WORK/payload-file-list-python-webapp.txt"
+  tar -I zstd -tf "$ARCHIVE" > "$ARCHIVE_LIST_PYWEB"
+fi
+
+if grep -Eq '^\./opt/pincabos/web/(\.venv|venv)/bin/python$|^\./opt/pincabos/(\.venv|venv)/bin/python$' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: WebApp/local PinCabOS venv python present in payload"
+else
+  echo "NOTICE: no WebApp/local venv python found in payload; will rely on system Python/fallback"
+fi
+
+if grep -Eq '/(site-packages|dist-packages)/flask($|/)' "$ARCHIVE_LIST_PYWEB"; then
+  echo "OK: Flask package present somewhere in payload"
+else
+  echo "WARNING: Flask package not detected by archive path scan"
+  echo "The fallback service may fail if Flask is only installed by another mechanism."
+fi
+
+tar -I zstd -tf "$OVERLAY" | grep -q '^usr/share/plymouth/themes/pincabos/pincabos.plymouth$' \
+  || die "Plymouth overlay missing pincabos.plymouth"
+echo "OK: Plymouth overlay valid"
+
+echo
+echo "=== 8) Split payload and make ISO-ready payload directory ==="
+sha256sum "$ARCHIVE" > "$PAYLOAD_FULL/pincabos-rootfs-cab-v8.1g.sha256"
+sha256sum "$OVERLAY" > "$PAYLOAD_FULL/pincabos-plymouth-theme-overlay-v8.1g.sha256"
+
+split -b 1900M -d -a 3 "$ARCHIVE" "$ARCHIVE.part-"
+
+cat > "$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh" <<'PINCBOS_PAYLOAD_HELPER'
+#!/usr/bin/env bash
+set -euo pipefail
+
+TARGET="${1:-/target}"
+PAYLOAD_DIR="${2:-/cdrom/pincabos-payload}"
+
+echo "==============================================================="
+echo " PINCABOS V8.1G — INSTALL LEAN CAB PAYLOAD"
+echo "==============================================================="
+
+[ "$(id -u)" -eq 0 ] || { echo "ERROR: root required"; exit 1; }
+[ -d "$TARGET" ] || { echo "ERROR: target missing: $TARGET"; exit 1; }
+findmnt "$TARGET" >/dev/null || { echo "ERROR: $TARGET not mounted"; exit 1; }
+
+echo
+echo "=== 1) Verify chunks ==="
+( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256 )
+
+echo
+echo "=== 2) Extract rootfs ==="
+cat "$PAYLOAD_DIR"/pincabos-rootfs-cab-v8.1g.tar.zst.part-* \
+  | tar --acls --xattrs --numeric-owner -I zstd -xpf - -C "$TARGET"
+
+
+echo
+echo "=== PinCabOS Live pinball identity compatibility ==="
+echo "PINCABOS_LIVE_PINBALL_NSS_IDENTITY_V2"
+
+#
+# The payload has now been extracted.
+# Resolve the REAL target account from /target.
+#
+PINBALL_UID="$(
+    awk -F: '$1=="pinball" {print $3; exit}' \
+        "$TARGET/etc/passwd"
+)"
+
+PINBALL_GID="$(
+    awk -F: '$1=="pinball" {print $4; exit}' \
+        "$TARGET/etc/passwd"
+)"
+
+if [ -z "$PINBALL_UID" ] || [ -z "$PINBALL_GID" ]; then
+    echo "ERROR: target user pinball does not exist after payload extraction."
+    echo "Target passwd:"
+    grep '^pinball:' "$TARGET/etc/passwd" 2>/dev/null || true
+    exit 71
+fi
+
+case "$PINBALL_UID" in
+    *[!0-9]*|'')
+        echo "ERROR: invalid target pinball UID: $PINBALL_UID"
+        exit 72
+        ;;
+esac
+
+case "$PINBALL_GID" in
+    *[!0-9]*|'')
+        echo "ERROR: invalid target pinball GID: $PINBALL_GID"
+        exit 73
+        ;;
+esac
+
+echo "Target pinball UID:GID = $PINBALL_UID:$PINBALL_GID"
+
+#
+# The installer helper itself executes in the Ubuntu Live environment.
+#
+# Some existing PinCabOS installation operations still legitimately use:
+#
+#   install -o pinball -g pinball
+#   chown pinball:pinball
+#
+# Those commands resolve names against the LIVE /etc/passwd, not
+# /target/etc/passwd.
+#
+# Create a temporary NSS identity in the Live system.
+# It disappears automatically when the Live ISO reboots.
+#
+
+if [ -f /etc/passwd ]; then
+    sed -i '/^pinball:/d' /etc/passwd
+fi
+
+if [ -f /etc/group ]; then
+    sed -i '/^pinball:/d' /etc/group
+fi
+
+printf 'pinball:x:%s:%s:PinCabOS Live Installer:/home/pinball:/bin/bash\n' \
+    "$PINBALL_UID" \
+    "$PINBALL_GID" \
+    >> /etc/passwd
+
+printf 'pinball:x:%s:\n' \
+    "$PINBALL_GID" \
+    >> /etc/group
+
+#
+# Verify NSS resolution BEFORE continuing.
+#
+LIVE_PINBALL_UID="$(id -u pinball 2>/dev/null || true)"
+LIVE_PINBALL_GID="$(id -g pinball 2>/dev/null || true)"
+
+if [ "$LIVE_PINBALL_UID" != "$PINBALL_UID" ] ||
+   [ "$LIVE_PINBALL_GID" != "$PINBALL_GID" ]; then
+
+    echo "ERROR: Live pinball NSS identity validation failed."
+    echo "Expected : $PINBALL_UID:$PINBALL_GID"
+    echo "Live     : ${LIVE_PINBALL_UID:-missing}:${LIVE_PINBALL_GID:-missing}"
+    exit 74
+fi
+
+echo "GO [√] Live user pinball ready: $LIVE_PINBALL_UID:$LIVE_PINBALL_GID"
+
+#
+# Extra validation: the TARGET account must still be unchanged.
+#
+TARGET_CHECK_UID="$(
+    awk -F: '$1=="pinball" {print $3; exit}' \
+        "$TARGET/etc/passwd"
+)"
+
+TARGET_CHECK_GID="$(
+    awk -F: '$1=="pinball" {print $4; exit}' \
+        "$TARGET/etc/passwd"
+)"
+
+if [ "$TARGET_CHECK_UID:$TARGET_CHECK_GID" != "$PINBALL_UID:$PINBALL_GID" ]; then
+    echo "ERROR: target pinball identity changed unexpectedly."
+    exit 75
+fi
+
+echo "GO [√] Target pinball identity validated."
+
+
+echo
+echo "=== 3) Extract Plymouth overlay ==="
+( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256 )
+tar --acls --xattrs --numeric-owner -I zstd \
+  -xpf "$PAYLOAD_DIR/pincabos-plymouth-theme-overlay-v8.1g.tar.zst" \
+  -C "$TARGET"
+
+echo
+echo "=== 4) Validate boot/Plymouth ==="
+ls "$TARGET"/boot/vmlinuz-* >/dev/null
+ls "$TARGET"/boot/initrd.img-* >/dev/null
+ls "$TARGET"/lib/modules/* >/dev/null
+test -f "$TARGET/usr/share/plymouth/themes/pincabos/pincabos.plymouth"
+
+echo
+echo "=== 5) Chroot mounts ==="
+mkdir -p "$TARGET"/dev "$TARGET"/proc "$TARGET"/sys "$TARGET"/run "$TARGET"/boot/efi
+mountpoint -q "$TARGET/dev"  || mount --bind /dev  "$TARGET/dev"
+mountpoint -q "$TARGET/proc" || mount --bind /proc "$TARGET/proc"
+mountpoint -q "$TARGET/sys"  || mount --bind /sys  "$TARGET/sys"
+mountpoint -q "$TARGET/run"  || mount --bind /run  "$TARGET/run"
+
+echo
+echo "=== 6) Restore required target dirs + force quiet splash + Plymouth ==="
+
+# These directories must exist in the installed target.
+# /var/tmp is required by update-initramfs/mktemp.
+mkdir -p "$TARGET/tmp"
+mkdir -p "$TARGET/var/tmp"
+mkdir -p "$TARGET/var/log"
+mkdir -p "$TARGET/var/cache"
+mkdir -p "$TARGET/var/cache/apt/archives/partial"
+mkdir -p "$TARGET/var/lib/initramfs-tools"
+mkdir -p "$TARGET/etc/plymouth"
+
+chmod 1777 "$TARGET/tmp"
+chmod 1777 "$TARGET/var/tmp"
+
+echo
+echo "=== Ensure installed target has /usr/bin/python3 ==="
+echo "PINCABOS_TARGET_ENSURE_PYTHON3_SYMLINK_V1"
+if [ ! -e "$TARGET/usr/bin/python3" ]; then
+  PYBIN="$(find "$TARGET/usr/bin" -maxdepth 1 -type f -name 'python3.*' | sort -V | tail -n 1 || true)"
+  if [ -n "$PYBIN" ]; then
+    ln -sfn "$(basename "$PYBIN")" "$TARGET/usr/bin/python3"
+    echo "Created /usr/bin/python3 -> $(basename "$PYBIN")"
+  else
+    echo "WARNING: no python3 binary found in installed target"
+  fi
+fi
+
+echo
+echo "=== PinCabOS first boot network + WebApp self-heal ==="
+# PINCABOS_ISO_AUDIO_TARGET_SANITIZER_V1
+#
+# Défense supplémentaire dans le système cible assemblé.
+
+echo "PINCABOS_ISO_AUDIO_TARGET_SANITIZER_V1"
+
+rm -f \
+  "$TARGET/etc/asound.conf" \
+  "$TARGET/var/lib/alsa/asound.state" \
+  "$TARGET/home/pinball/.asoundrc" \
+  "$TARGET/opt/pincabos/config/audio-router.json" \
+  "$TARGET/opt/pincabos/config/audio.json" \
+  "$TARGET/opt/pincabos/config/audio-ssf.json" \
+  "$TARGET/opt/pincabos/config/ssf-commander.json"
+
+rm -rf \
+  "$TARGET/home/pinball/.config/pulse" \
+  "$TARGET/home/pinball/.config/pipewire" \
+  "$TARGET/home/pinball/.config/wireplumber" \
+  "$TARGET/home/pinball/.local/state/pipewire" \
+  "$TARGET/home/pinball/.local/state/wireplumber" \
+  "$TARGET/var/lib/pipewire"
+
+python3 - "$TARGET" <<'PINCABOS_TARGET_AUDIO_PRIVACY_PY'
+from pathlib import Path
+import re
+import sys
+
+target = Path(sys.argv[1])
+
+roots = [
+    target / "home/pinball/.local/share/VPinballX",
+    target / "home/pinball/.vpinball",
+]
+
+hardware_audio_key = re.compile(
+    r"^\s*("
+    r"SoundDevice|"
+    r"SoundDeviceBG|"
+    r"MusicDevice|"
+    r"Sound3DDevice|"
+    r"AudioDevice|"
+    r"AudioDeviceBG"
+    r")\s*=.*$",
+    re.IGNORECASE,
+)
+
+updated = 0
+
+for root in roots:
+    if not root.exists():
+        continue
+
+    for ini in root.rglob("VPinballX.ini"):
+        if not ini.is_file() or ini.is_symlink():
+            continue
+
+        original = ini.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+
+        sanitized = "".join(
+            line
+            for line in original.splitlines(keepends=True)
+            if not hardware_audio_key.match(line)
+        )
+
+        if sanitized != original:
+            ini.write_text(
+                sanitized,
+                encoding="utf-8",
+            )
+            updated += 1
+
+print(
+    f"GO [√] Target VPX audio mappings removed: {updated}"
+)
+PINCABOS_TARGET_AUDIO_PRIVACY_PY
+
+install \
+  -d \
+  -o pinball \
+  -g pinball \
+  -m 2775 \
+  "$TARGET/opt/pincabos/config"
+
+echo "GO [√] Target personal audio state removed"
+
+echo "PINCABOS_FIRSTBOOT_NET_WEBAPP_FIX_V1"
+
+mkdir -p "$TARGET/usr/local/sbin"
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/multi-user.target.wants"
+mkdir -p "$TARGET/var/lib/pincabos"
+
+cat > "$TARGET/usr/local/sbin/pincabos-firstboot-network-webapp-fix" <<'FIRSTBOOT_NETWEB'
+#!/usr/bin/env bash
+set -u
+
+LOG="/var/log/pincabos-firstboot-network-webapp-fix.log"
+FLAG="/var/lib/pincabos/firstboot-network-webapp.done"
+
+mkdir -p /var/log /var/lib/pincabos
+
+{
+  echo "==============================================================="
+  echo " PinCabOS first boot network + WebApp fix"
+  echo " Started: $(date -Is)"
+  echo "==============================================================="
+
+  if [ -f "$FLAG" ]; then
+    echo "Already completed."
+    exit 0
+  fi
+
+  echo
+  echo "=== Disable unused print services ==="
+  for unit in cups.service cups.socket cups.path cups-browsed.service; do
+    systemctl mask "$unit" >/dev/null 2>&1 || true
+    systemctl disable "$unit" >/dev/null 2>&1 || true
+    systemctl stop "$unit" >/dev/null 2>&1 || true
+  done
+
+  echo
+  echo "=== Clean Chrome crash restore state ==="
+  if [ -d /home/pinball/.config/google-chrome ]; then
+    find /home/pinball/.config/google-chrome -maxdepth 4 -type f \( \
+      -name 'Current Session' -o \
+      -name 'Current Tabs' -o \
+      -name 'Last Session' -o \
+      -name 'Last Tabs' \
+    \) -print -delete 2>/dev/null || true
+
+    find /home/pinball/.config/google-chrome -maxdepth 2 \( \
+      -name 'SingletonCookie' -o \
+      -name 'SingletonLock' -o \
+      -name 'SingletonSocket' \
+    \) -print -delete 2>/dev/null || true
+
+    chown -R pinball:pinball /home/pinball/.config/google-chrome 2>/dev/null || true
+  fi
+
+  echo
+  echo "=== Detect first ethernet interface ==="
+  IFACE=""
+  for p in /sys/class/net/*; do
+    n="${p##*/}"
+    [ "$n" = "lo" ] && continue
+    [ -d "/sys/class/net/$n" ] || continue
+    IFACE="$n"
+    break
+  done
+
+  echo "Detected interface: ${IFACE:-none}"
+
+  if [ -n "$IFACE" ]; then
+    ip link set "$IFACE" up 2>/dev/null || true
+
+    echo
+    echo "=== Write generic DHCP netplan ==="
+    mkdir -p /etc/netplan
+    cat > /etc/netplan/01-pincabos-dhcp.yaml <<NETPLAN
+network:
+  version: 2
+  renderer: NetworkManager
+  ethernets:
+    $IFACE:
+      dhcp4: true
+      dhcp6: true
+      optional: true
+NETPLAN
+
+    chmod 600 /etc/netplan/01-pincabos-dhcp.yaml 2>/dev/null || true
+  fi
+
+  echo
+  echo "=== Enable NetworkManager and DHCP ==="
+  systemctl daemon-reload || true
+  systemctl enable NetworkManager.service >/dev/null 2>&1 || true
+  systemctl start NetworkManager.service >/dev/null 2>&1 || true
+
+  if command -v nmcli >/dev/null 2>&1 && [ -n "$IFACE" ]; then
+    nmcli networking on >/dev/null 2>&1 || true
+    nmcli device set "$IFACE" managed yes >/dev/null 2>&1 || true
+    nmcli connection delete "PinCabOS DHCP" >/dev/null 2>&1 || true
+    nmcli connection add type ethernet ifname "$IFACE" con-name "PinCabOS DHCP" \
+      connection.autoconnect yes ipv4.method auto ipv6.method auto >/dev/null 2>&1 || true
+    nmcli connection up "PinCabOS DHCP" >/dev/null 2>&1 || true
+  fi
+
+  if command -v netplan >/dev/null 2>&1; then
+    netplan generate >/dev/null 2>&1 || true
+    netplan apply >/dev/null 2>&1 || true
+  fi
+
+  sleep 3
+  ip -br addr || true
+
+  echo
+  echo "=== Enable/start PinCabOS WebApp single service ==="
+  systemctl daemon-reload || true
+
+  # Kill the old legacy alias loop. Only pincabos-webapp.service should run.
+  systemctl stop pincabos-web.service >/dev/null 2>&1 || true
+  systemctl disable pincabos-web.service >/dev/null 2>&1 || true
+  systemctl mask pincabos-web.service >/dev/null 2>&1 || true
+  systemctl reset-failed pincabos-web.service >/dev/null 2>&1 || true
+  systemctl reset-failed pincabos-webapp.service >/dev/null 2>&1 || true
+
+  if systemctl list-unit-files | grep -q '^pincabos-webapp\.service'; then
+    systemctl enable pincabos-webapp.service >/dev/null 2>&1 || true
+    systemctl start pincabos-webapp.service >/dev/null 2>&1 || true
+  else
+    echo "NOTICE: pincabos-webapp.service not listed."
+  fi
+
+  echo
+  echo "=== Wait for local web port ==="
+  WEB_OK=0
+  for i in $(seq 1 30); do
+    if command -v curl >/dev/null 2>&1 && curl -fsS --max-time 2 http://127.0.0.1/ >/dev/null 2>&1; then
+      WEB_OK=1
+      break
+    fi
+
+    if ss -lnt 2>/dev/null | grep -qE ':(80|5000|8000|8080)\s'; then
+      WEB_OK=1
+      break
+    fi
+
+    sleep 2
+  done
+
+  echo "WEB_OK=$WEB_OK"
+
+  if [ "$WEB_OK" != "1" ]; then
+    echo
+    echo "=== Official WebApp did not answer; enabling fallback ==="
+    systemctl enable pincabos-webapp-fallback.service >/dev/null 2>&1 || true
+    systemctl restart pincabos-webapp-fallback.service >/dev/null 2>&1 || true
+
+    for i in $(seq 1 20); do
+      if ss -lnt 2>/dev/null | grep -qE ':80\s'; then
+        WEB_OK=1
+        break
+      fi
+      sleep 2
+    done
+  fi
+
+  echo "WEB_OK_AFTER_FALLBACK=$WEB_OK"
+  systemctl status pincabos-webapp.service --no-pager -l || true
+  systemctl status pincabos-webapp-fallback.service --no-pager -l || true
+  ss -lntup 2>/dev/null | grep -E '(:80|:5000|:8000|:8080)' || true
+
+  touch "$FLAG"
+  systemctl disable pincabos-firstboot-network-webapp-fix.service >/dev/null 2>&1 || true
+
+  echo
+  echo "Completed: $(date -Is)"
+} >> "$LOG" 2>&1
+
+exit 0
+FIRSTBOOT_NETWEB
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-network-webapp-fix"
+
+cat > "$TARGET/etc/systemd/system/pincabos-firstboot-network-webapp-fix.service" <<'FIRSTBOOT_NETWEB_SERVICE'
+[Unit]
+Description=PinCabOS first boot network and WebApp self-heal
+After=local-fs.target dbus.service NetworkManager.service
+Before=display-manager.service lightdm.service gdm.service gdm3.service graphical.target
+Wants=NetworkManager.service
+ConditionPathExists=!/var/lib/pincabos/firstboot-network-webapp.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-network-webapp-fix
+TimeoutStartSec=2min
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+FIRSTBOOT_NETWEB_SERVICE
+
+ln -sfn ../pincabos-firstboot-network-webapp-fix.service \
+  "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-firstboot-network-webapp-fix.service"
+
+echo
+echo "=== Force single WebApp service, mask legacy alias ==="
+echo "PINCABOS_WEBAPP_SINGLE_SERVICE_FIX_V1"
+
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/multi-user.target.wants"
+mkdir -p "$TARGET/etc/systemd/system/pincabos-webapp.service.d"
+
+# The old pincabos-web.service is only a legacy alias and can loop with webapp.
+# Mask it in the installed target so only pincabos-webapp.service is used.
+rm -f "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-web.service" || true
+rm -f "$TARGET/etc/systemd/system/default.target.wants/pincabos-web.service" || true
+ln -sfn /dev/null "$TARGET/etc/systemd/system/pincabos-web.service"
+
+cat > "$TARGET/etc/systemd/system/pincabos-webapp.service.d/90-pincabos-stable-start.conf" <<'WEBAPP_OVERRIDE'
+[Unit]
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Restart=on-failure
+RestartSec=8
+WEBAPP_OVERRIDE
+
+echo
+echo "=== Install WebApp fallback launcher/service ==="
+echo "PINCABOS_WEBAPP_FALLBACK_SERVICE_V1"
+
+cat > "$TARGET/usr/local/sbin/pincabos-webapp-fallback-start" <<'WEBAPP_FALLBACK'
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /opt/pincabos/web
+
+PYTHON_CANDIDATES=(
+  /opt/pincabos/web/.venv/bin/python
+  /opt/pincabos/web/venv/bin/python
+  /opt/pincabos/.venv/bin/python
+  /opt/pincabos/venv/bin/python
+  /usr/bin/python3
+)
+
+for py in "${PYTHON_CANDIDATES[@]}"; do
+  [ -x "$py" ] || continue
+
+  if "$py" - <<'PYTEST' >/dev/null 2>&1
+import flask
+PYTEST
+  then
+    echo "Using Python runtime: $py"
+
+    exec "$py" - <<'PYRUN'
+import os
+import sys
+
+os.chdir("/opt/pincabos/web")
+sys.path.insert(0, "/opt/pincabos/web")
+
+import app as pincabos_app_module
+
+app = getattr(pincabos_app_module, "app", None)
+if app is None:
+    raise SystemExit("ERROR: app.py does not expose Flask object named app")
+
+app.run(host="0.0.0.0", port=80, debug=False, use_reloader=False)
+PYRUN
+  fi
+done
+
+echo "ERROR: no Python runtime with Flask found for PinCabOS WebApp"
+exit 1
+WEBAPP_FALLBACK
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-webapp-fallback-start"
+
+cat > "$TARGET/etc/systemd/system/pincabos-webapp-fallback.service" <<'WEBAPP_FALLBACK_SERVICE'
+[Unit]
+Description=PinCabOS WebApp fallback direct Flask service
+After=network-online.target
+Wants=network-online.target
+Conflicts=pincabos-web.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/pincabos/web
+ExecStart=/usr/local/sbin/pincabos-webapp-fallback-start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+WEBAPP_FALLBACK_SERVICE
+
+echo
+echo "=== Pre-enable WebApp service in installed target when present ==="
+if [ -f "$TARGET/etc/systemd/system/pincabos-webapp.service" ]; then
+  ln -sfn ../pincabos-webapp.service \
+    "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-webapp.service" || true
+elif [ -f "$TARGET/lib/systemd/system/pincabos-webapp.service" ]; then
+  ln -sfn /lib/systemd/system/pincabos-webapp.service \
+    "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-webapp.service" || true
+elif [ -f "$TARGET/usr/lib/systemd/system/pincabos-webapp.service" ]; then
+  ln -sfn /usr/lib/systemd/system/pincabos-webapp.service \
+    "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-webapp.service" || true
+else
+  echo "NOTICE: pincabos-webapp.service not found in target at install time."
+fi
+
+echo
+
+
+echo
+echo "==============================================================="
+echo " PinCabOS installed target automatic GPU/display pipeline"
+echo " PINCABOS_TARGET_AUTO_GPU_DISPLAY_VPINFE_PIPELINE_V1"
+echo "==============================================================="
+
+mkdir -p "$TARGET/usr/local/sbin"
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/multi-user.target.wants"
+mkdir -p "$TARGET/var/lib/pincabos"
+mkdir -p "$TARGET/opt/pincabos/config/screens"
+mkdir -p "$TARGET/opt/pincabos/state"
+
+echo
+echo "=== Remove source-cabinet GPU and display identity ==="
+
+rm -f \
+  "$TARGET/opt/pincabos/config/screens/screens.json" \
+  "$TARGET/opt/pincabos/config/screens/screens-detected.json" \
+  "$TARGET/opt/pincabos/config/screens/screens.env" \
+  "$TARGET/opt/pincabos/config/screens/layout.conf" \
+  "$TARGET/opt/pincabos/config/screens/display-role-bindings.json" \
+  "$TARGET/opt/pincabos/config/display-aliases.env" \
+  "$TARGET/opt/pincabos/state/screens-apply-last-success.flag" \
+  "$TARGET/opt/pincabos/state/gpu-update-last-success.flag" \
+  "$TARGET/opt/pincabos/state/gpu-update-required-reboot.flag" \
+  "$TARGET/var/lib/pincabos/hardware-autoconfig.done" \
+  "$TARGET/var/lib/pincabos/hardware-autoconfig.reboot-pending" \
+  "$TARGET/var/lib/pincabos/hardware-autoconfig.failed"
+
+echo
+echo "=== Remove source X11 and XRandR identity ==="
+echo "PINCABOS_TARGET_SOURCE_HARDWARE_IDENTITY_PURGE_V2"
+
+# PINCABOS_TARGET_LIVE_INSTALLER_RESIDUE_PURGE_V1
+echo "Purge live-installer residue from installed target"
+
+rm -f \
+  "$TARGET/etc/systemd/system/pincabos-live-installer-tty.service" \
+  "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-live-installer-tty.service" \
+  "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-live-installer-tty.service" \
+  "$TARGET/usr/local/sbin/pincabos-live-installer" \
+  "$TARGET/etc/skel/Desktop/Install-PinCabOS.desktop" \
+  2>/dev/null || true
+
+
+# A generated xorg.conf must never be transferred to another machine.
+rm -f \
+  "$TARGET/etc/X11/xorg.conf" \
+  "$TARGET/etc/X11/xorg.conf.backup" \
+  "$TARGET/etc/X11/xorg.conf.nvidia-xconfig-original" \
+  "$TARGET/etc/X11/xorg.conf.failsafe" 2>/dev/null || true
+
+find "$TARGET/etc/X11" -maxdepth 1 \
+  \( -type f -o -type l \) \
+  -name 'xorg.conf.*' -delete 2>/dev/null || true
+
+# Keep generic input configuration, but remove local GPU/monitor layouts.
+if [ -d "$TARGET/etc/X11/xorg.conf.d" ]; then
+  while IFS= read -r -d '' conf; do
+    if grep -Eqi \
+      'Section[[:space:]]+"(Device|Monitor|Screen|ServerLayout)"|Driver[[:space:]]+"(nvidia|nouveau|amdgpu|radeon|intel|modesetting)"|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+      "$conf"; then
+      echo "Removing source Xorg fragment: ${conf#$TARGET}"
+      rm -f "$conf"
+    fi
+  done < <(
+    find "$TARGET/etc/X11/xorg.conf.d" -maxdepth 1 \
+      -type f -name '*.conf' -print0 2>/dev/null
+  )
+fi
+
+# Remove desktop-specific monitor databases and static XRandR startup files.
+for profile in \
+  "$TARGET/home/pinball" \
+  "$TARGET/root"
+do
+  [ -d "$profile" ] || continue
+
+  rm -f \
+    "$profile/.config/monitors.xml" \
+    "$profile/.config/monitors.xml~" 2>/dev/null || true
+
+  rm -rf "$profile/.screenlayout" 2>/dev/null || true
+
+  for startup_file in \
+    "$profile/.xprofile" \
+    "$profile/.xsessionrc" \
+    "$profile/.xinitrc" \
+    "$profile/.config/openbox/autostart" \
+    "$profile/.config/lxsession/LXDE/autostart" \
+    "$profile/.config/lxsession/LXDE-pi/autostart"
+  do
+    [ -f "$startup_file" ] || continue
+
+    if grep -Eqi \
+      '(^|[[:space:]])xrandr([[:space:]]|$)|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+      "$startup_file"; then
+      echo "Removing source display startup file: ${startup_file#$TARGET}"
+      rm -f "$startup_file"
+    fi
+  done
+
+  if [ -d "$profile/.config/autostart" ]; then
+    while IFS= read -r -d '' autostart_file; do
+      if grep -Eqi \
+        '(^|[[:space:]])xrandr([[:space:]]|$)|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+        "$autostart_file"; then
+        echo "Removing source display autostart: ${autostart_file#$TARGET}"
+        rm -f "$autostart_file"
+      fi
+    done < <(
+      find "$profile/.config/autostart" -maxdepth 1 \
+        -type f -print0 2>/dev/null
+    )
+  fi
+done
+
+# Remove system-level scripts that impose a source-machine XRandR layout.
+for startup_dir in \
+  "$TARGET/etc/lightdm/lightdm.conf.d" \
+  "$TARGET/etc/X11/Xsession.d" \
+  "$TARGET/etc/xdg/autostart"
+do
+  [ -d "$startup_dir" ] || continue
+
+  while IFS= read -r -d '' startup_file; do
+    if grep -Eqi \
+      '(^|[[:space:]])xrandr([[:space:]]|$)|display-setup-script=.*xrandr|session-setup-script=.*xrandr|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+      "$startup_file"; then
+      echo "Removing source system display startup: ${startup_file#$TARGET}"
+      rm -f "$startup_file"
+    fi
+  done < <(
+    find "$startup_dir" -maxdepth 1 -type f -print0 2>/dev/null
+  )
+done
+
+chown -R pinball:pinball \
+  "$TARGET/opt/pincabos/config/screens" \
+  "$TARGET/opt/pincabos/state" 2>/dev/null || true
+
+echo
+echo "=== Disable competing legacy display services ==="
+
+for unit in \
+  pincabos-display-roles.service \
+  pincabos-display-role-app-sync.service \
+  pincabos-display-role-finalizer.service \
+  pincabos-display-role-normalizer.service \
+  pincabos-screen-topology.service
+do
+  rm -f \
+    "$TARGET/etc/systemd/system/graphical.target.wants/$unit" \
+    "$TARGET/etc/systemd/system/multi-user.target.wants/$unit" \
+    "$TARGET/etc/systemd/system/default.target.wants/$unit" || true
+
+  ln -sfn /dev/null "$TARGET/etc/systemd/system/$unit"
+done
+
+echo
+echo "=== Install first-boot universal GPU configuration ==="
+
+cat > "$TARGET/usr/local/sbin/pincabos-firstboot-hardware-autoconfig" <<'HARDWARE_AUTOCONFIG'
+#!/usr/bin/env bash
+set -u
+
+LOG="/var/log/pincabos-firstboot-hardware-autoconfig.log"
+STATE_DIR="/var/lib/pincabos"
+DONE="$STATE_DIR/hardware-autoconfig.done"
+PENDING="$STATE_DIR/hardware-autoconfig.reboot-pending"
+FAILED="$STATE_DIR/hardware-autoconfig.failed"
+
+mkdir -p "$STATE_DIR" /var/log
+
+exec >>"$LOG" 2>&1
+
+echo
+echo "==============================================================="
+echo " PinCabOS automatic GPU configuration"
+echo " Started: $(date -Is)"
+echo "==============================================================="
+
+if [ -f "$DONE" ]; then
+  echo "Already completed."
+  exit 0
+fi
+
+GPU_LINES="$(
+  lspci -Dnn 2>/dev/null |
+    grep -Ei 'VGA compatible controller|3D controller|Display controller' ||
+    true
+)"
+
+echo
+echo "=== Detected GPU devices ==="
+printf '%s\n' "$GPU_LINES"
+
+HAS_NVIDIA=0
+HAS_AMD=0
+HAS_INTEL=0
+HAS_VM=0
+
+grep -Eqi '\[10de:' <<<"$GPU_LINES" && HAS_NVIDIA=1
+grep -Eqi '\[(1002|1022):' <<<"$GPU_LINES" && HAS_AMD=1
+grep -Eqi '\[8086:' <<<"$GPU_LINES" && HAS_INTEL=1
+grep -Eqi '\[(1af4|1234|15ad|1b36):' <<<"$GPU_LINES" && HAS_VM=1
+
+echo
+echo "NVIDIA=$HAS_NVIDIA AMD=$HAS_AMD INTEL=$HAS_INTEL VM=$HAS_VM"
+
+network_ready() {
+  getent hosts archive.ubuntu.com >/dev/null 2>&1 ||
+  getent hosts security.ubuntu.com >/dev/null 2>&1
+}
+
+ensure_mesa_runtime() {
+  local missing=0
+
+  for package in \
+    mesa-vulkan-drivers \
+    mesa-utils \
+    libgl1-mesa-dri \
+    libglx-mesa0
+  do
+    dpkg-query -W -f='${Status}' "$package" 2>/dev/null |
+      grep -q 'install ok installed' || missing=1
+  done
+
+  if [ "$missing" = "0" ]; then
+    echo "Mesa graphics runtime already installed."
+    return 0
+  fi
+
+  if ! network_ready; then
+    echo "NOTICE: Mesa package repair deferred; network unavailable."
+    return 1
+  fi
+
+  apt-get update || return 1
+
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    mesa-vulkan-drivers \
+    mesa-utils \
+    libgl1-mesa-dri \
+    libglx-mesa0
+}
+
+if [ "$HAS_NVIDIA" = "1" ]; then
+  echo
+  echo "=== NVIDIA automatic configuration ==="
+
+  if [ -f "$PENDING" ]; then
+    echo "Verifying NVIDIA after requested reboot."
+
+    if command -v nvidia-smi >/dev/null 2>&1 &&
+       nvidia-smi >/dev/null 2>&1; then
+      echo "NVIDIA driver operational after reboot."
+      rm -f "$PENDING" "$FAILED"
+      touch "$DONE"
+      exit 0
+    fi
+
+    echo "ERROR: NVIDIA is still unavailable after automatic repair."
+    lspci -Dnnk 2>/dev/null |
+      grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
+      true
+    lsmod | grep -Ei 'nvidia|nouveau' || true
+    dmesg 2>/dev/null | grep -Ei 'nvidia|nouveau|NVRM' | tail -100 || true
+
+    touch "$FAILED" "$DONE"
+    rm -f "$PENDING"
+    exit 0
+  fi
+
+  if command -v nvidia-smi >/dev/null 2>&1 &&
+     nvidia-smi >/dev/null 2>&1; then
+    echo "NVIDIA driver already operational."
+    nvidia-smi || true
+    touch "$DONE"
+    exit 0
+  fi
+
+  if ! command -v ubuntu-drivers >/dev/null 2>&1; then
+    echo "ERROR: ubuntu-drivers is unavailable."
+    touch "$FAILED" "$DONE"
+    exit 0
+  fi
+
+  if ! network_ready; then
+    echo "NOTICE: network unavailable; NVIDIA setup will retry next boot."
+    exit 0
+  fi
+
+  echo
+  echo "--- Available/recommended NVIDIA drivers ---"
+  ubuntu-drivers devices || true
+  ubuntu-drivers list || true
+
+  echo
+  echo "--- Disable nouveau before NVIDIA activation ---"
+
+  cat > /etc/modprobe.d/pincabos-disable-nouveau.conf <<'NOUVEAU'
+blacklist nouveau
+options nouveau modeset=0
+NOUVEAU
+
+  apt-get update || {
+    echo "NOTICE: apt update failed; retrying next boot."
+    exit 0
+  }
+
+  echo
+  echo "--- Install Ubuntu recommended desktop NVIDIA driver ---"
+
+  if ! DEBIAN_FRONTEND=noninteractive ubuntu-drivers install; then
+    echo "ERROR: ubuntu-drivers install failed."
+    touch "$FAILED" "$DONE"
+    exit 0
+  fi
+
+  update-initramfs -u -k all || true
+
+  touch "$PENDING"
+
+  echo
+  echo "NVIDIA driver changed. Automatic reboot required."
+  sync
+  sleep 3
+  systemctl reboot || reboot
+  exit 0
+fi
+
+if [ "$HAS_AMD" = "1" ]; then
+  echo
+  echo "=== AMD/ATI configuration ==="
+  ensure_mesa_runtime || true
+  modprobe amdgpu 2>/dev/null || true
+
+  lspci -Dnnk 2>/dev/null |
+    grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
+    true
+
+  touch "$DONE"
+  exit 0
+fi
+
+if [ "$HAS_INTEL" = "1" ]; then
+  echo
+  echo "=== Intel configuration ==="
+  ensure_mesa_runtime || true
+
+  modprobe xe 2>/dev/null ||
+  modprobe i915 2>/dev/null ||
+  true
+
+  lspci -Dnnk 2>/dev/null |
+    grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
+    true
+
+  touch "$DONE"
+  exit 0
+fi
+
+if [ "$HAS_VM" = "1" ]; then
+  echo
+  echo "=== Virtual GPU configuration ==="
+  ensure_mesa_runtime || true
+
+  modprobe virtio_gpu 2>/dev/null ||
+  modprobe qxl 2>/dev/null ||
+  modprobe vmwgfx 2>/dev/null ||
+  true
+
+  echo "Virtual machine display accepted; one-screen mode is valid."
+  touch "$DONE"
+  exit 0
+fi
+
+echo
+echo "Unknown or generic graphics device."
+echo "Using kernel modesetting/Mesa without forcing a vendor package."
+ensure_mesa_runtime || true
+touch "$DONE"
+
+echo "Completed: $(date -Is)"
+exit 0
+HARDWARE_AUTOCONFIG
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-hardware-autoconfig"
+
+cat > "$TARGET/etc/systemd/system/pincabos-firstboot-hardware-autoconfig.service" <<'HARDWARE_SERVICE'
+[Unit]
+Description=PinCabOS automatic GPU configuration
+After=NetworkManager.service network-online.target pincabos-firstboot-network-webapp-fix.service
+Wants=network-online.target
+Before=display-manager.service lightdm.service gdm.service gdm3.service graphical.target
+ConditionPathExists=!/var/lib/pincabos/hardware-autoconfig.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-hardware-autoconfig
+TimeoutStartSec=30min
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+HARDWARE_SERVICE
+
+ln -sfn ../pincabos-firstboot-hardware-autoconfig.service \
+  "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-firstboot-hardware-autoconfig.service"
+
+
+echo
+echo "=== PinCabOS installed target VPinFE packaged runtime fix ==="
+echo "PINCABOS_TARGET_VPINFE_PACKAGED_RUNTIME_FIX_V1"
+
+echo
+echo "=== Resolve pinball numeric ownership from installed target ==="
+echo "PINCABOS_TARGET_PINBALL_NUMERIC_OWNER_V1"
+
+TARGET_PASSWD="$TARGET/etc/passwd"
+
+if [ ! -f "$TARGET_PASSWD" ]; then
+  echo "ERROR: target passwd missing: $TARGET_PASSWD"
+  exit 1
+fi
+
+PINBALL_UID="$(
+  awk -F: '$1 == "pinball" { print $3; exit }' "$TARGET_PASSWD"
+)"
+
+PINBALL_GID="$(
+  awk -F: '$1 == "pinball" { print $4; exit }' "$TARGET_PASSWD"
+)"
+
+case "$PINBALL_UID" in
+  ''|*[!0-9]*)
+    echo "ERROR: invalid or missing target pinball UID: ${PINBALL_UID:-empty}"
+    exit 1
+    ;;
+esac
+
+case "$PINBALL_GID" in
+  ''|*[!0-9]*)
+    echo "ERROR: invalid or missing target pinball GID: ${PINBALL_GID:-empty}"
+    exit 1
+    ;;
+esac
+
+echo "Target pinball ownership: UID=$PINBALL_UID GID=$PINBALL_GID"
+
+
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/graphical.target.wants"
+mkdir -p "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d"
+
+echo
+echo "=== Remove legacy VPinFE display/topology drop-ins ==="
+
+VPINFE_DROPIN_DIR="$TARGET/etc/systemd/system/pincabos-vpinfe.service.d"
+
+if [ -d "$VPINFE_DROPIN_DIR" ]; then
+  while IFS= read -r -d '' dropin; do
+    dropin_name="$(basename "$dropin")"
+
+    if [[ "$dropin_name" =~ (screen|display|topology|xrandr|iso-start) ]] || \
+       grep -Eqi \
+         'pincabos-display-role|pincabos-screen-topology\.service|(^|[[:space:]])xrandr([[:space:]]|$)|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+         "$dropin"; then
+      echo "Removing legacy VPinFE drop-in: ${dropin#$TARGET}"
+      rm -f "$dropin"
+    fi
+  done < <(
+    find "$VPINFE_DROPIN_DIR" -maxdepth 1 \
+      -type f -name '*.conf' -print0 2>/dev/null
+  )
+fi
+
+mkdir -p "$TARGET/usr/local/sbin"
+mkdir -p "$TARGET/var/lib/pincabos"
+
+if [ -f "$TARGET/opt/pincabos/tools/run-vpinfe-systemd.sh" ]; then
+  chmod 755 "$TARGET/opt/pincabos/tools/run-vpinfe-systemd.sh" || true
+fi
+
+if [ -d "$TARGET/home/pinball/vpinfe" ]; then
+  chown -R "$PINBALL_UID:$PINBALL_GID" "$TARGET/home/pinball/vpinfe" || true
+  find "$TARGET/home/pinball/vpinfe" -maxdepth 2 -type f -iname '*vpinfe*' -exec chmod 755 {} \; 2>/dev/null || true
+fi
+
+chown -R "$PINBALL_UID:$PINBALL_GID" "$TARGET/home/pinball/.config/vpinfe" 2>/dev/null || true
+chown -R "$PINBALL_UID:$PINBALL_GID" "$TARGET/opt/pincabos/config/vpinfe" 2>/dev/null || true
+
+
+echo
+# PINCABOS_ISO_SCREEN_PRIVACY_V1
+
+echo "=== Remove source cabinet screen identity ==="
+
+rm -f \
+  "$TARGET/opt/pincabos/config/screens/screens.json" \
+  "$TARGET/opt/pincabos/config/screens/bindings.json" \
+  "$TARGET/opt/pincabos/config/screens/display-bindings.json" \
+  "$TARGET/home/pinball/.config/monitors.xml"
+
+install \
+  -d \
+  -o pinball \
+  -g pinball \
+  -m 2775 \
+  "$TARGET/opt/pincabos/config/screens"
+
+python3 - "$TARGET" <<'PINCABOS_SCREEN_PRIVACY_PY'
+from pathlib import Path
+import re
+import sys
+
+target = Path(sys.argv[1])
+
+vpx_hardware_keys = {
+    "playfielddisplay",
+    "playfieldx",
+    "playfieldy",
+    "playfieldwidth",
+    "playfieldheight",
+    "playfieldfswidth",
+    "playfieldfsheight",
+    "playfieldfsrefreshrate",
+    "backglassdisplay",
+    "backglassx",
+    "backglassy",
+    "backglasswidth",
+    "backglassheight",
+    "backglassfswidth",
+    "backglassfsheight",
+    "backglassfsrefreshrate",
+    "scoreviewdisplay",
+    "scoreviewx",
+    "scoreviewy",
+    "scoreviewwidth",
+    "scoreviewheight",
+    "scoreviewfswidth",
+    "scoreviewfsheight",
+    "scoreviewfsrefreshrate",
+    "topperdisplay",
+    "topperx",
+    "toppery",
+    "topperwidth",
+    "topperheight",
+    "topperfswidth",
+    "topperfsheight",
+    "previewdisplay",
+    "previewx",
+    "previewy",
+    "previewwidth",
+    "previewheight",
+    "previewfswidth",
+    "previewfsheight",
+}
+
+vpinfe_hardware_keys = {
+    "tablescreenid",
+    "bgscreenid",
+    "dmdscreenid",
+    "fulldmdscreenid",
+    "tableorientation",
+    "tablerotation",
+    "cabmode",
+}
+
+
+def sanitize_ini(
+    path,
+    forbidden_keys,
+    removed_sections,
+):
+    if not path.is_file():
+        return False
+
+    original = path.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    output = []
+    skip_section = False
+
+    for line in original.splitlines(
+        keepends=True
+    ):
+        section_match = re.match(
+            r"^\s*\[([^\]]+)\]\s*$",
+            line,
+        )
+
+        if section_match:
+            section_name = (
+                section_match.group(1)
+                .strip()
+                .lower()
+            )
+
+            skip_section = (
+                section_name
+                in removed_sections
+            )
+
+            if skip_section:
+                continue
+
+        if skip_section:
+            continue
+
+        key_match = re.match(
+            r"^\s*([^;#][^=]*?)\s*=",
+            line,
+        )
+
+        if key_match:
+            key = (
+                key_match.group(1)
+                .strip()
+                .lower()
+            )
+
+            if key in forbidden_keys:
+                continue
+
+        output.append(line)
+
+    sanitized = "".join(output)
+
+    if sanitized == original:
+        return False
+
+    path.write_text(
+        sanitized,
+        encoding="utf-8",
+    )
+
+    return True
+
+
+vpx_updated = 0
+
+vpx_roots = [
+    target / "home/pinball/.local/share/VPinballX",
+    target / "home/pinball/.vpinball",
+]
+
+for root in vpx_roots:
+    if not root.exists():
+        continue
+
+    for ini in root.rglob("VPinballX.ini"):
+        if sanitize_ini(
+            ini,
+            vpx_hardware_keys,
+            {"pincabos.screens"},
+        ):
+            vpx_updated += 1
+
+vpinfe = (
+    target
+    / "home/pinball/.config/vpinfe/vpinfe.ini"
+)
+
+vpinfe_updated = sanitize_ini(
+    vpinfe,
+    vpinfe_hardware_keys,
+    {"pincabos.screens"},
+)
+
+print(
+    "GO [√] VPX display identities removed:",
+    vpx_updated,
+)
+
+print(
+    "GO [√] VPinFE display identity removed:",
+    int(vpinfe_updated),
+)
+PINCABOS_SCREEN_PRIVACY_PY
+
+chown -R \
+  pinball:pinball \
+  "$TARGET/opt/pincabos/config/screens"
+
+echo "GO [√] Target screen identity neutralized"
+
+echo "=== PinCabOS installed target screen topology systemd cycle fix ==="
+echo "PINCABOS_TARGET_SCREEN_TOPOLOGY_BOOT_SYSTEMD_CYCLE_FIX_V1"
+
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/graphical.target.wants"
+
+# The restored payload may contain an older unit with:
+#   After=display-manager.service graphical.target
+# That creates a systemd ordering cycle because the same unit is WantedBy=graphical.target.
+# Always rewrite the target unit here so VPinFE can safely wait for topology preflight.
+
+SCREEN_TOPOLOGY_PREFLIGHT="/usr/local/libexec/pincabos/pincabos-screen-topology-preflight.sh"
+SCREEN_TOPOLOGY_PREFLIGHT_TARGET="$TARGET${SCREEN_TOPOLOGY_PREFLIGHT}"
+
+if [ -f "$SCREEN_TOPOLOGY_PREFLIGHT_TARGET" ] && \
+   [ -f "$TARGET/opt/pincabos/scripts/pincabos-screen-topology.py" ]; then
+  chmod 755 "$SCREEN_TOPOLOGY_PREFLIGHT_TARGET" || true
+  chmod 755 "$TARGET/opt/pincabos/scripts/pincabos-screen-topology.py" || true
+  SCREEN_TOPOLOGY_EXEC="$SCREEN_TOPOLOGY_PREFLIGHT"
+else
+  echo "NOTICE: topology engine incomplete in target; using harmless no-op service."
+  SCREEN_TOPOLOGY_EXEC="/usr/bin/true"
+fi
+
+cat > "$TARGET/etc/systemd/system/pincabos-screen-topology-boot.service" <<SCREEN_TOPOLOGY_BOOT_SERVICE
+[Unit]
+Description=PinCabOS automatic X11 topology before VPinFE
+After=pincabos-firstboot-hardware-autoconfig.service display-manager.service
+Wants=display-manager.service
+Before=pincabos-vpinfe.service
+[Service]
+Type=oneshot
+ExecStart=$SCREEN_TOPOLOGY_EXEC
+RemainAfterExit=yes
+TimeoutStartSec=110
+
+[Install]
+WantedBy=graphical.target
+SCREEN_TOPOLOGY_BOOT_SERVICE
+
+ln -sfn ../pincabos-screen-topology-boot.service \
+  "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-screen-topology-boot.service" || true
+
+if grep -qE '^After=.*graphical\.target' "$TARGET/etc/systemd/system/pincabos-screen-topology-boot.service"; then
+  echo "ERROR: screen topology service still has After=...graphical.target"
+  exit 1
+fi
+
+
+
+echo
+echo "==============================================================="
+echo " PinCabOS target VPinFE universal display sanitation"
+echo " PINCABOS_TARGET_VPINFE_SINGLE_SCREEN_STABILITY_V1"
+echo "==============================================================="
+
+mkdir -p \
+  "$TARGET/usr/local/libexec/pincabos" \
+  "$TARGET/etc/systemd/system/timers.target.wants" \
+  "$TARGET/etc/systemd/system/paths.target.wants"
+
+echo
+echo "=== Purge inherited VPinFE display identity ==="
+
+python3 - \
+  "$TARGET/home/pinball/.config/vpinfe/vpinfe.ini" \
+  <<'PINCABOS_VPINFE_INI_PURGE'
+from pathlib import Path
+import os
+import re
+import sys
+import tempfile
+
+path = Path(sys.argv[1])
+
+updates = {
+    "tablescreenid": "0",
+    "bgscreenid": "",
+    "dmdscreenid": "",
+    "fulldmdscreenid": "",
+    "tablewindowoverride": "",
+    "bgwindowoverride": "",
+    "dmdwindowoverride": "",
+}
+
+original = (
+    path.read_text(encoding="utf-8", errors="replace")
+    if path.exists()
+    else ""
+)
+
+lines = original.splitlines()
+output = []
+section = ""
+found_displays = False
+written = set()
+
+
+def append_missing():
+    for key, value in updates.items():
+        if key not in written:
+            output.append(f"{key} = {value}")
+            written.add(key)
+
+
+for line in lines:
+    match = re.match(r"^\s*\[([^\]]+)\]\s*$", line)
+
+    if match:
+        if section == "displays":
+            append_missing()
+
+        section = match.group(1).strip().lower()
+
+        if section == "displays":
+            found_displays = True
+
+        output.append(line)
+        continue
+
+    if section == "displays" and "=" in line:
+        key = line.split("=", 1)[0].strip().lower()
+
+        if key in updates:
+            if key not in written:
+                output.append(f"{key} = {updates[key]}")
+                written.add(key)
+            continue
+
+    output.append(line)
+
+
+if found_displays:
+    if section == "displays":
+        append_missing()
+else:
+    if output and output[-1].strip():
+        output.append("")
+
+    output.append("[Displays]")
+    append_missing()
+
+
+content = "\n".join(output).rstrip() + "\n"
+
+path.parent.mkdir(parents=True, exist_ok=True)
+
+fd, temporary = tempfile.mkstemp(
+    prefix=f".{path.name}.",
+    dir=str(path.parent),
+)
+
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+    if path.exists():
+        stat = path.stat()
+        os.chmod(temporary, stat.st_mode & 0o777)
+        os.chown(temporary, stat.st_uid, stat.st_gid)
+    else:
+        os.chmod(temporary, 0o644)
+
+    os.replace(temporary, path)
+finally:
+    try:
+        os.unlink(temporary)
+    except FileNotFoundError:
+        pass
+
+print("OK: identité écrans VPinFE source supprimée.")
+PINCABOS_VPINFE_INI_PURGE
+
+chown "$PINBALL_UID:$PINBALL_GID" \
+  "$TARGET/home/pinball/.config/vpinfe/vpinfe.ini" \
+  2>/dev/null || true
+
+echo
+echo "=== Install runtime VPinFE display sanitizer ==="
+
+cat > "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize" <<'VPINFE_DISPLAY_SANITIZER'
+#!/usr/bin/env bash
+set -u
+
+INI="/home/pinball/.config/vpinfe/vpinfe.ini"
+SCREENS="/opt/pincabos/config/screens/screens.json"
+# PINCABOS_VPINFE_SANITIZER_TMP_FALLBACK_V2
+TMP_ROOT="${TMPDIR:-/tmp}"
+
+if [ ! -d "$TMP_ROOT" ] || [ ! -w "$TMP_ROOT" ]; then
+  TMP_ROOT="/tmp"
+fi
+
+XRANDR_TMP="$(
+  mktemp "$TMP_ROOT/pincabos-vpinfe-xrandr.XXXXXX"
+)" || exit 0
+
+trap 'rm -f "$XRANDR_TMP"' EXIT
+
+[ -f "$INI" ] || exit 0
+[ -f "$SCREENS" ] || exit 0
+
+/usr/sbin/runuser -u pinball -- \
+  /usr/bin/env \
+    DISPLAY=:0 \
+    XAUTHORITY=/home/pinball/.Xauthority \
+    /usr/bin/xrandr --query \
+    >"$XRANDR_TMP" 2>/dev/null || exit 0
+
+python3 - "$INI" "$SCREENS" "$XRANDR_TMP" <<'VPINFE_DISPLAY_PY'
+from pathlib import Path
+import json
+import os
+import pwd
+import re
+import sys
+import tempfile
+
+ini = Path(sys.argv[1])
+screens_file = Path(sys.argv[2])
+xrandr_file = Path(sys.argv[3])
+
+connected = []
+
+for line in xrandr_file.read_text(
+    encoding="utf-8",
+    errors="replace",
+).splitlines():
+    match = re.match(
+        r"^(\S+)\s+connected(?:\s+primary)?\s+"
+        r"\d+x\d+\+-?\d+\+-?\d+",
+        line,
+    )
+
+    if match:
+        connected.append(match.group(1))
+
+
+if not connected:
+    print("VPinFE sanitizer: aucun écran actif.")
+    raise SystemExit(0)
+
+
+try:
+    screens = json.loads(
+        screens_file.read_text(encoding="utf-8")
+    )
+except Exception as error:
+    print(f"VPinFE sanitizer: screens.json invalide: {error}")
+    raise SystemExit(0)
+
+
+def valid_role(role, already_used):
+    item = screens.get(role)
+
+    if not isinstance(item, dict):
+        return "", ""
+
+    name = str(item.get("name") or "").strip()
+
+    if (
+        not name
+        or name not in connected
+        or name in already_used
+    ):
+        return "", ""
+
+    try:
+        screen_id = int(item.get("id"))
+    except (TypeError, ValueError):
+        return "", ""
+
+    if screen_id < 0 or screen_id >= len(connected):
+        return "", ""
+
+    already_used.add(name)
+    return str(screen_id), name
+
+
+used = set()
+
+table_id, table_name = valid_role("playfield", used)
+
+if table_id == "":
+    table_id = "0"
+    table_name = connected[0]
+    used.add(table_name)
+
+bg_id, bg_name = valid_role("backglass", used)
+dmd_id, dmd_name = valid_role("fulldmd", used)
+
+updates = {
+    "tablescreenid": table_id,
+    "bgscreenid": bg_id,
+    "dmdscreenid": dmd_id,
+    "fulldmdscreenid": dmd_id,
+}
+
+if not bg_id:
+    updates["bgwindowoverride"] = ""
+
+if not dmd_id:
+    updates["dmdwindowoverride"] = ""
+
+
+original = ini.read_text(
+    encoding="utf-8",
+    errors="replace",
+)
+
+lines = original.splitlines()
+output = []
+section = ""
+found_displays = False
+written = set()
+
+
+def append_missing():
+    for key, value in updates.items():
+        if key not in written:
+            output.append(f"{key} = {value}")
+            written.add(key)
+
+
+for line in lines:
+    match = re.match(r"^\s*\[([^\]]+)\]\s*$", line)
+
+    if match:
+        if section == "displays":
+            append_missing()
+
+        section = match.group(1).strip().lower()
+
+        if section == "displays":
+            found_displays = True
+
+        output.append(line)
+        continue
+
+    if section == "displays" and "=" in line:
+        key = line.split("=", 1)[0].strip().lower()
+
+        if key in updates:
+            if key not in written:
+                output.append(f"{key} = {updates[key]}")
+                written.add(key)
+            continue
+
+    output.append(line)
+
+
+if found_displays:
+    if section == "displays":
+        append_missing()
+else:
+    if output and output[-1].strip():
+        output.append("")
+
+    output.append("[Displays]")
+    append_missing()
+
+
+content = "\n".join(output).rstrip() + "\n"
+
+if content != original:
+    fd, temporary = tempfile.mkstemp(
+        prefix=f".{ini.name}.",
+        dir=str(ini.parent),
+    )
+
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        stat = ini.stat()
+        os.chmod(temporary, stat.st_mode & 0o777)
+        os.chown(temporary, stat.st_uid, stat.st_gid)
+        os.replace(temporary, ini)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+try:
+    pinball = pwd.getpwnam("pinball")
+    os.chown(ini, pinball.pw_uid, pinball.pw_gid)
+except (KeyError, PermissionError):
+    pass
+
+
+print(
+    "VPinFE displays sanitized: "
+    f"PF={table_name}:{table_id} "
+    f"BG={bg_name or 'none'}:{bg_id or 'blank'} "
+    f"DMD={dmd_name or 'none'}:{dmd_id or 'blank'}"
+)
+VPINFE_DISPLAY_PY
+
+exit 0
+VPINFE_DISPLAY_SANITIZER
+
+chmod 755 \
+  "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize"
+
+echo
+echo "==============================================================="
+echo " PinCabOS target VPinFE Chrome profile stability"
+echo " PINCABOS_TARGET_VPINFE_CHROME_PROFILE_GUARD_V2"
+echo "==============================================================="
+
+mkdir -p \
+  "$TARGET/usr/local/libexec/pincabos" \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d" \
+  "$TARGET/var/tmp"
+
+install -d \
+  -o "$PINBALL_UID" \
+  -g "$PINBALL_GID" \
+  -m 0700 \
+  "$TARGET/var/tmp/pincabos-vpinfe"
+
+cat > "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard" <<'VPINFE_PROFILE_GUARD'
+#!/usr/bin/env bash
+set -u
+
+TMP_ROOT="/var/tmp/pincabos-vpinfe"
+PINBALL_UID="$(id -u pinball)"
+
+echo "=== PinCabOS VPinFE Chrome prestart guard ==="
+
+install -d \
+  -o pinball \
+  -g pinball \
+  -m 0700 \
+  "$TMP_ROOT"
+
+find_vpinfe_chrome_pids() {
+  local proc pid owner comm cmdline
+
+  for proc in /proc/[0-9]*; do
+    [ -d "$proc" ] || continue
+
+    pid="${proc##*/}"
+    owner="$(stat -c %u "$proc" 2>/dev/null || true)"
+
+    [ "$owner" = "$PINBALL_UID" ] || continue
+    [ -r "$proc/comm" ] || continue
+    [ -r "$proc/cmdline" ] || continue
+
+    comm="$(cat "$proc/comm" 2>/dev/null || true)"
+    cmdline="$(tr '\0' ' ' < "$proc/cmdline" 2>/dev/null || true)"
+
+    case "$comm" in
+      chrome|google-chrome|chromium|chromium-browser)
+        ;;
+      *)
+        continue
+        ;;
+    esac
+
+    case "$cmdline" in
+      *"--user-data-dir=/tmp/vpinfe_chromium_"*|\
+      *"--user-data-dir=/var/tmp/pincabos-vpinfe/vpinfe_chromium_"*)
+        printf '%s\n' "$pid"
+        ;;
+    esac
+  done
+}
+
+mapfile -t stale_pids < <(find_vpinfe_chrome_pids)
+
+if [ "${#stale_pids[@]}" -gt 0 ]; then
+  echo "Stopping stale VPinFE Chrome processes: ${stale_pids[*]}"
+  kill -TERM "${stale_pids[@]}" 2>/dev/null || true
+
+  for attempt in $(seq 1 8); do
+    remaining=()
+
+    for pid in "${stale_pids[@]}"; do
+      [ -d "/proc/$pid" ] && remaining+=("$pid")
+    done
+
+    [ "${#remaining[@]}" -eq 0 ] && break
+    sleep 1
+  done
+
+  remaining=()
+
+  for pid in "${stale_pids[@]}"; do
+    [ -d "/proc/$pid" ] && remaining+=("$pid")
+  done
+
+  if [ "${#remaining[@]}" -gt 0 ]; then
+    echo "Forcing stale VPinFE Chrome processes: ${remaining[*]}"
+    kill -KILL "${remaining[@]}" 2>/dev/null || true
+    sleep 1
+  fi
+fi
+
+echo "Removing stale VPinFE temporary profiles"
+
+find /tmp \
+  -mindepth 1 \
+  -maxdepth 1 \
+  -type d \
+  -name 'vpinfe_chromium_*' \
+  -print \
+  -exec rm -rf -- {} + \
+  2>/dev/null || true
+
+find "$TMP_ROOT" \
+  -mindepth 1 \
+  -maxdepth 1 \
+  -type d \
+  -name 'vpinfe_chromium_*' \
+  -print \
+  -exec rm -rf -- {} + \
+  2>/dev/null || true
+
+CHROME_RUNNING=0
+
+for proc in /proc/[0-9]*; do
+  [ -r "$proc/comm" ] || continue
+
+  [ "$(stat -c %u "$proc" 2>/dev/null || true)" = "$PINBALL_UID" ] \
+    || continue
+
+  comm="$(cat "$proc/comm" 2>/dev/null || true)"
+
+  case "$comm" in
+    chrome|google-chrome|chromium|chromium-browser)
+      CHROME_RUNNING=1
+      break
+      ;;
+  esac
+done
+
+if [ "$CHROME_RUNNING" -eq 0 ] && \
+   [ -d /home/pinball/.config/google-chrome ]; then
+
+  echo "Removing stale Singleton locks from inactive Chrome profile"
+
+  find /home/pinball/.config/google-chrome \
+    -maxdepth 2 \
+    \( \
+      -name SingletonLock -o \
+      -name SingletonCookie -o \
+      -name SingletonSocket \
+    \) \
+    -print \
+    -delete \
+    2>/dev/null || true
+fi
+
+install -d \
+  -o pinball \
+  -g pinball \
+  -m 0700 \
+  "$TMP_ROOT"
+
+echo "VPinFE Chrome prestart guard completed"
+exit 0
+VPINFE_PROFILE_GUARD
+
+chmod 755 \
+  "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard"
+
+chown root:root \
+  "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard"
+
+cat > "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf" <<'VPINFE_GUARD_DROPIN'
+[Service]
+# PINCABOS_VPINFE_CHROME_PROFILE_GUARD_V2
+ExecStartPre=/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard
+VPINFE_GUARD_DROPIN
+
+chmod 644 \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf"
+
+chown root:root \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf"
+
+test -d "$TARGET/var/tmp/pincabos-vpinfe"
+test -x "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard"
+
+grep -q \
+  'PINCABOS_VPINFE_CHROME_PROFILE_GUARD_V2' \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf"
+
+grep -q \
+  'PINCABOS_VPINFE_SANITIZER_TMP_FALLBACK_V2' \
+  "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize"
+
+echo "GO: VPinFE Chrome guard, TMPDIR and sanitizer fallback installed"
+
+echo
+echo "=== Fix Dashboard screens/apply helper ==="
+
+python3 - \
+  "$TARGET/usr/local/sbin/pincabos-dashboard-admin" \
+  <<'PINCABOS_DASHBOARD_HELPER_PATCH'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+
+if not path.exists():
+    raise SystemExit(f"ERROR: helper absent: {path}")
+
+text = path.read_text(encoding="utf-8")
+
+old = """    screens:apply)
+      log 'screen topology one-shot apply'
+      exec systemctl start pincabos-screen-topology.service
+      ;;
+"""
+
+new = """    screens:apply)
+      log 'screen topology unified apply'
+      systemctl restart pincabos-screen-topology-boot.service
+      systemctl restart pincabos-vpinfe.service
+      echo 'Topologie appliquée et VPinFE redémarré.'
+      ;;
+"""
+
+if new in text:
+    print("NOTICE: Dashboard helper déjà corrigé.")
+elif text.count(old) == 1:
+    path.write_text(
+        text.replace(old, new, 1),
+        encoding="utf-8",
+    )
+    print("OK: Dashboard utilise la topologie unifiée.")
+else:
+    raise SystemExit(
+        "ERROR: bloc screens/apply absent ou non unique."
+    )
+PINCABOS_DASHBOARD_HELPER_PATCH
+
+chmod 750 \
+  "$TARGET/usr/local/sbin/pincabos-dashboard-admin"
+
+chown root:root \
+  "$TARGET/usr/local/sbin/pincabos-dashboard-admin"
+
+echo
+echo "=== Mask obsolete topology timer and path ==="
+
+for legacy_unit in \
+  pincabos-screen-topology.timer \
+  pincabos-screen-topology.path
+do
+  rm -f \
+    "$TARGET/etc/systemd/system/timers.target.wants/$legacy_unit" \
+    "$TARGET/etc/systemd/system/paths.target.wants/$legacy_unit" \
+    "$TARGET/etc/systemd/system/multi-user.target.wants/$legacy_unit" \
+    "$TARGET/etc/systemd/system/graphical.target.wants/$legacy_unit" \
+    2>/dev/null || true
+
+  ln -sfn /dev/null \
+    "$TARGET/etc/systemd/system/$legacy_unit"
+done
+
+cat > "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/90-pincabos-iso-start.conf" <<'VPINFE_OVERRIDE'
+[Unit]
+After=pincabos-firstboot-hardware-autoconfig.service display-manager.service network-online.target pincabos-screen-topology-boot.service
+Requires=pincabos-screen-topology-boot.service
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+ExecStartPre=/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize
+Restart=always
+RestartSec=6
+TimeoutStartSec=90
+TimeoutStopSec=25
+VPINFE_OVERRIDE
+
+echo
+echo "==============================================================="
+echo " PinCabOS installed target graphical systemd cycle sanitation"
+echo " PINCABOS_TARGET_SYSTEMD_GRAPHICAL_CYCLE_SANITIZE_V1"
+echo " PINCABOS_TARGET_SYSTEMD_GRAPHICAL_CYCLE_SANITIZE_V2"
+echo "==============================================================="
+
+mkdir -p \
+  "$TARGET/etc/systemd/system" \
+  "$TARGET/etc/systemd/system/graphical.target.wants" \
+  "$TARGET/etc/systemd/system/multi-user.target.wants" \
+  "$TARGET/etc/systemd/system/default.target.wants" \
+  "$TARGET/etc/systemd/system/timers.target.wants" \
+  "$TARGET/etc/systemd/system/paths.target.wants"
+
+echo
+echo "=== Mask all obsolete display and topology units ==="
+
+for legacy_unit in \
+  pincabos-display-roles.service \
+  pincabos-display-role-app-sync.service \
+  pincabos-display-role-finalizer.service \
+  pincabos-display-role-normalizer.service \
+  pincabos-screen-topology.service \
+  pincabos-display-roles.path \
+  pincabos-display-roles.timer \
+  pincabos-display-role-app-sync.path \
+  pincabos-display-role-app-sync.timer \
+  pincabos-display-role-finalizer.path \
+  pincabos-display-role-finalizer.timer \
+  pincabos-display-role-normalizer.path \
+  pincabos-display-role-normalizer.timer \
+  pincabos-screen-topology.path \
+  pincabos-screen-topology.timer
+do
+  find "$TARGET/etc/systemd/system" \
+    -mindepth 2 \
+    -maxdepth 3 \
+    -type l \
+    -name "$legacy_unit" \
+    -delete 2>/dev/null || true
+
+  rm -rf \
+    "$TARGET/etc/systemd/system/$legacy_unit.d" \
+    2>/dev/null || true
+
+  rm -f \
+    "$TARGET/etc/systemd/system/$legacy_unit" \
+    2>/dev/null || true
+
+  ln -s /dev/null \
+    "$TARGET/etc/systemd/system/$legacy_unit"
+
+  echo "Masked obsolete unit: $legacy_unit"
+done
+
+pincabos_target_find_unit() {
+  local unit="$1"
+
+  if [ -f "$TARGET/etc/systemd/system/$unit" ]; then
+    printf '%s\n' "$TARGET/etc/systemd/system/$unit"
+    return 0
+  fi
+
+  if [ -f "$TARGET/lib/systemd/system/$unit" ]; then
+    printf '%s\n' "$TARGET/lib/systemd/system/$unit"
+    return 0
+  fi
+
+  if [ -f "$TARGET/usr/lib/systemd/system/$unit" ]; then
+    printf '%s\n' "$TARGET/usr/lib/systemd/system/$unit"
+    return 0
+  fi
+
+  return 1
+}
+
+pincabos_target_prepare_canonical_unit() {
+  local unit="$1"
+  local source_unit
+  local canonical_unit
+
+  source_unit="$(
+    pincabos_target_find_unit "$unit"
+  )" || {
+    echo "NOTICE: target unit missing: $unit"
+    return 1
+  }
+
+  canonical_unit="$TARGET/etc/systemd/system/$unit"
+
+  if [ "$source_unit" != "$canonical_unit" ]; then
+    cp -a "$source_unit" "$canonical_unit"
+  fi
+
+  chmod 644 "$canonical_unit"
+  chown root:root "$canonical_unit" 2>/dev/null || true
+
+  echo "Canonical target unit prepared: $unit"
+}
+
+MANAGED_GRAPHICAL_UNITS=(
+  pincabos-dashboard-live.service
+  pincabos-scoreview-router.service
+  pincabos-fulldmd-no-title.service
+  pincabos-backglass-bridge.service
+  pincabos-switch-graphical-vt.service
+)
+
+echo
+echo "=== Prepare canonical managed units ==="
+
+for managed_unit in "${MANAGED_GRAPHICAL_UNITS[@]}"; do
+  pincabos_target_prepare_canonical_unit \
+    "$managed_unit" || true
+done
+
+echo
+echo "=== Rewrite real systemd unit dependencies ==="
+
+python3 - "$TARGET" <<'PINCABOS_REWRITE_SYSTEMD_UNITS'
+from pathlib import Path
+import re
+import sys
+
+target = Path(sys.argv[1])
+systemd_root = target / "etc/systemd/system"
+
+legacy_dependencies = {
+    "graphical.target",
+    "pincabos-display-roles.service",
+    "pincabos-display-role-app-sync.service",
+    "pincabos-display-role-finalizer.service",
+    "pincabos-display-role-normalizer.service",
+    "pincabos-screen-topology.service",
+    "pincabos-screen-topology.timer",
+    "pincabos-screen-topology.path",
+}
+
+definitions = {
+    "pincabos-dashboard-live.service": {
+        "after": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+        "wants": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+    },
+    "pincabos-scoreview-router.service": {
+        "after": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+        "wants": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+    },
+    "pincabos-fulldmd-no-title.service": {
+        "after": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+            "pincabos-scoreview-router.service",
+        ],
+        "wants": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+            "pincabos-scoreview-router.service",
+        ],
+    },
+    "pincabos-backglass-bridge.service": {
+        "after": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+        "wants": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+    },
+    "pincabos-switch-graphical-vt.service": {
+        "after": [
+            "display-manager.service",
+            "pincabos-final-graphical-guard.service",
+        ],
+        "wants": [
+            "display-manager.service",
+        ],
+    },
+}
+
+
+def unique(values):
+    result = []
+
+    for value in values:
+        if value and value not in result:
+            result.append(value)
+
+    return result
+
+
+def filter_tokens(tokens):
+    return [
+        token
+        for token in tokens
+        if token not in legacy_dependencies
+    ]
+
+
+def rewrite_unit(path, desired_after, desired_wants):
+    original = path.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    lines = original.splitlines()
+    output = []
+
+    section = ""
+    unit_dependencies_written = False
+    install_target_written = False
+
+    existing_after = []
+    existing_wants = []
+
+    def write_unit_dependencies():
+        nonlocal unit_dependencies_written
+
+        if unit_dependencies_written:
+            return
+
+        final_after = unique(
+            filter_tokens(existing_after)
+            + desired_after
+        )
+
+        final_wants = unique(
+            filter_tokens(existing_wants)
+            + desired_wants
+        )
+
+        if final_after:
+            output.append(
+                "After=" + " ".join(final_after)
+            )
+
+        if final_wants:
+            output.append(
+                "Wants=" + " ".join(final_wants)
+            )
+
+        unit_dependencies_written = True
+
+    for line in lines:
+        stripped = line.strip()
+
+        section_match = re.match(
+            r"^\[([^\]]+)\]$",
+            stripped,
+        )
+
+        if section_match:
+            if section == "Unit":
+                write_unit_dependencies()
+
+            if (
+                section == "Install"
+                and not install_target_written
+            ):
+                output.append(
+                    "WantedBy=graphical.target"
+                )
+                install_target_written = True
+
+            section = section_match.group(1)
+            output.append(line)
+            continue
+
+        if section == "Unit":
+            dependency_match = re.match(
+                r"^(After|Wants|Requires|Before)"
+                r"\s*=\s*(.*)$",
+                stripped,
+                re.IGNORECASE,
+            )
+
+            if dependency_match:
+                key = dependency_match.group(1)
+                key_lower = key.lower()
+
+                tokens = filter_tokens(
+                    dependency_match.group(2).split()
+                )
+
+                if key_lower == "after":
+                    existing_after.extend(tokens)
+                    continue
+
+                if key_lower == "wants":
+                    existing_wants.extend(tokens)
+                    continue
+
+                if tokens:
+                    output.append(
+                        key + "=" + " ".join(tokens)
+                    )
+
+                continue
+
+        if section == "Install":
+            if re.match(
+                r"^WantedBy\s*=",
+                stripped,
+                re.IGNORECASE,
+            ):
+                continue
+
+        output.append(line)
+
+    if section == "Unit":
+        write_unit_dependencies()
+
+    if section == "Install" and not install_target_written:
+        output.append("WantedBy=graphical.target")
+        install_target_written = True
+
+    if not any(
+        line.strip() == "[Install]"
+        for line in output
+    ):
+        output.extend([
+            "",
+            "[Install]",
+            "WantedBy=graphical.target",
+        ])
+
+    content = "\n".join(output).rstrip() + "\n"
+
+    path.write_text(
+        content,
+        encoding="utf-8",
+    )
+
+
+def clean_dropin(path):
+    original = path.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    output = []
+
+    for line in original.splitlines():
+        stripped = line.strip()
+
+        dependency_match = re.match(
+            r"^(After|Wants|Requires|Before)"
+            r"\s*=\s*(.*)$",
+            stripped,
+            re.IGNORECASE,
+        )
+
+        if dependency_match:
+            tokens = filter_tokens(
+                dependency_match.group(2).split()
+            )
+
+            if tokens:
+                output.append(
+                    dependency_match.group(1)
+                    + "="
+                    + " ".join(tokens)
+                )
+
+            continue
+
+        wanted_by_match = re.match(
+            r"^WantedBy\s*=\s*(.*)$",
+            stripped,
+            re.IGNORECASE,
+        )
+
+        if wanted_by_match:
+            tokens = [
+                token
+                for token in wanted_by_match.group(1).split()
+                if token != "multi-user.target"
+            ]
+
+            if tokens:
+                output.append(
+                    "WantedBy=" + " ".join(tokens)
+                )
+
+            continue
+
+        output.append(line)
+
+    path.write_text(
+        "\n".join(output).rstrip() + "\n",
+        encoding="utf-8",
+    )
+
+
+for unit, definition in definitions.items():
+    unit_path = systemd_root / unit
+
+    if not unit_path.is_file():
+        print(f"NOTICE: unit not present: {unit}")
+        continue
+
+    rewrite_unit(
+        unit_path,
+        definition["after"],
+        definition["wants"],
+    )
+
+    dropin_dir = systemd_root / f"{unit}.d"
+
+    if dropin_dir.is_dir():
+        for dropin in sorted(
+            dropin_dir.glob("*.conf")
+        ):
+            clean_dropin(dropin)
+
+    print(f"Rewritten target unit: {unit}")
+PINCABOS_REWRITE_SYSTEMD_UNITS
+
+echo
+echo "=== Remove obsolete ordering drop-ins ==="
+
+rm -f \
+  "$TARGET/etc/systemd/system/pincabos-dashboard-live.service.d/70-after-graphical-x11.conf" \
+  "$TARGET/etc/systemd/system/pincabos-dashboard-live.service.d/90-display-roles.conf" \
+  "$TARGET/etc/systemd/system/pincabos-dashboard-live.service.d/95-pincabos-iso-ordering.conf" \
+  "$TARGET/etc/systemd/system/pincabos-scoreview-router.service.d/95-pincabos-iso-ordering.conf" \
+  "$TARGET/etc/systemd/system/pincabos-fulldmd-no-title.service.d/95-pincabos-iso-ordering.conf" \
+  "$TARGET/etc/systemd/system/pincabos-switch-graphical-vt.service.d/95-pincabos-iso-ordering.conf" \
+  "$TARGET/etc/systemd/system/pincabos-backglass-bridge.service.d/95-pincabos-iso-ordering.conf" \
+  2>/dev/null || true
+
+echo
+echo "=== Enable managed units only in graphical.target ==="
+
+for managed_unit in "${MANAGED_GRAPHICAL_UNITS[@]}"; do
+  if [ ! -f "$TARGET/etc/systemd/system/$managed_unit" ]; then
+    echo "NOTICE: canonical unit missing: $managed_unit"
+    continue
+  fi
+
+  find "$TARGET/etc/systemd/system" \
+    -mindepth 2 \
+    -maxdepth 3 \
+    -type l \
+    -name "$managed_unit" \
+    -delete 2>/dev/null || true
+
+  ln -sfn \
+    "../$managed_unit" \
+    "$TARGET/etc/systemd/system/graphical.target.wants/$managed_unit"
+
+  echo "Enabled only in graphical.target: $managed_unit"
+done
+
+echo
+echo "=== Validate topology unit ordering ==="
+
+TOPOLOGY_UNIT="$TARGET/etc/systemd/system/pincabos-screen-topology-boot.service"
+
+if [ ! -f "$TOPOLOGY_UNIT" ]; then
+  echo "ERROR: missing topology boot unit"
+  exit 1
+fi
+
+if grep -Eq \
+  '^After=.*(^|[[:space:]])graphical\.target([[:space:]]|$)' \
+  "$TOPOLOGY_UNIT"
+then
+  echo "ERROR: topology boot unit still contains After=graphical.target"
+  exit 1
+fi
+
+rm -f \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/55-pincabos-screen-topology.conf" \
+  2>/dev/null || true
+
+echo
+echo "=== Validate rewritten unit files ==="
+
+for managed_unit in "${MANAGED_GRAPHICAL_UNITS[@]}"; do
+  managed_path="$TARGET/etc/systemd/system/$managed_unit"
+
+  [ -f "$managed_path" ] || continue
+
+  if grep -Eq \
+    '^After=.*(^|[[:space:]])graphical\.target([[:space:]]|$)' \
+    "$managed_path"
+  then
+    echo "ERROR: $managed_unit still contains After=graphical.target"
+    exit 1
+  fi
+
+  if grep -Eq \
+    '^(After|Wants|Requires|Before)=.*pincabos-(display-roles|display-role-|screen-topology\.service)' \
+    "$managed_path"
+  then
+    echo "ERROR: $managed_unit still references an obsolete display engine"
+    exit 1
+  fi
+
+  if [ -L "$TARGET/etc/systemd/system/multi-user.target.wants/$managed_unit" ]; then
+    echo "ERROR: $managed_unit remains enabled in multi-user.target"
+    exit 1
+  fi
+
+  if [ ! -L "$TARGET/etc/systemd/system/graphical.target.wants/$managed_unit" ]; then
+    echo "ERROR: $managed_unit is not enabled in graphical.target"
+    exit 1
+  fi
+
+  echo "OK: clean graphical ordering: $managed_unit"
+done
+
+echo
+echo "=== Validate target systemd ordering graph ==="
+
+SYSTEMD_VERIFY_LOG="$(
+  mktemp /tmp/pincabos-target-systemd-verify.XXXXXX
+)"
+
+systemd-analyze --root="$TARGET" verify \
+  pincabos-screen-topology-boot.service \
+  pincabos-vpinfe.service \
+  pincabos-dashboard-live.service \
+  pincabos-scoreview-router.service \
+  pincabos-fulldmd-no-title.service \
+  pincabos-switch-graphical-vt.service \
+  pincabos-backglass-bridge.service \
+  >"$SYSTEMD_VERIFY_LOG" 2>&1 || true
+
+if grep -Eqi \
+  'ordering cycle|cyclic ordering dependency|unable to break cycle|transaction order is cyclic' \
+  "$SYSTEMD_VERIFY_LOG"
+then
+  echo "ERROR: target systemd ordering cycle remains"
+  cat "$SYSTEMD_VERIFY_LOG"
+  rm -f "$SYSTEMD_VERIFY_LOG"
+  exit 1
+fi
+
+echo "OK: no target graphical ordering cycle detected"
+
+grep -Ei \
+  'pincabos-|warning|error|failed' \
+  "$SYSTEMD_VERIFY_LOG" |
+  tail -100 || true
+
+rm -f "$SYSTEMD_VERIFY_LOG"
+
+unset -f pincabos_target_find_unit
+unset -f pincabos_target_prepare_canonical_unit
+unset MANAGED_GRAPHICAL_UNITS
+
+echo
+echo "=== Enable VPinFE service in graphical.target ==="
+if [ -f "$TARGET/etc/systemd/system/pincabos-vpinfe.service" ]; then
+  ln -sfn ../pincabos-vpinfe.service \
+    "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-vpinfe.service" || true
+elif [ -f "$TARGET/lib/systemd/system/pincabos-vpinfe.service" ]; then
+  ln -sfn /lib/systemd/system/pincabos-vpinfe.service \
+    "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-vpinfe.service" || true
+elif [ -f "$TARGET/usr/lib/systemd/system/pincabos-vpinfe.service" ]; then
+  ln -sfn /usr/lib/systemd/system/pincabos-vpinfe.service \
+    "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-vpinfe.service" || true
+else
+  echo "WARNING: pincabos-vpinfe.service not found in target"
+fi
+
+cat > "$TARGET/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix" <<'FIRSTBOOT_VPINFE'
+#!/usr/bin/env bash
+set -u
+
+LOG="/var/log/pincabos-firstboot-vpinfe-packaged-runtime-fix.log"
+FLAG="/var/lib/pincabos/firstboot-vpinfe-packaged-runtime.done"
+
+mkdir -p /var/log /var/lib/pincabos
+
+{
+  echo "==============================================================="
+  echo " PinCabOS first boot VPinFE packaged runtime fix"
+  echo " Started: $(date -Is)"
+  echo "==============================================================="
+
+  if [ -f "$FLAG" ]; then
+    echo "Already completed."
+    exit 0
+  fi
+
+  echo
+  echo "=== Runtime files ==="
+  ls -lah /home/pinball/vpinfe 2>/dev/null || true
+  ls -lah /home/pinball/vpinfe/_internal 2>/dev/null | sed -n '1,80p' || true
+  ls -lah /opt/pincabos/tools/run-vpinfe-systemd.sh 2>/dev/null || true
+
+  echo
+  echo "=== Permissions ==="
+  chown -R pinball:pinball /home/pinball/vpinfe 2>/dev/null || true
+  chown -R pinball:pinball /home/pinball/.config/vpinfe 2>/dev/null || true
+  chown -R pinball:pinball /opt/pincabos/config/vpinfe 2>/dev/null || true
+  chmod 755 /opt/pincabos/tools/run-vpinfe-systemd.sh 2>/dev/null || true
+
+  echo
+  echo "=== Enable/start VPinFE ==="
+  systemctl daemon-reload || true
+  systemctl reset-failed pincabos-vpinfe.service >/dev/null 2>&1 || true
+  systemctl enable pincabos-vpinfe.service >/dev/null 2>&1 || true
+  systemctl restart pincabos-vpinfe.service >/dev/null 2>&1 || true
+
+  echo
+  echo "=== Wait for VPinFE port 8001 ==="
+  VPINFE_OK=0
+  for i in $(seq 1 45); do
+    if ss -lnt 2>/dev/null | grep -qE ':8001\s'; then
+      VPINFE_OK=1
+      break
+    fi
+    sleep 2
+  done
+
+  echo "VPINFE_OK=$VPINFE_OK"
+  systemctl status pincabos-vpinfe.service --no-pager -l || true
+  journalctl -u pincabos-vpinfe.service -b --no-pager -n 160 || true
+  ss -lntup 2>/dev/null | grep -E '(:8001|:80|:5000|:8080)' || true
+
+  touch "$FLAG"
+  systemctl disable pincabos-firstboot-vpinfe-packaged-runtime-fix.service >/dev/null 2>&1 || true
+
+  echo
+  echo "Completed: $(date -Is)"
+} >> "$LOG" 2>&1
+
+exit 0
+FIRSTBOOT_VPINFE
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix"
+
+cat > "$TARGET/etc/systemd/system/pincabos-firstboot-vpinfe-packaged-runtime-fix.service" <<'FIRSTBOOT_VPINFE_SERVICE'
+[Unit]
+Description=PinCabOS first boot VPinFE packaged runtime fix
+After=display-manager.service network-online.target pincabos-firstboot-network-webapp-fix.service
+Wants=network-online.target
+ConditionPathExists=!/var/lib/pincabos/firstboot-vpinfe-packaged-runtime.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix
+TimeoutStartSec=3min
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target
+FIRSTBOOT_VPINFE_SERVICE
+
+# The unified hardware/topology pipeline now starts VPinFE.
+# Keep the diagnostic unit available, but do not enable a competing starter.
+rm -f "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-firstboot-vpinfe-packaged-runtime-fix.service" || true
+
+echo "=== Mask unused CUPS units in installed target ==="
+for unit in cups.service cups.socket cups.path cups-browsed.service; do
+  ln -sfn /dev/null "$TARGET/etc/systemd/system/$unit" || true
+done
+
+if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' "$TARGET/etc/default/grub"; then
+  sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' "$TARGET/etc/default/grub"
+else
+  echo 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"' >> "$TARGET/etc/default/grub"
+fi
+
+printf '[Daemon]\nTheme=pincabos\n' > "$TARGET/etc/plymouth/plymouthd.conf"
+
+if chroot "$TARGET" /bin/sh -c 'command -v plymouth-set-default-theme >/dev/null 2>&1'; then
+  chroot "$TARGET" plymouth-set-default-theme pincabos || true
+else
+  echo "NOTICE: plymouth-set-default-theme missing; using update-alternatives fallback"
+  chroot "$TARGET" update-alternatives --install \
+    /usr/share/plymouth/themes/default.plymouth \
+    default.plymouth \
+    /usr/share/plymouth/themes/pincabos/pincabos.plymouth \
+    100 || true
+
+  chroot "$TARGET" update-alternatives --set \
+    default.plymouth \
+    /usr/share/plymouth/themes/pincabos/pincabos.plymouth || true
+fi
+
+echo
+echo "=== 7) Validate target temp dirs before initramfs ==="
+test -d "$TARGET/var/tmp"
+test -d "$TARGET/tmp"
+test "$(stat -c %a "$TARGET/var/tmp")" = "1777" || chmod 1777 "$TARGET/var/tmp"
+test "$(stat -c %a "$TARGET/tmp")" = "1777" || chmod 1777 "$TARGET/tmp"
+ls -ld "$TARGET/tmp" "$TARGET/var/tmp"
+
+echo
+echo "=== 8) Install safe first-boot initramfs refresh + grub ==="
+
+# Do NOT run update-initramfs inside the live installer.
+# The payload already contains /boot/initrd.img-* from the source cabinet.
+# Running mkinitramfs inside the live chroot was the blocker on /var/tmp.
+ls "$TARGET"/boot/initrd.img-* >/dev/null
+ls "$TARGET"/boot/vmlinuz-* >/dev/null
+
+mkdir -p "$TARGET/usr/local/sbin" "$TARGET/etc/systemd/system" "$TARGET/etc/systemd/system/multi-user.target.wants" "$TARGET/var/lib/pincabos"
+
+cat > "$TARGET/usr/local/sbin/pincabos-firstboot-initramfs-refresh" <<'FIRSTBOOT_REFRESH'
+#!/usr/bin/env bash
+set -u
+
+FLAG="/var/lib/pincabos/firstboot-initramfs-refresh.done"
+LOG="/var/log/pincabos-firstboot-initramfs-refresh.log"
+
+mkdir -p /var/lib/pincabos /tmp /var/tmp /var/log /var/cache/apt/archives/partial
+chmod 1777 /tmp /var/tmp 2>/dev/null || true
+
+{
+  echo "==============================================================="
+  echo " PinCabOS first boot initramfs refresh"
+  echo " Started: $(date -Is)"
+  echo "==============================================================="
+
+  if [ -f "$FLAG" ]; then
+    echo "Already completed."
+    exit 0
+  fi
+
+  if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+    plymouth-set-default-theme pincabos || true
+  fi
+
+  if command -v update-initramfs >/dev/null 2>&1; then
+    update-initramfs -u -k all || true
+  fi
+
+  if command -v update-grub >/dev/null 2>&1; then
+    update-grub || true
+  fi
+
+  touch "$FLAG"
+  systemctl disable pincabos-firstboot-initramfs-refresh.service >/dev/null 2>&1 || true
+
+  echo "Completed: $(date -Is)"
+} >> "$LOG" 2>&1
+
+exit 0
+FIRSTBOOT_REFRESH
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-initramfs-refresh"
+
+cat > "$TARGET/etc/systemd/system/pincabos-firstboot-initramfs-refresh.service" <<'FIRSTBOOT_SERVICE'
+[Unit]
+Description=PinCabOS first boot initramfs refresh
+After=local-fs.target
+ConditionPathExists=!/var/lib/pincabos/firstboot-initramfs-refresh.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-initramfs-refresh
+TimeoutStartSec=10min
+
+[Install]
+WantedBy=multi-user.target
+FIRSTBOOT_SERVICE
+
+ln -sfn ../pincabos-firstboot-initramfs-refresh.service \
+  "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-firstboot-initramfs-refresh.service"
+
+chroot "$TARGET" update-grub || true
+
+echo
+echo "=== 9) GRUB EFI ==="
+mountpoint -q "$TARGET/boot/efi" || {
+  echo "ERROR: EFI not mounted on $TARGET/boot/efi"
+  exit 1
+}
+
+INSTALL_MODE="${PINCABOS_INSTALL_MODE:-full}"
+echo "Install mode for GRUB: $INSTALL_MODE"
+
+chroot "$TARGET" grub-install \
+  --target=x86_64-efi \
+  --efi-directory=/boot/efi \
+  --bootloader-id=PinCabOS \
+  --recheck
+
+if [ "$INSTALL_MODE" = "full" ]; then
+  chroot "$TARGET" grub-install \
+    --target=x86_64-efi \
+    --efi-directory=/boot/efi \
+    --bootloader-id=PinCabOS \
+    --removable \
+    --recheck || true
+else
+  echo "Dualboot mode: skipping removable EFI install to preserve existing EFI/BOOT."
+fi
+
+echo
+echo "OK — V8.1G target installed"
+PINCBOS_PAYLOAD_HELPER
+
+chmod +x "$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh"
+
+rm -rf "$PAYLOAD_ISO_READY"
+mkdir -p "$PAYLOAD_ISO_READY"
+
+cp -a "$ARCHIVE".part-* "$PAYLOAD_ISO_READY/"
+cp -a "$MANIFEST" "$PAYLOAD_ISO_READY/"
+cp -a "$OVERLAY" "$PAYLOAD_ISO_READY/"
+cp -a "$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh" "$PAYLOAD_ISO_READY/"
+
+(
+  cd "$PAYLOAD_ISO_READY"
+  sha256sum pincabos-rootfs-cab-v8.1g.tar.zst.part-* > pincabos-rootfs-cab-v8.1g.parts.sha256
+  sha256sum pincabos-plymouth-theme-overlay-v8.1g.tar.zst > pincabos-plymouth-theme-overlay-v8.1g.sha256
+  sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
+  sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
+)
+
+echo
+echo "ISO-ready payload:"
+ls -lh "$PAYLOAD_ISO_READY"
+du -sh "$PAYLOAD_ISO_READY"
+
+echo
+echo "=== 9) Download or validate Ubuntu base ISO ==="
+mkdir -p "$CACHE_DIR"
+
+if [ ! -f "$BASE_ISO" ]; then
+  wget -O "$BASE_ISO.part" "$BASE_ISO_URL"
+  mv "$BASE_ISO.part" "$BASE_ISO"
+else
+  echo "Base ISO already cached: $BASE_ISO"
+fi
+
+wget -O "$CACHE_DIR/SHA256SUMS" "$BASE_SHA_URL"
+
+EXPECTED="$(grep 'ubuntu-26.04-desktop-amd64.iso$' "$CACHE_DIR/SHA256SUMS" | awk '{print $1}')"
+ACTUAL="$(sha256sum "$BASE_ISO" | awk '{print $1}')"
+
+echo "Expected: $EXPECTED"
+echo "Actual:   $ACTUAL"
+
+[ -n "$EXPECTED" ] || die "Cannot find base ISO checksum"
+[ "$EXPECTED" = "$ACTUAL" ] || die "Base ISO checksum mismatch"
+
+echo "OK: base ISO checksum valid"
+
+echo
+echo "=== 10) Extract base ISO ==="
+rm -rf "$ISO_DIR" "$ROOTFS_DIR"
+mkdir -p "$ISO_DIR" "$ROOTFS_DIR"
+
+xorriso -osirrox on -indev "$BASE_ISO" -extract / "$ISO_DIR"
+chmod -R u+w "$ISO_DIR"
+
+echo
+echo "=== 10.1) PinCabOS LEAN LIVE BASE V1 ==="
+echo "PINCABOS_LEAN_LIVE_BASE_V1"
+echo "Removing Ubuntu package repository unused by PinCabOS installer."
+
+for unused in \
+  "$ISO_DIR/pool" \
+  "$ISO_DIR/dists"
+do
+  if [ -e "$unused" ] || [ -L "$unused" ]; then
+    echo
+    echo "Removing unused ISO tree:"
+    du -sh "$unused" 2>/dev/null || true
+    rm -rf "$unused"
+    echo "GO [√] Removed: $unused"
+  else
+    echo "NOTICE: already absent: $unused"
+  fi
+done
+
+echo
+echo "--- Required boot/live trees remain ---"
+
+for required in \
+  "$ISO_DIR/casper" \
+  "$ISO_DIR/boot"
+do
+  if [ ! -e "$required" ]; then
+    die "LEAN LIVE BASE removed/missing required path: $required"
+  fi
+
+  echo "GO [√] Required: $required"
+done
+
+if [ -e "$ISO_DIR/EFI" ]; then
+  echo "GO [√] UEFI tree present: $ISO_DIR/EFI"
+else
+  echo "NOTICE: EFI directory not present; final UEFI validation will decide."
+fi
+
+echo
+echo "LEAN LIVE BASE V1 complete."
+
+echo
+echo "=== 11) Locate and unpack live squashfs ==="
+find "$ISO_DIR/casper" -maxdepth 3 -type f -name '*.squashfs' \
+  -printf '%12s  %p\n' 2>/dev/null | sort -n || true
+
+SQUASHFS="$(find "$ISO_DIR/casper" -maxdepth 3 -type f -name '*.squashfs' -printf '%s %p\n' 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)"
+
+[ -n "$SQUASHFS" ] || die "No squashfs found under $ISO_DIR/casper"
+[ -f "$SQUASHFS" ] || die "Squashfs path invalid: $SQUASHFS"
+
+echo "Selected live squashfs:"
+ls -lh "$SQUASHFS"
+
+unsquashfs -d "$ROOTFS_DIR" "$SQUASHFS"
+
+echo
+echo "=== 12) Ensure required live installer tools inside squashfs ==="
+cp -a /etc/resolv.conf "$ROOTFS_DIR/etc/resolv.conf" || true
+
+echo
+echo "--- PinCabOS hard reset apt sources inside live chroot ---"
+mkdir -p "$ROOTFS_DIR/etc/apt/sources.list.d"
+mkdir -p "$ROOTFS_DIR/etc/apt/pincabos-disabled-sources"
+mkdir -p "$ROOTFS_DIR/etc/apt/pincabos-empty-sourceparts"
+
+# Disable every sourceparts file, including ubuntu.sources.
+# This avoids both file:/cdrom and duplicate source warnings.
+while IFS= read -r aptsrc; do
+  [ -f "$aptsrc" ] || continue
+  rel="${aptsrc#$ROOTFS_DIR/}"
+  safe="$(echo "$rel" | tr '/' '_')"
+  echo "Disabling apt sourceparts file: /$rel"
+  cp -a "$aptsrc" "$ROOTFS_DIR/etc/apt/pincabos-disabled-sources/${safe}.bak" || true
+  mv "$aptsrc" "$ROOTFS_DIR/etc/apt/pincabos-disabled-sources/${safe}.disabled" || true
+done < <(find "$ROOTFS_DIR/etc/apt/sources.list.d" -maxdepth 1 -type f \( -name '*.list' -o -name '*.sources' \) 2>/dev/null | sort)
+
+cat > "$ROOTFS_DIR/etc/apt/sources.list" <<'PINCABOS_APT_SOURCES'
+deb http://archive.ubuntu.com/ubuntu resolute main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu resolute-updates main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu resolute-backports main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu resolute-security main restricted universe multiverse
+PINCABOS_APT_SOURCES
+
+rm -rf "$ROOTFS_DIR/var/lib/apt/lists"
+mkdir -p "$ROOTFS_DIR/var/lib/apt/lists/partial"
+
+echo "--- Final active apt sources.list ---"
+cat "$ROOTFS_DIR/etc/apt/sources.list"
+
+echo "--- Final sourceparts directory should be empty ---"
+find "$ROOTFS_DIR/etc/apt/sources.list.d" -maxdepth 1 -type f -print || true
+
+if grep -RniE 'cdrom:|file:/cdrom' "$ROOTFS_DIR/etc/apt/sources.list" "$ROOTFS_DIR/etc/apt/sources.list.d" 2>/dev/null; then
+  die "Active cdrom apt source still present after hard reset"
+fi
+echo "OK: active apt sources have no cdrom/file:/cdrom"
+
+mount --bind /dev "$ROOTFS_DIR/dev"
+mount --bind /proc "$ROOTFS_DIR/proc"
+mount --bind /sys "$ROOTFS_DIR/sys"
+mount --bind /run "$ROOTFS_DIR/run"
+
+APT_FORCE_OPTS=(
+  -o Dir::Etc::sourcelist=/etc/apt/sources.list
+  -o Dir::Etc::sourceparts=/etc/apt/pincabos-empty-sourceparts
+  -o APT::Get::List-Cleanup=0
+)
+
+chroot "$ROOTFS_DIR" apt-get "${APT_FORCE_OPTS[@]}" clean || true
+chroot "$ROOTFS_DIR" apt-get "${APT_FORCE_OPTS[@]}" update
+DEBIAN_FRONTEND=noninteractive chroot "$ROOTFS_DIR" apt-get "${APT_FORCE_OPTS[@]}" install -y \
+  zstd \
+  parted \
+  gdisk \
+  dosfstools \
+  e2fsprogs \
+  util-linux \
+  coreutils \
+  sudo \
+  grub-efi-amd64-bin \
+  ca-certificates
+
+cleanup_mounts
+
+echo
+echo "=== 13) Disable Ubuntu Welcome/GDM and force PinCabOS tty installer ==="
+mkdir -p "$ROOTFS_DIR/etc/systemd/system"
+mkdir -p "$ROOTFS_DIR/etc/systemd/system/multi-user.target.wants"
+
+ln -sfn /lib/systemd/system/multi-user.target "$ROOTFS_DIR/etc/systemd/system/default.target"
+ln -sfn /dev/null "$ROOTFS_DIR/etc/systemd/system/display-manager.service"
+ln -sfn /dev/null "$ROOTFS_DIR/etc/systemd/system/gdm.service"
+ln -sfn /dev/null "$ROOTFS_DIR/etc/systemd/system/gdm3.service"
+
+echo
+echo "--- Disable unused CUPS services in live ISO to avoid reboot/shutdown delay ---"
+echo "PINCABOS_LIVE_DISABLE_CUPS_SHUTDOWN_DELAY_V1"
+for unit in cups.service cups.socket cups.path cups-browsed.service; do
+  echo "Masking live unit: $unit"
+  ln -sfn /dev/null "$ROOTFS_DIR/etc/systemd/system/$unit" || true
+done
+
+DISABLED_DIR="$ROOTFS_DIR/var/lib/pincabos-disabled-ubuntu-welcome"
+mkdir -p "$DISABLED_DIR"
+
+while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  rel="${f#$ROOTFS_DIR/}"
+  safe="$(echo "$rel" | tr '/' '_')"
+  echo "Disabling: /$rel"
+  cp -a "$f" "$DISABLED_DIR/$safe" || true
+  mv "$f" "$f.disabled-by-pincabos" || true
+done < <(find "$ROOTFS_DIR" -xdev -type f \( \
+  -path '*/etc/xdg/autostart/*' -o \
+  -path '*/usr/share/applications/*' -o \
+  -path '*/etc/systemd/system/*' -o \
+  -path '*/lib/systemd/system/*' -o \
+  -path '*/usr/lib/systemd/system/*' \
+\) \( \
+  -iname '*ubuntu*welcome*' -o \
+  -iname '*ubuntu*bootstrap*' -o \
+  -iname '*ubuntu*desktop*installer*' -o \
+  -iname '*subiquity*' -o \
+  -iname '*casper*installer*' \
+\) | sort)
+
+mkdir -p "$ROOTFS_DIR/usr/local/sbin"
+
+cat >"$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer" <<'PINCBOS_LIVE_INSTALLER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# === PINCABOS_LIVE_INSTALLER_TTY_THEME_V1 ===
+
+if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ]; then
+  ORANGE=$'\033[38;5;208m'
+  PURPLE=$'\033[38;5;129m'
+  DARKBLUE=$'\033[38;5;20m'
+  CYAN=$'\033[36m'
+  GREEN=$'\033[32m'
+  YELLOW=$'\033[33m'
+  RED=$'\033[31m'
+  BLUE=$'\033[34m'
+  WHITE=$'\033[97m'
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  NC=$'\033[0m'
+else
+  ORANGE=''
+  PURPLE=''
+  DARKBLUE=''
+  CYAN=''
+  GREEN=''
+  YELLOW=''
+  RED=''
+  BLUE=''
+  WHITE=''
+  BOLD=''
+  DIM=''
+  NC=''
+fi
+
+pco_hr() {
+  printf '%b\n' \
+    "${ORANGE}────────────────────────────────────────────────────────────────${NC}"
+}
+
+pco_logo() {
+  printf '\n'
+  pco_hr
+
+  printf '%b\n' \
+    "${ORANGE}██████╗ ██╗███╗   ██╗ ██████╗ █████╗ ██████╗  ██████╗ ███████╗${NC}" \
+    "${ORANGE}██╔══██╗██║████╗  ██║██╔════╝██╔══██╗██╔══██╗██╔═══██╗██╔════╝${NC}" \
+    "${ORANGE}██████╔╝██║██╔██╗ ██║██║     ███████║██████╔╝██║   ██║███████╗${NC}" \
+    "${ORANGE}██╔═══╝ ██║██║╚██╗██║██║     ██╔══██║██╔══██╗██║   ██║╚════██║${NC}" \
+    "${ORANGE}██║     ██║██║ ╚████║╚██████╗██║  ██║██████╔╝╚██████╔╝███████║${NC}" \
+    "${DARKBLUE}╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚══════╝${NC}"
+
+  pco_hr
+
+  printf '\n%b\n' \
+    "${CYAN}${BOLD}Ultimate VPinball Linux Cabinet System${NC}"
+
+  printf '%b\n' \
+    "${PURPLE}Created by Karots Sugarpie${NC}"
+
+  printf '\n'
+}
+
+pco_title() {
+  if [ -t 1 ]; then
+    printf '\033c'
+  elif command -v clear >/dev/null 2>&1; then
+    clear 2>/dev/null || true
+  fi
+
+  pco_logo
+
+  printf '%b\n' \
+    "${CYAN}${BOLD}              PINCABOS LIVE SYSTEM INSTALLER${NC}"
+
+  printf '%b\n\n' \
+    "${DIM}Installation automatique de PinCabOS sur disque${NC}"
+}
+
+pco_step() {
+  local label="${2:-$1}"
+
+  printf '\n%b\n' \
+    "${CYAN}─► ${BOLD}${label}${NC}${CYAN} ◄────────────────────────────────────────${NC}"
+}
+
+pco_go() {
+  printf '%b\n' "${GREEN}GO [√]${NC} $*"
+}
+
+# PINCABOS_LIVE_INSTALLER_GREEN_GO_V1
+
+pco_warn() {
+  printf '%b\n' "${YELLOW}WARN [!]${NC} $*"
+}
+
+pco_info() {
+  printf '%b\n' "${BLUE}INFO${NC} $*"
+}
+
+pco_error() {
+  printf '%b\n' "${RED}NOGO [***]${NC} $*" >&2
+}
+
+pco_prompt() {
+  local prompt="$1"
+
+  printf '%b%s%b ' \
+    "${BOLD}${WHITE}" \
+    "$prompt" \
+    "${NC}" >&2
+}
+
+pco_title
+
+
+if grep -qw "pincabos.rescue=1" /proc/cmdline 2>/dev/null; then
+  :
+  pco_hr
+  echo " PinCabOS V8.1G — Rescue Shell"
+  pco_hr
+  echo
+  echo "Type 'pincabos-live-installer' to launch the installer."
+  echo
+  exec /bin/bash -l
+fi
+
+clear
+pco_hr
+echo " PinCabOS Beta Installer"
+pco_hr
+echo
+echo "PinCabOS installation media ready."
+echo
+
+if [ "$(id -u)" -ne 0 ]; then
+  exec sudo -E "$0" "$@"
+fi
+
+PAYLOAD_DIR="/cdrom/pincabos-payload"
+TARGET="/target"
+MIN_FREE_MIB="${PINCABOS_DUALBOOT_MIN_FREE_MIB:-32768}"
+
+
+# ==============================================================
+# PINCABOS_INSTALLER_REGIONAL_SETUP_V2_ALL_REGIONS
+#
+# Tous les choix sont obtenus dynamiquement depuis Ubuntu/XKB.
+# Aucun pays, clavier ou timezone n'est limité à une liste codée en dur.
+#
+
+REG_LOCALE="fr_CA.UTF-8"
+REG_LANGUAGE="fr_CA:fr"
+REG_LOCALE_LABEL="fr_CA.UTF-8"
+
+REG_XKB_LAYOUT="ca"
+REG_XKB_VARIANT=""
+REG_KEYBOARD_LABEL="ca"
+
+REG_TIMEZONE="America/Montreal"
+
+PCO_SELECTED=""
+PCO_SELECTED_LABEL=""
+
+pco_choose_list() {
+    local title="$1"
+    local source_file="$2"
+
+    local PAGE_SIZE=20
+    local PAGE=0
+    local FILTER=""
+    local CHOICE=""
+    local SEARCH=""
+    local TMP_FILTER=""
+
+    while true; do
+        TMP_FILTER="$(mktemp)"
+
+        if [ -n "$FILTER" ]; then
+            grep -iF -- "$FILTER" "$source_file" \
+                > "$TMP_FILTER" || true
+        else
+            cat "$source_file" > "$TMP_FILTER"
+        fi
+
+        mapfile -t PCO_ITEMS < "$TMP_FILTER"
+        rm -f "$TMP_FILTER"
+
+        local TOTAL="${#PCO_ITEMS[@]}"
+
+        if [ "$TOTAL" -eq 0 ]; then
+            echo
+            pco_warn "No entry matches: $FILTER"
+            FILTER=""
+            PAGE=0
+            continue
+        fi
+
+        local PAGES=$(( (TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
+
+        [ "$PAGE" -lt "$PAGES" ] || PAGE=$((PAGES - 1))
+        [ "$PAGE" -ge 0 ] || PAGE=0
+
+        local START=$((PAGE * PAGE_SIZE))
+        local END=$((START + PAGE_SIZE))
+
+        [ "$END" -le "$TOTAL" ] || END="$TOTAL"
+
+        echo
+        pco_hr
+        echo " $title"
+        pco_hr
+        echo
+        echo " Entries : $TOTAL"
+        echo " Page    : $((PAGE + 1)) / $PAGES"
+
+        if [ -n "$FILTER" ]; then
+            echo " Filter  : $FILTER"
+        fi
+
+        echo
+
+        local IDX
+        local NUM=1
+
+        for ((IDX=START; IDX<END; IDX++)); do
+            local LINE="${PCO_ITEMS[$IDX]}"
+            local VALUE="${LINE%%|*}"
+            local LABEL="${LINE#*|}"
+
+            printf "  [%2d] %-22s %s\n" \
+                "$NUM" \
+                "$VALUE" \
+                "$LABEL"
+
+            NUM=$((NUM + 1))
+        done
+
+        echo
+        echo "  n = next page"
+        echo "  p = previous page"
+        echo "  s = search/filter"
+        echo "  c = clear search"
+        echo
+
+        pco_prompt "Choice: "
+        read -r CHOICE
+
+        case "$CHOICE" in
+            n|N)
+                if [ "$((PAGE + 1))" -lt "$PAGES" ]; then
+                    PAGE=$((PAGE + 1))
+                fi
+                ;;
+
+            p|P)
+                if [ "$PAGE" -gt 0 ]; then
+                    PAGE=$((PAGE - 1))
+                fi
+                ;;
+
+            s|S)
+                echo
+                pco_prompt "Search: "
+                read -r SEARCH
+                FILTER="$SEARCH"
+                PAGE=0
+                ;;
+
+            c|C)
+                FILTER=""
+                PAGE=0
+                ;;
+
+            *)
+                if [[ "$CHOICE" =~ ^[0-9]+$ ]]; then
+                    local LOCAL_INDEX=$((CHOICE - 1))
+
+                    if [ "$LOCAL_INDEX" -ge 0 ] &&
+                       [ "$LOCAL_INDEX" -lt "$((END - START))" ]; then
+
+                        local ABS_INDEX=$((START + LOCAL_INDEX))
+                        local SELECTED="${PCO_ITEMS[$ABS_INDEX]}"
+
+                        PCO_SELECTED="${SELECTED%%|*}"
+                        PCO_SELECTED_LABEL="${SELECTED#*|}"
+
+                        return 0
+                    fi
+                fi
+
+                pco_warn "Invalid choice."
+                ;;
+        esac
+    done
+}
+
+pco_build_locale_catalog() {
+    local OUT="$1"
+
+    : > "$OUT"
+
+    if [ -f /usr/share/i18n/SUPPORTED ]; then
+        awk '
+            $2 == "UTF-8" {
+                print $1 "|" $1
+            }
+        ' /usr/share/i18n/SUPPORTED \
+            | sort -u \
+            > "$OUT"
+    fi
+
+    if [ ! -s "$OUT" ]; then
+        locale -a 2>/dev/null \
+            | grep -Ei 'utf[-]?8' \
+            | sort -u \
+            | awk '{print $0 "|" $0}' \
+            > "$OUT" || true
+    fi
+
+    #
+    # Garantir les principales locales même si l'image Live
+    # expose une liste incomplète.
+    #
+    for LOC in \
+        fr_CA.UTF-8 \
+        en_CA.UTF-8 \
+        en_US.UTF-8 \
+        fr_FR.UTF-8
+    do
+        grep -q "^${LOC}|" "$OUT" 2>/dev/null ||
+            printf '%s|%s\n' "$LOC" "$LOC" >> "$OUT"
+    done
+
+    sort -u -o "$OUT" "$OUT"
+}
+
+pco_build_keyboard_catalog() {
+    local OUT="$1"
+
+    : > "$OUT"
+
+    local RULES=""
+
+    for CANDIDATE in \
+        /usr/share/X11/xkb/rules/base.lst \
+        /usr/share/X11/xkb/rules/evdev.lst
+    do
+        if [ -f "$CANDIDATE" ]; then
+            RULES="$CANDIDATE"
+            break
+        fi
+    done
+
+    if [ -n "$RULES" ]; then
+        awk '
+            /^! layout/ {
+                active=1
+                next
+            }
+
+            /^!/ {
+                if (active) exit
+            }
+
+            active && NF {
+                code=$1
+                $1=""
+                sub(/^[[:space:]]+/, "", $0)
+                print code "|" $0
+            }
+        ' "$RULES" \
+            | sort -u \
+            > "$OUT"
+    fi
+
+    if [ ! -s "$OUT" ] &&
+       command -v localectl >/dev/null 2>&1; then
+
+        localectl list-x11-keymap-layouts \
+            --no-pager 2>/dev/null \
+            | sort -u \
+            | awk '{print $0 "|" $0}' \
+            > "$OUT" || true
+    fi
+
+    [ -s "$OUT" ] || {
+        printf '%s\n' \
+            'us|English (US)' \
+            'ca|Canada' \
+            'fr|France' \
+            'gb|United Kingdom' \
+            > "$OUT"
+    }
+}
+
+pco_build_keyboard_variant_catalog() {
+    local LAYOUT="$1"
+    local OUT="$2"
+
+    : > "$OUT"
+
+    #
+    # Option par défaut toujours disponible.
+    #
+    echo '|Default / no variant' > "$OUT"
+
+    if command -v localectl >/dev/null 2>&1; then
+        localectl list-x11-keymap-variants \
+            "$LAYOUT" \
+            --no-pager 2>/dev/null \
+            | grep -v '^$' \
+            | sort -u \
+            | awk '{print $0 "|" $0}' \
+            >> "$OUT" || true
+    fi
+
+    #
+    # Fallback base.lst / evdev.lst.
+    #
+    if [ "$(wc -l < "$OUT")" -le 1 ]; then
+        local RULES=""
+
+        for CANDIDATE in \
+            /usr/share/X11/xkb/rules/base.lst \
+            /usr/share/X11/xkb/rules/evdev.lst
+        do
+            if [ -f "$CANDIDATE" ]; then
+                RULES="$CANDIDATE"
+                break
+            fi
+        done
+
+        if [ -n "$RULES" ]; then
+            awk -v wanted="$LAYOUT" '
+                /^! variant/ {
+                    active=1
+                    next
+                }
+
+                /^!/ {
+                    if (active) exit
+                }
+
+                active && NF {
+                    variant=$1
+
+                    line=$0
+
+                    if (
+                        line ~ ("[[:space:]]" wanted ":") ||
+                        line ~ ("^" variant "[[:space:]]+" wanted ":")
+                    ) {
+                        desc=line
+                        sub(/^[^[:space:]]+[[:space:]]+/, "", desc)
+                        print variant "|" desc
+                    }
+                }
+            ' "$RULES" \
+                | sort -u \
+                >> "$OUT" || true
+        fi
+    fi
+
+    sort -u -o "$OUT" "$OUT"
+}
+
+pco_build_timezone_catalog() {
+    local OUT="$1"
+
+    : > "$OUT"
+
+    if command -v timedatectl >/dev/null 2>&1; then
+        timedatectl list-timezones \
+            --no-pager 2>/dev/null \
+            | grep '/' \
+            | sort -u \
+            | awk '{print $0 "|" $0}' \
+            > "$OUT" || true
+    fi
+
+    if [ ! -s "$OUT" ] &&
+       [ -f /usr/share/zoneinfo/zone.tab ]; then
+
+        awk '
+            !/^#/ && NF >= 3 {
+                print $3 "|" $3
+            }
+        ' /usr/share/zoneinfo/zone.tab \
+            | sort -u \
+            > "$OUT"
+    fi
+
+    grep -q '^UTC|' "$OUT" 2>/dev/null ||
+        echo 'UTC|UTC' >> "$OUT"
+
+    sort -u -o "$OUT" "$OUT"
+}
+
+apply_live_keyboard() {
+    echo
+    pco_step "Applying keyboard to live installer"
+
+    mkdir -p /etc/default
+
+    cat > /etc/default/keyboard <<EOF
+XKBMODEL="pc105"
+XKBLAYOUT="$REG_XKB_LAYOUT"
+XKBVARIANT="$REG_XKB_VARIANT"
+XKBOPTIONS=""
+BACKSPACE="guess"
+EOF
+
+    if command -v setupcon >/dev/null 2>&1; then
+        if setupcon --keyboard-only >/dev/null 2>&1; then
+            pco_go "Live keyboard applied: $REG_KEYBOARD_LABEL"
+            return 0
+        fi
+    fi
+
+    if command -v ckbcomp >/dev/null 2>&1 &&
+       command -v loadkeys >/dev/null 2>&1; then
+
+        if [ -n "$REG_XKB_VARIANT" ]; then
+            if ckbcomp \
+                "$REG_XKB_LAYOUT" \
+                "$REG_XKB_VARIANT" \
+                2>/dev/null \
+                | loadkeys >/dev/null 2>&1; then
+
+                pco_go "Live keyboard applied"
+                return 0
+            fi
+        else
+            if ckbcomp \
+                "$REG_XKB_LAYOUT" \
+                2>/dev/null \
+                | loadkeys >/dev/null 2>&1; then
+
+                pco_go "Live keyboard applied"
+                return 0
+            fi
+        fi
+    fi
+
+    pco_warn "Live keyboard could not be changed."
+    echo "The selected keyboard will still be installed on the target."
+}
+
+regional_setup() {
+    local LOCALES
+    local KEYBOARDS
+    local VARIANTS
+    local TIMEZONES
+    local BASE_LOCALE
+    local LANG_CODE
+    local CHOICE
+
+    LOCALES="$(mktemp)"
+    KEYBOARDS="$(mktemp)"
+    VARIANTS="$(mktemp)"
+    TIMEZONES="$(mktemp)"
+
+    pco_build_locale_catalog "$LOCALES"
+    pco_build_keyboard_catalog "$KEYBOARDS"
+    pco_build_timezone_catalog "$TIMEZONES"
+
+    while true; do
+
+        echo
+        pco_hr
+        echo " PinCabOS Regional Setup — ALL REGIONS"
+        pco_hr
+        echo
+        echo "All available UTF-8 locales, XKB keyboard layouts"
+        echo "and timezones can be selected."
+        echo
+        echo "TIP: use 's' in a list to search."
+        echo
+        echo "Examples:"
+        echo "  Locale   search: fr_CA"
+        echo "  Keyboard search: Canada"
+        echo "  Timezone search: Montreal"
+        echo
+
+        #
+        # Locale / Region
+        #
+        pco_choose_list \
+            "Language / Region — all UTF-8 locales" \
+            "$LOCALES"
+
+        REG_LOCALE="$PCO_SELECTED"
+        REG_LOCALE_LABEL="$PCO_SELECTED_LABEL"
+
+        BASE_LOCALE="${REG_LOCALE%%.*}"
+        LANG_CODE="${BASE_LOCALE%%_*}"
+
+        REG_LANGUAGE="${BASE_LOCALE}:${LANG_CODE}"
+
+        #
+        # Keyboard layout
+        #
+        pco_choose_list \
+            "Keyboard layout — all XKB layouts" \
+            "$KEYBOARDS"
+
+        REG_XKB_LAYOUT="$PCO_SELECTED"
+        REG_KEYBOARD_LABEL="$PCO_SELECTED_LABEL"
+
+        #
+        # Keyboard variant
+        #
+        pco_build_keyboard_variant_catalog \
+            "$REG_XKB_LAYOUT" \
+            "$VARIANTS"
+
+        pco_choose_list \
+            "Keyboard variant — $REG_XKB_LAYOUT" \
+            "$VARIANTS"
+
+        REG_XKB_VARIANT="$PCO_SELECTED"
+
+        if [ -n "$PCO_SELECTED_LABEL" ] &&
+           [ "$PCO_SELECTED_LABEL" != "Default / no variant" ]; then
+
+            REG_KEYBOARD_LABEL="$REG_KEYBOARD_LABEL / $PCO_SELECTED_LABEL"
+        fi
+
+        #
+        # Change keyboard immediately.
+        #
+        apply_live_keyboard
+
+        #
+        # Timezone — all regions.
+        #
+        pco_choose_list \
+            "Timezone — all regions" \
+            "$TIMEZONES"
+
+        REG_TIMEZONE="$PCO_SELECTED"
+
+        echo
+        pco_hr
+        echo " Regional configuration"
+        pco_hr
+        echo
+        echo " Language : $REG_LOCALE_LABEL"
+        echo " Locale   : $REG_LOCALE"
+        echo " Keyboard : $REG_KEYBOARD_LABEL"
+        echo " XKB      : $REG_XKB_LAYOUT ${REG_XKB_VARIANT:-}"
+        echo " Timezone : $REG_TIMEZONE"
+        echo
+        echo "  [1] Continue"
+        echo "  [2] Change"
+        echo
+
+        pco_prompt "Choice: "
+        read -r CHOICE
+
+        case "$CHOICE" in
+            1)
+                pco_go "Regional configuration accepted"
+                break
+                ;;
+
+            2)
+                continue
+                ;;
+
+            *)
+                pco_warn "Invalid choice."
+                ;;
+        esac
+    done
+
+    rm -f \
+        "$LOCALES" \
+        "$KEYBOARDS" \
+        "$VARIANTS" \
+        "$TIMEZONES"
+}
+
+apply_target_regional() {
+    echo
+    pco_step "Applying regional settings to installed PinCabOS"
+
+    [ -d "$TARGET/etc" ] || {
+        pco_error "target /etc missing"
+        return 1
+    }
+
+    mkdir -p \
+        "$TARGET/etc/default" \
+        "$TARGET/etc/pincabos"
+
+    #
+    # Keyboard
+    #
+    cat > "$TARGET/etc/default/keyboard" <<EOF
+XKBMODEL="pc105"
+XKBLAYOUT="$REG_XKB_LAYOUT"
+XKBVARIANT="$REG_XKB_VARIANT"
+XKBOPTIONS=""
+BACKSPACE="guess"
+EOF
+
+    #
+    # Locale
+    #
+    cat > "$TARGET/etc/default/locale" <<EOF
+LANG=$REG_LOCALE
+LANGUAGE=$REG_LANGUAGE
+EOF
+
+    cat > "$TARGET/etc/locale.conf" <<EOF
+LANG=$REG_LOCALE
+LANGUAGE=$REG_LANGUAGE
+EOF
+
+    touch "$TARGET/etc/locale.gen"
+
+    #
+    # Ensure exactly the selected locale is enabled.
+    #
+    if grep -Eq \
+        "^[#[:space:]]*${REG_LOCALE}[[:space:]]+UTF-8" \
+        "$TARGET/etc/locale.gen"; then
+
+        sed -i -E \
+            "s|^[#[:space:]]*(${REG_LOCALE}[[:space:]]+UTF-8).*$|\1|" \
+            "$TARGET/etc/locale.gen"
+    else
+        printf '%s UTF-8\n' "$REG_LOCALE" \
+            >> "$TARGET/etc/locale.gen"
+    fi
+
+    if [ -x "$TARGET/usr/sbin/locale-gen" ]; then
+        chroot "$TARGET" /usr/sbin/locale-gen "$REG_LOCALE" || {
+            pco_warn "locale-gen returned an error."
+        }
+    else
+        pco_warn "locale-gen not present in installed target."
+    fi
+
+    if [ -x "$TARGET/usr/sbin/update-locale" ]; then
+        chroot "$TARGET" /usr/sbin/update-locale \
+            "LANG=$REG_LOCALE" \
+            "LANGUAGE=$REG_LANGUAGE" || true
+    fi
+
+    #
+    # Timezone
+    #
+    if [ ! -e "$TARGET/usr/share/zoneinfo/$REG_TIMEZONE" ]; then
+        pco_error "Timezone unavailable in target: $REG_TIMEZONE"
+        return 1
+    fi
+
+    ln -sfn \
+        "/usr/share/zoneinfo/$REG_TIMEZONE" \
+        "$TARGET/etc/localtime"
+
+    printf '%s\n' "$REG_TIMEZONE" \
+        > "$TARGET/etc/timezone"
+
+    #
+    # PinCabOS persistent record.
+    #
+    cat > "$TARGET/etc/pincabos/regional.conf" <<EOF
+PINCABOS_LOCALE="$REG_LOCALE"
+PINCABOS_LANGUAGE="$REG_LANGUAGE"
+PINCABOS_KEYBOARD_LAYOUT="$REG_XKB_LAYOUT"
+PINCABOS_KEYBOARD_VARIANT="$REG_XKB_VARIANT"
+PINCABOS_TIMEZONE="$REG_TIMEZONE"
+EOF
+
+    chmod 644 \
+        "$TARGET/etc/default/keyboard" \
+        "$TARGET/etc/default/locale" \
+        "$TARGET/etc/locale.conf" \
+        "$TARGET/etc/timezone" \
+        "$TARGET/etc/pincabos/regional.conf"
+
+    echo
+    pco_go "Regional settings installed"
+    echo " Locale   : $REG_LOCALE"
+    echo " Keyboard : $REG_XKB_LAYOUT ${REG_XKB_VARIANT:-}"
+    echo " Timezone : $REG_TIMEZONE"
+}
+
+
+check_payload() {
+  pco_step "Live media payload check"
+
+  test -d "$PAYLOAD_DIR" || {
+    pco_error "payload directory not found: $PAYLOAD_DIR"
+    ls -lah /cdrom 2>/dev/null || true
+    exit 1
+  }
+
+  test -x "$PAYLOAD_DIR/pincabos-v8.1g-install-cab-payload-to-target.sh" || {
+    pco_error "install helper missing or not executable"
+    exit 1
+  }
+
+  (
+    cd "$PAYLOAD_DIR"
+    sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
+    sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
+  )
+
+  echo
+  pco_go "payload checksums valid"
+}
+
+choose_disk() {
+  local title="$1"
+  local CHOICE IDX
+
+  while true; do
+    echo
+    pco_step "$title"
+    echo
+
+    mapfile -t DISKS < <(lsblk -dpno NAME,TYPE | awk '$2=="disk"{print $1}' | grep -Ev '/dev/loop|/dev/sr|/dev/ram' || true)
+
+    if [ "${#DISKS[@]}" -eq 0 ]; then
+      echo "No installable disk found."
+      echo "Options: r = retry, s = shell, q = reboot"
+      pco_prompt "> "
+      read -r CHOICE
+      case "$CHOICE" in
+        r|R) continue ;;
+        s|S) bash ;;
+        q|Q) reboot ;;
+      esac
+      continue
+    fi
+
+    local i=1
+    for d in "${DISKS[@]}"; do
+      echo "  [$i] $(lsblk -dpno NAME,SIZE,MODEL "$d")"
+      i=$((i+1))
+    done
+
+    echo
+    echo "Options: number = select disk, s = shell, r = refresh, q = reboot"
+    pco_prompt "Choice: "
+    read -r CHOICE
+
+    case "$CHOICE" in
+      s|S) bash; continue ;;
+      r|R) continue ;;
+      q|Q) reboot ;;
+    esac
+
+    [[ "$CHOICE" =~ ^[0-9]+$ ]] || {
+      echo "Invalid choice."
+      continue
+    }
+
+    IDX=$((CHOICE-1))
+    if [ "$IDX" -lt 0 ] || [ "$IDX" -ge "${#DISKS[@]}" ]; then
+      echo "Selection out of range."
+      continue
+    fi
+
+    DISK="${DISKS[$IDX]}"
+    return 0
+  done
+}
+
+part_paths_for_disk() {
+  local disk="$1"
+
+  if [[ "$disk" =~ nvme|mmcblk ]]; then
+    EFI_PART="${disk}p1"
+    ROOT_PART="${disk}p2"
+  else
+    EFI_PART="${disk}1"
+    ROOT_PART="${disk}2"
+  fi
+}
+
+unmount_disk_mounts() {
+  local disk="$1"
+
+  while IFS= read -r mp; do
+    [ -n "$mp" ] && umount -R "$mp" 2>/dev/null || true
+  done < <(lsblk -rpno MOUNTPOINT "$disk" | awk 'NF')
+}
+
+prepare_target_mount() {
+  umount -R "$TARGET" 2>/dev/null || true
+  rm -rf "$TARGET"
+  mkdir -p "$TARGET"
+}
+
+write_fstab() {
+  local root_part="$1"
+  local efi_part="$2"
+
+  echo
+  pco_step "Writing correct fstab"
+
+  ROOT_UUID="$(blkid -s UUID -o value "$root_part")"
+  EFI_UUID="$(blkid -s UUID -o value "$efi_part")"
+
+  cat >"$TARGET/etc/fstab" <<FSTAB
+# PinCabOS generated fstab
+UUID=$ROOT_UUID / ext4 defaults,noatime 0 1
+UUID=$EFI_UUID /boot/efi vfat umask=0077 0 1
+FSTAB
+
+  cat "$TARGET/etc/fstab"
+
+  test -s "$TARGET/etc/fstab"
+  grep -q '^UUID=.* / ext4 ' "$TARGET/etc/fstab"
+  grep -q '^UUID=.* /boot/efi vfat ' "$TARGET/etc/fstab"
+
+  pco_go "fstab écrit et UUID validés"
+}
+
+mount_chroot_dirs() {
+  mountpoint -q "$TARGET/dev"  || mount --bind /dev  "$TARGET/dev"
+  mountpoint -q "$TARGET/proc" || mount --bind /proc "$TARGET/proc"
+  mountpoint -q "$TARGET/sys"  || mount --bind /sys  "$TARGET/sys"
+  mountpoint -q "$TARGET/run"  || mount --bind /run  "$TARGET/run"
+}
+
+install_payload() {
+  local mode="$1"
+
+  echo
+  pco_step "Installing PinCabOS payload"
+  PINCABOS_INSTALL_MODE="$mode" \
+    "$PAYLOAD_DIR/pincabos-v8.1g-install-cab-payload-to-target.sh" "$TARGET" "$PAYLOAD_DIR"
+
+  apply_target_regional
+
+  test -d "$TARGET/opt/pincabos"
+  test -d "$TARGET/home/pinball/vpinfe"
+  ls "$TARGET"/boot/vmlinuz-* >/dev/null
+  ls "$TARGET"/boot/initrd.img-* >/dev/null
+
+  pco_go "Payload PinCabOS installé et vérifié"
+}
+
+final_boot_refresh() {
+  local mode="$1"
+
+  echo
+  pco_step "Final boot refresh"
+
+  mount_chroot_dirs
+
+  mountpoint -q "$TARGET/dev"
+  mountpoint -q "$TARGET/proc"
+  mountpoint -q "$TARGET/sys"
+  mountpoint -q "$TARGET/run"
+
+  pco_go "Environnement chroot monté"
+
+  # Do not run update-initramfs here. It is deferred to first real boot.
+  ls "$TARGET"/boot/initrd.img-* >/dev/null
+  ls "$TARGET"/boot/vmlinuz-* >/dev/null
+
+  pco_go "Kernel et initramfs présents"
+
+  if chroot "$TARGET" update-grub; then
+    pco_go "Configuration GRUB générée"
+  else
+    pco_warn "update-grub a retourné un avertissement"
+  fi
+
+  chroot "$TARGET" grub-install \
+    --target=x86_64-efi \
+    --efi-directory=/boot/efi \
+    --bootloader-id=PinCabOS \
+    --recheck
+
+  pco_go "Chargeur EFI PinCabOS installé"
+
+  if [ "$mode" = "full" ]; then
+    if chroot "$TARGET" grub-install \
+      --target=x86_64-efi \
+      --efi-directory=/boot/efi \
+      --bootloader-id=PinCabOS \
+      --removable \
+      --recheck
+    then
+      pco_go "Fallback EFI amovible installé"
+    else
+      pco_warn "Fallback EFI amovible non installé"
+    fi
+  else
+    pco_info "Dualboot : fallback EFI amovible ignoré"
+  fi
+
+  pco_go "Démarrage EFI finalisé"
+}
+
+full_disk_install() {
+  choose_disk "Available target disks — FULL ERASE MODE"
+
+  echo
+  echo "Selected disk:"
+  lsblk -dpno NAME,SIZE,MODEL "$DISK"
+  echo
+  pco_warn "ALL DATA ON $DISK WILL BE ERASED."
+  echo
+  pco_prompt "Type INSTALL PINCABOS to continue: "
+  read -r CONFIRM
+
+  [ "$CONFIRM" = "INSTALL PINCABOS" ] || {
+    echo "Cancelled."
+    exit 1
+  }
+
+  echo
+  pco_step "Unmounting target disk partitions"
+  unmount_disk_mounts "$DISK"
+  pco_go "Partitions existantes démontées"
+
+  echo
+  pco_step "Partitioning disk GPT"
+  wipefs -a "$DISK" || true
+  sgdisk --zap-all "$DISK" || true
+  partprobe "$DISK" || true
+  sleep 2
+
+  parted -s "$DISK" mklabel gpt
+  parted -s "$DISK" mkpart ESP fat32 1MiB 551MiB
+  parted -s "$DISK" set 1 esp on
+  parted -s "$DISK" mkpart primary ext4 551MiB 100%
+
+  partprobe "$DISK"
+  udevadm settle
+  sleep 2
+
+  part_paths_for_disk "$DISK"
+
+  test -b "$EFI_PART" || { echo "ERROR: missing EFI partition: $EFI_PART"; exit 1; }
+  test -b "$ROOT_PART" || { echo "ERROR: missing root partition: $ROOT_PART"; exit 1; }
+
+  pco_go "Table GPT et partitions EFI/root créées"
+
+  echo
+  pco_step "Formatting partitions"
+  mkfs.vfat -F 32 -n PCOS_EFI "$EFI_PART"
+  mkfs.ext4 -F -L rootfs "$ROOT_PART"
+
+  [ "$(blkid -s TYPE -o value "$EFI_PART")" = "vfat" ]
+  [ "$(blkid -s TYPE -o value "$ROOT_PART")" = "ext4" ]
+
+  pco_go "Partitions EFI et root formatées"
+
+  echo
+  pco_step "Mounting target"
+  prepare_target_mount
+  mount "$ROOT_PART" "$TARGET"
+  mkdir -p "$TARGET/boot/efi"
+  mount "$EFI_PART" "$TARGET/boot/efi"
+
+  mountpoint -q "$TARGET"
+  mountpoint -q "$TARGET/boot/efi"
+
+  pco_go "Partitions root et EFI montées"
+
+  install_payload "full"
+  write_fstab "$ROOT_PART" "$EFI_PART"
+  final_boot_refresh "full"
+}
+
+find_efi_partition() {
+  local disk="$1"
+
+  lsblk -rpno NAME,FSTYPE,PARTTYPE "$disk" \
+    | awk 'tolower($3)=="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"{print $1; exit}'
+
+  return 0
+}
+
+list_free_spaces() {
+  local disk="$1"
+
+  parted -m "$disk" unit MiB print free \
+    | awk -F: -v min="$MIN_FREE_MIB" '
+      /free/ {
+        start=$2
+        end=$3
+        size=$4
+        gsub(/MiB/,"",start)
+        gsub(/MiB/,"",end)
+        gsub(/MiB/,"",size)
+        if ((size+0) >= min) {
+          printf "%.2f|%.2f|%.2f\n", start, end, size
+        }
+      }
+    '
+}
+
+dualboot_install() {
+  choose_disk "Available target disks — DUALBOOT FREE SPACE MODE"
+
+  echo
+  echo "Selected disk:"
+  lsblk -dpno NAME,SIZE,MODEL "$DISK"
+  echo
+  echo "Dualboot mode will NOT resize partitions."
+  echo "It only uses existing unallocated/free space on the selected disk."
+  echo
+
+  EFI_PART="$(find_efi_partition "$DISK" || true)"
+
+  if [ -z "$EFI_PART" ]; then
+    pco_error "no existing EFI System Partition found on $DISK."
+    echo "Dualboot mode requires an existing EFI partition on the same disk."
+    exit 1
+  fi
+
+  echo "Existing EFI partition found:"
+  lsblk -rpno NAME,SIZE,FSTYPE,PARTLABEL "$EFI_PART" || true
+
+  mapfile -t FREE_SPACES < <(list_free_spaces "$DISK")
+
+  if [ "${#FREE_SPACES[@]}" -eq 0 ]; then
+    echo
+    pco_error "no unallocated space >= ${MIN_FREE_MIB}MiB found on $DISK."
+    echo "Create unallocated space first, then rerun this installer."
+    echo "No existing partition was modified."
+    exit 1
+  fi
+
+  echo
+  echo "Available unallocated spaces:"
+  local i=1 row start end size gib
+  for row in "${FREE_SPACES[@]}"; do
+    IFS='|' read -r start end size <<<"$row"
+    gib="$(awk -v m="$size" 'BEGIN { printf "%.1f", m/1024 }')"
+    echo "  [$i] start=${start}MiB end=${end}MiB size=${gib}GiB"
+    i=$((i+1))
+  done
+
+  echo
+  pco_prompt "Select free space number: "
+  read -r FREE_CHOICE
+
+  [[ "$FREE_CHOICE" =~ ^[0-9]+$ ]] || {
+    echo "Invalid choice."
+    exit 1
+  }
+
+  FREE_IDX=$((FREE_CHOICE-1))
+  if [ "$FREE_IDX" -lt 0 ] || [ "$FREE_IDX" -ge "${#FREE_SPACES[@]}" ]; then
+    echo "Selection out of range."
+    exit 1
+  fi
+
+  IFS='|' read -r START_MIB END_MIB SIZE_MIB <<<"${FREE_SPACES[$FREE_IDX]}"
+  END_SAFE_MIB="$(awk -v e="$END_MIB" 'BEGIN { printf "%.2f", e-1 }')"
+
+  echo
+  pco_warn ""
+  echo "This will create a new PinCabOS ext4 partition only in this free space:"
+  echo "  Disk:  $DISK"
+  echo "  Start: ${START_MIB}MiB"
+  echo "  End:   ${END_SAFE_MIB}MiB"
+  echo "  EFI:   $EFI_PART will be reused, NOT formatted"
+  echo
+  pco_prompt "Type INSTALL PINCABOS DUALBOOT to continue: "
+  read -r CONFIRM
+
+  [ "$CONFIRM" = "INSTALL PINCABOS DUALBOOT" ] || {
+    echo "Cancelled."
+    exit 1
+  }
+
+  echo
+  pco_step "Creating PinCabOS root partition in free space"
+  parted -s "$DISK" unit MiB mkpart PINCABOS_ROOT ext4 "${START_MIB}MiB" "${END_SAFE_MIB}MiB"
+  partprobe "$DISK"
+  udevadm settle
+  sleep 2
+
+  ROOT_PART="$(lsblk -rpno NAME,PARTLABEL "$DISK" | awk '$2=="PINCABOS_ROOT"{print $1}' | tail -n1)"
+
+  if [ -z "$ROOT_PART" ] || [ ! -b "$ROOT_PART" ]; then
+    pco_error "could not locate new PINCABOS_ROOT partition."
+    lsblk -rpno NAME,SIZE,FSTYPE,PARTLABEL "$DISK"
+    exit 1
+  fi
+
+  pco_go "Partition PinCabOS créée dans l’espace libre"
+
+  echo
+  echo "New PinCabOS root partition:"
+  lsblk -rpno NAME,SIZE,FSTYPE,PARTLABEL "$ROOT_PART" || true
+
+  echo
+  pco_step "Formatting PinCabOS root only"
+  mkfs.ext4 -F -L rootfs "$ROOT_PART"
+
+  [ "$(blkid -s TYPE -o value "$ROOT_PART")" = "ext4" ]
+
+  pco_go "Partition PinCabOS formatée en ext4"
+
+  echo
+  pco_step "Mounting target"
+  prepare_target_mount
+  mount "$ROOT_PART" "$TARGET"
+  mkdir -p "$TARGET/boot/efi"
+  mount "$EFI_PART" "$TARGET/boot/efi"
+
+  mountpoint -q "$TARGET"
+  mountpoint -q "$TARGET/boot/efi"
+
+  pco_go "Partitions root et EFI montées"
+
+  install_payload "dualboot"
+  write_fstab "$ROOT_PART" "$EFI_PART"
+  final_boot_refresh "dualboot"
+}
+
+check_payload
+
+regional_setup
+
+while true; do
+  echo
+  pco_hr
+  echo " PinCabOS install mode"
+  pco_hr
+  echo
+  echo "  [1] Erase a full disk and install PinCabOS"
+  echo "      Recommended for a dedicated pincab."
+  echo
+  echo "  [2] Install PinCabOS into existing unallocated space"
+  echo "      Dualboot mode. Does NOT resize existing partitions."
+  echo
+  echo "  [3] Rescue shell"
+  echo
+  echo "  [4] Reboot"
+  echo
+  pco_prompt "Choice: "
+  read -r MODE
+
+  case "$MODE" in
+    1) full_disk_install; break ;;
+    2) dualboot_install; break ;;
+    3) bash ;;
+    4) reboot ;;
+    *) echo "Invalid choice." ;;
+  esac
+done
+
+echo
+pco_step "Final validation"
+find "$TARGET/boot" -maxdepth 2 -type f | sort | sed -n '1,120p'
+ls -lah "$TARGET/lib/modules"
+cat "$TARGET/etc/fstab"
+grep -R "quiet splash\|PinCabOS\|pincabos\|plymouth" \
+  "$TARGET/etc/default/grub" \
+  "$TARGET/etc/plymouth/plymouthd.conf" \
+  "$TARGET/boot/grub/grub.cfg" \
+  2>/dev/null || true
+
+test -s "$TARGET/etc/fstab"
+test -d "$TARGET/boot/efi"
+ls "$TARGET"/boot/vmlinuz-* >/dev/null
+ls "$TARGET"/boot/initrd.img-* >/dev/null
+test -d "$TARGET/opt/pincabos"
+
+pco_go "Validation finale du système installé réussie"
+
+echo
+pco_hr
+pco_go "PinCabOS installation completed successfully."
+pco_warn "Remove the ISO/USB media, then reboot."
+pco_hr
+pco_prompt "Press ENTER to reboot now, or CTRL+C to stay in live session..."
+read -r
+reboot
+PINCBOS_LIVE_INSTALLER
+
+chmod 755 "$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer"
+
+echo
+echo "=== PinCabOS lean live TTY boot ==="
+echo "PINCABOS_LIVE_TTY_BOOT_NO_CYCLE_V1"
+
+mkdir -p \
+  "$ROOTFS_DIR/etc/systemd/system" \
+  "$ROOTFS_DIR/etc/systemd/system/multi-user.target.wants" \
+  "$ROOTFS_DIR/usr/local/sbin"
+
+echo
+echo "--- Set stable live hostname ---"
+
+printf 'pincabos-live\n' > "$ROOTFS_DIR/etc/hostname"
+
+if [ -f "$ROOTFS_DIR/etc/hosts" ]; then
+  sed -i \
+    '/^[[:space:]]*127\.0\.1\.1[[:space:]]/d' \
+    "$ROOTFS_DIR/etc/hosts"
+else
+  printf '127.0.0.1 localhost\n' > "$ROOTFS_DIR/etc/hosts"
+fi
+
+printf '127.0.1.1 pincabos-live\n' \
+  >> "$ROOTFS_DIR/etc/hosts"
+
+echo
+echo "--- Mask unnecessary desktop/live background services ---"
+
+LIVE_MASK_UNITS=(
+  casper-md5check.service
+  cloud-init-local.service
+  cloud-init.service
+  cloud-config.service
+  cloud-final.service
+  cloud-init.target
+  snapd.service
+  snapd.socket
+  snapd.seeded.service
+  snapd.autoimport.service
+  apt-daily.service
+  apt-daily.timer
+  apt-daily-upgrade.service
+  apt-daily-upgrade.timer
+  unattended-upgrades.service
+  packagekit.service
+  NetworkManager-wait-online.service
+  fwupd.service
+  fwupd-refresh.service
+  fwupd-refresh.timer
+  whoopsie.service
+  apport.service
+  plymouth-start.service
+  plymouth-quit.service
+  plymouth-quit-wait.service
+  plymouth-read-write.service
+)
+
+for unit in "${LIVE_MASK_UNITS[@]}"; do
+  echo "Masking live-only unit: $unit"
+  ln -sfn /dev/null \
+    "$ROOTFS_DIR/etc/systemd/system/$unit"
+done
+
+# tty1 belongs exclusively to the PinCabOS installer.
+ln -sfn /dev/null \
+  "$ROOTFS_DIR/etc/systemd/system/getty@tty1.service"
+
+ln -sfn /dev/null \
+  "$ROOTFS_DIR/etc/systemd/system/autovt@tty1.service"
+
+cat >"$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-wait" <<'PINCABOS_LIVE_WAIT'
+#!/usr/bin/env bash
+set -u
+
+PAYLOAD="/cdrom/pincabos-payload"
+HELPER="$PAYLOAD/pincabos-v8.1g-install-cab-payload-to-target.sh"
+CHECKSUM="$PAYLOAD/pincabos-rootfs-cab-v8.1g.parts.sha256"
+
+for second in $(seq 1 90); do
+  if [ -d "$PAYLOAD" ] &&
+     [ -x "$HELPER" ] &&
+     [ -s "$CHECKSUM" ]; then
+    exit 0
+  fi
+
+  sleep 1
+done
+
+echo
+echo "NOGO: PinCabOS payload was not mounted under /cdrom."
+echo
+echo "Current /cdrom contents:"
+ls -lah /cdrom 2>/dev/null || true
+
+exit 1
+PINCABOS_LIVE_WAIT
+
+chmod 755 \
+  "$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-wait"
+
+cat >"$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-console" <<'PINCABOS_LIVE_CONSOLE'
+#!/usr/bin/env bash
+set +e
+
+export TERM=linux
+
+printf '\033c'
+echo "==============================================================="
+echo " PINCABOS — STARTING TEXT INSTALLER"
+echo "==============================================================="
+echo
+
+/usr/local/sbin/pincabos-live-installer-wait
+WAIT_RC=$?
+
+if [ "$WAIT_RC" -ne 0 ]; then
+  echo
+  echo "NOGO: live media payload initialization failed."
+  echo "A rescue shell is opening on tty1."
+  echo
+  exec /bin/bash -l
+fi
+
+# PINCABOS_LIVE_CLEAN_TTY_CONSOLE_V1
+# Le démarrage Ubuntu/Casper reste sur tty2.
+# tty1 est réservé exclusivement à l’interface PinCabOS.
+dmesg -n 3 >/dev/null 2>&1 || true
+printf '\033c\033[2J\033[H'
+clear 2>/dev/null || true
+
+/usr/local/sbin/pincabos-live-installer
+INSTALLER_RC=$?
+
+echo
+echo "==============================================================="
+echo " PINCABOS INSTALLER STOPPED — CODE $INSTALLER_RC"
+echo "==============================================================="
+echo "A rescue shell is opening on tty1."
+echo
+
+exec /bin/bash -l
+PINCABOS_LIVE_CONSOLE
+
+chmod 755 \
+  "$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-console"
+
+cat >"$ROOTFS_DIR/etc/systemd/system/pincabos-live-installer-tty.service" <<'PINCBOS_SERVICE'
+[Unit]
+Description=PinCabOS text installer on tty1
+After=local-fs.target
+Before=getty.target
+ConditionKernelCommandLine=!pincabos.rescue=1
+ConditionPathExists=/usr/local/sbin/pincabos-live-installer-console
+
+[Service]
+Type=simple
+Environment=TERM=linux
+ExecStartPre=-/usr/bin/chvt 1
+ExecStart=/usr/local/sbin/pincabos-live-installer-console
+StandardInput=tty-force
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Restart=no
+SendSIGHUP=yes
+
+[Install]
+WantedBy=multi-user.target
+PINCBOS_SERVICE
+
+ln -sfn ../pincabos-live-installer-tty.service \
+  "$ROOTFS_DIR/etc/systemd/system/multi-user.target.wants/pincabos-live-installer-tty.service"
+
+echo
+echo "=== 14) Add manual fallback launcher ==="
+mkdir -p "$ROOTFS_DIR/etc/skel/Desktop"
+
+cat >"$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop" <<'PINCBOS_DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Install PinCabOS
+Comment=Install PinCabOS to disk
+Exec=sudo /usr/local/sbin/pincabos-live-installer
+Terminal=true
+Icon=system-software-install
+Categories=System;
+PINCBOS_DESKTOP
+
+chmod 755 "$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop"
+
+echo
+echo "=== 15) Repack live squashfs ==="
+rm -f "$SQUASHFS"
+mksquashfs "$ROOTFS_DIR" "$SQUASHFS" -comp xz -b 1M -noappend
+
+echo
+echo "=== 16) Integrate payload into ISO tree ==="
+rm -rf "$ISO_DIR/pincabos-payload"
+mkdir -p "$ISO_DIR/pincabos-payload"
+rsync -aHAX --info=progress2 "$PAYLOAD_ISO_READY"/ "$ISO_DIR/pincabos-payload"/
+
+(
+  cd "$ISO_DIR/pincabos-payload"
+  sha256sum pincabos-rootfs-cab-v8.1g.tar.zst.part-* > pincabos-rootfs-cab-v8.1g.parts.sha256
+  sha256sum pincabos-plymouth-theme-overlay-v8.1g.tar.zst > pincabos-plymouth-theme-overlay-v8.1g.sha256
+  sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
+  sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
+)
+
+echo
+echo "=== 17) Add README and write custom PinCabOS GRUB menu ==="
+
+cat >"$ISO_DIR/PINCABOS-V8.1G-README.txt" <<'PINCBOS_README'
+PinCabOS Beta Installer
+
+Payload:
+- V8.1G lean payload from validated cabinet source
+- Includes /boot, GRUB, initrd, /lib/modules
+- Includes Plymouth theme overlay: pincabos
+- Excludes Tables, swap, old ISO builds, build cache
+- Preserves WebApp runtime venv when present
+
+Installer:
+- English text installer on tty1
+- Ubuntu Welcome/GDM disabled
+- Full disk install mode
+- Dualboot free-space-only mode
+- Rescue shell mode from ISO boot menu
+- EFI label in full mode: PCOS_EFI
+- Root label: rootfs
+- Bootloader ID: PinCabOS
+
+Dualboot safety:
+- Does not shrink existing partitions
+- Requires existing unallocated space
+- Reuses existing EFI partition without formatting it
+- Skips removable EFI overwrite in dualboot mode
+PINCBOS_README
+
+KERNEL_REL="$(find "$ISO_DIR/casper" -maxdepth 2 -type f \( -name 'vmlinuz' -o -name 'vmlinuz.*' -o -name 'vmlinuz-*' \) | sort | head -n1)"
+INITRD_REL="$(find "$ISO_DIR/casper" -maxdepth 2 -type f \( -name 'initrd' -o -name 'initrd.*' -o -name 'initrd-*' \) | sort | head -n1)"
+
+[ -n "$KERNEL_REL" ] || die "Cannot find casper kernel for GRUB menu"
+[ -n "$INITRD_REL" ] || die "Cannot find casper initrd for GRUB menu"
+
+KERNEL_REL="/${KERNEL_REL#$ISO_DIR/}"
+INITRD_REL="/${INITRD_REL#$ISO_DIR/}"
+
+echo "GRUB kernel: $KERNEL_REL"
+echo "GRUB initrd: $INITRD_REL"
+
+mkdir -p "$ISO_DIR/boot/grub"
+
+cat >"$ISO_DIR/boot/grub/grub.cfg" <<PINCABOS_GRUB
+set default=0
+set timeout=10
+set timeout_style=menu
+
+if loadfont /boot/grub/font.pf2 ; then
+  set gfxmode=auto
+  insmod all_video
+  insmod gfxterm
+  terminal_output gfxterm
+fi
+
+set menu_color_normal=white/black
+set menu_color_highlight=black/light-gray
+
+menuentry "Install PinCabOS V8.1G" {
+  set gfxpayload=keep
+  linux $KERNEL_REL boot=casper noprompt systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty2 quiet loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
+  initrd $INITRD_REL
+}
+
+menuentry "Install PinCabOS V8.1G - safe graphics" {
+  set gfxpayload=keep
+  linux $KERNEL_REL boot=casper noprompt nomodeset systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty2 quiet loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
+  initrd $INITRD_REL
+}
+
+menuentry "PinCabOS rescue shell" {
+  set gfxpayload=keep
+  linux $KERNEL_REL boot=casper noprompt systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty1 loglevel=4 systemd.show_status=true rd.systemd.show_status=true vt.global_cursor_default=1 pincabos.rescue=1 ---
+  initrd $INITRD_REL
+}
+
+menuentry "Reboot" {
+  reboot
+}
+
+menuentry "Power off" {
+  halt
+}
+PINCABOS_GRUB
+
+if [ -f "$ISO_DIR/boot/grub/loopback.cfg" ]; then
+  cp -a "$ISO_DIR/boot/grub/grub.cfg" "$ISO_DIR/boot/grub/loopback.cfg"
+fi
+
+while IFS= read -r cfg; do
+  sed -i \
+    -e 's/Try or Install Ubuntu/Install PinCabOS/g' \
+    -e 's/Ubuntu safe graphics/PinCabOS safe graphics/g' \
+    -e 's/Install Ubuntu/Install PinCabOS/g' \
+    -e 's/Ubuntu/PinCabOS/g' \
+    "$cfg" || true
+done < <(find "$ISO_DIR" -type f \( -name 'grub.cfg' -o -name 'loopback.cfg' -o -name 'txt.cfg' \) 2>/dev/null)
+
+echo "--- PinCabOS GRUB menu ---"
+sed -n '1,180p' "$ISO_DIR/boot/grub/grub.cfg"
+
+echo
+
+echo
+echo "=== 17B) PinCabOS GRUB branding/logo ==="
+echo "PINCABOS_GRUB_BRANDING_LOGO_V1"
+echo "PINCABOS_GRUB_BRANDING_PCOSINSTALLWP_V1"
+
+mkdir -p "$ISO_DIR/boot/grub"
+
+GRUB_LOGO_SRC=""
+for candidate in \
+  /opt/pincabos/install/PCOSInstallWP.png \
+  "/opt/pincabos/install PCOSInstallWP.png" \
+  /usr/share/plymouth/themes/pincabos/PCOLoading.png \
+  /usr/share/plymouth/themes/pincabos/pincabos.png \
+  /usr/share/pixmaps/pincabos.png
+do
+  if [ -f "$candidate" ]; then
+    GRUB_LOGO_SRC="$candidate"
+    break
+  fi
+done
+
+[ -n "$GRUB_LOGO_SRC" ] || die "PinCabOS GRUB logo source not found"
+
+echo "Using GRUB logo/background:"
+echo "$GRUB_LOGO_SRC"
+
+cp -f "$GRUB_LOGO_SRC" "$ISO_DIR/boot/grub/pincabos-grub.png"
+
+cat > "$ISO_DIR/boot/grub/pincabos-branding.cfg" <<'PINCABOS_GRUB_BRAND'
+# PINCABOS_GRUB_BRANDING_LOGO_V1
+# PINCABOS_GRUB_BRANDING_PCOSINSTALLWP_V1
+insmod all_video
+insmod gfxterm
+insmod png
+
+for f in /boot/grub/font.pf2 /boot/grub/fonts/unicode.pf2 /boot/grub/unicode.pf2; do
+  if loadfont "$f"; then
+    set pincabos_font_loaded=1
+    break
+  fi
+done
+
+set gfxmode=auto
+set gfxpayload=keep
+
+if [ "$pincabos_font_loaded" = "1" ]; then
+  terminal_output gfxterm
+fi
+
+set color_normal=white/black
+set color_highlight=black/light-gray
+
+if [ -f /boot/grub/pincabos-grub.png ]; then
+  background_image /boot/grub/pincabos-grub.png
+fi
+PINCABOS_GRUB_BRAND
+
+echo "--- Remove Ubuntu GRUB theme/wording from ISO grub configs ---"
+while IFS= read -r cfg; do
+  echo "Sanitizing: $cfg"
+  sed -i -E \
+    -e '/^[[:space:]]*set[[:space:]]+theme=/d' \
+    -e '/^[[:space:]]*export[[:space:]]+theme/d' \
+    -e 's/Ubuntu/PinCabOS Installer/g' \
+    "$cfg"
+done < <(find "$ISO_DIR" -type f \( -name 'grub.cfg' -o -name 'loopback.cfg' \) 2>/dev/null)
+
+GRUBCFG="$ISO_DIR/boot/grub/grub.cfg"
+[ -f "$GRUBCFG" ] || die "main GRUB config missing: $GRUBCFG"
+
+if ! grep -q 'pincabos-branding.cfg' "$GRUBCFG"; then
+  TMP_GRUBCFG="${GRUBCFG}.tmp"
+  {
+    echo "# PINCABOS_GRUB_BRANDING_LOGO_V1"
+    echo "# PINCABOS_GRUB_BRANDING_PCOSINSTALLWP_V1"
+    echo "source /boot/grub/pincabos-branding.cfg"
+    echo
+    cat "$GRUBCFG"
+  } > "$TMP_GRUBCFG"
+  mv "$TMP_GRUBCFG" "$GRUBCFG"
+fi
+
+echo "--- GRUB branding validation ---"
+ls -lah "$ISO_DIR/boot/grub/pincabos-grub.png" "$ISO_DIR/boot/grub/pincabos-branding.cfg"
+grep -RInE 'PINCABOS_GRUB_BRANDING|pincabos-branding|pincabos-grub|background_image|set theme=|Ubuntu' \
+  "$ISO_DIR/boot/grub" "$ISO_DIR/EFI" 2>/dev/null || true
+
+
+echo
+# PINCABOS_LIVE_TTY_BOOT_POLICY_V1
+echo "=== 17C) Enforce non-graphical PinCabOS live boot ==="
+
+python3 - "$ISO_DIR" <<'PINCABOS_GRUB_TTY_POLICY'
+from pathlib import Path
+import sys
+
+iso_root = Path(sys.argv[1])
+
+config_names = {
+    "grub.cfg",
+    "loopback.cfg",
+    "txt.cfg",
+}
+
+remove_exact = {
+    "quiet",
+    "splash",
+    "noplymouth",
+}
+
+remove_prefixes = (
+    "systemd.unit=",
+    "cloud-init=",
+    "plymouth.enable=",
+    "rd.plymouth=",
+    "console=",
+    "loglevel=",
+    "rd.udev.log_level=",
+    "systemd.show_status=",
+    "rd.systemd.show_status=",
+    "vt.global_cursor_default=",
+)
+
+changed_files = []
+
+for path in sorted(iso_root.rglob("*")):
+    if not path.is_file() or path.name not in config_names:
+        continue
+
+    original = path.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    output = []
+    changed = False
+
+    for line in original.splitlines(keepends=True):
+        stripped = line.lstrip()
+        newline = "\n" if line.endswith("\n") else ""
+
+        valid_command = (
+            stripped.startswith("linux ")
+            or stripped.startswith("linuxefi ")
+            or stripped.startswith("append ")
+        )
+
+        if not valid_command or "boot=casper" not in stripped:
+            output.append(line)
+            continue
+
+        indentation = line[:len(line) - len(stripped)]
+        tokens = stripped.rstrip("\n").split()
+
+        command = tokens[0]
+        parameters = []
+
+        for token in tokens[1:]:
+            if token in remove_exact:
+                continue
+
+            if token.startswith(remove_prefixes):
+                continue
+
+            parameters.append(token)
+
+        rescue = "pincabos.rescue=1" in parameters
+
+        try:
+            separator_index = parameters.index("---")
+        except ValueError:
+            separator_index = len(parameters)
+
+        if rescue:
+            additions = [
+                "systemd.unit=multi-user.target",
+                "cloud-init=disabled",
+                "plymouth.enable=0",
+                "rd.plymouth=0",
+                "noplymouth",
+                "console=tty1",
+                "loglevel=4",
+                "systemd.show_status=true",
+                "rd.systemd.show_status=true",
+                "vt.global_cursor_default=1",
+            ]
+        else:
+            additions = [
+                "systemd.unit=multi-user.target",
+                "cloud-init=disabled",
+                "plymouth.enable=0",
+                "rd.plymouth=0",
+                "noplymouth",
+                "console=tty2",
+                "quiet",
+                "loglevel=3",
+                "rd.udev.log_level=3",
+                "systemd.show_status=false",
+                "rd.systemd.show_status=false",
+                "vt.global_cursor_default=1",
+            ]
+
+        parameters = (
+            parameters[:separator_index]
+            + additions
+            + parameters[separator_index:]
+        )
+
+        output.append(
+            indentation
+            + " ".join([command] + parameters)
+            + newline
+        )
+
+        changed = True
+
+    if changed:
+        path.write_text("".join(output), encoding="utf-8")
+        changed_files.append(str(path))
+
+if not changed_files:
+    raise SystemExit(
+        "NOGO: aucune ligne boot=casper n’a été corrigée"
+    )
+
+print("GRUB configurations corrected:")
+
+for item in changed_files:
+    print(f"  {item}")
+PINCABOS_GRUB_TTY_POLICY
+
+echo "--- Validate text-only live boot policy ---"
+
+LIVE_BOOT_LINES="$(
+  grep -RHE \
+    '^[[:space:]]*(linux|linuxefi|append)[[:space:]].*boot=casper' \
+    "$ISO_DIR/boot/grub" \
+    "$ISO_DIR/EFI" \
+    2>/dev/null || true
+)"
+
+[ -n "$LIVE_BOOT_LINES" ] \
+  || die "No live boot=casper lines found after TTY policy"
+
+if grep -Eq '(^|[[:space:]])splash([[:space:]]|$)' \
+    <<<"$LIVE_BOOT_LINES"; then
+  echo "$LIVE_BOOT_LINES"
+  die "A live boot entry still contains splash"
+fi
+
+if grep -v 'systemd.unit=multi-user.target' \
+    <<<"$LIVE_BOOT_LINES" \
+    | grep -q .; then
+  echo "$LIVE_BOOT_LINES"
+  die "A live boot entry does not force multi-user.target"
+fi
+
+if grep -v 'plymouth.enable=0' \
+    <<<"$LIVE_BOOT_LINES" \
+    | grep -q .; then
+  echo "$LIVE_BOOT_LINES"
+  die "A live boot entry does not disable Plymouth"
+fi
+
+echo "$LIVE_BOOT_LINES"
+echo "GO [√] Live boot is text-only and forces multi-user.target"
+
+echo "=== 18) Update casper metadata and md5sum ==="
+du -sx --block-size=1 "$ROOTFS_DIR" | cut -f1 > "$ISO_DIR/casper/filesystem.size"
+echo "$(du -sx --block-size=1 "$ROOTFS_DIR" | cut -f1)" > "${SQUASHFS}.size" || true
+
+(
+  cd "$ISO_DIR"
+  rm -f md5sum.txt
+  find . -type f \
+    ! -name md5sum.txt \
+    ! -path './isolinux/boot.cat' \
+    ! -path './boot.catalog' \
+    -print0 \
+    | sort -z \
+    | xargs -0 md5sum > md5sum.txt
+)
+
+echo
+echo "=== 19) Build final bootable ISO with explicit BIOS + UEFI ==="
+
+BIOS_IMG=""
+for p in \
+  "$ISO_DIR/boot/grub/i386-pc/eltorito.img" \
+  "$ISO_DIR/boot/grub/eltorito.img" \
+  "$ISO_DIR/boot/grub/i386-pc/core.img"
+do
+  if [ -f "$p" ]; then
+    BIOS_IMG="$p"
+    break
+  fi
+done
+
+if [ -z "$BIOS_IMG" ]; then
+  echo "Boot file audit:"
+  find "$ISO_DIR/boot" -maxdepth 5 -type f | sort | sed -n '1,240p'
+  die "BIOS El Torito image not found"
+fi
+
+BIOS_REL="${BIOS_IMG#$ISO_DIR/}"
+echo "BIOS boot image: $BIOS_REL"
+
+HYBRID_MBR="/usr/lib/grub/i386-pc/boot_hybrid.img"
+test -f "$HYBRID_MBR" || die "Missing GRUB hybrid MBR: $HYBRID_MBR"
+
+EFI_IMG="$BOOT_WORK/efiboot.img"
+rm -rf "$BOOT_WORK"
+mkdir -p "$BOOT_WORK"
+truncate -s 64M "$EFI_IMG"
+mformat -i "$EFI_IMG" -F ::
+
+if [ -d "$ISO_DIR/EFI" ]; then
+  mcopy -i "$EFI_IMG" -s "$ISO_DIR/EFI" ::/
+else
+  die "ISO tree has no /EFI directory"
+fi
+
+mdir -i "$EFI_IMG" ::/EFI/BOOT/BOOTX64.EFI >/dev/null 2>&1 \
+  || die "UEFI image missing EFI/BOOT/BOOTX64.EFI"
+
+rm -f "$OUT_ISO"
+
+xorriso -as mkisofs \
+  -r \
+  -J \
+  -joliet-long \
+  -l \
+  -V "$VOLID" \
+  -o "$OUT_ISO" \
+  --grub2-mbr "$HYBRID_MBR" \
+  -partition_offset 16 \
+  --mbr-force-bootable \
+  -append_partition 2 0xef "$EFI_IMG" \
+  -appended_part_as_gpt \
+  -iso_mbr_part_type 0x00 \
+  -c boot.catalog \
+  -b "$BIOS_REL" \
+  -no-emul-boot \
+  -boot-load-size 4 \
+  -boot-info-table \
+  --grub2-boot-info \
+  -eltorito-alt-boot \
+  -e '--interval:appended_partition_2:all::' \
+  -no-emul-boot \
+  "$ISO_DIR"
+
+echo
+echo "=== 20) Final ISO validation ==="
+test -f "$OUT_ISO" || die "ISO was not created"
+ls -lh "$OUT_ISO"
+sha256sum "$OUT_ISO" | tee "$OUT_ISO.sha256"
+
+echo
+echo "--- El Torito boot report ---"
+xorriso -indev "$OUT_ISO" -report_el_torito plain | sed -n '1,220p'
+
+echo
+echo "--- ISO payload listing ---"
+xorriso -osirrox on -indev "$OUT_ISO" \
+  -find /pincabos-payload -maxdepth 1 -type f -exec lsdl \
+  | sed -n '1,120p'
+
+echo
+echo "--- ISO PinCabOS files sanity ---"
+xorriso -osirrox on -indev "$OUT_ISO" \
+  -find / -maxdepth 2 -type f -name 'PINCABOS*' -exec lsdl \
+  | sed -n '1,80p'
+
+echo
+echo "==============================================================="
+echo " ISO CREATED OK"
+echo "==============================================================="
+echo "ISO:"
+echo "$OUT_ISO"
+echo
+echo "SHA256:"
+cat "$OUT_ISO.sha256"
+echo
+echo "Expected VM boot:"
+echo "  PinCabOS Beta Installer on tty1"
+echo "  No Ubuntu Welcome window"
+echo
+echo "Log:"
+echo "$LOG"
+echo "==============================================================="
+
+echo
+echo "==============================================================="
+echo " PINCABOS — NETTOYAGE APRÈS ISO RÉUSSIE"
+echo " PINCABOS_ISO_POST_SUCCESS_CLEANUP_V2"
+echo "==============================================================="
+
+FINAL_ISO="/opt/pincabos/build/output/PinCabOS-beta-Installer.iso"
+BUILD_WORK="/opt/pincabos/build/live-v8.1g-english"
+BUILD_LOGS="/opt/pincabos/build/logs"
+
+echo
+echo "=== Validation ISO avant nettoyage ==="
+
+if [ ! -s "$FINAL_ISO" ]; then
+  echo "ERREUR: ISO finale absente ou vide."
+  echo "Nettoyage annulé pour conserver les fichiers de diagnostic."
+  exit 1
+fi
+
+ISO_SIZE="$(stat -c '%s' "$FINAL_ISO" 2>/dev/null || echo 0)"
+
+if [ "$ISO_SIZE" -lt 1000000000 ]; then
+  echo "ERREUR: ISO anormalement petite: $ISO_SIZE octets"
+  echo "Nettoyage annulé."
+  exit 1
+fi
+
+ls -lh "$FINAL_ISO"
+sha256sum "$FINAL_ISO"
+
+echo
+echo "=== Suppression des répertoires de travail générés ==="
+
+for path in \
+  "$BUILD_WORK/payload-full" \
+  "$BUILD_WORK/iso-ready" \
+  "$BUILD_WORK/iso" \
+  "$BUILD_WORK/squashfs-root"
+do
+  case "$path" in
+    "$BUILD_WORK"/*)
+      if [ -e "$path" ]; then
+        echo "Suppression: $path"
+        rm -rf --one-file-system "$path"
+      fi
+      ;;
+    *)
+      echo "REFUS sécurité: chemin hors BUILD_WORK: $path"
+      exit 1
+      ;;
+  esac
+done
+
+echo
+echo "=== Suppression des listes et fichiers temporaires du build ==="
+
+find "$BUILD_WORK" -maxdepth 1 -type f \
+  \( \
+    -name 'payload-file-list-*' -o \
+    -name '*.tmp' -o \
+    -name '*.part' \
+  \) \
+  -print -delete 2>/dev/null || true
+
+echo
+echo "=== Suppression des backups du dossier script ==="
+
+find /opt/pincabos/script -maxdepth 1 -type f \
+  \( \
+    -name '*.bak' -o \
+    -name '*.bak-*' -o \
+    -name '*.backup' -o \
+    -name '*.orig' -o \
+    -name '*~' \
+  \) \
+  -print -delete 2>/dev/null || true
+
+echo
+echo "=== Garder seulement les 5 logs ISO les plus récents ==="
+
+if [ -d "$BUILD_LOGS" ]; then
+  mapfile -t OLD_LOGS < <(
+    find "$BUILD_LOGS" -maxdepth 1 -type f \
+      -name 'iso-*.log' \
+      -printf '%T@ %p\n' 2>/dev/null |
+    sort -nr |
+    tail -n +6 |
+    cut -d' ' -f2-
+  )
+
+  if [ "${#OLD_LOGS[@]}" -gt 0 ]; then
+    printf '%s\n' "${OLD_LOGS[@]}"
+    rm -f -- "${OLD_LOGS[@]}"
+  else
+    echo "Aucun ancien log à supprimer."
+  fi
+fi
+
+echo
+echo "=== Résultat final ==="
+du -sh /opt/pincabos/build 2>/dev/null || true
+du -sh /opt/pincabos/build/output 2>/dev/null || true
+ls -lh /opt/pincabos/build/output 2>/dev/null || true
+
+echo
+echo "OK: nettoyage post-build terminé."
+

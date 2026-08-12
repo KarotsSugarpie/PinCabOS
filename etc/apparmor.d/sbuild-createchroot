@@ -1,0 +1,18 @@
+# This profile allows everything and only exists to give the
+# application a name instead of having the label "unconfined"
+
+abi <abi/5.0>,
+include <tunables/global>
+
+profile sbuild-createchroot /usr/bin/sbuild-createchroot flags=(attach_disconnected mediate_deleted) {
+  allow all,
+  @{exec_path} mrix,
+
+  # override default pix, assumes allow all ix is at a lower priority
+  /usr/bin/unshare ix,
+
+  userns,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/sbuild-createchroot>
+}

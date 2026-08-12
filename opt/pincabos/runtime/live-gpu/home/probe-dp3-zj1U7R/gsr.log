@@ -1,0 +1,2 @@
+gsr warning: your FFmpeg version is known to be buggy (it doesn't have working hybrid_fragmented movflags). If you experience stutter in the mp4 file then update your FFmpeg to at least version 8 or record to a mkv file
+[h264_nvenc @ 0x604aedb4e880] ignoring invalid SAR: 0/0

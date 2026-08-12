@@ -1,0 +1,153 @@
+# vim:ft=apparmor
+# Author: Daniel Richard G. <skunk@iSKUNK.ORG>
+
+# Related:
+#   https://bugs.launchpad.net/bugs/1292324
+#   https://github.com/canonical/lightdm/issues/18
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile Xorg_wrap /usr/lib/xorg/Xorg.wrap flags=(complain) {
+  include <abstractions/base>
+  # Broad directory rules here cover the Xorg wrapper config file too
+  # Included abstractions/dri-common includes dri device files
+  include <abstractions/X>
+
+  # Privileges dropped if root is not needed due to cards supporting kms
+  capability setuid,
+  capability setgid,
+
+  # Is this needed?
+  #deny capability sys_admin,
+
+  /etc/X11/Xwrapper.config r,
+
+  /usr/lib/xorg/Xorg.wrap mr,
+  /usr/lib/xorg/Xorg px,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/Xorg_wrap>
+}
+
+# Note: attach_disconnected appears necessary in rootless mode
+profile Xorg /usr/lib/xorg/Xorg flags=(attach_disconnected, complain) {
+  include <abstractions/base>
+  include <abstractions/dbus-strict>
+  include <abstractions/fonts>
+  include <abstractions/mesa>
+  include <abstractions/nameservice>
+  include <abstractions/vulkan>
+  include <abstractions/X>
+
+  capability dac_override,
+  capability ipc_owner,
+  capability perfmon,
+  capability setgid,
+  capability setuid,
+  capability sys_admin,
+  capability sys_nice,
+  capability sys_rawio,
+
+  deny capability dac_read_search,
+
+  # Xorg wants net_admin for SO_RCVBUFFORCE (see socket(7)), but denying it
+  # seems to have a negligible impact on performance.
+  deny capability net_admin,
+
+  network netlink raw,
+
+  signal (receive) set=(hup, term),
+  signal (send) set=(usr1),
+
+  unix (accept, bind, listen, receive, send) type=stream addr="@/tmp/.X11-unix/X[0-9]*",
+
+  dbus (send)
+    bus=system
+    path=/org/freedesktop/login1
+    interface=org.freedesktop.login1.Manager
+    member=GetSessionByPID
+    peer=(name=org.freedesktop.login1),
+
+  dbus (send)
+    bus=system
+    path=/org/freedesktop/login1/session/*
+    interface=org.freedesktop.login1.Session
+    member={PauseDeviceComplete,ReleaseControl,ReleaseDevice,TakeControl,TakeDevice}
+    peer=(name=org.freedesktop.login1),
+
+  dbus (receive)
+    bus=system
+    path=/org/freedesktop/login1/session/*
+    interface=org.freedesktop.login1.Session
+    member=PauseDevice,
+
+  /{,usr/}bin/{bash,dash,sh} ix,
+  /usr/bin/xkbcomp           ix,
+
+  @{exec_path}            mr,
+
+  @{PROC}/cmdline         r,
+  @{PROC}/@{pid}/cmdline  r,
+  @{PROC}/ioports         r,
+  @{PROC}/mtrr            rw,
+
+  @{sys}/**/              r,
+  @{sys}/devices/**       r,
+  @{sys}/module/**        r,
+
+  @{sys}/devices/@{pci_bus}/**/backlight/*/brightness rw,
+
+  # Display managers
+  @{run}/user/@{uid}/gdm/* r,
+  @{run}/lightdm/**        r,
+  @{run}/lxdm/*            r,
+  @{run}/sddm/*            r,
+  @{run}/slim.auth         r,
+  /var/lib/wdm/**          r,
+  /var/lib/xdm/**          r,
+
+  @{run}/nvidia-xdriver-*  rw,	# TODO: double-check
+  @{run}/udev/data/**      r,
+
+  /dev/dri/card[0-9]*      r,
+  /dev/fb0                 rw,
+  /dev/input/event*        rw,
+  /dev/tty[0-9]*           rw,
+  /dev/vga_arbiter         rw,
+
+  /etc/X11/** r,
+
+  owner /tmp/.tX[0-9]*-lock    rw,
+  owner /tmp/.X[0-9]*-lock     wl,
+  owner /tmp/serverauth.*      r,    # startx(1)
+  owner /tmp/server-[0-9]*.xkm rw,
+
+  /usr/lib/xorg/modules/   r,
+  /usr/lib/xorg/modules/** mr,
+  /usr/share/**            r,
+
+  owner /var/lib/xkb/**                 rw,
+  owner /var/log/Xorg.pid-[1-9]*.log    rw,
+  owner /var/log/Xorg.[0-9]*.log{,.old} rw,
+
+  # Rootless mode (gdm3, startx)
+  owner @{HOME}/.local/                                        w,
+  owner @{HOME}/.local/share/                                  w,
+  owner @{HOME}/.local/share/xorg/                             w,
+  owner @{HOME}/.local/share/xorg/Xorg.pid-[1-9]*.log          rw,
+  owner @{HOME}/.local/share/xorg/Xorg.[0-9]*.log{,.old}       rw,
+  owner /var/lib/gdm*/.cache/mesa_shader_cache/                rw,
+  owner /var/lib/gdm*/.cache/mesa_shader_cache/**              rwk,
+  owner /var/lib/gdm*/.local/share/xorg/Xorg.pid-[1-9]*.log    rw,
+  owner /var/lib/gdm*/.local/share/xorg/Xorg.[0-9]*.log{,.old} rw,
+
+  # When running without a kernel mode-setting (KMS) driver, Xorg may need
+  # these additional permissions. DO NOT enable these unless necessary!
+  #nokms#/dev/mem rw,
+  #nokms#@{sys}/devices/@{pci_bus}/*/*/resource[0-9] w,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/Xorg>
+}

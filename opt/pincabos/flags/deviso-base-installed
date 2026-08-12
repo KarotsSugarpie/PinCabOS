@@ -1,0 +1,4 @@
+name=deviso-base-installed
+status=GO
+label=devISO base preinstalled from Calamares payload
+exit_code=0

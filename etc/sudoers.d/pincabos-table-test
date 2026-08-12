@@ -1,0 +1,2 @@
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-table-test-control play, /usr/local/sbin/pincabos-table-test-control stop
+www-data ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-table-test-control play, /usr/local/sbin/pincabos-table-test-control stop

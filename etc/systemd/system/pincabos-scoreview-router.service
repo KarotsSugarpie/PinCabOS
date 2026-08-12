@@ -1,0 +1,13 @@
+[Unit]
+Description=PinCabOS ScoreView FullDMD alias router
+
+After=display-manager.service pincabos-screen-topology-boot.service
+Wants=display-manager.service pincabos-screen-topology-boot.service
+[Service]
+Type=simple
+ExecStart=/opt/pincabos/bin/pincabos-scoreview-router.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical.target

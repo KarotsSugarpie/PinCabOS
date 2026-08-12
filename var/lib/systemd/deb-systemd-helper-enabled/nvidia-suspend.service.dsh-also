@@ -1,0 +1,1 @@
+/etc/systemd/system/systemd-suspend.service.wants/nvidia-suspend.service

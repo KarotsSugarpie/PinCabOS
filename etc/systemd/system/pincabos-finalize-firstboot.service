@@ -1,0 +1,15 @@
+[Unit]
+Description=PinCabOS first boot finalizer and system doctor
+ConditionPathExists=!/var/lib/pincabos/doctor-firstboot.done
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos --repair --firstboot
+ExecStartPost=/usr/bin/touch /var/lib/pincabos/doctor-firstboot.done
+SuccessExitStatus=0 2
+TimeoutStartSec=20min
+
+[Install]
+WantedBy=multi-user.target

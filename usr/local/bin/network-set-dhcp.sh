@@ -1,0 +1,1 @@
+/opt/pincabos/tools/network-set-dhcp.sh

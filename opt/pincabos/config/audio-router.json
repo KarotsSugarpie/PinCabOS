@@ -1,0 +1,19 @@
+{
+  "audio_mode": "dual",
+  "audio_backend": "alsa",
+  "backbox_device": "CMI8738/CMI8768 PCI Audio (CMI8738/C3DX PCI Audio Device) Analog Stereo",
+  "playfield_device": "Built-in Audio Analog Stereo",
+  "surround_device": "",
+  "bass_device": "",
+  "ssf_mode": "individual",
+  "invert_lr": false,
+  "invert_front_rear": false,
+  "enable_bass": true,
+  "night_mode": false,
+  "sound3d": "0",
+  "_pincabos_meta": {
+    "modified_at": "2026-07-13 19:14:56",
+    "modified_by": "PinCabOS",
+    "function": "Audio / SSF V2 Save"
+  }
+}

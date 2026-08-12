@@ -1,0 +1,4 @@
+/etc/systemd/system/dbus-org.freedesktop.resolve1.service
+/etc/systemd/system/sockets.target.wants/systemd-resolved-varlink.socket
+/etc/systemd/system/sockets.target.wants/systemd-resolved-monitor.socket
+/etc/systemd/system/sysinit.target.wants/systemd-resolved.service

@@ -1,0 +1,5 @@
+# PinCabOS WebApp screen/xrandr helper
+www-data ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-screen-xrandr.sh query
+www-data ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-screen-xrandr.sh apply
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-screen-xrandr.sh query
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-screen-xrandr.sh apply

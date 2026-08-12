@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "version": "alpha2.0-beta.20260714.1",
+  "channel": "beta",
+  "archive": "pincabos-update.tar.zst",
+  "sha256": "37a654421fd3c3fa3674c9dc89a3f16bd6e21a59ab279b883d341bc26788f078",
+  "files": "files.list",
+  "file_count": 319,
+  "built_at": "2026-07-14T02:03:06Z"
+}

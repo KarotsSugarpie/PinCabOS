@@ -1,0 +1,12 @@
+[Unit]
+Description=PinCabOS table-tree import fallback
+
+[Timer]
+OnBootSec=45s
+OnUnitActiveSec=5min
+AccuracySec=20s
+Unit=pincabos-table-tree.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

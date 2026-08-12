@@ -1,0 +1,18 @@
+[Unit]
+Description=PinCabOS Dashboard Live Screen Capture
+After=lightdm.service pincabos-webapp.service
+Wants=lightdm.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/python3 /opt/pincabos/tools/pincabos-dashboard-live-capture.py
+Restart=always
+RestartSec=3
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

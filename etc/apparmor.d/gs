@@ -1,0 +1,45 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    Author: Giampaolo Fresi Roglia (gianz)
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+
+abi <abi/5.0>,
+
+include <tunables/global>
+include <tunables/gs>
+include <tunables/print-devices>
+
+profile gs /usr/bin/gs {
+  include <abstractions/base>
+  include <abstractions/private-files-strict>
+  include <abstractions/user-tmp>
+  include <abstractions/fonts>
+
+  # allow read access to anything in /usr/share, for plugins and input
+  # methods
+  file r /usr/local/share/**,
+  file r /usr/share/**,
+  file r /var/lib/ghostscript/**,
+
+  # allow read access to paperspec
+  file r /etc/paperspecs,
+
+  # allow access to files with selected extensions under HOME and
+  # common mount locations
+  owner file rw @{HOME}/**.@{gs_file_ext},
+  owner file rw /mnt/**.@{gs_file_ext},
+  owner file rw /media/*/**.@{gs_file_ext},
+
+  # allow access to local printer devices
+  file rw @{print_devices},
+
+  file mr @{exec_path},
+
+  include if exists <local/gs>
+}

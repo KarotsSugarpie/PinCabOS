@@ -1,0 +1,63 @@
+{
+  "id": "72f47429dff24b34a7c443e9c1b2bc76",
+  "state": "completed_with_warning",
+  "created_at": "2026-08-01T16:41:23Z",
+  "updated_at": "2026-08-01T16:41:23Z",
+  "started_at": "2026-08-01T16:41:23Z",
+  "finished_at": "2026-08-01T16:41:23Z",
+  "selected_tables": [
+    "'300' (Gottlieb 1975)",
+    "Attack & Revenge from Mars (Original 2015)",
+    "Attack from Mars (Bally 1995)",
+    "Batman (66 Premium) (Stern 2016)",
+    "Batman '66 (Original 2018)",
+    "Beavis and Butt-Head Pinballed (Original 2024)"
+  ],
+  "total_tables": 6,
+  "completed_tables": 0,
+  "completed_names": [],
+  "current_table": "'300' (Gottlieb 1975)",
+  "current_package": "",
+  "events": [
+    {
+      "at": "2026-08-01T16:41:23Z",
+      "level": "info",
+      "message": "Job créé : 6 table(s) sélectionnée(s)."
+    },
+    {
+      "at": "2026-08-01T16:41:23Z",
+      "level": "info",
+      "message": "Le moteur V1 créera un fichier .PinCabOS individuel pour chaque table."
+    },
+    {
+      "at": "2026-08-01T16:41:23Z",
+      "level": "info",
+      "message": "Export V1 démarré en arrière-plan : 6 table(s)."
+    },
+    {
+      "at": "2026-08-01T16:41:23Z",
+      "level": "info",
+      "message": "Première table planifiée : '300' (Gottlieb 1975)"
+    },
+    {
+      "at": "2026-08-01T16:41:23Z",
+      "level": "info",
+      "message": "Requête interne envoyée au moteur V1. La page reste utilisable."
+    },
+    {
+      "at": "2026-08-01T16:41:23Z",
+      "level": "warning",
+      "message": "V1 a répondu HTTP 200, mais seulement 0/6 copies .PinCabOS ont été observées."
+    }
+  ],
+  "result_excerpt": "QR Code PayPal PinCabOS\nNotes de version\nNom : PinCabOS\nVersion : Alpha 2.0\nBuild : dev\nCanal : ins.pincabos.cc\nCodename : Stark\nAuteur : Karots Sugarpie\nSite : pincabos.cc\nSi vous aimez PinCabOS,\nvous pouvez me le montrer en offrant ce que vous voulez.\nMerci pour votre soutien.\nOptimisé par\n★ ★ Testeurs ★ / ★★ Soutiens Fondateurs ★★ ★\nMerci aux personnes qui aident à tester PinCabOs, rapporter les problèmes, proposer des idées et soutenir le développement du projet.\n★★ Karots Sugarpie ★★ ★ Strung Flo ★ ★ Nicolas Prou ★ ★ Olivier Chéron ★\n🚀 Bienvenue dans PinCabOS\nAvant d’utiliser PinCabOS, Jarvis recommande de compléter l’assistant Premier Démarrage.\nChecklist : accès WebApp réseau, GPU/pilotes, puis détection et assignation des écrans.\n🚀 Démarrer l’assistant\nPlus tard\nNe plus afficher automatiquement",
+  "error": "",
+  "progress": {
+    "percent": 100,
+    "label": "Terminé avec vérification requise",
+    "current_table": "'300' (Gottlieb 1975)",
+    "completed": 0,
+    "total": 6,
+    "mode": "packages"
+  }
+}

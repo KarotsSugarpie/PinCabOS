@@ -1,0 +1,40 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# Many programs wish to perform nameservice-like operations, such as looking up
+# users by name or id, groups by name or id, hosts by name or IP, etc.
+
+  abi <abi/5.0>,
+
+  include <abstractions/nss-systemd>
+
+  @{etc_ro}/default/nss r,
+  @{etc_ro}/gai.conf r,
+  @{etc_ro}/group r,
+  @{etc_ro}/host.conf r,
+  @{etc_ro}/hosts r,
+  @{etc_ro}/nsswitch.conf r,
+  @{etc_ro}/passwd r,
+  @{etc_ro}/protocols r,
+  @{etc_ro}/resolv.conf r,
+  @{etc_ro}/services r,
+
+  # On systems with authselect installed, /etc/nsswitch.conf is a symlink to /etc/authselect/nsswitch.conf
+  @{etc_ro}/authselect/nsswitch.conf r,
+
+  # Alternative location for group & passwd files
+  /var/lib/extrausers/group  r,
+  /var/lib/extrausers/passwd r,
+  /var/lib/nscd/group r,
+  /var/lib/nscd/passwd r,
+
+  @{run}/nscd/db* r,
+  @{run}/resolvconf/resolv.conf r,
+  @{run}/systemd/resolve/resolv.conf r,
+  @{run}/systemd/resolve/stub-resolv.conf r,
+
+  include if exists <abstractions/nameservice-strict.d>
+
+# vim:ft=apparmor

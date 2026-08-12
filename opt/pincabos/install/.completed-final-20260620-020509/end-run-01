@@ -1,0 +1,5 @@
+name=end-run-01
+status=GO
+label=RUN_01 skipped: devISO base already installed
+exit_code=0
+timestamp=2026-06-20 02:04:03

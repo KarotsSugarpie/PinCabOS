@@ -1,0 +1,3 @@
+# PinCabOS - accès persistant DudesCab pour VPX/libdof/UMX
+# USB VID:PID = 2e8a:106f
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="106f", OWNER="pinball", GROUP="pinball", MODE="0660"

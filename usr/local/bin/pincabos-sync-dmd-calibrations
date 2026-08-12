@@ -1,0 +1,1 @@
+/opt/pincabos/tools/pincabos-sync-dmd-calibrations.sh

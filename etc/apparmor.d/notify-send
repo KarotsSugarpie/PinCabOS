@@ -1,0 +1,21 @@
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile notify-send /usr/bin/notify-send {
+    include <abstractions/base>
+    include <abstractions/dbus-session-strict>
+
+    /usr/bin/notify-send mr,
+
+    # No idea why notify-send wants cgroup info but it works fine without it
+    deny /proc/@{pid}/cgroup r,
+    
+    dbus (send)
+        bus=session
+        path=/org/freedesktop/Notifications
+        interface=org.freedesktop.Notifications
+        member={GetServerInformation,Notify},
+
+    include if exists <local/notify-send>
+}

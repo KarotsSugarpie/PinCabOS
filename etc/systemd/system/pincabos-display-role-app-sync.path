@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch PinCabOS display-role outputs and application INIs
+
+[Path]
+PathExists=/opt/pincabos/config/screens/screens.json
+PathChanged=/opt/pincabos/config/display-aliases.env
+PathChanged=/home/pinball/.config/vpinfe/vpinfe.ini
+PathChanged=/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini
+Unit=pincabos-display-role-app-sync.service
+
+[Install]
+WantedBy=multi-user.target

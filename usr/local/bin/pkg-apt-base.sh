@@ -1,0 +1,1 @@
+/opt/pincabos/install/packages/pkg-apt-base.sh

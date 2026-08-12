@@ -1,0 +1,7 @@
+[Unit]
+Description=PinCabOS backups/logs permissions guard
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-fix-backups-logs-perms

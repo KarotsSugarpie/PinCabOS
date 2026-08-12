@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch PinCabOS display roles for automatic finalization
+
+[Path]
+PathExists=/opt/pincabos/config/screens/screens.json
+PathChanged=/opt/pincabos/config/screens/screens.json
+PathChanged=/opt/pincabos/config/display-aliases.env
+Unit=pincabos-display-role-finalizer.service
+
+[Install]
+WantedBy=multi-user.target

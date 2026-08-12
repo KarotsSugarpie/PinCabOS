@@ -1,0 +1,19 @@
+abi <abi/5.0>,
+include <tunables/global>
+
+profile john /usr/sbin/john {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/private-files-strict>
+  include if exists <local/john>
+
+  /usr/sbin/john mr,
+
+  /** r,
+
+  owner @{HOME}/.john/ rw,
+  owner @{HOME}/.john/*.log rwk,
+  owner @{HOME}/.john/*.pot rwk,
+  owner @{HOME}/.john/*.rec rwk,
+}

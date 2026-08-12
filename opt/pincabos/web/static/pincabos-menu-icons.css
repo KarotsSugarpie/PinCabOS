@@ -1,0 +1,14 @@
+/* PinCabOS-File created by Karots Sugarpie */
+/* PinCabOS menu icons */
+.menu-ico {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 5px !important;
+  font-size: 1.05em !important;
+  line-height: 1 !important;
+}
+
+.pincabos-nav a {
+  gap: 3px !important;
+}

@@ -1,0 +1,44 @@
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile znc /usr/bin/znc {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+
+  include <abstractions/perl>
+  include <abstractions/python>
+  # It seems that znc embeds a tcl interpreter and that there are no tcl-related abstractions
+
+  network tcp,
+
+  @{exec_path} mr,
+
+  @{system_share_dirs}/znc/** r,
+
+  owner @{HOME}/.znc/ rw,
+  owner @{HOME}/.znc/** r,
+
+  owner @{HOME}/.znc/znc.pid rw,
+
+  owner @{HOME}/.znc/configs/ rw,
+  owner @{HOME}/.znc/configs/znc.conf rwk,
+  # Tilde version is used when the config is updated by ZNC
+  owner @{HOME}/.znc/configs/znc.conf~ rwk,
+  owner @{HOME}/.znc/modules/ rw,
+  owner @{HOME}/.znc/modules/* mrw,
+  owner @{HOME}/.znc/moddata/ rw,
+  owner @{HOME}/.znc/moddata/** rw,
+  owner @{HOME}/.znc/users/ rw,
+  owner @{HOME}/.znc/users/** rw,
+
+  # Write perms on znc.pem only needed with --makeconf
+  owner @{HOME}/.znc/znc.pem rw,
+
+  # Python extensions will need to be run through a Python interpreter
+  # The Perl interpreter is already included in the abstractions file
+  /{usr/,}bin/python{3,3.[0-9],3.[1-9][0-9]} rix,
+
+  include if exists <local/znc>
+}

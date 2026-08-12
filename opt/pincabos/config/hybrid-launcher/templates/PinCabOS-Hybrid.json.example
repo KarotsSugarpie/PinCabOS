@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "default": "original",
+  "timeout": 20,
+  "choices": {
+    "original": {
+      "table": "/home/pinball/Tables/MaTable Original/MaTable Original.vpx",
+      "env": {
+        "PINCABOS_GAME_CHOICE": "original"
+      }
+    },
+    "pup": {
+      "table": "/home/pinball/Tables/MaTable PuP/MaTable PuP.vpx",
+      "env": {
+        "PINCABOS_GAME_CHOICE": "pup",
+        "PINCABOS_PUP_ENABLED": "1"
+      }
+    }
+  }
+}

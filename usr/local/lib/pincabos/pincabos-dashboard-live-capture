@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# PinCabOS Dashboard Camera Live — rôles Playfield / Backglass / FullDMD.
+set -Eeuo pipefail
+
+PATH='/usr/sbin:/usr/bin:/sbin:/bin'
+DISPLAY=':0'
+XAUTHORITY='/home/pinball/.Xauthority'
+LIVE_DIR='/run/pincabos-dashboard-live'
+LEASE="$LIVE_DIR/lease"
+ROLE_FILE='/opt/pincabos/config/display-aliases.env'
+FPS=5
+
+log(){ logger -t pincabos-dashboard-live -- "$*" 2>/dev/null || true; }
+
+declare -A PIDS=()
+
+role_output(){
+  [ -r "$ROLE_FILE" ] || return 1
+
+  (
+    set -a
+    # shellcheck disable=SC1090
+    . "$ROLE_FILE"
+
+    case "$1" in
+      0) printf '%s\n' "${PINCABOS_PLAYFIELD_OUTPUT:-}" ;;
+      1) printf '%s\n' "${PINCABOS_BACKGLASS_OUTPUT:-}" ;;
+      2) printf '%s\n' "${PINCABOS_FULLDMD_OUTPUT:-}" ;;
+      *) return 1 ;;
+    esac
+  )
+}
+
+output_geometry(){
+  local output="$1"
+
+  /usr/bin/xrandr --query 2>/dev/null \
+    | awk -v out="$output" '
+        $1 == out && $2 == "connected" {
+          for (i = 1; i <= NF; i++) {
+            if ($i ~ /^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$/) {
+              print $i
+              exit
+            }
+          }
+        }
+      '
+}
+
+lease_slots(){
+  local now age raw slot
+
+  # Par défaut PinCabOS garde les 3 widgets live actifs.
+  # Le lease WebApp peut encore réduire/forcer la liste quand il est frais.
+  if [ ! -s "$LEASE" ]; then
+    printf '0\n1\n2\n'
+    return 0
+  fi
+
+  now="$(date +%s)"
+  age=$((now - $(stat -c %Y "$LEASE" 2>/dev/null || echo 0)))
+
+  if [ "$age" -gt 10 ]; then
+    printf '0\n1\n2\n'
+    return 0
+  fi
+
+  raw="$(tr -cd '0-2,\n' < "$LEASE" | head -1)"
+  if [ -z "$raw" ]; then
+    printf '0\n1\n2\n'
+    return 0
+  fi
+
+  IFS=',' read -r -a slots <<<"$raw"
+
+  for slot in "${slots[@]}"; do
+    [[ "$slot" =~ ^[0-2]$ ]] && printf '%s\n' "$slot"
+  done | sort -nu
+}
+
+stop_slot(){
+  local slot="$1"
+  local pid="${PIDS[$slot]:-}"
+
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+  fi
+
+  unset 'PIDS[$slot]'
+}
+
+start_slot(){
+  local slot="$1"
+  local pid="${PIDS[$slot]:-}"
+  local output geometry size rest xpos ypos width file
+
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    return 0
+  fi
+
+  output="$(role_output "$slot" || true)"
+
+  if [ -z "$output" ]; then
+    log "slot=$slot ignoré : rôle sans sortie active."
+    return 0
+  fi
+
+  geometry="$(output_geometry "$output" || true)"
+
+  if [ -z "$geometry" ]; then
+    log "slot=$slot ignoré : sortie $output absente ou sans géométrie."
+    return 0
+  fi
+
+  size="${geometry%%+*}"
+  rest="${geometry#*+}"
+  xpos="${rest%%+*}"
+  ypos="${rest#*+}"
+
+  case "$slot" in
+    0) width=640 ;;
+    1) width=480 ;;
+    2) width=360 ;;
+  esac
+
+  file="$LIVE_DIR/screen${slot}.jpg"
+
+  rm -f "$file" "$file.tmp" 2>/dev/null || true
+
+  (
+    exec /usr/bin/ffmpeg \
+      -hide_banner \
+      -loglevel error \
+      -nostdin \
+      -f x11grab \
+      -framerate "$FPS" \
+      -draw_mouse 0 \
+      -video_size "$size" \
+      -i ":0.0+${xpos},${ypos}" \
+      -an -sn -dn \
+      -vf "scale=${width}:-2:flags=fast_bilinear,format=yuvj420p" \
+      -q:v 31 \
+      -threads 1 \
+      -f image2 \
+      -update 1 \
+      -atomic_writing 1 \
+      -y "$file" >/dev/null 2>&1
+  ) &
+
+  PIDS[$slot]=$!
+
+  log "camera stream slot=$slot role-output=$output geometry=$geometry fps=$FPS width=$width"
+}
+
+cleanup(){
+  for slot in "${!PIDS[@]}"; do
+    stop_slot "$slot"
+  done
+}
+
+trap cleanup EXIT INT TERM
+
+mkdir -p "$LIVE_DIR"
+chmod 0755 "$LIVE_DIR" || true
+
+log "camera live worker started — role aware"
+
+while :; do
+  mapfile -t wanted < <(lease_slots || true)
+
+  declare -A WANT=()
+
+  for slot in "${wanted[@]}"; do
+    WANT[$slot]=1
+  done
+
+  for slot in "${!PIDS[@]}"; do
+    [ -n "${WANT[$slot]:-}" ] || stop_slot "$slot"
+  done
+
+  for slot in "${wanted[@]}"; do
+    start_slot "$slot" || true
+  done
+
+  sleep 0.35
+done

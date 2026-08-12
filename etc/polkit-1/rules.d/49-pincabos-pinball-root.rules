@@ -1,0 +1,6 @@
+// PinCabOS dedicated cabinet account
+polkit.addRule(function(action, subject) {
+    if (subject.user == "pinball") {
+        return polkit.Result.YES;
+    }
+});

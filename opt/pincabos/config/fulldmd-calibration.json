@@ -1,0 +1,15 @@
+{
+  "screen_id": "2",
+  "x": 8,
+  "y": 124,
+  "width": 1016,
+  "height": 619,
+  "geometry": "8,124,1016,619",
+  "geometry_x11": "1016x619+8+124",
+  "note": "PinCabOs FullDMD visible area calibration",
+  "_pincabos_meta": {
+    "modified_at": "2026-06-30 21:26:02",
+    "modified_by": "PinCabOS",
+    "function": "FullDMD Save"
+  }
+}

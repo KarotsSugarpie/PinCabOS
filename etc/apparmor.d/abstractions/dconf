@@ -1,0 +1,14 @@
+# vim:ft=apparmor
+
+  abi <abi/5.0>,
+
+# permissions for querying dconf settings; granting write access should
+# be specified in a specific application's profile.
+
+  @{etc_ro}/dconf/** r,
+  # TODO: make w conditional when an override is available, so it can be moved to a portal.
+  owner @{run}/user/*/dconf/user rw,
+  owner @{HOME}/.config/dconf/user r,
+
+  # Include additions to the abstraction
+  include if exists <abstractions/dconf.d>

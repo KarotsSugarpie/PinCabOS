@@ -1,0 +1,20 @@
+[Unit]
+Description=PinCabOS Firstboot Online GO Bootstrap
+Documentation=https://pincabos.cc/
+After=network.target NetworkManager.service systemd-networkd.service systemd-resolved.service
+Wants=network.target
+ConditionPathExists=/opt/pincabos
+ConditionPathExists=!/opt/pincabos/flags/final-go
+
+[Service]
+Type=oneshot
+Environment=TERM=xterm
+Environment=DEBIAN_FRONTEND=noninteractive
+ExecStart=/usr/local/sbin/pincabos-firstboot-online-go.sh
+RemainAfterExit=no
+TimeoutStartSec=0
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

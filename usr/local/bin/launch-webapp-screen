@@ -1,0 +1,1 @@
+/opt/pincabos/tools/launch-webapp-screen.sh

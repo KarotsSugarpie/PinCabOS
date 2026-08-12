@@ -1,0 +1,149 @@
+[2026-07-03 16:37:11.580808] [0x0000765f68224000] [info]    config: 'file_apps' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/apps.json
+[2026-07-03 16:37:11.580861] [0x0000765f68224000] [info]    config: 'credentials_file' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/credentials.json
+[2026-07-03 16:37:11.580865] [0x0000765f68224000] [info]    config: 'origin_web_ui_allowed' = pc
+[2026-07-03 16:37:11.580868] [0x0000765f68224000] [info]    config: 'mouse' = disabled
+[2026-07-03 16:37:11.580870] [0x0000765f68224000] [info]    config: 'min_log_level' = debug
+[2026-07-03 16:37:11.580873] [0x0000765f68224000] [info]    config: 'file_state' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/state.json
+[2026-07-03 16:37:11.580875] [0x0000765f68224000] [info]    config: 'port' = 48989
+[2026-07-03 16:37:11.580877] [0x0000765f68224000] [info]    config: 'system_tray' = disabled
+[2026-07-03 16:37:11.580880] [0x0000765f68224000] [info]    config: 'nvenc_preset' = 1
+[2026-07-03 16:37:11.580882] [0x0000765f68224000] [info]    config: 'keyboard' = disabled
+[2026-07-03 16:37:11.580884] [0x0000765f68224000] [info]    config: 'address_family' = ipv4
+[2026-07-03 16:37:11.580886] [0x0000765f68224000] [info]    config: 'stream_audio' = disabled
+[2026-07-03 16:37:11.580888] [0x0000765f68224000] [info]    config: 'capture' = nvfbc
+[2026-07-03 16:37:11.580891] [0x0000765f68224000] [info]    config: 'sunshine_name' = PinCabOS-NvFBC-Probe
+[2026-07-03 16:37:11.580904] [0x0000765f68224000] [info]    config: 'controller' = disabled
+[2026-07-03 16:37:11.580908] [0x0000765f68224000] [info]    config: 'channels' = 1
+[2026-07-03 16:37:11.580911] [0x0000765f68224000] [info]    config: 'bind_address' = 127.0.0.1
+[2026-07-03 16:37:11.580913] [0x0000765f68224000] [info]    config: 'encoder' = nvenc
+[2026-07-03 16:37:11.580915] [0x0000765f68224000] [info]    config: 'cert' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/cacert.pem
+[2026-07-03 16:37:11.580917] [0x0000765f68224000] [info]    config: 'pkey' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/cakey.pem
+[2026-07-03 16:37:11.580920] [0x0000765f68224000] [info]    config: 'nvenc_twopass' = disabled
+[2026-07-03 16:37:11.580922] [0x0000765f68224000] [info]    config: 'log_path' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/sunshine.log
+[2026-07-03 16:37:11.580924] [0x0000765f68224000] [info]    config: 'upnp' = disabled
+Warning: Unrecognized configurable option [channels]
+[2026-07-03 16:37:11.581]: Info: Sunshine version: 2026.516.143833 commit: 14ffa6fdaa53f7b51512be2b3d24f3939695403c
+[2026-07-03 16:37:11.581]: Info: Package Publisher: LizardByte
+[2026-07-03 16:37:11.581]: Info: Publisher Website: https://app.lizardbyte.dev
+[2026-07-03 16:37:11.581]: Info: Get support: https://app.lizardbyte.dev/support
+[2026-07-03 16:37:11.581]: Info: config: 'upnp' = disabled
+[2026-07-03 16:37:11.581]: Info: config: 'log_path' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/sunshine.log
+[2026-07-03 16:37:11.581]: Info: config: 'nvenc_twopass' = disabled
+[2026-07-03 16:37:11.581]: Info: config: 'pkey' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/cakey.pem
+[2026-07-03 16:37:11.581]: Info: config: 'cert' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/cacert.pem
+[2026-07-03 16:37:11.581]: Info: config: 'encoder' = nvenc
+[2026-07-03 16:37:11.581]: Info: config: 'bind_address' = 127.0.0.1
+[2026-07-03 16:37:11.581]: Info: config: 'channels' = 1
+[2026-07-03 16:37:11.581]: Info: config: 'controller' = disabled
+[2026-07-03 16:37:11.581]: Info: config: 'sunshine_name' = PinCabOS-NvFBC-Probe
+[2026-07-03 16:37:11.581]: Info: config: 'file_apps' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/apps.json
+[2026-07-03 16:37:11.581]: Info: config: 'keyboard' = disabled
+[2026-07-03 16:37:11.581]: Info: config: 'credentials_file' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/credentials.json
+[2026-07-03 16:37:11.581]: Info: config: 'origin_web_ui_allowed' = pc
+[2026-07-03 16:37:11.581]: Info: config: 'min_log_level' = debug
+[2026-07-03 16:37:11.581]: Info: config: 'mouse' = disabled
+[2026-07-03 16:37:11.581]: Info: config: 'file_state' = /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/state.json
+[2026-07-03 16:37:11.581]: Info: config: 'port' = 48989
+[2026-07-03 16:37:11.581]: Info: config: 'system_tray' = disabled
+[2026-07-03 16:37:11.581]: Info: config: 'nvenc_preset' = 1
+[2026-07-03 16:37:11.581]: Info: config: 'address_family' = ipv4
+[2026-07-03 16:37:11.581]: Info: config: 'stream_audio' = disabled
+[2026-07-03 16:37:11.581]: Info: config: 'capture' = nvfbc
+[2026-07-03 16:37:11.581]: Error: No such node (apps)
+[2026-07-03 16:37:12.289]: Info: Found [3] outputs
+[2026-07-03 16:37:12.289]: Info: Virtual Desktop: 7680x2160
+[2026-07-03 16:37:12.289]: Info: XrandR: available
+[2026-07-03 16:37:12.289]: Info: -- Output --
+[2026-07-03 16:37:12.289]: Debug:   ID: 444
+[2026-07-03 16:37:12.289]: Debug:   Name: HDMI-0
+[2026-07-03 16:37:12.289]: Info:   Resolution: 3840x2160
+[2026-07-03 16:37:12.289]: Info:   Offset: 0x0
+[2026-07-03 16:37:12.289]: Info: -- Output --
+[2026-07-03 16:37:12.289]: Debug:   ID: 471
+[2026-07-03 16:37:12.289]: Debug:   Name: DP-1
+[2026-07-03 16:37:12.289]: Info:   Resolution: 1920x1080
+[2026-07-03 16:37:12.289]: Info:   Offset: 3840x0
+[2026-07-03 16:37:12.289]: Info: -- Output --
+[2026-07-03 16:37:12.289]: Debug:   ID: 475
+[2026-07-03 16:37:12.289]: Debug:   Name: DP-3
+[2026-07-03 16:37:12.289]: Info:   Resolution: 1920x1200
+[2026-07-03 16:37:12.289]: Info:   Offset: 5760x0
+[2026-07-03 16:37:12.351]: Error: Couldn't release NvFBC context from current thread: 
+[2026-07-03 16:37:12.367]: Warning: Unable to create virtual mouse: Permission denied
+[2026-07-03 16:37:12.367]: Warning: Unable to create virtual keyboard: Permission denied
+[2026-07-03 16:37:12.367]: Warning: Gamepad xone is disabled due to Permission denied
+[2026-07-03 16:37:12.367]: Warning: Gamepad ds5 is disabled due to Permission denied
+[2026-07-03 16:37:12.367]: Warning: Gamepad switch is disabled due to Permission denied
+[2026-07-03 16:37:12.367]: Warning: No gamepad input is available
+[2026-07-03 16:37:12.367]: Info: Trying encoder [nvenc]
+[2026-07-03 16:37:12.367]: Info: Screencasting with NvFBC
+
+Session terminated, killing shell...[2026-07-03 16:37:12.728]: Info: Creating encoder [h264_nvenc]
+[2026-07-03 16:37:12.728]: Info: Color coding: SDR (Rec. 601)
+[2026-07-03 16:37:12.728]: Info: Color depth: 8-bit
+[2026-07-03 16:37:12.728]: Info: Color range: JPEG
+[2026-07-03 16:37:12.984]: Info: Streaming bitrate is 1000000
+[2026-07-03 16:37:12.988]: Debug: [h264_nvenc @ 0x599b3bd08500] Loaded Nvenc version 13.0
+[2026-07-03 16:37:12.988]: Debug: [h264_nvenc @ 0x599b3bd08500] Nvenc initialized successfully
+[2026-07-03 16:37:13.139]: Debug: Frame 1: IDR Keyframe (AV_FRAME_FLAG_KEY)
+[2026-07-03 16:37:13.161]: Debug: [h264_nvenc @ 0x599b3bd08500] Nvenc unloaded
+[2026-07-03 16:37:13.161]: Info: Creating encoder [hevc_nvenc]
+[2026-07-03 16:37:13.161]: Info: Color coding: SDR (Rec. 601)
+[2026-07-03 16:37:13.161]: Info: Color depth: 8-bit
+[2026-07-03 16:37:13.161]: Info: Color range: JPEG
+[2026-07-03 16:37:13.162]: Info: Streaming bitrate is 1000000
+[2026-07-03 16:37:13.162]: Debug: [hevc_nvenc @ 0x599b3d4c4c80] Loaded Nvenc version 13.0
+[2026-07-03 16:37:13.162]: Debug: [hevc_nvenc @ 0x599b3d4c4c80] Nvenc initialized successfully
+[2026-07-03 16:37:13.291]: Debug: Frame 1: IDR Keyframe (AV_FRAME_FLAG_KEY)
+[2026-07-03 16:37:13.317]: Debug: [hevc_nvenc @ 0x599b3d4c4c80] Nvenc unloaded
+[2026-07-03 16:37:13.318]: Info: Creating encoder [av1_nvenc]
+[2026-07-03 16:37:13.318]: Info: Color coding: SDR (Rec. 601)
+[2026-07-03 16:37:13.318]: Info: Color depth: 8-bit
+[2026-07-03 16:37:13.318]: Info: Color range: JPEG
+[2026-07-03 16:37:13.318]: Info: Streaming bitrate is 1000000
+[2026-07-03 16:37:13.318]: Debug: [av1_nvenc @ 0x599b3d4c4c80] Loaded Nvenc version 13.0
+[2026-07-03 16:37:13.318]: Debug: [av1_nvenc @ 0x599b3d4c4c80] Nvenc initialized successfully
+[2026-07-03 16:37:13.328]: Warning: [av1_nvenc @ 0x599b3d4c4c80] Codec not supported
+[2026-07-03 16:37:13.328]: Error: [av1_nvenc @ 0x599b3d4c4c80] Provided device doesn't support required NVENC features
+[2026-07-03 16:37:13.330]: Debug: [av1_nvenc @ 0x599b3d4c4c80] Nvenc unloaded
+[2026-07-03 16:37:13.330]: Error: Could not open codec [av1_nvenc]: Function not implemented
+[2026-07-03 16:37:13.373]: Error: Couldn't release NvFBC context from current thread: 
+[2026-07-03 16:37:13.373]: Info: Screencasting with NvFBC
+[2026-07-03 16:37:13.731]: Info: Creating encoder [hevc_nvenc]
+[2026-07-03 16:37:13.731]: Info: Color coding: SDR (Rec. 709)
+[2026-07-03 16:37:13.731]: Info: Color depth: 10-bit
+[2026-07-03 16:37:13.731]: Info: Color range: JPEG
+[2026-07-03 16:37:13.731]: Info: Streaming bitrate is 1000000
+[2026-07-03 16:37:13.732]: Debug: [hevc_nvenc @ 0x599b3d4c4c80] Loaded Nvenc version 13.0
+[2026-07-03 16:37:13.732]: Debug: [hevc_nvenc @ 0x599b3d4c4c80] Nvenc initialized successfully
+[2026-07-03 16:37:13.768]: Error: cuda::cuda_t doesn't support any format other than AV_PIX_FMT_NV12
+[2026-07-03 16:37:13.784]: Debug: [hevc_nvenc @ 0x599b3d4c4c80] Nvenc unloaded
+[2026-07-03 16:37:13.826]: Error: Couldn't release NvFBC context from current thread: 
+[2026-07-03 16:37:13.826]: Info: // Testing for available encoders, this may generate errors. You can safely ignore those errors. //
+[2026-07-03 16:37:13.826]: Info: 
+[2026-07-03 16:37:13.826]: Info: // Ignore any errors mentioned above, they are not relevant. //
+[2026-07-03 16:37:13.826]: Info: 
+[2026-07-03 16:37:13.826]: Debug: ------  h264 ------
+[2026-07-03 16:37:13.826]: Debug: PASSED: supported
+[2026-07-03 16:37:13.826]: Debug: REF_FRAMES_RESTRICT: supported
+[2026-07-03 16:37:13.826]: Debug: DYNAMIC_RANGE: unsupported
+[2026-07-03 16:37:13.826]: Debug: YUV444: unsupported
+[2026-07-03 16:37:13.826]: Debug: VUI_PARAMETERS: supported
+[2026-07-03 16:37:13.826]: Debug: -------------------
+[2026-07-03 16:37:13.826]: Info: Found H.264 encoder: h264_nvenc [nvenc]
+[2026-07-03 16:37:13.826]: Debug: ------  hevc ------
+[2026-07-03 16:37:13.826]: Debug: PASSED: supported
+[2026-07-03 16:37:13.826]: Debug: REF_FRAMES_RESTRICT: supported
+[2026-07-03 16:37:13.826]: Debug: DYNAMIC_RANGE: unsupported
+[2026-07-03 16:37:13.826]: Debug: YUV444: unsupported
+[2026-07-03 16:37:13.826]: Debug: VUI_PARAMETERS: supported
+[2026-07-03 16:37:13.826]: Debug: -------------------
+[2026-07-03 16:37:13.826]: Info: Found HEVC encoder: hevc_nvenc [nvenc]
+[2026-07-03 16:37:14.248]: Info: Open the Web UI to set your new username and password and getting started
+[2026-07-03 16:37:14.249]: Info: File /opt/pincabos/apps/sunshine-stream-test/2026-07-03-163547/nvfbc-probe-2026-07-03-163710/state.json doesn't exist
+[2026-07-03 16:37:14.249]: Info: No main thread features enabled, skipping event loop
+[2026-07-03 16:37:14.250]: Error: Failed to create client: Daemon not running
+[2026-07-03 16:37:14.253]: Info: Configuration UI available at [https://127.0.0.1:48990]
+ ...killed.
+[2026-07-03 16:37:15.603]: Info: Terminate handler called
+[2026-07-03 16:37:15.603]: Error: Couldn't accept incoming connections: Operation canceled

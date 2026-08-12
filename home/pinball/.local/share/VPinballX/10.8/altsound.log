@@ -1,0 +1,11 @@
+NONE: path set: /home/pinball/.local/share/VPinballX/10.8/altsound.log
+NONE: New log level set: INFO
+INFO: Parsed "record_sound_cmds": false
+INFO: Parsed "rom_volume_ctrl": true
+INFO: Parsed "cmd_skip_count": 0
+INFO: Parsed "format": altsound
+INFO: Parsed "logging_level": Error
+NONE: New log level set: ERROR
+INFO: altsound processor created
+INFO: SUCCESS AltsoundCsvParser::parse()
+INFO: SUCCESS AltsoundProcessor::loadSamples()

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT="/home/pinball/Tables"
+SUFFIX=".__pincabos_hybrid_disabled__"
+
+while IFS= read -r -d '' hidden; do
+    visible="${hidden%$SUFFIX}"
+
+    if [[ -e "$visible" ]]; then
+        echo "INFO [=] Visible et caché présents, aucune action : $visible"
+        continue
+    fi
+
+    mv -- "$hidden" "$visible"
+    chown -R pinball:pinball "$visible" 2>/dev/null || true
+    echo "RESTORE [√] PuP-Pack restauré : $visible"
+done < <(find "$ROOT" -type d -name "*${SUFFIX}" -print0 2>/dev/null)

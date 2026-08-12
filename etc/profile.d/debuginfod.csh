@@ -1,0 +1,1 @@
+/usr/share/libdebuginfod-common/debuginfod.csh

@@ -1,0 +1,17 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    Author: Giampaolo Fresi Roglia (gianz)
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+
+# @{print_devices} is a space-separated list of all devices
+# representing locally connected printers
+
+@{print_devices}=/dev/lp* /dev/ttyS* /dev/ttyUSB* /dev/usb/lp* /dev/parport*
+
+include if exists <tunables/print-devices.d>

@@ -1,0 +1,3 @@
+# PinCabOS Dashboard managed source.
+# Existing Chrony sources are preserved.
+server time.google.com iburst

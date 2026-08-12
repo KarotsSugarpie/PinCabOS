@@ -1,0 +1,375 @@
+/*
+  PINCABOS_THEME_GLOBAL_V2
+
+  Couche visuelle finale.
+  Toutes les couleurs utilisent les variables generees par :
+  /static/pincabos-appearance-vars.css
+
+  Les CSS propres aux pages gardent seulement leur structure,
+  leurs grilles et leurs comportements techniques.
+*/
+
+:root {
+  --pco-theme-accent: var(--pco-appearance-accent);
+  --pco-theme-accent2: var(--pco-appearance-accent2);
+  --pco-theme-page-text: var(--pco-appearance-page-text);
+  --pco-theme-muted-text: var(--pco-appearance-muted-text);
+  --pco-theme-card-bg: var(--pco-appearance-card-bg);
+  --pco-theme-card-border: var(--pco-appearance-card-border);
+  --pco-theme-card-radius: var(--pco-appearance-card-radius);
+  --pco-theme-card-shadow: var(--pco-appearance-card-shadow);
+  --pco-theme-input-bg: var(--pco-appearance-input-bg);
+  --pco-theme-input-text: var(--pco-appearance-input-text);
+  --pco-theme-input-border: var(--pco-appearance-input-border);
+}
+
+/* Fond et texte global */
+html body {
+  color: var(--pco-theme-page-text) !important;
+  background-color: var(--pco-theme-input-bg) !important;
+}
+
+/* Cartes, panneaux et zones visuelles communes */
+html body :is(
+  .card,
+  .tool-card,
+  .dashboard-card,
+  .dashboard-system-card,
+  .metric,
+  .stat,
+  .tile,
+  .pco-st-panel,
+  .pco-st-card,
+  .pco-st-hero,
+  .pco-st-partner,
+  .pcx-card,
+  .pcx-top,
+  .pcx-side,
+  .pcx-main,
+  .firstrun-step,
+  .firstrun-hero,
+  .fulldmd-calibration-grid > .card
+) {
+  background: var(--pco-theme-card-bg) !important;
+  color: var(--pco-theme-page-text) !important;
+  border-color: var(--pco-theme-card-border) !important;
+  border-radius: var(--pco-theme-card-radius) !important;
+  box-shadow: var(--pco-theme-card-shadow) !important;
+}
+
+/* Menu, header et footer */
+html body :is(
+  .top,
+  .footer,
+  footer,
+  .pincabos-support-footer,
+  .pincabos-support-footer-safe,
+  .nav-panel,
+  .pincabos-nav,
+  .nav-row
+) {
+  background: var(--pco-appearance-nav-panel-bg) !important;
+  color: var(--pco-theme-page-text) !important;
+  border-color: var(--pco-appearance-nav-panel-border) !important;
+}
+
+/* Titres */
+html body :is(
+  h1,
+  h2,
+  h3,
+  .card h1,
+  .card h2,
+  .card h3,
+  .tool-card h1,
+  .tool-card h2,
+  .tool-card h3,
+  .nav-label,
+  .pco-st-title,
+  .pco-st-heading
+) {
+  color: var(--pco-theme-accent) !important;
+}
+
+/* Texte, listes et détails */
+html body :is(
+  p,
+  li,
+  td,
+  th,
+  label,
+  .muted,
+  .subtitle,
+  .pco-st-muted,
+  .pincabos-release-notes-safe,
+  .pincabos-support-text-safe,
+  .pincabos-release-grid-safe
+) {
+  color: var(--pco-theme-page-text) !important;
+}
+
+/* Liens ordinaires */
+html body :is(
+  a:not(.button):not(.pcx-btn),
+  .link,
+  .pco-st-link
+) {
+  color: var(--pco-theme-accent) !important;
+}
+
+/* Boutons standards */
+html body :is(
+  .button,
+  button,
+  input[type="submit"],
+  input[type="button"],
+  .nav a,
+  .pincabos-nav a,
+  .pcx-btn,
+  .pco-st-primary
+) {
+  background: var(--pco-appearance-button-bg) !important;
+  color: var(--pco-appearance-button-text) !important;
+  border-color: var(--pco-theme-card-border) !important;
+  border-radius: var(--pco-appearance-button-radius) !important;
+}
+
+/* Boutons secondaires */
+html body :is(
+  .secondary,
+  .pco-st-secondary,
+  .nav a.secondary,
+  button.secondary
+) {
+  background: var(--pco-appearance-secondary-bg) !important;
+  color: var(--pco-appearance-secondary-text) !important;
+  border-color: var(--pco-theme-accent2) !important;
+}
+
+/* Bouton ou menu actif */
+html body :is(
+  .active,
+  .nav a.active,
+  .pincabos-nav a.active
+) {
+  background: var(--pco-appearance-nav-active-bg) !important;
+  color: var(--pco-appearance-nav-active-text) !important;
+  border-color: var(--pco-theme-accent) !important;
+}
+
+/* Champs et zones techniques */
+html body :is(
+  input:not([type="submit"]):not([type="button"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+  select,
+  textarea
+) {
+  background: var(--pco-theme-input-bg) !important;
+  color: var(--pco-theme-input-text) !important;
+  border-color: var(--pco-theme-input-border) !important;
+}
+
+/* Logs, tableaux, code */
+html body :is(
+  pre,
+  code,
+  table,
+  .table-wrap,
+  .pco-st-kv,
+  .pco-st-kv-value,
+  .task-log,
+  .update-log,
+  .progress-log,
+  .log
+) {
+  background: var(--pco-appearance-table-bg) !important;
+  color: var(--pco-theme-input-text) !important;
+  border-color: var(--pco-theme-input-border) !important;
+}
+
+/* Etats */
+html body .ok {
+  color: var(--pco-appearance-ok) !important;
+}
+
+html body .warn {
+  color: var(--pco-appearance-warn) !important;
+}
+
+html body .bad {
+  color: var(--pco-appearance-bad) !important;
+}
+
+/* =============================================================
+   PINCABOS_APPEARANCE_CARDS_FOOTER_V1
+   Cartes et footer suivent le choix Apparence actif.
+   ============================================================= */
+
+/* Cartes des pages Outils */
+html body .tool-card,
+html body .pco-tools-fulldmd-card,
+html body #pco-lobby .pco-tool {
+  background: var(--pco-theme-card-bg) !important;
+  color: var(--pco-theme-page-text) !important;
+  border-color: var(--pco-theme-card-border) !important;
+  box-shadow: var(--pco-theme-card-shadow) !important;
+}
+
+html body .tool-card:hover,
+html body .tool-card:focus-visible,
+html body .pco-tools-fulldmd-card:hover,
+html body .pco-tools-fulldmd-card:focus-visible,
+html body #pco-lobby .pco-tool:hover {
+  background: var(--pco-appearance-secondary-bg) !important;
+  border-color: var(--pco-appearance-accent) !important;
+  color: var(--pco-theme-page-text) !important;
+  box-shadow: var(--pco-theme-card-shadow) !important;
+}
+
+html body .tool-card .pco-tool-body,
+html body .tool-card strong,
+html body .pco-tools-fulldmd-card .pco-tools-fulldmd-copy,
+html body .pco-tools-fulldmd-card .pco-tools-fulldmd-copy strong {
+  color: var(--pco-theme-page-text) !important;
+}
+
+html body .tool-card .pco-tool-description,
+html body .pco-tools-fulldmd-card .pco-tools-fulldmd-copy small {
+  color: var(--pco-theme-muted-text) !important;
+}
+
+html body .tool-card .pco-tool-footer,
+html body .tool-card .pco-tool-open,
+html body .pco-tools-fulldmd-open,
+html body .pco-tools-fulldmd-icon,
+html body .pco-tool-glyph {
+  color: var(--pco-appearance-accent) !important;
+}
+
+html body .pco-tool-image,
+html body #pco-lobby .pco-tool-image,
+html body .pco-tools-fulldmd-icon {
+  background: var(--pco-appearance-secondary-bg) !important;
+  border-color: var(--pco-theme-card-border) !important;
+}
+
+/* Footer principal */
+html body div#pincabos-support-footer-static.footer.pincabos-support-footer-safe.pco-footer-layout-v14 {
+  background: var(--pco-theme-card-bg) !important;
+  color: var(--pco-theme-page-text) !important;
+  border-color: var(--pco-theme-card-border) !important;
+  box-shadow: var(--pco-theme-card-shadow) !important;
+}
+
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-support-qr-safe,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-support-text-safe,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-footer-supporters-inline-v14 {
+  border-right-color: var(--pco-theme-card-border) !important;
+}
+
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-support-title-left-v3,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-footer-supporters-inline-v14 h2,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-release-notes-safe h2,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-release-grid-safe strong,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pco-footer-contributor-v14 i {
+  color: var(--pco-appearance-accent) !important;
+}
+
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-support-text-safe p,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-footer-supporters-inline-v14 p,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-release-grid-safe p,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-paypal-powered-safe {
+  color: var(--pco-theme-page-text) !important;
+}
+
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-support-qr-label-safe {
+  color: var(--pco-theme-muted-text) !important;
+}
+
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pp-SE79XX45T2NBG-safe {
+  background: var(--pco-appearance-button-bg) !important;
+  color: var(--pco-appearance-button-text) !important;
+  border-color: var(--pco-theme-card-border) !important;
+}
+
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pco-footer-contributor-v14,
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pco-footer-contributor-v14.founder {
+  background: var(--pco-appearance-secondary-bg) !important;
+  border-color: var(--pco-theme-card-border) !important;
+  color: var(--pco-appearance-secondary-text) !important;
+}
+
+html body div#pincabos-support-footer-static.pco-footer-layout-v14 .pincabos-release-grid-safe p {
+  border-bottom-color: var(--pco-theme-card-border) !important;
+}
+
+/* =============================================================
+   PINCABOS_APPEARANCE_MENU_CARDS_V2
+   Cartes menu / Outils pilotées directement par Apparence.
+   Le footer n'est pas modifié ici.
+   ============================================================= */
+
+html body a.tool-card,
+html body .pco-tools-page a.tool-card,
+html body .pco-tools-grid a.tool-card,
+html body .pco-tools-card-list a.tool-card,
+html body .pco-tools-family a.tool-card,
+html body .pco-tools-fulldmd-card,
+html body #pco-lobby .pco-tool,
+html body .pco-menu-tools .pco-menu-tool-btn {
+  background-color: var(--pco-appearance-card-bg) !important;
+  background-image: none !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+html body a.tool-card::before,
+html body a.tool-card::after,
+html body .pco-tools-fulldmd-card::before,
+html body .pco-tools-fulldmd-card::after,
+html body #pco-lobby .pco-tool::before,
+html body #pco-lobby .pco-tool::after {
+  background-image: none !important;
+  background-color: transparent !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
+
+html body a.tool-card .pco-tool-body,
+html body a.tool-card .pco-tool-art,
+html body .pco-tools-fulldmd-card .pco-tools-fulldmd-copy {
+  background-color: transparent !important;
+  color: var(--pco-appearance-page-text) !important;
+}
+
+html body a.tool-card strong,
+html body .pco-tools-fulldmd-card strong,
+html body #pco-lobby .pco-tool strong,
+html body .pco-menu-tools .pco-menu-tool-btn {
+  color: var(--pco-appearance-page-text) !important;
+}
+
+html body a.tool-card .pco-tool-description,
+html body .pco-tools-fulldmd-card small,
+html body #pco-lobby .pco-tool small {
+  color: var(--pco-appearance-muted-text) !important;
+}
+
+html body a.tool-card .pco-tool-footer,
+html body a.tool-card .pco-tool-open,
+html body .pco-tools-fulldmd-open,
+html body .pco-tools-fulldmd-icon,
+html body .pco-tool-glyph {
+  color: var(--pco-appearance-accent) !important;
+}
+
+html body a.tool-card:hover,
+html body a.tool-card:focus-visible,
+html body .pco-tools-fulldmd-card:hover,
+html body .pco-tools-fulldmd-card:focus-visible,
+html body #pco-lobby .pco-tool:hover,
+html body .pco-menu-tools .pco-menu-tool-btn:hover {
+  background-color: var(--pco-appearance-secondary-bg) !important;
+  background-image: none !important;
+  border-color: var(--pco-appearance-accent) !important;
+  color: var(--pco-appearance-page-text) !important;
+}

@@ -1,0 +1,12 @@
+[Unit]
+Description=PinCabOS DudesCab safety watchdog during VPX
+After=multi-user.target pincabos-usb-secure-lock.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/pincabos/pincabos-dudescab-watchdog.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

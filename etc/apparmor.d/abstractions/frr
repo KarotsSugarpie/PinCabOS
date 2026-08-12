@@ -1,0 +1,56 @@
+# vim:ft=apparmor
+# LOGPROF-SUGGEST: no
+# ------------------------------------------------------------------
+#
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#
+# ------------------------------------------------------------------
+
+  abi <abi/5.0>,
+
+  include <abstractions/nameservice-strict>
+
+  # Common capabilities
+  network,
+  capability net_bind_service,
+  capability chown,
+  capability setgid,
+  capability setuid,
+  capability dac_override,
+  capability dac_read_search,
+
+  / r,
+  @{run}/frr/ r,
+  @{run}/frr/zserv.api rw,
+  @{run}/frr/@{profile_name}.pid rwk,
+  @{run}/frr/@{profile_name}.vty rw,
+
+  # YANG modules
+  /usr/share/yang/ r, 
+  /usr/share/yang/modules/ r,
+  /usr/share/yang/modules/libyang/ r,
+  /usr/share/yang/modules/libyang/** r,
+
+  # MGMT Backend Server https://docs.frrouting.org/en/latest/mgmtd.html#mgmtd-backend-interface
+  @{run}/frr/mgmtd_be.sock rw,
+
+  # Daemon config https://docs.frrouting.org/en/latest/basic.html
+  /etc/frr/ r, 
+  /etc/frr/@{profile_name}.conf rw,
+  /etc/frr/frr.conf rw,
+
+  # Log file https://docs.frrouting.org/en/latest/basic.html
+  /var/log/frr/ w,
+  /var/log/frr/* w,
+
+  # Crash logs https://docs.frrouting.org/en/latest/setup.html#crash-logs
+  /var/tmp/frr/ w,
+  owner /var/tmp/frr/@{profile_name}.@{pid}/ w,
+  owner /var/tmp/frr/@{profile_name}.@{pid}/crashlog w,
+  owner /var/tmp/frr/@{profile_name}.@{pid}/logbuf.@{tid} rw,
+
+  include if exists <abstractions/frr.d>

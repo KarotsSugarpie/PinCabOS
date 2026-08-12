@@ -1,0 +1,2 @@
+# Written by curtin
+SUBSYSTEM=="block", ACTION=="add|change", ENV{DM_NAME}=="ubuntu--vg-ubuntu--lv", SYMLINK+="disk/by-dname/ubuntu--vg-ubuntu--lv"

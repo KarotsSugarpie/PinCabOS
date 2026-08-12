@@ -1,0 +1,1 @@
+/opt/pincabos/bin/pincabos-close-active-chrome-tab.sh

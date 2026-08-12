@@ -1,0 +1,18 @@
+[Unit]
+Description=PinCabOS Portable Backglass Bridge
+
+After=display-manager.service pincabos-screen-topology-boot.service
+Wants=display-manager.service pincabos-screen-topology-boot.service
+[Service]
+Type=simple
+User=pinball
+Group=pinball
+Environment=HOME=/home/pinball
+Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+ExecStart=/opt/pincabos/tools/pincabos-backglass-bridge.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical.target

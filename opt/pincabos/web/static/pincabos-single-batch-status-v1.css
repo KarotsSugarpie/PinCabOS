@@ -1,0 +1,234 @@
+/* PINCABOS_SINGLE_BATCH_STATUS_OWNER_V1 */
+/* PINCABOS_BATCH_CARD_FLOAT_UNDER_LANGUAGE_V2 */
+
+/*
+ * Un seul moteur visuel demeure :
+ *   carte : #pcos-bxp6-language-status
+ *   hôte  : #pco-impexp-live-menu-slot
+ *
+ * L'ancien overlay reste neutralisé afin que les trois anciennes
+ * fenêtres ne puissent plus se battre.
+ */
+html.pco-single-batch-status-owner #pco-impexp-live-overlay-root {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Anciennes cartes concurrentes. */
+html.pco-single-batch-status-owner #pcos-bip-language-status,
+html.pco-single-batch-status-owner .pco-impexp-menu-import,
+html.pco-single-batch-status-owner #pincabos-batch-live-status-card,
+html.pco-single-batch-status-owner #pincabos-batch-status-card,
+html.pco-single-batch-status-owner .pincabos-batch-live-status-card,
+html.pco-single-batch-status-owner .pincabos-batch-status-card {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/*
+ * Le slot demeure normal lorsqu'aucun Batch n'est actif.
+ * Le JavaScript lui ajoute .pco-batch-float-active uniquement pendant
+ * un Import ou un Export réellement actif.
+ */
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active {
+  position: fixed !important;
+  z-index: 2450 !important;
+  top: var(--pco-batch-float-top, 118px) !important;
+  right: var(--pco-batch-float-right, 18px) !important;
+  width: var(--pco-batch-float-width, 430px) !important;
+  max-width: calc(100vw - 28px) !important;
+  max-height: calc(100vh - var(--pco-batch-float-top, 118px) - 18px);
+  display: block !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: auto;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, .62));
+}
+
+/*
+ * Carte visuelle inspirée de la carte Batch du widget Services :
+ * fond sombre, bord cyan, actions orange.
+ */
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+> #pcos-bxp6-language-status {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 13px 14px !important;
+  border: 1px solid #12b9dc !important;
+  border-radius: 15px !important;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(17, 43, 75, .98),
+      rgba(21, 12, 42, .98)
+    ) !important;
+  color: #ffffff !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .025),
+    0 0 22px rgba(18, 185, 220, .12) !important;
+  pointer-events: auto !important;
+}
+
+/* Titre et pourcentage. */
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bxp6-titleline,
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bip-global-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin: 0 0 5px !important;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bxp6-title,
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bip-global-title {
+  color: #ffffff !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+  line-height: 1.15 !important;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bxp6-pct,
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bip-global-pct {
+  color: #ff9d00 !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+}
+
+/* Table ou package courant. */
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bxp6-current,
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bip-global-current {
+  display: block !important;
+  margin: 2px 0 5px !important;
+  color: #d8c7ef !important;
+  font-size: .89rem !important;
+  line-height: 1.25 !important;
+  overflow-wrap: anywhere;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bxp6-counter,
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bip-global-count {
+  display: block !important;
+  margin: 0 0 7px !important;
+  color: #ffffff !important;
+  font-size: .8rem !important;
+  font-weight: 800 !important;
+}
+
+/* Barre de progression. */
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bxp6-track,
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bip-global-track {
+  display: block !important;
+  width: 100% !important;
+  height: 8px !important;
+  margin: 7px 0 10px !important;
+  border: 1px solid rgba(18, 185, 220, .42) !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
+  background: rgba(0, 0, 0, .48) !important;
+}
+
+/* Actions à droite, comme sur la carte demandée. */
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bxp6-actions,
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+.pcos-bip-global-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 9px !important;
+  margin-top: 7px !important;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+button,
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+a.button {
+  min-height: 36px !important;
+  box-sizing: border-box !important;
+  padding: 8px 13px !important;
+  border: 1px solid #ff8a00 !important;
+  border-radius: 10px !important;
+  background: #ff8200 !important;
+  color: #080308 !important;
+  font-size: .84rem !important;
+  font-weight: 900 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+button:hover:not(:disabled),
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+a.button:hover {
+  background: #ffa21b !important;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+button:disabled {
+  opacity: .48 !important;
+  cursor: not-allowed !important;
+}
+
+/* Le slot ne crée aucune zone vide lorsqu'il est inactif. */
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot:not(.pco-batch-float-active) {
+  min-height: 0 !important;
+}
+
+/* Écrans plus petits : largeur confortable sans sortir de l'écran. */
+@media (max-width: 760px) {
+  html.pco-single-batch-status-owner
+  #pco-impexp-live-menu-slot.pco-batch-float-active {
+    top: 12px !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}

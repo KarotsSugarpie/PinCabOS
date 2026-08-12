@@ -1,0 +1,25 @@
+#!/bin/sh
+
+version="$1"
+bootdir=/boot
+
+# passing the kernel version is required
+[ -z "${version}" ] && exit 0
+
+# absolute file name of kernel image may be passed as a second argument;
+# remove the initrd from the same directory
+if [ -n "$2" ]; then
+	bootdir=$(dirname "$2")
+fi
+
+# avoid running multiple times
+if [ -n "$DEB_MAINT_PARAMS" ]; then
+	eval set -- "$DEB_MAINT_PARAMS"
+	if [ -z "$1" ] || [ "$1" != "remove" ]; then
+		exit 0
+	fi
+fi
+
+
+# delete initramfs
+rm -f "$bootdir/initrd.img-${version}"

@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+# PINCABOS_HYBRID_PUP_MODE_HELPER_V4_COLLISION_SAFE
+
+ACTION="${1:-}"
+VALUE="${2:-}"
+
+TABLES_ROOT="/home/pinball/Tables"
+STATE_DIR="/var/lib/pincabos-hybrid-launcher"
+STATE_FILE="${STATE_DIR}/hidden-pup-root.state"
+LOCK_FILE="/run/lock/pincabos-hybrid-pup-mode.lock"
+SUFFIX=".__pincabos_original_disabled__"
+
+mkdir -p "$STATE_DIR" "$(dirname "$LOCK_FILE")"
+exec 9>"$LOCK_FILE"
+flock -x 9
+
+fail() {
+    echo "NOGO [X] $*" >&2
+    exit 1
+}
+
+normalise() {
+    realpath -m -- "$1"
+}
+
+validate_path() {
+    local path base
+    path="$(normalise "$1")"
+
+    case "$path" in
+        "$TABLES_ROOT"/*) ;;
+        *) fail "Chemin refusé hors de $TABLES_ROOT : $path" ;;
+    esac
+
+    base="$(basename "$path")"
+    case "$base" in
+        pupvideos|pupvideo|pupvideos"$SUFFIX"|pupvideo"$SUFFIX") ;;
+        *) fail "Nom de dossier PuP refusé : $base" ;;
+    esac
+
+    printf '%s\n' "$path"
+}
+
+write_state() {
+    local original="$1" hidden="$2" temporary
+    temporary="${STATE_FILE}.tmp.$$"
+    printf '%s\n%s\n' "$original" "$hidden" > "$temporary"
+    chmod 600 "$temporary"
+    mv -f -- "$temporary" "$STATE_FILE"
+}
+
+read_state() {
+    ORIGINAL=""
+    HIDDEN=""
+
+    if [[ -f "$STATE_FILE" ]]; then
+        mapfile -t values < "$STATE_FILE"
+        ORIGINAL="${values[0]:-}"
+        HIDDEN="${values[1]:-}"
+    fi
+}
+
+directory_is_empty() {
+    [[ -d "$1" ]] || return 1
+    [[ -z "$(find "$1" -mindepth 1 -print -quit 2>/dev/null)" ]]
+}
+
+quarantine_recreated_root() {
+    local original="$1"
+    local table_dir stamp recovery destination
+
+    table_dir="$(dirname "$original")"
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    recovery="${table_dir}/logs/hybrid-launcher-recovery/${stamp}"
+    destination="${recovery}/$(basename "$original")-recree-pendant-original"
+
+    install -d -o pinball -g pinball -m 0755 "$recovery"
+    mv -- "$original" "$destination"
+    chown -R pinball:pinball "$recovery"
+
+    echo "AVERTISSEMENT [!] Un nouveau dossier PuP a été recréé pendant le mode Original."
+    echo "AVERTISSEMENT [!] Il a été conservé sans suppression : $destination"
+}
+
+recover_state() {
+    read_state
+
+    [[ -n "$ORIGINAL" && -n "$HIDDEN" ]] || {
+        rm -f "$STATE_FILE"
+        return 0
+    }
+
+    ORIGINAL="$(validate_path "$ORIGINAL")"
+    HIDDEN="$(validate_path "$HIDDEN")"
+
+    if [[ -d "$HIDDEN" && ! -e "$ORIGINAL" ]]; then
+        mv -- "$HIDDEN" "$ORIGINAL"
+        chown -R pinball:pinball "$ORIGINAL"
+        echo "GO [√] PuP-Pack restauré : $ORIGINAL"
+
+    elif [[ -d "$HIDDEN" && -d "$ORIGINAL" ]]; then
+        if directory_is_empty "$ORIGINAL"; then
+            rmdir "$ORIGINAL"
+            echo "INFO [=] Dossier PuP actif recréé vide retiré avec rmdir."
+        else
+            quarantine_recreated_root "$ORIGINAL"
+        fi
+
+        mv -- "$HIDDEN" "$ORIGINAL"
+        chown -R pinball:pinball "$ORIGINAL"
+        echo "GO [√] PuP-Pack original restauré après collision : $ORIGINAL"
+
+    elif [[ ! -e "$HIDDEN" && -d "$ORIGINAL" ]]; then
+        echo "GO [√] PuP-Pack déjà actif : $ORIGINAL"
+
+    elif [[ -e "$HIDDEN" || -e "$ORIGINAL" ]]; then
+        fail "État PuP inattendu; fichiers non-dossiers détectés."
+
+    else
+        fail "Le dossier actif et le dossier masqué ont tous les deux disparu."
+    fi
+
+    rm -f "$STATE_FILE"
+}
+
+case "$ACTION" in
+    recover|show)
+        recover_state
+        ;;
+
+    hide)
+        [[ -n "$VALUE" ]] || fail "Usage : $0 hide CHEMIN_PUPVIDEOS"
+
+        recover_state
+
+        original="$(validate_path "$VALUE")"
+        case "$original" in
+            *"$SUFFIX")
+                fail "Le chemin hide doit être le dossier actif."
+                ;;
+        esac
+
+        hidden="$(validate_path "${original}${SUFFIX}")"
+
+        [[ -d "$original" ]] || fail "Dossier PuP actif absent : $original"
+        [[ ! -e "$hidden" ]] || fail "Dossier masqué déjà présent : $hidden"
+
+        mv -- "$original" "$hidden"
+        write_state "$original" "$hidden"
+        echo "GO [√] PuP-Pack masqué : $hidden"
+        ;;
+
+    status)
+        read_state
+        if [[ -n "$ORIGINAL" && -n "$HIDDEN" ]]; then
+            printf 'ORIGINAL=%s\nHIDDEN=%s\n' "$ORIGINAL" "$HIDDEN"
+            printf 'ORIGINAL_EXISTS=%s\n' "$([[ -e "$ORIGINAL" ]] && echo 1 || echo 0)"
+            printf 'HIDDEN_EXISTS=%s\n' "$([[ -e "$HIDDEN" ]] && echo 1 || echo 0)"
+        else
+            echo "STATE=clean"
+        fi
+        ;;
+
+    *)
+        fail "Usage : $0 recover|hide CHEMIN|show|status"
+        ;;
+esac

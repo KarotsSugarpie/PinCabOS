@@ -1,0 +1,588 @@
+/* PINCABOS_EXPLORER_TABLE_TEST_CENTER_V1 */
+.pco-table-test-cell{min-width:290px}
+.pco-table-test-box{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px;
+  margin-top:6px;
+  padding:7px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:9px;
+  background:rgba(5,2,10,.5)
+}
+.pco-table-test-badge{
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  white-space:nowrap
+}
+.pco-table-test-badge.is-go{background:rgba(40,180,100,.16);color:#7ff0b3}
+.pco-table-test-badge.is-warning{background:rgba(255,166,0,.16);color:#ffd078}
+.pco-table-test-badge.is-problem{background:rgba(210,45,65,.18);color:#ff9da9}
+.pco-table-test-box button,
+.pco-table-test-box a{
+  cursor:pointer;
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:7px;
+  background:rgba(255,255,255,.07);
+  color:#f5eef8;
+  font:inherit;
+  font-size:11px;
+  font-weight:850;
+  text-decoration:none
+}
+.pco-table-test-box button[data-action="play"]{border-color:rgba(55,220,125,.35);color:#9bf2c0}
+.pco-table-test-box button[data-action="stop"]{border-color:rgba(255,90,100,.35);color:#ffadb5}
+.pco-table-test-box button:disabled{cursor:not-allowed;opacity:.38}
+.pco-table-test-summary{
+  flex-basis:100%;
+  overflow:hidden;
+  color:#bfb3c5;
+  font-size:11px;
+  text-overflow:ellipsis;
+  white-space:nowrap
+}
+.pco-table-test-summary.is-problem{color:#ff9da9}
+.pco-table-test-summary.is-warning{color:#ffd078}
+.pco-table-test-toast{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:99999;
+  max-width:460px;
+  padding:11px 14px;
+  border:1px solid rgba(255,166,0,.55);
+  border-radius:10px;
+  background:#100817;
+  color:#fff;
+  box-shadow:0 14px 35px rgba(0,0,0,.45)
+}
+
+/* PINCABOS_EXPLORER_VPS_BLUE_NEWTAB_V1_CSS */
+.pco-table-test-box a.pco-table-test-vps,
+.pco-table-test-box a.pco-table-test-vps:visited {
+  border-color: rgba(65, 145, 255, .78) !important;
+  background: rgba(30, 105, 220, .30) !important;
+  color: #b9dcff !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(120, 185, 255, .16),
+    0 0 10px rgba(30, 105, 220, .12);
+}
+
+.pco-table-test-box a.pco-table-test-vps:hover,
+.pco-table-test-box a.pco-table-test-vps:focus-visible {
+  border-color: rgba(105, 180, 255, .95) !important;
+  background: rgba(35, 125, 245, .48) !important;
+  color: #ffffff !important;
+}
+
+/* PINCABOS_EXPLORER_CONTROLS_COMPACT_RIGHT_V1 */
+
+/*
+ * Ligne 1:
+ *   statut à gauche
+ *   Play / Stop / VPS groupés complètement à droite
+ *
+ * Ligne 2:
+ *   résumé compact sur toute la largeur
+ */
+.pco-table-test-cell {
+  min-width: 270px !important;
+}
+
+.pco-table-test-box {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  column-gap: 4px !important;
+  row-gap: 2px !important;
+  min-height: 0 !important;
+  margin: 2px 0 !important;
+  padding: 4px 6px !important;
+  border-radius: 7px !important;
+}
+
+.pco-table-test-badge {
+  flex: 0 0 auto !important;
+  padding: 3px 6px !important;
+  font-size: 10px !important;
+  line-height: 1.05 !important;
+}
+
+/* Le premier bouton crée l’espace qui pousse tout le groupe à droite. */
+.pco-table-test-box button[data-action="play"] {
+  margin-left: auto !important;
+}
+
+.pco-table-test-box button,
+.pco-table-test-box a {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  padding: 3px 7px !important;
+  border-radius: 6px !important;
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+  white-space: nowrap !important;
+}
+
+.pco-table-test-summary {
+  flex: 1 0 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 1px !important;
+  font-size: 9.5px !important;
+  line-height: 1.15 !important;
+}
+
+/* Réduit aussi légèrement l’espace vertical de la cellule Explorer. */
+.pcx-page table td:has(.pco-table-test-box) {
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
+}
+
+/* Les petits écrans gardent les boutons à droite sans agrandir la carte. */
+@media (max-width: 900px) {
+  .pco-table-test-cell {
+    min-width: 250px !important;
+  }
+
+  .pco-table-test-box {
+    padding: 4px 5px !important;
+  }
+
+  .pco-table-test-box button,
+  .pco-table-test-box a {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}
+
+/* PINCABOS_EXPLORER_FIXED_TABLE_LOG_GO_NOGO_V1_CSS */
+
+.pco-table-test-badge.is-running {
+  border-color: rgba(70, 170, 255, .82) !important;
+  background: rgba(30, 110, 220, .28) !important;
+  color: #c2e5ff !important;
+}
+
+/* PINCABOS_EXPLORER_INSTALLED_TABLE_COUNT_V1_CSS */
+
+.pco-explorer-card-with-table-count {
+  position: relative !important;
+}
+
+#pco-explorer-installed-table-count {
+  position: absolute;
+  z-index: 4;
+  top: 14px;
+  right: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  max-width: min(330px, 42%);
+  box-sizing: border-box;
+  padding: 7px 13px;
+  border: 1px solid rgba(255, 154, 0, .78);
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 126, 0, .20),
+      rgba(105, 44, 154, .34)
+    ),
+    rgba(9, 4, 15, .90);
+  color: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .05),
+    0 0 18px rgba(255, 126, 0, .14);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+#pco-explorer-installed-table-count
+.pco-explorer-table-count-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+#pco-explorer-installed-table-count
+.pco-explorer-table-count-value {
+  color: #ffb000;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+#pco-explorer-installed-table-count
+.pco-explorer-table-count-label {
+  color: #ffffff;
+  font-size: .82rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+#pco-explorer-installed-table-count.is-loading {
+  opacity: .72;
+}
+
+#pco-explorer-installed-table-count.is-error {
+  border-color: rgba(255, 77, 77, .82);
+}
+
+#pco-explorer-installed-table-count.is-error
+.pco-explorer-table-count-value,
+#pco-explorer-installed-table-count.is-error
+.pco-explorer-table-count-label {
+  color: #ff8b8b;
+}
+
+@media (max-width: 920px) {
+  #pco-explorer-installed-table-count {
+    position: static;
+    width: max-content;
+    max-width: 100%;
+    margin: 8px 0 4px auto;
+  }
+}
+
+/* PINCABOS_EXPLORER_NATIVE_TABLES_V1_CSS */
+.pco-native-table-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+  min-width: 390px;
+  margin-top: 7px;
+  padding: 7px;
+  border: 1px solid rgba(255, 176, 0, .24);
+  border-radius: 9px;
+  background: rgba(7, 9, 12, .76);
+  box-sizing: border-box;
+}
+
+.pco-native-controls-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.pco-native-status,
+.pco-native-button {
+  min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  box-sizing: border-box;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pco-native-status {
+  min-width: 92px;
+  padding: 6px 8px;
+  border: 1px solid currentColor;
+}
+
+.pco-native-button {
+  padding: 6px 9px;
+  border: 1px solid #4a515a;
+  background: linear-gradient(#292e35, #15191e);
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.pco-native-button:hover {
+  border-color: #ffb000;
+  background: linear-gradient(#4b3a14, #241b08);
+}
+
+.pco-native-button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
+.pco-native-status.is-go {
+  color: #55ef8a;
+  background: rgba(32, 135, 74, .16);
+}
+
+.pco-native-status.is-warning,
+.pco-native-status.is-indexing {
+  color: #ffb000;
+  background: rgba(255, 176, 0, .12);
+}
+
+.pco-native-status.is-problem {
+  color: #ff6363;
+  background: rgba(185, 36, 36, .17);
+}
+
+.pco-native-status.is-running {
+  color: #79c8ff;
+  background: rgba(28, 113, 172, .18);
+}
+
+.pco-native-table-tools.is-active {
+  border-color: rgba(121, 200, 255, .75);
+  box-shadow: 0 0 0 1px rgba(121, 200, 255, .16);
+}
+
+.pco-native-summary {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pco-native-inventory {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.pco-native-token {
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.pco-native-token.is-found {
+  color: #55ef8a;
+}
+
+.pco-native-token.is-missing,
+.pco-native-indexing {
+  color: #ffb000;
+}
+
+.pco-native-table-toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 99999;
+  max-width: min(520px, calc(100vw - 36px));
+  padding: 12px 15px;
+  border: 1px solid #55ef8a;
+  border-radius: 10px;
+  background: rgba(9, 13, 17, .96);
+  color: #fff;
+  font-weight: 850;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.pco-native-table-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pco-native-table-toast.is-error {
+  border-color: #ff6363;
+}
+
+.pcx-card .pco-native-table-tools {
+  min-width: 0;
+  width: 100%;
+  margin-top: 8px;
+}
+
+@media (max-width: 1200px) {
+  .pco-native-table-tools {
+    min-width: 310px;
+  }
+}
+
+@media (max-width: 760px) {
+  .pco-native-table-tools {
+    min-width: 0;
+  }
+
+  .pco-native-controls-line {
+    align-items: stretch;
+  }
+
+  .pco-native-status,
+  .pco-native-button {
+    flex: 1 1 auto;
+  }
+}
+
+
+
+/* PINCABOS_EXPLORER_NATIVE_FAST_V2_CSS */
+.pco-native-table-tools {
+  min-width: 300px !important;
+  content-visibility: auto;
+  contain: layout paint style;
+  contain-intrinsic-size: 46px;
+}
+
+.pco-native-inventory-text {
+  display: block;
+  max-width: 520px;
+  overflow: hidden;
+  color: #d8dde5;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* PINCABOS_EXPLORER_CONTROLS_IN_TABLE_V41_CSS */
+.pco-table-header-slot {
+  flex: 1 1 760px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 14px;
+}
+
+.pco-table-header-slot .pco-native-table-tools {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: nowrap !important;
+  gap: 7px !important;
+  width: min(100%, 1120px) !important;
+  max-width: 1120px !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 6px 8px !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap !important;
+}
+
+.pco-table-header-slot .pco-native-controls-line {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 5px !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+
+.pco-table-header-slot .pco-native-summary {
+  display: inline-flex !important;
+  flex: 1 1 auto !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  white-space: nowrap !important;
+}
+
+.pco-table-header-slot .pco-native-inventory,
+.pco-table-header-slot .pco-native-inventory-text,
+.pco-table-header-slot .pco-native-indexing {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  max-width: 100% !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
+}
+
+.pco-table-header-slot .pco-native-token {
+  flex: 0 0 auto;
+  white-space: nowrap !important;
+}
+
+.pco-table-header-slot + .pcx-search,
+.pco-table-header-slot + .pco-native-search-form {
+  flex: 0 0 auto;
+}
+
+@media (min-width: 1400px) {
+  .pcx-head:has(.pco-table-header-slot) {
+    flex-wrap: nowrap;
+  }
+
+  .pcx-head:has(.pco-table-header-slot)
+  > div:first-child {
+    flex: 0 1 500px;
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 1399px) {
+  .pco-table-header-slot {
+    order: 3;
+    flex-basis: 100%;
+    margin: 8px 0 0;
+  }
+}
+
+/* PINCABOS_COMMANDER_ZERO_BACKGROUND_V1_CSS */
+
+/*
+ * Le compteur est maintenant créé directement par Flask.
+ * Aucun fetch JavaScript n'est nécessaire après l'affichage.
+ */
+.pco-explorer-native-heading {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 12px !important;
+}
+
+.pco-explorer-native-heading > h2 {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+}
+
+.pco-explorer-native-heading
+#pco-explorer-installed-table-count.pco-native-count-badge {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+
+    width: auto !important;
+    min-width: 190px !important;
+    max-width: none !important;
+    min-height: 34px !important;
+    height: auto !important;
+
+    margin: 0 !important;
+    padding: 7px 16px !important;
+
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+}
+
+@media (max-width: 760px) {
+    .pco-explorer-native-heading {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+
+    .pco-explorer-native-heading
+    #pco-explorer-installed-table-count.pco-native-count-badge {
+        min-width: 0 !important;
+    }
+}

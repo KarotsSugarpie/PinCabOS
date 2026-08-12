@@ -1,0 +1,29 @@
+# vim:ft=apparmor
+# ------------------------------------------------------------------
+#
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#
+# ------------------------------------------------------------------
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile staticd /usr/lib/frr/staticd flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/frr>
+ 
+  @{exec_path} mr,
+
+  /etc/frr/zebra.conf r,
+
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+  @{PROC}/sys/net/core/somaxconn r,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/staticd>
+}

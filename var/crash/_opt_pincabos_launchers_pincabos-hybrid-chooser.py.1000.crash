@@ -1,0 +1,1104 @@
+ProblemType: Crash
+Date: Sun Jul 19 02:57:01 2026
+ExecutablePath: /opt/pincabos/launchers/pincabos-hybrid-chooser.py
+ExecutableTimestamp: 1784444109
+InterpreterPath: /usr/bin/python3.14
+OpenFds:
+ 0:/dev/null
+ pos:	0
+ flags:	0100000
+ mnt_id:	30
+ ino:	5
+ 
+ 1:/root/pincabos-batman-hybrid-test.log
+ pos:	1072
+ flags:	0100001
+ mnt_id:	34
+ ino:	26488888
+ 
+ 2:/root/pincabos-batman-hybrid-test.log
+ pos:	1072
+ flags:	0100001
+ mnt_id:	34
+ ino:	26488888
+ 
+ 3:/usr/lib/x86_64-linux-gnu/libffi.so.8.2.0
+ pos:	0
+ flags:	02100000
+ mnt_id:	34
+ ino:	54425916
+ 
+ 4:socket:[296149800]
+ pos:	0
+ flags:	02004002
+ mnt_id:	12
+ ino:	296149800
+ scm_fds: 0
+ 
+ 5:socket:[296157808]
+ pos:	0
+ flags:	02004002
+ mnt_id:	12
+ ino:	296157808
+ scm_fds: 0
+ 
+ 6:socket:[296157809]
+ pos:	0
+ flags:	02004002
+ mnt_id:	12
+ ino:	296157809
+ 
+ 7:socket:[296157814]
+ pos:	0
+ flags:	02004002
+ mnt_id:	12
+ ino:	296157814
+ 
+ 8:pipe:[296157818]
+ pos:	0
+ flags:	02004000
+ mnt_id:	18
+ ino:	296157818
+ 
+ 9:pipe:[296157818]
+ pos:	0
+ flags:	02004001
+ mnt_id:	18
+ ino:	296157818
+ 
+ 10:/memfd:pulseaudio (deleted)
+ pos:	0
+ flags:	02100002
+ mnt_id:	0
+ ino:	38121
+ 
+ 11:socket:[296157821]
+ pos:	0
+ flags:	02004002
+ mnt_id:	12
+ ino:	296157821
+ scm_fds: 0
+ 
+ 12:/dev/input/event7
+ pos:	0
+ flags:	02104002
+ mnt_id:	30
+ ino:	2256
+ 
+ 13:socket:[296140798]
+ pos:	0
+ flags:	02000002
+ mnt_id:	12
+ ino:	296140798
+ scm_fds: 0
+ 
+ 14:socket:[296140799]
+ pos:	0
+ flags:	02000002
+ mnt_id:	12
+ ino:	296140799
+ scm_fds: 0
+ 
+ 15:/dev/nvidiactl
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	839
+ 
+ 16:/dev/nvidia-modeset
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	869
+ 
+ 17:/dev/nvidia0
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	841
+ 
+ 18:/dev/nvidia0
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	841
+ 
+ 19:socket:[296178690]
+ pos:	0
+ flags:	02004002
+ mnt_id:	12
+ ino:	296178690
+ scm_fds: 0
+ 
+ 20:/dev/nvidiactl
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	839
+ 
+ 21:/dev/dri/renderD128
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	845
+ 
+ 22:/dev/nvidia-modeset
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	869
+ 
+ 23:/dev/nvidia0
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	841
+ 
+ 24:/dev/nvidia0
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	841
+ 
+ 25:/dev/nvidia0
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	841
+ 
+ 26:/dev/nvidia0
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	841
+ 
+ 27:/dev/nvidia0
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	841
+ 
+ 28:/dev/nvidia-modeset
+ pos:	0
+ flags:	02100002
+ mnt_id:	30
+ ino:	869
+ 
+ 29:/home/pinball/.cache/nvidia/GLCache/0b65b643da47be025a4fd8543de3c06d/db918fb00baaf964/d373b7b0f465c5de.toc
+ pos:	1536
+ flags:	02100002
+ mnt_id:	34
+ ino:	35655286
+ lock:	1: POSIX  ADVISORY  WRITE 3824677 103:02:35655286 0 0
+ 
+ 30:/usr/share/fonts/truetype/freefont/FreeSansBold.ttf
+ pos:	57344
+ flags:	0100000
+ mnt_id:	34
+ ino:	56493054
+ 
+ 31:/home/pinball/.cache/nvidia/GLCache/0b65b643da47be025a4fd8543de3c06d/db918fb00baaf964/d373b7b0f465c5de.bin
+ pos:	20480
+ flags:	02100002
+ mnt_id:	34
+ ino:	35655287
+ lock:	1: POSIX  ADVISORY  WRITE 3824677 103:02:35655287 0 0
+ 
+ 32:/usr/share/fonts/truetype/freefont/FreeSansBold.ttf
+ pos:	61440
+ flags:	0100000
+ mnt_id:	34
+ ino:	56493054
+ 
+ 33:/usr/share/fonts/truetype/freefont/FreeSansBold.ttf
+ pos:	53248
+ flags:	0100000
+ mnt_id:	34
+ ino:	56493054
+ 
+ 34:/proc/3824677
+ pos:	0
+ flags:	012200000
+ mnt_id:	29
+ ino:	296149797
+ 
+ 35:/proc/3824677/fd
+ pos:	0
+ flags:	02700000
+ mnt_id:	29
+ ino:	296157810
+ 
+ 36:/proc/3824677/fdinfo
+ pos:	0
+ flags:	02700000
+ mnt_id:	29
+ ino:	296171136
+ProcCmdline: python3 /opt/pincabos/launchers/pincabos-hybrid-chooser.py /opt/pincabos/launchers/assets/PCOSGamesChoices.png /run/pincabos-hybrid-launchers/choice-3824498.json original 20
+ProcCwd: /root
+ProcEnviron:
+ LANG=C.UTF-8
+ PATH=(custom, no user)
+ SHELL=/bin/bash
+ TERM=xterm-256color
+ XDG_RUNTIME_DIR=<set>
+ProcMaps:
+ 00400000-00422000 r--p 00000000 103:02 54398964                          /usr/bin/python3.14
+ 00422000-007a8000 r-xp 00022000 103:02 54398964                          /usr/bin/python3.14
+ 007a8000-00a86000 r--p 003a8000 103:02 54398964                          /usr/bin/python3.14
+ 00a86000-00a87000 r--p 00686000 103:02 54398964                          /usr/bin/python3.14
+ 00a87000-00b22000 rw-p 00687000 103:02 54398964                          /usr/bin/python3.14
+ 00b22000-00b94000 rw-p 00000000 00:00 0 
+ 0f2e9000-14d64000 rw-p 00000000 00:00 0                                  [heap]
+ 41048000-410f7000 rw-p 00000000 00:00 0 
+ 41a45000-41a47000 r-xs 00000000 00:01 16611                              /memfd:/.glXXXXXX (deleted)
+ 77f9f0a91000-77f9f0e91000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9f0e91000-77f9f1291000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9f1291000-77f9f1691000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9f1c91000-77f9f3c36000 rw-p 00000000 00:00 0 
+ 77f9f4400000-77f9f4439000 r--p 00000000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 77f9f4439000-77f9f45e5000 r-xp 00039000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 77f9f45e5000-77f9f4638000 r--p 001e5000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 77f9f4638000-77f9f4640000 r--p 00237000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 77f9f4640000-77f9f4641000 rw-p 0023f000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 77f9f4641000-77f9f4642000 rw-p 00000000 00:00 0 
+ 77f9f4683000-77f9f4783000 rw-p 00000000 00:00 0 
+ 77f9f4783000-77f9f4798000 r--p 00000000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 77f9f4798000-77f9f47b9000 r-xp 00015000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 77f9f47b9000-77f9f47d0000 r--p 00036000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 77f9f47d0000-77f9f47d2000 r--p 0004c000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 77f9f47d2000-77f9f47db000 rw-p 0004e000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 77f9f47db000-77f9f4bdb000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9f4bdb000-77f9f4fdb000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9f4fdb000-77f9f53db000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9f53db000-77f9f57db000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9f57db000-77f9f5bdb000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9f5bdb000-77f9f7b80000 rw-p 00000000 00:00 0 
+ 77f9f7b80000-77f9f7c00000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9f7c00000-77f9f7f14000 r--p 00000000 103:02 54429593                  /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.595.71.05
+ 77f9f7f14000-77f9fbe42000 r-xp 00314000 103:02 54429593                  /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.595.71.05
+ 77f9fbe42000-77f9fd271000 r--p 04242000 103:02 54429593                  /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.595.71.05
+ 77f9fd271000-77f9fd272000 ---p 05671000 103:02 54429593                  /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.595.71.05
+ 77f9fd272000-77f9fd47e000 r--p 05671000 103:02 54429593                  /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.595.71.05
+ 77f9fd47e000-77f9fd5b8000 rw-p 0587d000 103:02 54429593                  /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.595.71.05
+ 77f9fd5b8000-77f9fd664000 rw-p 00000000 00:00 0 
+ 77f9fd680000-77f9fd780000 rw-p 00000000 00:00 0 
+ 77f9fd780000-77f9fd800000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9fd800000-77f9fda50000 r-xp 00000000 103:02 54429590                  /usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.595.71.05
+ 77f9fda50000-77f9fda71000 rwxp 00250000 103:02 54429590                  /usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.595.71.05
+ 77f9fda71000-77f9fdc00000 r-xp 00271000 103:02 54429590                  /usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.595.71.05
+ 77f9fdc00000-77f9fe800000 r-xp 00400000 103:02 54429590                  /usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.595.71.05
+ 77f9fe800000-77f9ffc26000 r-xp 01000000 103:02 54429590                  /usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.595.71.05
+ 77f9ffc26000-77f9ffc27000 ---p 02426000 103:02 54429590                  /usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.595.71.05
+ 77f9ffc27000-77f9ffd9e000 r--p 02426000 103:02 54429590                  /usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.595.71.05
+ 77f9ffd9e000-77f9ffe01000 rw-p 0259d000 103:02 54429590                  /usr/lib/x86_64-linux-gnu/libnvidia-glcore.so.595.71.05
+ 77f9ffe01000-77f9ffe20000 rw-p 00000000 00:00 0 
+ 77f9ffe5a000-77f9ffe5c000 r--p 00000000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 77f9ffe5c000-77f9ffe69000 r-xp 00002000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 77f9ffe69000-77f9ffe6b000 r--p 0000f000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 77f9ffe6b000-77f9ffe6c000 r--p 00010000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 77f9ffe6c000-77f9ffe6d000 rw-p 00011000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 77f9ffe6d000-77f9ffe80000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9ffe80000-77f9ffec0000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9ffec0000-77f9ffee0000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9ffee0000-77f9fff20000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9fff20000-77f9fff40000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77f9fff40000-77f9fffc0000 rw-s 00000000 00:07 841                        /dev/nvidia0
+ 77f9fffc0000-77fa00000000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa00000000-77fa00021000 rw-p 00000000 00:00 0 
+ 77fa00021000-77fa04000000 ---p 00000000 00:00 0 
+ 77fa04000000-77fa04021000 rw-p 00000000 00:00 0 
+ 77fa04021000-77fa08000000 ---p 00000000 00:00 0 
+ 77fa08000000-77fa08021000 rw-p 00000000 00:00 0 
+ 77fa08021000-77fa0c000000 ---p 00000000 00:00 0 
+ 77fa0c000000-77fa0c003000 r--p 00000000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 77fa0c003000-77fa0c025000 r-xp 00003000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 77fa0c025000-77fa0c027000 r--p 00025000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 77fa0c027000-77fa0c028000 r--p 00027000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 77fa0c028000-77fa0c029000 rw-p 00028000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 77fa0c029000-77fa0c26e000 rw-s 00000000 00:01 11268                      /memfd:/.nvidia_drv.XXXXXX (deleted)
+ 77fa0c26e000-77fa0c27e000 r--p 00000000 103:02 54429591                  /usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.595.71.05
+ 77fa0c27e000-77fa0c2de000 r-xp 00010000 103:02 54429591                  /usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.595.71.05
+ 77fa0c2de000-77fa0c2fb000 r--p 00070000 103:02 54429591                  /usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.595.71.05
+ 77fa0c2fb000-77fa0c301000 r--p 0008c000 103:02 54429591                  /usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.595.71.05
+ 77fa0c301000-77fa0c302000 rw-p 00092000 103:02 54429591                  /usr/lib/x86_64-linux-gnu/libnvidia-glsi.so.595.71.05
+ 77fa0c302000-77fa0c30a000 rw-p 00000000 00:00 0 
+ 77fa0c30a000-77fa0c35b000 r--p 00000000 103:02 54429583                  /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.595.71.05
+ 77fa0c35b000-77fa0c3b8000 r-xp 00051000 103:02 54429583                  /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.595.71.05
+ 77fa0c3b8000-77fa0c3ed000 rwxp 000ae000 103:02 54429583                  /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.595.71.05
+ 77fa0c3ed000-77fa0c3ee000 r-xp 000e3000 103:02 54429583                  /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.595.71.05
+ 77fa0c3ee000-77fa0c40e000 r--p 000e4000 103:02 54429583                  /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.595.71.05
+ 77fa0c40e000-77fa0c42e000 r--p 00103000 103:02 54429583                  /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.595.71.05
+ 77fa0c42e000-77fa0c433000 rw-p 00123000 103:02 54429583                  /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.595.71.05
+ 77fa0c433000-77fa0c435000 rw-p 00000000 00:00 0 
+ 77fa0c435000-77fa0c476000 r--p 00000000 103:02 54425738                  /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0
+ 77fa0c476000-77fa0c479000 r-xp 00041000 103:02 54425738                  /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0
+ 77fa0c479000-77fa0c4b4000 r-xp 00044000 103:02 54425738                  /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0
+ 77fa0c4b4000-77fa0c4b5000 r-xp 0007f000 103:02 54425738                  /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0
+ 77fa0c4b5000-77fa0c4c9000 r--p 00080000 103:02 54425738                  /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0
+ 77fa0c4c9000-77fa0c4e5000 r--p 00093000 103:02 54425738                  /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0
+ 77fa0c4e5000-77fa0c4e6000 rw-p 000af000 103:02 54425738                  /usr/lib/x86_64-linux-gnu/libGLdispatch.so.0.0.0
+ 77fa0c4e6000-77fa0c4ee000 rw-p 00000000 00:00 0 
+ 77fa0c4ee000-77fa0d4f0000 rw-p 00000000 00:00 0 
+ 77fa0d4f0000-77fa114f0000 rw-s 00000000 00:01 38121                      /memfd:pulseaudio (deleted)
+ 77fa114f0000-77fa124f2000 rw-p 00000000 00:00 0 
+ 77fa124f2000-77fa126f2000 rw-p 00000000 00:00 0 
+ 77fa126f2000-77fa12714000 r--p 00000000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 77fa12714000-77fa127c5000 r-xp 00022000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 77fa127c5000-77fa127f2000 r--p 000d3000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 77fa127f2000-77fa127fc000 r--p 00100000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 77fa127fc000-77fa12800000 rw-p 0010a000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 77fa12800000-77fa128e4000 r--p 00000000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 77fa128e4000-77fa12c78000 r-xp 000e4000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 77fa12c78000-77fa12d97000 r--p 00478000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 77fa12d97000-77fa12e14000 r--p 00597000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 77fa12e14000-77fa12e17000 rw-p 00614000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 77fa12e17000-77fa12e1a000 rw-p 00000000 00:00 0 
+ 77fa12e29000-77fa12e2d000 r--p 00000000 103:02 54429571                  /usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.595.71.05
+ 77fa12e2d000-77fa12e46000 r-xp 00004000 103:02 54429571                  /usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.595.71.05
+ 77fa12e46000-77fa12e51000 r--p 0001d000 103:02 54429571                  /usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.595.71.05
+ 77fa12e51000-77fa12e52000 r--p 00027000 103:02 54429571                  /usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.595.71.05
+ 77fa12e52000-77fa12e53000 rw-p 00028000 103:02 54429571                  /usr/lib/x86_64-linux-gnu/libnvidia-allocator.so.595.71.05
+ 77fa12e53000-77fa12e55000 rw-p 00000000 00:00 0 
+ 77fa12e64000-77fa12e74000 rw-s 00000000 00:07 841                        /dev/nvidia0
+ 77fa12e74000-77fa12e7f000 r--p 00000000 103:02 54426289                  /usr/lib/x86_64-linux-gnu/libxcb-glx.so.0.0.0
+ 77fa12e7f000-77fa12e88000 r-xp 0000b000 103:02 54426289                  /usr/lib/x86_64-linux-gnu/libxcb-glx.so.0.0.0
+ 77fa12e88000-77fa12e8d000 r--p 00014000 103:02 54426289                  /usr/lib/x86_64-linux-gnu/libxcb-glx.so.0.0.0
+ 77fa12e8d000-77fa12e8f000 r--p 00019000 103:02 54426289                  /usr/lib/x86_64-linux-gnu/libxcb-glx.so.0.0.0
+ 77fa12e8f000-77fa12e90000 rw-p 0001b000 103:02 54426289                  /usr/lib/x86_64-linux-gnu/libxcb-glx.so.0.0.0
+ 77fa12e90000-77fa12ed2000 r--p 00000000 103:02 54425733                  /usr/lib/x86_64-linux-gnu/libGL.so.1.7.0
+ 77fa12ed2000-77fa12ed5000 r-xp 00042000 103:02 54425733                  /usr/lib/x86_64-linux-gnu/libGL.so.1.7.0
+ 77fa12ed5000-77fa12ef0000 r-xp 00045000 103:02 54425733                  /usr/lib/x86_64-linux-gnu/libGL.so.1.7.0
+ 77fa12ef0000-77fa12ef1000 r-xp 00060000 103:02 54425733                  /usr/lib/x86_64-linux-gnu/libGL.so.1.7.0
+ 77fa12ef1000-77fa12f05000 r--p 00061000 103:02 54425733                  /usr/lib/x86_64-linux-gnu/libGL.so.1.7.0
+ 77fa12f05000-77fa12f13000 r--p 00075000 103:02 54425733                  /usr/lib/x86_64-linux-gnu/libGL.so.1.7.0
+ 77fa12f13000-77fa12f14000 rw-p 00083000 103:02 54425733                  /usr/lib/x86_64-linux-gnu/libGL.so.1.7.0
+ 77fa12f14000-77fa13400000 rw-p 00000000 00:00 0 
+ 77fa13400000-77fa13421000 r--p 00000000 103:02 54395772                  /usr/lib/x86_64-linux-gnu/libgfortran.so.5.0.0
+ 77fa13421000-77fa1374a000 r-xp 00021000 103:02 54395772                  /usr/lib/x86_64-linux-gnu/libgfortran.so.5.0.0
+ 77fa1374a000-77fa1377d000 r--p 0034a000 103:02 54395772                  /usr/lib/x86_64-linux-gnu/libgfortran.so.5.0.0
+ 77fa1377d000-77fa1377e000 r--p 0037d000 103:02 54395772                  /usr/lib/x86_64-linux-gnu/libgfortran.so.5.0.0
+ 77fa1377e000-77fa13780000 rw-p 0037e000 103:02 54395772                  /usr/lib/x86_64-linux-gnu/libgfortran.so.5.0.0
+ 77fa13786000-77fa13789000 r--p 00000000 103:02 54425736                  /usr/lib/x86_64-linux-gnu/libGLX.so.0.0.0
+ 77fa13789000-77fa137a4000 r-xp 00003000 103:02 54425736                  /usr/lib/x86_64-linux-gnu/libGLX.so.0.0.0
+ 77fa137a4000-77fa137a7000 r--p 0001e000 103:02 54425736                  /usr/lib/x86_64-linux-gnu/libGLX.so.0.0.0
+ 77fa137a7000-77fa137a8000 r--p 00021000 103:02 54425736                  /usr/lib/x86_64-linux-gnu/libGLX.so.0.0.0
+ 77fa137a8000-77fa137a9000 rw-p 00022000 103:02 54425736                  /usr/lib/x86_64-linux-gnu/libGLX.so.0.0.0
+ 77fa137a9000-77fa137b9000 rw-p 00000000 00:00 0 
+ 77fa137b9000-77fa137c1000 r--p 00000000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 77fa137c1000-77fa137e8000 r-xp 00008000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 77fa137e8000-77fa137fa000 r--p 0002f000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 77fa137fa000-77fa137ff000 r--p 00041000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 77fa137ff000-77fa13800000 rw-p 00046000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 77fa13800000-77fa13820000 r--p 00000000 103:02 56492094                  /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.1
+ 77fa13820000-77fa13ef3000 r-xp 00020000 103:02 56492094                  /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.1
+ 77fa13ef3000-77fa13f14000 r--p 006f3000 103:02 56492094                  /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.1
+ 77fa13f14000-77fa13f18000 r--p 00713000 103:02 56492094                  /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.1
+ 77fa13f18000-77fa13f1a000 rw-p 00717000 103:02 56492094                  /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.1
+ 77fa13f1a000-77fa13f1d000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa13f1d000-77fa13f1f000 rw-s 00000000 00:01 16611                      /memfd:/.glXXXXXX (deleted)
+ 77fa13f1f000-77fa13f26000 r--p 00000000 103:02 54426291                  /usr/lib/x86_64-linux-gnu/libxcb-randr.so.0.1.0
+ 77fa13f26000-77fa13f2b000 r-xp 00007000 103:02 54426291                  /usr/lib/x86_64-linux-gnu/libxcb-randr.so.0.1.0
+ 77fa13f2b000-77fa13f2e000 r--p 0000c000 103:02 54426291                  /usr/lib/x86_64-linux-gnu/libxcb-randr.so.0.1.0
+ 77fa13f2e000-77fa13f2f000 r--p 0000f000 103:02 54426291                  /usr/lib/x86_64-linux-gnu/libxcb-randr.so.0.1.0
+ 77fa13f2f000-77fa13f30000 rw-p 00010000 103:02 54426291                  /usr/lib/x86_64-linux-gnu/libxcb-randr.so.0.1.0
+ 77fa13f30000-77fa13f36000 r--p 00000000 103:02 56493108                  /usr/lib/python3/dist-packages/pygame/_freetype.cpython-314-x86_64-linux-gnu.so
+ 77fa13f36000-77fa13f44000 r-xp 00006000 103:02 56493108                  /usr/lib/python3/dist-packages/pygame/_freetype.cpython-314-x86_64-linux-gnu.so
+ 77fa13f44000-77fa13f49000 r--p 00014000 103:02 56493108                  /usr/lib/python3/dist-packages/pygame/_freetype.cpython-314-x86_64-linux-gnu.so
+ 77fa13f49000-77fa13f4a000 r--p 00019000 103:02 56493108                  /usr/lib/python3/dist-packages/pygame/_freetype.cpython-314-x86_64-linux-gnu.so
+ 77fa13f4a000-77fa13f4b000 rw-p 0001a000 103:02 56493108                  /usr/lib/python3/dist-packages/pygame/_freetype.cpython-314-x86_64-linux-gnu.so
+ 77fa13f4b000-77fa1434b000 rw-p 00000000 00:00 0 
+ 77fa1434b000-77fa14351000 r--p 00000000 103:02 56492088                  /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.1
+ 77fa14351000-77fa143f9000 r-xp 00006000 103:02 56492088                  /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.1
+ 77fa143f9000-77fa143fe000 r--p 000ae000 103:02 56492088                  /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.1
+ 77fa143fe000-77fa143ff000 r--p 000b2000 103:02 56492088                  /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.1
+ 77fa143ff000-77fa14400000 rw-p 000b3000 103:02 56492088                  /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.12.1
+ 77fa14400000-77fa14428000 r--p 00000000 103:02 56492132                  /usr/lib/python3/dist-packages/numpy/_core/_multiarray_umath.cpython-314-x86_64-linux-gnu.so
+ 77fa14428000-77fa14b51000 r-xp 00028000 103:02 56492132                  /usr/lib/python3/dist-packages/numpy/_core/_multiarray_umath.cpython-314-x86_64-linux-gnu.so
+ 77fa14b51000-77fa14cb3000 r--p 00751000 103:02 56492132                  /usr/lib/python3/dist-packages/numpy/_core/_multiarray_umath.cpython-314-x86_64-linux-gnu.so
+ 77fa14cb3000-77fa14cb6000 r--p 008b2000 103:02 56492132                  /usr/lib/python3/dist-packages/numpy/_core/_multiarray_umath.cpython-314-x86_64-linux-gnu.so
+ 77fa14cb6000-77fa14cd8000 rw-p 008b5000 103:02 56492132                  /usr/lib/python3/dist-packages/numpy/_core/_multiarray_umath.cpython-314-x86_64-linux-gnu.so
+ 77fa14cd8000-77fa14cef000 rw-p 00000000 00:00 0 
+ 77fa14cf0000-77fa14cf2000 r--p 00000000 103:02 54426288                  /usr/lib/x86_64-linux-gnu/libxcb-dri3.so.0.1.0
+ 77fa14cf2000-77fa14cf4000 r-xp 00002000 103:02 54426288                  /usr/lib/x86_64-linux-gnu/libxcb-dri3.so.0.1.0
+ 77fa14cf4000-77fa14cf5000 r--p 00004000 103:02 54426288                  /usr/lib/x86_64-linux-gnu/libxcb-dri3.so.0.1.0
+ 77fa14cf5000-77fa14cf6000 r--p 00004000 103:02 54426288                  /usr/lib/x86_64-linux-gnu/libxcb-dri3.so.0.1.0
+ 77fa14cf6000-77fa14cf7000 rw-p 00005000 103:02 54426288                  /usr/lib/x86_64-linux-gnu/libxcb-dri3.so.0.1.0
+ 77fa14cf7000-77fa14cf8000 r--p 00000000 103:02 54426173                  /usr/lib/x86_64-linux-gnu/librt.so.1
+ 77fa14cf8000-77fa14cf9000 r-xp 00001000 103:02 54426173                  /usr/lib/x86_64-linux-gnu/librt.so.1
+ 77fa14cf9000-77fa14cfa000 r--p 00002000 103:02 54426173                  /usr/lib/x86_64-linux-gnu/librt.so.1
+ 77fa14cfa000-77fa14cfb000 r--p 00002000 103:02 54426173                  /usr/lib/x86_64-linux-gnu/librt.so.1
+ 77fa14cfb000-77fa14cfc000 rw-p 00003000 103:02 54426173                  /usr/lib/x86_64-linux-gnu/librt.so.1
+ 77fa14cfc000-77fa14cfd000 r--p 00000000 103:02 54426154                  /usr/lib/x86_64-linux-gnu/libpthread.so.0
+ 77fa14cfd000-77fa14cfe000 r-xp 00001000 103:02 54426154                  /usr/lib/x86_64-linux-gnu/libpthread.so.0
+ 77fa14cfe000-77fa14cff000 r--p 00002000 103:02 54426154                  /usr/lib/x86_64-linux-gnu/libpthread.so.0
+ 77fa14cff000-77fa14d00000 r--p 00002000 103:02 54426154                  /usr/lib/x86_64-linux-gnu/libpthread.so.0
+ 77fa14d00000-77fa14d01000 rw-p 00003000 103:02 54426154                  /usr/lib/x86_64-linux-gnu/libpthread.so.0
+ 77fa14d01000-77fa14d02000 r--p 00000000 103:02 54425889                  /usr/lib/x86_64-linux-gnu/libdl.so.2
+ 77fa14d02000-77fa14d03000 r-xp 00001000 103:02 54425889                  /usr/lib/x86_64-linux-gnu/libdl.so.2
+ 77fa14d03000-77fa14d04000 r--p 00002000 103:02 54425889                  /usr/lib/x86_64-linux-gnu/libdl.so.2
+ 77fa14d04000-77fa14d05000 r--p 00002000 103:02 54425889                  /usr/lib/x86_64-linux-gnu/libdl.so.2
+ 77fa14d05000-77fa14d06000 rw-p 00003000 103:02 54425889                  /usr/lib/x86_64-linux-gnu/libdl.so.2
+ 77fa14d06000-77fa14d0a000 rw-p 00000000 00:00 0 
+ 77fa14d0a000-77fa14d0d000 r--p 00000000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 77fa14d0d000-77fa14d13000 r-xp 00003000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 77fa14d13000-77fa14d17000 r--p 00009000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 77fa14d17000-77fa14d18000 r--p 0000d000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 77fa14d18000-77fa14d19000 rw-p 0000e000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 77fa14d19000-77fa14d1c000 r--p 00000000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 77fa14d1c000-77fa14d20000 r-xp 00003000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 77fa14d20000-77fa14d23000 r--p 00007000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 77fa14d23000-77fa14d24000 r--p 00009000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 77fa14d24000-77fa14d25000 rw-p 0000a000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 77fa14d25000-77fa14d28000 r--p 00000000 103:02 56492688                  /usr/lib/python3/dist-packages/numpy/linalg/_umath_linalg.cpython-314-x86_64-linux-gnu.so
+ 77fa14d28000-77fa14d40000 r-xp 00003000 103:02 56492688                  /usr/lib/python3/dist-packages/numpy/linalg/_umath_linalg.cpython-314-x86_64-linux-gnu.so
+ 77fa14d40000-77fa14d43000 r--p 0001b000 103:02 56492688                  /usr/lib/python3/dist-packages/numpy/linalg/_umath_linalg.cpython-314-x86_64-linux-gnu.so
+ 77fa14d43000-77fa14d44000 r--p 0001d000 103:02 56492688                  /usr/lib/python3/dist-packages/numpy/linalg/_umath_linalg.cpython-314-x86_64-linux-gnu.so
+ 77fa14d44000-77fa14d45000 rw-p 0001e000 103:02 56492688                  /usr/lib/python3/dist-packages/numpy/linalg/_umath_linalg.cpython-314-x86_64-linux-gnu.so
+ 77fa14d45000-77fa14d49000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa14d49000-77fa14d4a000 r--p 00000000 103:02 54429597                  /usr/lib/x86_64-linux-gnu/libnvidia-tls.so.595.71.05
+ 77fa14d4a000-77fa14d4c000 r-xp 00001000 103:02 54429597                  /usr/lib/x86_64-linux-gnu/libnvidia-tls.so.595.71.05
+ 77fa14d4c000-77fa14d4d000 r--p 00003000 103:02 54429597                  /usr/lib/x86_64-linux-gnu/libnvidia-tls.so.595.71.05
+ 77fa14d4d000-77fa14d4e000 r--p 00003000 103:02 54429597                  /usr/lib/x86_64-linux-gnu/libnvidia-tls.so.595.71.05
+ 77fa14d4e000-77fa14d4f000 rw-p 00004000 103:02 54429597                  /usr/lib/x86_64-linux-gnu/libnvidia-tls.so.595.71.05
+ 77fa14d50000-77fa14d51000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa14d51000-77fa14d52000 rw-s 00000000 00:07 841                        /dev/nvidia0
+ 77fa14d52000-77fa14d54000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa14d54000-77fa14d58000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa14d58000-77fa14d59000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa14d59000-77fa14d5a000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa14d5a000-77fa14d5b000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa14d5b000-77fa14d5c000 rw-s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa14d5c000-77fa14d5d000 rw-s 00044000 00:01 11268                      /memfd:/.nvidia_drv.XXXXXX (deleted)
+ 77fa14d5d000-77fa14d5e000 r--s 00000000 00:07 839                        /dev/nvidiactl
+ 77fa14d5e000-77fa14d5f000 r--p 00000000 103:02 54408069                  /usr/lib/locale/C.utf8/LC_NUMERIC
+ 77fa14d5f000-77fa14d73000 r--p 00000000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 77fa14d73000-77fa14d80000 r-xp 00014000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 77fa14d80000-77fa14d8f000 r--p 00021000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 77fa14d8f000-77fa14d90000 r--p 0002f000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 77fa14d90000-77fa14d9a000 rw-p 00030000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 77fa14d9a000-77fa14d9e000 r--p 00000000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 77fa14d9e000-77fa14da4000 r-xp 00004000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 77fa14da4000-77fa14da8000 r--p 0000a000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 77fa14da8000-77fa14da9000 r--p 0000d000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 77fa14da9000-77fa14dab000 rw-p 0000e000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 77fa14dab000-77fa14dad000 r--p 00000000 103:02 54426113                  /usr/lib/x86_64-linux-gnu/libopusfile.so.0.4.5
+ 77fa14dad000-77fa14db6000 r-xp 00002000 103:02 54426113                  /usr/lib/x86_64-linux-gnu/libopusfile.so.0.4.5
+ 77fa14db6000-77fa14db8000 r--p 0000b000 103:02 54426113                  /usr/lib/x86_64-linux-gnu/libopusfile.so.0.4.5
+ 77fa14db8000-77fa14db9000 r--p 0000c000 103:02 54426113                  /usr/lib/x86_64-linux-gnu/libopusfile.so.0.4.5
+ 77fa14db9000-77fa14dba000 rw-p 0000d000 103:02 54426113                  /usr/lib/x86_64-linux-gnu/libopusfile.so.0.4.5
+ 77fa14dba000-77fa14dbc000 r--p 00000000 103:02 54426260                  /usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.8
+ 77fa14dbc000-77fa14dc2000 r-xp 00002000 103:02 54426260                  /usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.8
+ 77fa14dc2000-77fa14dc3000 r--p 00008000 103:02 54426260                  /usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.8
+ 77fa14dc3000-77fa14dc4000 r--p 00008000 103:02 54426260                  /usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.8
+ 77fa14dc4000-77fa14dc5000 rw-p 00009000 103:02 54426260                  /usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.8
+ 77fa14dc5000-77fa14dcb000 r--p 00000000 103:02 54426308                  /usr/lib/x86_64-linux-gnu/libxmp.so.4.6.3
+ 77fa14dcb000-77fa14e4d000 r-xp 00006000 103:02 54426308                  /usr/lib/x86_64-linux-gnu/libxmp.so.4.6.3
+ 77fa14e4d000-77fa14e64000 r--p 00088000 103:02 54426308                  /usr/lib/x86_64-linux-gnu/libxmp.so.4.6.3
+ 77fa14e64000-77fa14e67000 r--p 0009e000 103:02 54426308                  /usr/lib/x86_64-linux-gnu/libxmp.so.4.6.3
+ 77fa14e67000-77fa14e68000 rw-p 000a1000 103:02 54426308                  /usr/lib/x86_64-linux-gnu/libxmp.so.4.6.3
+ 77fa14e68000-77fa14e6d000 r--p 00000000 103:02 54425758                  /usr/lib/x86_64-linux-gnu/libSDL2_mixer-2.0.so.0.800.1
+ 77fa14e6d000-77fa14e8b000 r-xp 00005000 103:02 54425758                  /usr/lib/x86_64-linux-gnu/libSDL2_mixer-2.0.so.0.800.1
+ 77fa14e8b000-77fa14e92000 r--p 00023000 103:02 54425758                  /usr/lib/x86_64-linux-gnu/libSDL2_mixer-2.0.so.0.800.1
+ 77fa14e92000-77fa14e93000 r--p 0002a000 103:02 54425758                  /usr/lib/x86_64-linux-gnu/libSDL2_mixer-2.0.so.0.800.1
+ 77fa14e93000-77fa14e94000 rw-p 0002b000 103:02 54425758                  /usr/lib/x86_64-linux-gnu/libSDL2_mixer-2.0.so.0.800.1
+ 77fa14e94000-77fa14e95000 rw-p 00000000 00:00 0 
+ 77fa14e95000-77fa14e96000 r--p 00000000 103:02 54408072                  /usr/lib/locale/C.utf8/LC_TIME
+ 77fa14e96000-77fa14e9a000 r--p 00000000 103:02 56493169                  /usr/lib/python3/dist-packages/pygame/mixer.cpython-314-x86_64-linux-gnu.so
+ 77fa14e9a000-77fa14e9f000 r-xp 00004000 103:02 56493169                  /usr/lib/python3/dist-packages/pygame/mixer.cpython-314-x86_64-linux-gnu.so
+ 77fa14e9f000-77fa14ea2000 r--p 00009000 103:02 56493169                  /usr/lib/python3/dist-packages/pygame/mixer.cpython-314-x86_64-linux-gnu.so
+ 77fa14ea2000-77fa14ea3000 r--p 0000b000 103:02 56493169                  /usr/lib/python3/dist-packages/pygame/mixer.cpython-314-x86_64-linux-gnu.so
+ 77fa14ea3000-77fa14ea4000 rw-p 0000c000 103:02 56493169                  /usr/lib/python3/dist-packages/pygame/mixer.cpython-314-x86_64-linux-gnu.so
+ 77fa14ea4000-77fa14ea7000 r--p 00000000 103:02 54426129                  /usr/lib/x86_64-linux-gnu/libpcre2-8.so.0.14.0
+ 77fa14ea7000-77fa14f23000 r-xp 00003000 103:02 54426129                  /usr/lib/x86_64-linux-gnu/libpcre2-8.so.0.14.0
+ 77fa14f23000-77fa14f4e000 r--p 0007f000 103:02 54426129                  /usr/lib/x86_64-linux-gnu/libpcre2-8.so.0.14.0
+ 77fa14f4e000-77fa14f4f000 r--p 000a9000 103:02 54426129                  /usr/lib/x86_64-linux-gnu/libpcre2-8.so.0.14.0
+ 77fa14f4f000-77fa14f50000 rw-p 000aa000 103:02 54426129                  /usr/lib/x86_64-linux-gnu/libpcre2-8.so.0.14.0
+ 77fa14f50000-77fa14f51000 r--p 00000000 103:02 54425836                  /usr/lib/x86_64-linux-gnu/libbrotlicommon.so.1.2.0
+ 77fa14f51000-77fa14f52000 r-xp 00001000 103:02 54425836                  /usr/lib/x86_64-linux-gnu/libbrotlicommon.so.1.2.0
+ 77fa14f52000-77fa14f71000 r--p 00002000 103:02 54425836                  /usr/lib/x86_64-linux-gnu/libbrotlicommon.so.1.2.0
+ 77fa14f71000-77fa14f72000 r--p 00021000 103:02 54425836                  /usr/lib/x86_64-linux-gnu/libbrotlicommon.so.1.2.0
+ 77fa14f72000-77fa14f73000 rw-p 00022000 103:02 54425836                  /usr/lib/x86_64-linux-gnu/libbrotlicommon.so.1.2.0
+ 77fa14f73000-77fa14f76000 r--p 00000000 103:02 54425972                  /usr/lib/x86_64-linux-gnu/libgraphite2.so.3.2.1
+ 77fa14f76000-77fa14f93000 r-xp 00003000 103:02 54425972                  /usr/lib/x86_64-linux-gnu/libgraphite2.so.3.2.1
+ 77fa14f93000-77fa14f96000 r--p 00020000 103:02 54425972                  /usr/lib/x86_64-linux-gnu/libgraphite2.so.3.2.1
+ 77fa14f96000-77fa14f98000 r--p 00022000 103:02 54425972                  /usr/lib/x86_64-linux-gnu/libgraphite2.so.3.2.1
+ 77fa14f98000-77fa14f99000 rw-p 00024000 103:02 54425972                  /usr/lib/x86_64-linux-gnu/libgraphite2.so.3.2.1
+ 77fa14f99000-77fa14fb8000 r--p 00000000 103:02 54425961                  /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.8800.0
+ 77fa14fb8000-77fa1505e000 r-xp 0001f000 103:02 54425961                  /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.8800.0
+ 77fa1505e000-77fa150ee000 r--p 000c5000 103:02 54425961                  /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.8800.0
+ 77fa150ee000-77fa150ef000 r--p 00155000 103:02 54425961                  /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.8800.0
+ 77fa150ef000-77fa150f0000 rw-p 00156000 103:02 54425961                  /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0.8800.0
+ 77fa150f0000-77fa150f1000 rw-p 00000000 00:00 0 
+ 77fa150f1000-77fa150f2000 r--p 00000000 103:02 54425837                  /usr/lib/x86_64-linux-gnu/libbrotlidec.so.1.2.0
+ 77fa150f2000-77fa150fb000 r-xp 00001000 103:02 54425837                  /usr/lib/x86_64-linux-gnu/libbrotlidec.so.1.2.0
+ 77fa150fb000-77fa150fe000 r--p 0000a000 103:02 54425837                  /usr/lib/x86_64-linux-gnu/libbrotlidec.so.1.2.0
+ 77fa150fe000-77fa150ff000 r--p 0000c000 103:02 54425837                  /usr/lib/x86_64-linux-gnu/libbrotlidec.so.1.2.0
+ 77fa150ff000-77fa15100000 rw-p 0000d000 103:02 54425837                  /usr/lib/x86_64-linux-gnu/libbrotlidec.so.1.2.0
+ 77fa15100000-77fa1510c000 r--p 00000000 103:02 54425985                  /usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.61232.0
+ 77fa1510c000-77fa151f8000 r-xp 0000c000 103:02 54425985                  /usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.61232.0
+ 77fa151f8000-77fa15229000 r--p 000f8000 103:02 54425985                  /usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.61232.0
+ 77fa15229000-77fa1522a000 r--p 00128000 103:02 54425985                  /usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.61232.0
+ 77fa1522a000-77fa1522b000 rw-p 00129000 103:02 54425985                  /usr/lib/x86_64-linux-gnu/libharfbuzz.so.0.61232.0
+ 77fa1522b000-77fa15238000 r--p 00000000 103:02 54425945                  /usr/lib/x86_64-linux-gnu/libfreetype.so.6.20.5
+ 77fa15238000-77fa152cf000 r-xp 0000d000 103:02 54425945                  /usr/lib/x86_64-linux-gnu/libfreetype.so.6.20.5
+ 77fa152cf000-77fa152f7000 r--p 000a4000 103:02 54425945                  /usr/lib/x86_64-linux-gnu/libfreetype.so.6.20.5
+ 77fa152f7000-77fa152ff000 r--p 000cc000 103:02 54425945                  /usr/lib/x86_64-linux-gnu/libfreetype.so.6.20.5
+ 77fa152ff000-77fa15300000 rw-p 000d4000 103:02 54425945                  /usr/lib/x86_64-linux-gnu/libfreetype.so.6.20.5
+ 77fa15300000-77fa15400000 rw-p 00000000 00:00 0 
+ 77fa15400000-77fa154a3000 r--p 00000000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 77fa154a3000-77fa155fe000 r-xp 000a3000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 77fa155fe000-77fa1568a000 r--p 001fe000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 77fa1568a000-77fa15699000 r--p 0028a000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 77fa15699000-77fa1569c000 rw-p 00299000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 77fa1569c000-77fa156a0000 rw-p 00000000 00:00 0 
+ 77fa156a0000-77fa156a1000 r--p 00000000 103:02 54408063                  /usr/lib/locale/C.utf8/LC_COLLATE
+ 77fa156a1000-77fa156a2000 r--p 00000000 103:02 54408067                  /usr/lib/locale/C.utf8/LC_MONETARY
+ 77fa156a2000-77fa156a3000 r--p 00000000 103:02 54408073                  /usr/lib/locale/C.utf8/LC_MESSAGES/SYS_LC_MESSAGES
+ 77fa156a3000-77fa156a5000 r--p 00000000 103:02 54425814                  /usr/lib/x86_64-linux-gnu/libatomic.so.1.2.0
+ 77fa156a5000-77fa156a9000 r-xp 00002000 103:02 54425814                  /usr/lib/x86_64-linux-gnu/libatomic.so.1.2.0
+ 77fa156a9000-77fa156ab000 r--p 00006000 103:02 54425814                  /usr/lib/x86_64-linux-gnu/libatomic.so.1.2.0
+ 77fa156ab000-77fa156ac000 r--p 00007000 103:02 54425814                  /usr/lib/x86_64-linux-gnu/libatomic.so.1.2.0
+ 77fa156ac000-77fa156ad000 rw-p 00008000 103:02 54425814                  /usr/lib/x86_64-linux-gnu/libatomic.so.1.2.0
+ 77fa156ad000-77fa156ae000 rw-p 00000000 00:00 0 
+ 77fa156ae000-77fa156b0000 r--p 00000000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 77fa156b0000-77fa156bf000 r-xp 00002000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 77fa156bf000-77fa156c1000 r--p 00011000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 77fa156c1000-77fa156c2000 r--p 00012000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 77fa156c2000-77fa156c3000 rw-p 00013000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 77fa156c3000-77fa156c6000 r--p 00000000 103:02 54425759                  /usr/lib/x86_64-linux-gnu/libSDL2_ttf-2.0.so.0.2400.0
+ 77fa156c6000-77fa156d5000 r-xp 00003000 103:02 54425759                  /usr/lib/x86_64-linux-gnu/libSDL2_ttf-2.0.so.0.2400.0
+ 77fa156d5000-77fa156d7000 r--p 00012000 103:02 54425759                  /usr/lib/x86_64-linux-gnu/libSDL2_ttf-2.0.so.0.2400.0
+ 77fa156d7000-77fa156d8000 r--p 00013000 103:02 54425759                  /usr/lib/x86_64-linux-gnu/libSDL2_ttf-2.0.so.0.2400.0
+ 77fa156d8000-77fa156d9000 rw-p 00014000 103:02 54425759                  /usr/lib/x86_64-linux-gnu/libSDL2_ttf-2.0.so.0.2400.0
+ 77fa156d9000-77fa156da000 r--p 00000000 103:02 54408070                  /usr/lib/locale/C.utf8/LC_PAPER
+ 77fa156da000-77fa156db000 r--p 00000000 103:02 54408068                  /usr/lib/locale/C.utf8/LC_NAME
+ 77fa156db000-77fa156dd000 r--p 00000000 103:02 56493191                  /usr/lib/python3/dist-packages/pygame/scrap.cpython-314-x86_64-linux-gnu.so
+ 77fa156dd000-77fa156de000 r-xp 00002000 103:02 56493191                  /usr/lib/python3/dist-packages/pygame/scrap.cpython-314-x86_64-linux-gnu.so
+ 77fa156de000-77fa156df000 r--p 00003000 103:02 56493191                  /usr/lib/python3/dist-packages/pygame/scrap.cpython-314-x86_64-linux-gnu.so
+ 77fa156df000-77fa156e0000 r--p 00003000 103:02 56493191                  /usr/lib/python3/dist-packages/pygame/scrap.cpython-314-x86_64-linux-gnu.so
+ 77fa156e0000-77fa156e1000 rw-p 00004000 103:02 56493191                  /usr/lib/python3/dist-packages/pygame/scrap.cpython-314-x86_64-linux-gnu.so
+ 77fa156e1000-77fa156e3000 r--p 00000000 103:02 56493171                  /usr/lib/python3/dist-packages/pygame/mixer_music.cpython-314-x86_64-linux-gnu.so
+ 77fa156e3000-77fa156e5000 r-xp 00002000 103:02 56493171                  /usr/lib/python3/dist-packages/pygame/mixer_music.cpython-314-x86_64-linux-gnu.so
+ 77fa156e5000-77fa156e6000 r--p 00004000 103:02 56493171                  /usr/lib/python3/dist-packages/pygame/mixer_music.cpython-314-x86_64-linux-gnu.so
+ 77fa156e6000-77fa156e7000 r--p 00004000 103:02 56493171                  /usr/lib/python3/dist-packages/pygame/mixer_music.cpython-314-x86_64-linux-gnu.so
+ 77fa156e7000-77fa156e8000 rw-p 00005000 103:02 56493171                  /usr/lib/python3/dist-packages/pygame/mixer_music.cpython-314-x86_64-linux-gnu.so
+ 77fa156e8000-77fa156eb000 r--p 00000000 103:02 56493146                  /usr/lib/python3/dist-packages/pygame/font.cpython-314-x86_64-linux-gnu.so
+ 77fa156eb000-77fa156ee000 r-xp 00003000 103:02 56493146                  /usr/lib/python3/dist-packages/pygame/font.cpython-314-x86_64-linux-gnu.so
+ 77fa156ee000-77fa156f0000 r--p 00006000 103:02 56493146                  /usr/lib/python3/dist-packages/pygame/font.cpython-314-x86_64-linux-gnu.so
+ 77fa156f0000-77fa156f1000 r--p 00007000 103:02 56493146                  /usr/lib/python3/dist-packages/pygame/font.cpython-314-x86_64-linux-gnu.so
+ 77fa156f1000-77fa156f2000 rw-p 00008000 103:02 56493146                  /usr/lib/python3/dist-packages/pygame/font.cpython-314-x86_64-linux-gnu.so
+ 77fa156f2000-77fa156f5000 r--p 00000000 103:02 56493208                  /usr/lib/python3/dist-packages/pygame/transform.cpython-314-x86_64-linux-gnu.so
+ 77fa156f5000-77fa15701000 r-xp 00003000 103:02 56493208                  /usr/lib/python3/dist-packages/pygame/transform.cpython-314-x86_64-linux-gnu.so
+ 77fa15701000-77fa15703000 r--p 0000f000 103:02 56493208                  /usr/lib/python3/dist-packages/pygame/transform.cpython-314-x86_64-linux-gnu.so
+ 77fa15703000-77fa15704000 r--p 00010000 103:02 56493208                  /usr/lib/python3/dist-packages/pygame/transform.cpython-314-x86_64-linux-gnu.so
+ 77fa15704000-77fa15705000 rw-p 00011000 103:02 56493208                  /usr/lib/python3/dist-packages/pygame/transform.cpython-314-x86_64-linux-gnu.so
+ 77fa15705000-77fa15708000 r--p 00000000 103:02 56493176                  /usr/lib/python3/dist-packages/pygame/pixelarray.cpython-314-x86_64-linux-gnu.so
+ 77fa15708000-77fa15710000 r-xp 00003000 103:02 56493176                  /usr/lib/python3/dist-packages/pygame/pixelarray.cpython-314-x86_64-linux-gnu.so
+ 77fa15710000-77fa15712000 r--p 0000b000 103:02 56493176                  /usr/lib/python3/dist-packages/pygame/pixelarray.cpython-314-x86_64-linux-gnu.so
+ 77fa15712000-77fa15713000 r--p 0000c000 103:02 56493176                  /usr/lib/python3/dist-packages/pygame/pixelarray.cpython-314-x86_64-linux-gnu.so
+ 77fa15713000-77fa15714000 rw-p 0000d000 103:02 56493176                  /usr/lib/python3/dist-packages/pygame/pixelarray.cpython-314-x86_64-linux-gnu.so
+ 77fa15714000-77fa15716000 r--p 00000000 103:02 56493178                  /usr/lib/python3/dist-packages/pygame/pixelcopy.cpython-314-x86_64-linux-gnu.so
+ 77fa15716000-77fa1571b000 r-xp 00002000 103:02 56493178                  /usr/lib/python3/dist-packages/pygame/pixelcopy.cpython-314-x86_64-linux-gnu.so
+ 77fa1571b000-77fa1571d000 r--p 00007000 103:02 56493178                  /usr/lib/python3/dist-packages/pygame/pixelcopy.cpython-314-x86_64-linux-gnu.so
+ 77fa1571d000-77fa1571e000 r--p 00008000 103:02 56493178                  /usr/lib/python3/dist-packages/pygame/pixelcopy.cpython-314-x86_64-linux-gnu.so
+ 77fa1571e000-77fa1571f000 rw-p 00009000 103:02 56493178                  /usr/lib/python3/dist-packages/pygame/pixelcopy.cpython-314-x86_64-linux-gnu.so
+ 77fa1571f000-77fa15721000 r--p 00000000 103:02 54398682                  /usr/lib/python3.14/lib-dynload/_queue.cpython-314-x86_64-linux-gnu.so
+ 77fa15721000-77fa15723000 r-xp 00002000 103:02 54398682                  /usr/lib/python3.14/lib-dynload/_queue.cpython-314-x86_64-linux-gnu.so
+ 77fa15723000-77fa15724000 r--p 00004000 103:02 54398682                  /usr/lib/python3.14/lib-dynload/_queue.cpython-314-x86_64-linux-gnu.so
+ 77fa15724000-77fa15725000 r--p 00004000 103:02 54398682                  /usr/lib/python3.14/lib-dynload/_queue.cpython-314-x86_64-linux-gnu.so
+ 77fa15725000-77fa15726000 rw-p 00005000 103:02 54398682                  /usr/lib/python3.14/lib-dynload/_queue.cpython-314-x86_64-linux-gnu.so
+ 77fa15726000-77fa15729000 r--p 00000000 103:02 56493163                  /usr/lib/python3/dist-packages/pygame/mask.cpython-314-x86_64-linux-gnu.so
+ 77fa15729000-77fa15733000 r-xp 00003000 103:02 56493163                  /usr/lib/python3/dist-packages/pygame/mask.cpython-314-x86_64-linux-gnu.so
+ 77fa15733000-77fa15735000 r--p 0000d000 103:02 56493163                  /usr/lib/python3/dist-packages/pygame/mask.cpython-314-x86_64-linux-gnu.so
+ 77fa15735000-77fa15736000 r--p 0000f000 103:02 56493163                  /usr/lib/python3/dist-packages/pygame/mask.cpython-314-x86_64-linux-gnu.so
+ 77fa15736000-77fa15737000 rw-p 00010000 103:02 56493163                  /usr/lib/python3/dist-packages/pygame/mask.cpython-314-x86_64-linux-gnu.so
+ 77fa15737000-77fa15739000 r--p 00000000 103:02 56493206                  /usr/lib/python3/dist-packages/pygame/time.cpython-314-x86_64-linux-gnu.so
+ 77fa15739000-77fa1573b000 r-xp 00002000 103:02 56493206                  /usr/lib/python3/dist-packages/pygame/time.cpython-314-x86_64-linux-gnu.so
+ 77fa1573b000-77fa1573c000 r--p 00004000 103:02 56493206                  /usr/lib/python3/dist-packages/pygame/time.cpython-314-x86_64-linux-gnu.so
+ 77fa1573c000-77fa1573d000 r--p 00004000 103:02 56493206                  /usr/lib/python3/dist-packages/pygame/time.cpython-314-x86_64-linux-gnu.so
+ 77fa1573d000-77fa1573e000 rw-p 00005000 103:02 56493206                  /usr/lib/python3/dist-packages/pygame/time.cpython-314-x86_64-linux-gnu.so
+ 77fa1573e000-77fa1573f000 r--p 00000000 103:02 54426187                  /usr/lib/x86_64-linux-gnu/libsharpyuv.so.0.1.1
+ 77fa1573f000-77fa15743000 r-xp 00001000 103:02 54426187                  /usr/lib/x86_64-linux-gnu/libsharpyuv.so.0.1.1
+ 77fa15743000-77fa15744000 r--p 00005000 103:02 54426187                  /usr/lib/x86_64-linux-gnu/libsharpyuv.so.0.1.1
+ 77fa15744000-77fa15745000 r--p 00005000 103:02 54426187                  /usr/lib/x86_64-linux-gnu/libsharpyuv.so.0.1.1
+ 77fa15745000-77fa15746000 rw-p 00006000 103:02 54426187                  /usr/lib/x86_64-linux-gnu/libsharpyuv.so.0.1.1
+ 77fa15746000-77fa15747000 rw-p 00000000 00:00 0 
+ 77fa15747000-77fa15748000 r--p 00000000 103:02 54425882                  /usr/lib/x86_64-linux-gnu/libdeflate.so.0
+ 77fa15748000-77fa15758000 r-xp 00001000 103:02 54425882                  /usr/lib/x86_64-linux-gnu/libdeflate.so.0
+ 77fa15758000-77fa1575d000 r--p 00011000 103:02 54425882                  /usr/lib/x86_64-linux-gnu/libdeflate.so.0
+ 77fa1575d000-77fa1575e000 r--p 00015000 103:02 54425882                  /usr/lib/x86_64-linux-gnu/libdeflate.so.0
+ 77fa1575e000-77fa1575f000 rw-p 00016000 103:02 54425882                  /usr/lib/x86_64-linux-gnu/libdeflate.so.0
+ 77fa1575f000-77fa15764000 r--p 00000000 103:02 54425748                  /usr/lib/x86_64-linux-gnu/libLerc.so.4
+ 77fa15764000-77fa157ea000 r-xp 00005000 103:02 54425748                  /usr/lib/x86_64-linux-gnu/libLerc.so.4
+ 77fa157ea000-77fa157f2000 r--p 0008b000 103:02 54425748                  /usr/lib/x86_64-linux-gnu/libLerc.so.4
+ 77fa157f2000-77fa157f3000 r--p 00093000 103:02 54425748                  /usr/lib/x86_64-linux-gnu/libLerc.so.4
+ 77fa157f3000-77fa157f4000 rw-p 00094000 103:02 54425748                  /usr/lib/x86_64-linux-gnu/libLerc.so.4
+ 77fa157f4000-77fa157f8000 r--p 00000000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 77fa157f8000-77fa1581c000 r-xp 00004000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 77fa1581c000-77fa15827000 r--p 00028000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 77fa15827000-77fa15828000 r--p 00033000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 77fa15828000-77fa15829000 rw-p 00034000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 77fa15829000-77fa1582d000 r--p 00000000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 77fa1582d000-77fa158dd000 r-xp 00004000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 77fa158dd000-77fa158ea000 r--p 000b4000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 77fa158ea000-77fa158eb000 r--p 000c1000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 77fa158eb000-77fa158ec000 rw-p 000c2000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 77fa158ec000-77fa158ef000 r--p 00000000 103:02 54426276                  /usr/lib/x86_64-linux-gnu/libwebp.so.7.1.10
+ 77fa158ef000-77fa15965000 r-xp 00003000 103:02 54426276                  /usr/lib/x86_64-linux-gnu/libwebp.so.7.1.10
+ 77fa15965000-77fa1597c000 r--p 00079000 103:02 54426276                  /usr/lib/x86_64-linux-gnu/libwebp.so.7.1.10
+ 77fa1597c000-77fa1597d000 r--p 0008f000 103:02 54426276                  /usr/lib/x86_64-linux-gnu/libwebp.so.7.1.10
+ 77fa1597d000-77fa1597e000 rw-p 00090000 103:02 54426276                  /usr/lib/x86_64-linux-gnu/libwebp.so.7.1.10
+ 77fa1597e000-77fa1597f000 rw-p 00000000 00:00 0 
+ 77fa1597f000-77fa15987000 r--p 00000000 103:02 54426222                  /usr/lib/x86_64-linux-gnu/libtiff.so.6.1.0
+ 77fa15987000-77fa159dc000 r-xp 00008000 103:02 54426222                  /usr/lib/x86_64-linux-gnu/libtiff.so.6.1.0
+ 77fa159dc000-77fa15a0d000 r--p 0005d000 103:02 54426222                  /usr/lib/x86_64-linux-gnu/libtiff.so.6.1.0
+ 77fa15a0d000-77fa15a12000 r--p 0008e000 103:02 54426222                  /usr/lib/x86_64-linux-gnu/libtiff.so.6.1.0
+ 77fa15a12000-77fa15a13000 rw-p 00093000 103:02 54426222                  /usr/lib/x86_64-linux-gnu/libtiff.so.6.1.0
+ 77fa15a13000-77fa15a17000 r--p 00000000 103:02 54426025                  /usr/lib/x86_64-linux-gnu/libjpeg.so.8.2.2
+ 77fa15a17000-77fa15a68000 r-xp 00004000 103:02 54426025                  /usr/lib/x86_64-linux-gnu/libjpeg.so.8.2.2
+ 77fa15a68000-77fa15aa8000 r--p 00055000 103:02 54426025                  /usr/lib/x86_64-linux-gnu/libjpeg.so.8.2.2
+ 77fa15aa8000-77fa15aa9000 r--p 00095000 103:02 54426025                  /usr/lib/x86_64-linux-gnu/libjpeg.so.8.2.2
+ 77fa15aa9000-77fa15aaa000 rw-p 00096000 103:02 54426025                  /usr/lib/x86_64-linux-gnu/libjpeg.so.8.2.2
+ 77fa15aaa000-77fa15aaf000 r--p 00000000 103:02 54426146                  /usr/lib/x86_64-linux-gnu/libpng16.so.16.57.0
+ 77fa15aaf000-77fa15ad9000 r-xp 00005000 103:02 54426146                  /usr/lib/x86_64-linux-gnu/libpng16.so.16.57.0
+ 77fa15ad9000-77fa15ae2000 r--p 0002f000 103:02 54426146                  /usr/lib/x86_64-linux-gnu/libpng16.so.16.57.0
+ 77fa15ae2000-77fa15ae3000 r--p 00037000 103:02 54426146                  /usr/lib/x86_64-linux-gnu/libpng16.so.16.57.0
+ 77fa15ae3000-77fa15ae4000 rw-p 00038000 103:02 54426146                  /usr/lib/x86_64-linux-gnu/libpng16.so.16.57.0
+ 77fa15ae4000-77fa15ae8000 r--p 00000000 103:02 54425757                  /usr/lib/x86_64-linux-gnu/libSDL2_image-2.0.so.0.800.8
+ 77fa15ae8000-77fa15b00000 r-xp 00004000 103:02 54425757                  /usr/lib/x86_64-linux-gnu/libSDL2_image-2.0.so.0.800.8
+ 77fa15b00000-77fa15b03000 r--p 0001c000 103:02 54425757                  /usr/lib/x86_64-linux-gnu/libSDL2_image-2.0.so.0.800.8
+ 77fa15b03000-77fa15b04000 r--p 0001f000 103:02 54425757                  /usr/lib/x86_64-linux-gnu/libSDL2_image-2.0.so.0.800.8
+ 77fa15b04000-77fa15b05000 rw-p 00020000 103:02 54425757                  /usr/lib/x86_64-linux-gnu/libSDL2_image-2.0.so.0.800.8
+ 77fa15b05000-77fa15b0b000 r--p 00000000 103:02 54426074                  /usr/lib/x86_64-linux-gnu/libmvec.so.1
+ 77fa15b0b000-77fa15b2e000 r-xp 00006000 103:02 54426074                  /usr/lib/x86_64-linux-gnu/libmvec.so.1
+ 77fa15b2e000-77fa15bfe000 r--p 00029000 103:02 54426074                  /usr/lib/x86_64-linux-gnu/libmvec.so.1
+ 77fa15bfe000-77fa15bff000 r--p 000f8000 103:02 54426074                  /usr/lib/x86_64-linux-gnu/libmvec.so.1
+ 77fa15bff000-77fa15c00000 rw-p 000f9000 103:02 54426074                  /usr/lib/x86_64-linux-gnu/libmvec.so.1
+ 77fa15c00000-77fa15c07000 r--p 00000000 103:02 54426112                  /usr/lib/x86_64-linux-gnu/libopus.so.0.11.1
+ 77fa15c07000-77fa15c79000 r-xp 00007000 103:02 54426112                  /usr/lib/x86_64-linux-gnu/libopus.so.0.11.1
+ 77fa15c79000-77fa16012000 r--p 00079000 103:02 54426112                  /usr/lib/x86_64-linux-gnu/libopus.so.0.11.1
+ 77fa16012000-77fa16015000 r--p 00412000 103:02 54426112                  /usr/lib/x86_64-linux-gnu/libopus.so.0.11.1
+ 77fa16015000-77fa16016000 rw-p 00415000 103:02 54426112                  /usr/lib/x86_64-linux-gnu/libopus.so.0.11.1
+ 77fa16016000-77fa16018000 r--p 00000000 103:02 56493173                  /usr/lib/python3/dist-packages/pygame/mouse.cpython-314-x86_64-linux-gnu.so
+ 77fa16018000-77fa1601a000 r-xp 00002000 103:02 56493173                  /usr/lib/python3/dist-packages/pygame/mouse.cpython-314-x86_64-linux-gnu.so
+ 77fa1601a000-77fa1601b000 r--p 00004000 103:02 56493173                  /usr/lib/python3/dist-packages/pygame/mouse.cpython-314-x86_64-linux-gnu.so
+ 77fa1601b000-77fa1601c000 r--p 00004000 103:02 56493173                  /usr/lib/python3/dist-packages/pygame/mouse.cpython-314-x86_64-linux-gnu.so
+ 77fa1601c000-77fa1601d000 rw-p 00005000 103:02 56493173                  /usr/lib/python3/dist-packages/pygame/mouse.cpython-314-x86_64-linux-gnu.so
+ 77fa1601d000-77fa1601f000 r--p 00000000 103:02 54426022                  /usr/lib/x86_64-linux-gnu/libjbig.so.0
+ 77fa1601f000-77fa16029000 r-xp 00002000 103:02 54426022                  /usr/lib/x86_64-linux-gnu/libjbig.so.0
+ 77fa16029000-77fa1602b000 r--p 0000c000 103:02 54426022                  /usr/lib/x86_64-linux-gnu/libjbig.so.0
+ 77fa1602b000-77fa1602c000 r--p 0000d000 103:02 54426022                  /usr/lib/x86_64-linux-gnu/libjbig.so.0
+ 77fa1602c000-77fa1602f000 rw-p 0000e000 103:02 54426022                  /usr/lib/x86_64-linux-gnu/libjbig.so.0
+ 77fa1602f000-77fa16030000 r--p 00000000 103:02 54426277                  /usr/lib/x86_64-linux-gnu/libwebpdemux.so.2.0.16
+ 77fa16030000-77fa16033000 r-xp 00001000 103:02 54426277                  /usr/lib/x86_64-linux-gnu/libwebpdemux.so.2.0.16
+ 77fa16033000-77fa16034000 r--p 00004000 103:02 54426277                  /usr/lib/x86_64-linux-gnu/libwebpdemux.so.2.0.16
+ 77fa16034000-77fa16035000 r--p 00004000 103:02 54426277                  /usr/lib/x86_64-linux-gnu/libwebpdemux.so.2.0.16
+ 77fa16035000-77fa16036000 rw-p 00005000 103:02 54426277                  /usr/lib/x86_64-linux-gnu/libwebpdemux.so.2.0.16
+ 77fa16036000-77fa16039000 r--p 00000000 103:02 56493158                  /usr/lib/python3/dist-packages/pygame/key.cpython-314-x86_64-linux-gnu.so
+ 77fa16039000-77fa1603b000 r-xp 00003000 103:02 56493158                  /usr/lib/python3/dist-packages/pygame/key.cpython-314-x86_64-linux-gnu.so
+ 77fa1603b000-77fa1603c000 r--p 00005000 103:02 56493158                  /usr/lib/python3/dist-packages/pygame/key.cpython-314-x86_64-linux-gnu.so
+ 77fa1603c000-77fa1603d000 r--p 00006000 103:02 56493158                  /usr/lib/python3/dist-packages/pygame/key.cpython-314-x86_64-linux-gnu.so
+ 77fa1603d000-77fa1603e000 rw-p 00007000 103:02 56493158                  /usr/lib/python3/dist-packages/pygame/key.cpython-314-x86_64-linux-gnu.so
+ 77fa1603e000-77fa16040000 r--p 00000000 103:02 56493156                  /usr/lib/python3/dist-packages/pygame/joystick.cpython-314-x86_64-linux-gnu.so
+ 77fa16040000-77fa16042000 r-xp 00002000 103:02 56493156                  /usr/lib/python3/dist-packages/pygame/joystick.cpython-314-x86_64-linux-gnu.so
+ 77fa16042000-77fa16043000 r--p 00004000 103:02 56493156                  /usr/lib/python3/dist-packages/pygame/joystick.cpython-314-x86_64-linux-gnu.so
+ 77fa16043000-77fa16044000 r--p 00005000 103:02 56493156                  /usr/lib/python3/dist-packages/pygame/joystick.cpython-314-x86_64-linux-gnu.so
+ 77fa16044000-77fa16045000 rw-p 00006000 103:02 56493156                  /usr/lib/python3/dist-packages/pygame/joystick.cpython-314-x86_64-linux-gnu.so
+ 77fa16045000-77fa16047000 r--p 00000000 103:02 56493155                  /usr/lib/python3/dist-packages/pygame/imageext.cpython-314-x86_64-linux-gnu.so
+ 77fa16047000-77fa16049000 r-xp 00002000 103:02 56493155                  /usr/lib/python3/dist-packages/pygame/imageext.cpython-314-x86_64-linux-gnu.so
+ 77fa16049000-77fa1604a000 r--p 00004000 103:02 56493155                  /usr/lib/python3/dist-packages/pygame/imageext.cpython-314-x86_64-linux-gnu.so
+ 77fa1604a000-77fa1604b000 r--p 00004000 103:02 56493155                  /usr/lib/python3/dist-packages/pygame/imageext.cpython-314-x86_64-linux-gnu.so
+ 77fa1604b000-77fa1604c000 rw-p 00005000 103:02 56493155                  /usr/lib/python3/dist-packages/pygame/imageext.cpython-314-x86_64-linux-gnu.so
+ 77fa1604c000-77fa1604e000 r--p 00000000 103:02 56493153                  /usr/lib/python3/dist-packages/pygame/image.cpython-314-x86_64-linux-gnu.so
+ 77fa1604e000-77fa16053000 r-xp 00002000 103:02 56493153                  /usr/lib/python3/dist-packages/pygame/image.cpython-314-x86_64-linux-gnu.so
+ 77fa16053000-77fa16054000 r--p 00007000 103:02 56493153                  /usr/lib/python3/dist-packages/pygame/image.cpython-314-x86_64-linux-gnu.so
+ 77fa16054000-77fa16055000 r--p 00008000 103:02 56493153                  /usr/lib/python3/dist-packages/pygame/image.cpython-314-x86_64-linux-gnu.so
+ 77fa16055000-77fa16056000 rw-p 00009000 103:02 56493153                  /usr/lib/python3/dist-packages/pygame/image.cpython-314-x86_64-linux-gnu.so
+ 77fa16056000-77fa16059000 r--p 00000000 103:02 56493142                  /usr/lib/python3/dist-packages/pygame/event.cpython-314-x86_64-linux-gnu.so
+ 77fa16059000-77fa1605f000 r-xp 00003000 103:02 56493142                  /usr/lib/python3/dist-packages/pygame/event.cpython-314-x86_64-linux-gnu.so
+ 77fa1605f000-77fa16062000 r--p 00009000 103:02 56493142                  /usr/lib/python3/dist-packages/pygame/event.cpython-314-x86_64-linux-gnu.so
+ 77fa16062000-77fa16063000 r--p 0000b000 103:02 56493142                  /usr/lib/python3/dist-packages/pygame/event.cpython-314-x86_64-linux-gnu.so
+ 77fa16063000-77fa16064000 rw-p 0000c000 103:02 56493142                  /usr/lib/python3/dist-packages/pygame/event.cpython-314-x86_64-linux-gnu.so
+ 77fa16064000-77fa16066000 r--p 00000000 103:02 56493139                  /usr/lib/python3/dist-packages/pygame/draw.cpython-314-x86_64-linux-gnu.so
+ 77fa16066000-77fa1606f000 r-xp 00002000 103:02 56493139                  /usr/lib/python3/dist-packages/pygame/draw.cpython-314-x86_64-linux-gnu.so
+ 77fa1606f000-77fa16071000 r--p 0000b000 103:02 56493139                  /usr/lib/python3/dist-packages/pygame/draw.cpython-314-x86_64-linux-gnu.so
+ 77fa16071000-77fa16072000 r--p 0000c000 103:02 56493139                  /usr/lib/python3/dist-packages/pygame/draw.cpython-314-x86_64-linux-gnu.so
+ 77fa16072000-77fa16073000 rw-p 0000d000 103:02 56493139                  /usr/lib/python3/dist-packages/pygame/draw.cpython-314-x86_64-linux-gnu.so
+ 77fa16073000-77fa16077000 r--p 00000000 103:02 56493197                  /usr/lib/python3/dist-packages/pygame/surface.cpython-314-x86_64-linux-gnu.so
+ 77fa16077000-77fa160aa000 r-xp 00004000 103:02 56493197                  /usr/lib/python3/dist-packages/pygame/surface.cpython-314-x86_64-linux-gnu.so
+ 77fa160aa000-77fa160af000 r--p 00037000 103:02 56493197                  /usr/lib/python3/dist-packages/pygame/surface.cpython-314-x86_64-linux-gnu.so
+ 77fa160af000-77fa160b0000 r--p 0003c000 103:02 56493197                  /usr/lib/python3/dist-packages/pygame/surface.cpython-314-x86_64-linux-gnu.so
+ 77fa160b0000-77fa160b1000 rw-p 0003d000 103:02 56493197                  /usr/lib/python3/dist-packages/pygame/surface.cpython-314-x86_64-linux-gnu.so
+ 77fa160b1000-77fa160b5000 r--p 00000000 103:02 56493137                  /usr/lib/python3/dist-packages/pygame/display.cpython-314-x86_64-linux-gnu.so
+ 77fa160b5000-77fa160bc000 r-xp 00004000 103:02 56493137                  /usr/lib/python3/dist-packages/pygame/display.cpython-314-x86_64-linux-gnu.so
+ 77fa160bc000-77fa160bf000 r--p 0000b000 103:02 56493137                  /usr/lib/python3/dist-packages/pygame/display.cpython-314-x86_64-linux-gnu.so
+ 77fa160bf000-77fa160c0000 r--p 0000d000 103:02 56493137                  /usr/lib/python3/dist-packages/pygame/display.cpython-314-x86_64-linux-gnu.so
+ 77fa160c0000-77fa160c1000 rw-p 0000e000 103:02 56493137                  /usr/lib/python3/dist-packages/pygame/display.cpython-314-x86_64-linux-gnu.so
+ 77fa160c1000-77fa160c6000 r--p 00000000 103:02 56493165                  /usr/lib/python3/dist-packages/pygame/math.cpython-314-x86_64-linux-gnu.so
+ 77fa160c6000-77fa160d0000 r-xp 00005000 103:02 56493165                  /usr/lib/python3/dist-packages/pygame/math.cpython-314-x86_64-linux-gnu.so
+ 77fa160d0000-77fa160d5000 r--p 0000f000 103:02 56493165                  /usr/lib/python3/dist-packages/pygame/math.cpython-314-x86_64-linux-gnu.so
+ 77fa160d5000-77fa160d6000 r--p 00014000 103:02 56493165                  /usr/lib/python3/dist-packages/pygame/math.cpython-314-x86_64-linux-gnu.so
+ 77fa160d6000-77fa160d8000 rw-p 00015000 103:02 56493165                  /usr/lib/python3/dist-packages/pygame/math.cpython-314-x86_64-linux-gnu.so
+ 77fa160d8000-77fa160da000 r--p 00000000 103:02 56493126                  /usr/lib/python3/dist-packages/pygame/bufferproxy.cpython-314-x86_64-linux-gnu.so
+ 77fa160da000-77fa160dc000 r-xp 00002000 103:02 56493126                  /usr/lib/python3/dist-packages/pygame/bufferproxy.cpython-314-x86_64-linux-gnu.so
+ 77fa160dc000-77fa160dd000 r--p 00004000 103:02 56493126                  /usr/lib/python3/dist-packages/pygame/bufferproxy.cpython-314-x86_64-linux-gnu.so
+ 77fa160dd000-77fa160de000 r--p 00004000 103:02 56493126                  /usr/lib/python3/dist-packages/pygame/bufferproxy.cpython-314-x86_64-linux-gnu.so
+ 77fa160de000-77fa160df000 rw-p 00005000 103:02 56493126                  /usr/lib/python3/dist-packages/pygame/bufferproxy.cpython-314-x86_64-linux-gnu.so
+ 77fa160df000-77fa160e2000 r--p 00000000 103:02 56493130                  /usr/lib/python3/dist-packages/pygame/color.cpython-314-x86_64-linux-gnu.so
+ 77fa160e2000-77fa160e7000 r-xp 00003000 103:02 56493130                  /usr/lib/python3/dist-packages/pygame/color.cpython-314-x86_64-linux-gnu.so
+ 77fa160e7000-77fa160e9000 r--p 00008000 103:02 56493130                  /usr/lib/python3/dist-packages/pygame/color.cpython-314-x86_64-linux-gnu.so
+ 77fa160e9000-77fa160ea000 r--p 00009000 103:02 56493130                  /usr/lib/python3/dist-packages/pygame/color.cpython-314-x86_64-linux-gnu.so
+ 77fa160ea000-77fa160eb000 rw-p 0000a000 103:02 56493130                  /usr/lib/python3/dist-packages/pygame/color.cpython-314-x86_64-linux-gnu.so
+ 77fa160eb000-77fa160ec000 r--p 00000000 103:02 56493201                  /usr/lib/python3/dist-packages/pygame/surflock.cpython-314-x86_64-linux-gnu.so
+ 77fa160ec000-77fa160ed000 r-xp 00001000 103:02 56493201                  /usr/lib/python3/dist-packages/pygame/surflock.cpython-314-x86_64-linux-gnu.so
+ 77fa160ed000-77fa160ee000 r--p 00002000 103:02 56493201                  /usr/lib/python3/dist-packages/pygame/surflock.cpython-314-x86_64-linux-gnu.so
+ 77fa160ee000-77fa160ef000 r--p 00002000 103:02 56493201                  /usr/lib/python3/dist-packages/pygame/surflock.cpython-314-x86_64-linux-gnu.so
+ 77fa160ef000-77fa160f0000 rw-p 00003000 103:02 56493201                  /usr/lib/python3/dist-packages/pygame/surflock.cpython-314-x86_64-linux-gnu.so
+ 77fa160f0000-77fa160f2000 r--p 00000000 103:02 56493189                  /usr/lib/python3/dist-packages/pygame/rwobject.cpython-314-x86_64-linux-gnu.so
+ 77fa160f2000-77fa160f4000 r-xp 00002000 103:02 56493189                  /usr/lib/python3/dist-packages/pygame/rwobject.cpython-314-x86_64-linux-gnu.so
+ 77fa160f4000-77fa160f5000 r--p 00004000 103:02 56493189                  /usr/lib/python3/dist-packages/pygame/rwobject.cpython-314-x86_64-linux-gnu.so
+ 77fa160f5000-77fa160f6000 r--p 00004000 103:02 56493189                  /usr/lib/python3/dist-packages/pygame/rwobject.cpython-314-x86_64-linux-gnu.so
+ 77fa160f6000-77fa160f7000 rw-p 00005000 103:02 56493189                  /usr/lib/python3/dist-packages/pygame/rwobject.cpython-314-x86_64-linux-gnu.so
+ 77fa160f7000-77fa160f8000 r--p 00000000 103:02 56493133                  /usr/lib/python3/dist-packages/pygame/constants.cpython-314-x86_64-linux-gnu.so
+ 77fa160f8000-77fa16104000 r-xp 00001000 103:02 56493133                  /usr/lib/python3/dist-packages/pygame/constants.cpython-314-x86_64-linux-gnu.so
+ 77fa16104000-77fa16106000 r--p 0000d000 103:02 56493133                  /usr/lib/python3/dist-packages/pygame/constants.cpython-314-x86_64-linux-gnu.so
+ 77fa16106000-77fa16107000 r--p 0000e000 103:02 56493133                  /usr/lib/python3/dist-packages/pygame/constants.cpython-314-x86_64-linux-gnu.so
+ 77fa16107000-77fa16108000 rw-p 0000f000 103:02 56493133                  /usr/lib/python3/dist-packages/pygame/constants.cpython-314-x86_64-linux-gnu.so
+ 77fa16108000-77fa1610e000 r--p 00000000 103:02 54426068                  /usr/lib/x86_64-linux-gnu/libmp3lame.so.0.0.0
+ 77fa1610e000-77fa16137000 r-xp 00006000 103:02 54426068                  /usr/lib/x86_64-linux-gnu/libmp3lame.so.0.0.0
+ 77fa16137000-77fa16144000 r--p 0002f000 103:02 54426068                  /usr/lib/x86_64-linux-gnu/libmp3lame.so.0.0.0
+ 77fa16144000-77fa16145000 r--p 0003b000 103:02 54426068                  /usr/lib/x86_64-linux-gnu/libmp3lame.so.0.0.0
+ 77fa16145000-77fa16146000 rw-p 0003c000 103:02 54426068                  /usr/lib/x86_64-linux-gnu/libmp3lame.so.0.0.0
+ 77fa16146000-77fa16157000 rw-p 00000000 00:00 0 
+ 77fa16157000-77fa1615c000 r--p 00000000 103:02 54426071                  /usr/lib/x86_64-linux-gnu/libmpg123.so.0.49.4
+ 77fa1615c000-77fa1619a000 r-xp 00005000 103:02 54426071                  /usr/lib/x86_64-linux-gnu/libmpg123.so.0.49.4
+ 77fa1619a000-77fa161b4000 r--p 00043000 103:02 54426071                  /usr/lib/x86_64-linux-gnu/libmpg123.so.0.49.4
+ 77fa161b4000-77fa161b5000 r--p 0005d000 103:02 54426071                  /usr/lib/x86_64-linux-gnu/libmpg123.so.0.49.4
+ 77fa161b5000-77fa161b6000 rw-p 0005e000 103:02 54426071                  /usr/lib/x86_64-linux-gnu/libmpg123.so.0.49.4
+ 77fa161b6000-77fa161b8000 r--p 00000000 103:02 54426105                  /usr/lib/x86_64-linux-gnu/libogg.so.0.8.6
+ 77fa161b8000-77fa161bb000 r-xp 00002000 103:02 54426105                  /usr/lib/x86_64-linux-gnu/libogg.so.0.8.6
+ 77fa161bb000-77fa161be000 r--p 00005000 103:02 54426105                  /usr/lib/x86_64-linux-gnu/libogg.so.0.8.6
+ 77fa161be000-77fa161bf000 r--p 00008000 103:02 54426105                  /usr/lib/x86_64-linux-gnu/libogg.so.0.8.6
+ 77fa161bf000-77fa161c0000 rw-p 00009000 103:02 54426105                  /usr/lib/x86_64-linux-gnu/libogg.so.0.8.6
+ 77fa161c0000-77fa161d4000 r--p 00000000 103:02 54426259                  /usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.12
+ 77fa161d4000-77fa161d7000 r-xp 00014000 103:02 54426259                  /usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.12
+ 77fa161d7000-77fa1624e000 r--p 00017000 103:02 54426259                  /usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.12
+ 77fa1624e000-77fa1626a000 r--p 0008d000 103:02 54426259                  /usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.12
+ 77fa1626a000-77fa1626b000 rw-p 000a9000 103:02 54426259                  /usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.12
+ 77fa1626b000-77fa1626e000 r--p 00000000 103:02 54426258                  /usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.9
+ 77fa1626e000-77fa16287000 r-xp 00003000 103:02 54426258                  /usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.9
+ 77fa16287000-77fa16298000 r--p 0001c000 103:02 54426258                  /usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.9
+ 77fa16298000-77fa16299000 r--p 0002c000 103:02 54426258                  /usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.9
+ 77fa16299000-77fa1629a000 rw-p 0002d000 103:02 54426258                  /usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.9
+ 77fa1629a000-77fa162a3000 r--p 00000000 103:02 54425732                  /usr/lib/x86_64-linux-gnu/libFLAC.so.14.0.0
+ 77fa162a3000-77fa162eb000 r-xp 00009000 103:02 54425732                  /usr/lib/x86_64-linux-gnu/libFLAC.so.14.0.0
+ 77fa162eb000-77fa162fc000 r--p 00051000 103:02 54425732                  /usr/lib/x86_64-linux-gnu/libFLAC.so.14.0.0
+ 77fa162fc000-77fa162fd000 r--p 00062000 103:02 54425732                  /usr/lib/x86_64-linux-gnu/libFLAC.so.14.0.0
+ 77fa162fd000-77fa162fe000 rw-p 00063000 103:02 54425732                  /usr/lib/x86_64-linux-gnu/libFLAC.so.14.0.0
+ 77fa162fe000-77fa16300000 r--p 00000000 103:02 54425776                  /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+ 77fa16300000-77fa16302000 r-xp 00002000 103:02 54425776                  /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+ 77fa16302000-77fa16304000 r--p 00004000 103:02 54425776                  /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+ 77fa16304000-77fa16305000 r--p 00005000 103:02 54425776                  /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+ 77fa16305000-77fa16306000 rw-p 00006000 103:02 54425776                  /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+ 77fa16306000-77fa16307000 r--p 00000000 103:02 54425771                  /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+ 77fa16307000-77fa16309000 r-xp 00001000 103:02 54425771                  /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+ 77fa16309000-77fa1630a000 r--p 00003000 103:02 54425771                  /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+ 77fa1630a000-77fa1630b000 r--p 00003000 103:02 54425771                  /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+ 77fa1630b000-77fa1630c000 rw-p 00004000 103:02 54425771                  /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+ 77fa1630c000-77fa1630f000 r--p 00000000 103:02 54425802                  /usr/lib/x86_64-linux-gnu/libapparmor.so.1.29.4
+ 77fa1630f000-77fa16319000 r-xp 00003000 103:02 54425802                  /usr/lib/x86_64-linux-gnu/libapparmor.so.1.29.4
+ 77fa16319000-77fa16320000 r--p 0000d000 103:02 54425802                  /usr/lib/x86_64-linux-gnu/libapparmor.so.1.29.4
+ 77fa16320000-77fa16321000 r--p 00013000 103:02 54425802                  /usr/lib/x86_64-linux-gnu/libapparmor.so.1.29.4
+ 77fa16321000-77fa16322000 rw-p 00014000 103:02 54425802                  /usr/lib/x86_64-linux-gnu/libapparmor.so.1.29.4
+ 77fa16322000-77fa16324000 r--p 00000000 103:02 54425811                  /usr/lib/x86_64-linux-gnu/libasyncns.so.0.3.1
+ 77fa16324000-77fa16327000 r-xp 00002000 103:02 54425811                  /usr/lib/x86_64-linux-gnu/libasyncns.so.0.3.1
+ 77fa16327000-77fa16328000 r--p 00005000 103:02 54425811                  /usr/lib/x86_64-linux-gnu/libasyncns.so.0.3.1
+ 77fa16328000-77fa16329000 r--p 00006000 103:02 54425811                  /usr/lib/x86_64-linux-gnu/libasyncns.so.0.3.1
+ 77fa16329000-77fa1632a000 rw-p 00007000 103:02 54425811                  /usr/lib/x86_64-linux-gnu/libasyncns.so.0.3.1
+ 77fa1632a000-77fa16343000 r--p 00000000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 77fa16343000-77fa163fa000 r-xp 00019000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 77fa163fa000-77fa16434000 r--p 000d0000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 77fa16434000-77fa1643c000 r--p 0010a000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 77fa1643c000-77fa1643d000 rw-p 00112000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 77fa1643d000-77fa1643e000 rw-p 00000000 00:00 0 
+ 77fa1643e000-77fa1643f000 r--p 00000000 103:02 54425768                  /usr/lib/x86_64-linux-gnu/libX11-xcb.so.1.0.0
+ 77fa1643f000-77fa16440000 r-xp 00001000 103:02 54425768                  /usr/lib/x86_64-linux-gnu/libX11-xcb.so.1.0.0
+ 77fa16440000-77fa16441000 r--p 00002000 103:02 54425768                  /usr/lib/x86_64-linux-gnu/libX11-xcb.so.1.0.0
+ 77fa16441000-77fa16442000 r--p 00002000 103:02 54425768                  /usr/lib/x86_64-linux-gnu/libX11-xcb.so.1.0.0
+ 77fa16442000-77fa16443000 rw-p 00003000 103:02 54425768                  /usr/lib/x86_64-linux-gnu/libX11-xcb.so.1.0.0
+ 77fa16443000-77fa1644c000 r--p 00000000 103:02 54426193                  /usr/lib/x86_64-linux-gnu/libsndfile.so.1.0.37
+ 77fa1644c000-77fa164b4000 r-xp 00009000 103:02 54426193                  /usr/lib/x86_64-linux-gnu/libsndfile.so.1.0.37
+ 77fa164b4000-77fa164cd000 r--p 00071000 103:02 54426193                  /usr/lib/x86_64-linux-gnu/libsndfile.so.1.0.37
+ 77fa164cd000-77fa164d0000 r--p 0008a000 103:02 54426193                  /usr/lib/x86_64-linux-gnu/libsndfile.so.1.0.37
+ 77fa164d0000-77fa164d1000 rw-p 0008d000 103:02 54426193                  /usr/lib/x86_64-linux-gnu/libsndfile.so.1.0.37
+ 77fa164d1000-77fa164d3000 rw-p 00000000 00:00 0 
+ 77fa164d3000-77fa164d5000 r--p 00000000 103:02 54425916                  /usr/lib/x86_64-linux-gnu/libffi.so.8.2.0
+ 77fa164d5000-77fa164e0000 r-xp 00002000 103:02 54425916                  /usr/lib/x86_64-linux-gnu/libffi.so.8.2.0
+ 77fa164e0000-77fa164e2000 r--p 0000d000 103:02 54425916                  /usr/lib/x86_64-linux-gnu/libffi.so.8.2.0
+ 77fa164e2000-77fa164e3000 r--p 0000e000 103:02 54425916                  /usr/lib/x86_64-linux-gnu/libffi.so.8.2.0
+ 77fa164e3000-77fa164e4000 rw-p 0000f000 103:02 54425916                  /usr/lib/x86_64-linux-gnu/libffi.so.8.2.0
+ 77fa164e4000-77fa164e8000 r--p 00000000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 77fa164e8000-77fa1650c000 r-xp 00004000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 77fa1650c000-77fa16510000 r--p 00028000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 77fa16510000-77fa16511000 r--p 0002c000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 77fa16511000-77fa16512000 rw-p 0002d000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 77fa16512000-77fa16514000 r--p 00000000 103:02 54425787                  /usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0
+ 77fa16514000-77fa1651b000 r-xp 00002000 103:02 54425787                  /usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0
+ 77fa1651b000-77fa1651c000 r--p 00009000 103:02 54425787                  /usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0
+ 77fa1651c000-77fa1651d000 r--p 00009000 103:02 54425787                  /usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0
+ 77fa1651d000-77fa1651e000 rw-p 0000a000 103:02 54425787                  /usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0
+ 77fa1651e000-77fa1652a000 r--p 00000000 103:02 54426299                  /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+ 77fa1652a000-77fa1653e000 r-xp 0000c000 103:02 54426299                  /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+ 77fa1653e000-77fa16547000 r--p 00020000 103:02 54426299                  /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+ 77fa16547000-77fa16548000 r--p 00028000 103:02 54426299                  /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+ 77fa16548000-77fa16549000 rw-p 00029000 103:02 54426299                  /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+ 77fa16549000-77fa16555000 r--p 00000000 103:02 54425876                  /usr/lib/x86_64-linux-gnu/libdbus-1.so.3.38.3
+ 77fa16555000-77fa16586000 r-xp 0000c000 103:02 54425876                  /usr/lib/x86_64-linux-gnu/libdbus-1.so.3.38.3
+ 77fa16586000-77fa16597000 r--p 0003d000 103:02 54425876                  /usr/lib/x86_64-linux-gnu/libdbus-1.so.3.38.3
+ 77fa16597000-77fa16598000 r--p 0004d000 103:02 54425876                  /usr/lib/x86_64-linux-gnu/libdbus-1.so.3.38.3
+ 77fa16598000-77fa16599000 rw-p 0004e000 103:02 54425876                  /usr/lib/x86_64-linux-gnu/libdbus-1.so.3.38.3
+ 77fa16599000-77fa165ab000 r--p 00000000 103:02 54428723                  /usr/lib/x86_64-linux-gnu/pulseaudio/libpulsecommon-17.0.so
+ 77fa165ab000-77fa165f5000 r-xp 00012000 103:02 54428723                  /usr/lib/x86_64-linux-gnu/pulseaudio/libpulsecommon-17.0.so
+ 77fa165f5000-77fa16614000 r--p 0005c000 103:02 54428723                  /usr/lib/x86_64-linux-gnu/pulseaudio/libpulsecommon-17.0.so
+ 77fa16614000-77fa16616000 r--p 0007a000 103:02 54428723                  /usr/lib/x86_64-linux-gnu/pulseaudio/libpulsecommon-17.0.so
+ 77fa16616000-77fa16617000 rw-p 0007c000 103:02 54428723                  /usr/lib/x86_64-linux-gnu/pulseaudio/libpulsecommon-17.0.so
+ 77fa16617000-77fa1661b000 r--p 00000000 103:02 54425881                  /usr/lib/x86_64-linux-gnu/libdecor-0.so.0.200.5
+ 77fa1661b000-77fa1661e000 r-xp 00004000 103:02 54425881                  /usr/lib/x86_64-linux-gnu/libdecor-0.so.0.200.5
+ 77fa1661e000-77fa16620000 r--p 00007000 103:02 54425881                  /usr/lib/x86_64-linux-gnu/libdecor-0.so.0.200.5
+ 77fa16620000-77fa16621000 r--p 00008000 103:02 54425881                  /usr/lib/x86_64-linux-gnu/libdecor-0.so.0.200.5
+ 77fa16621000-77fa16622000 rw-p 00009000 103:02 54425881                  /usr/lib/x86_64-linux-gnu/libdecor-0.so.0.200.5
+ 77fa16622000-77fa16628000 r--p 00000000 103:02 54426303                  /usr/lib/x86_64-linux-gnu/libxkbcommon.so.0.13.1
+ 77fa16628000-77fa16656000 r-xp 00006000 103:02 54426303                  /usr/lib/x86_64-linux-gnu/libxkbcommon.so.0.13.1
+ 77fa16656000-77fa1667e000 r--p 00034000 103:02 54426303                  /usr/lib/x86_64-linux-gnu/libxkbcommon.so.0.13.1
+ 77fa1667e000-77fa16680000 r--p 0005b000 103:02 54426303                  /usr/lib/x86_64-linux-gnu/libxkbcommon.so.0.13.1
+ 77fa16680000-77fa16681000 rw-p 0005d000 103:02 54426303                  /usr/lib/x86_64-linux-gnu/libxkbcommon.so.0.13.1
+ 77fa16681000-77fa16683000 r--p 00000000 103:02 54426274                  /usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0.24.0
+ 77fa16683000-77fa16685000 r-xp 00002000 103:02 54426274                  /usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0.24.0
+ 77fa16685000-77fa16686000 r--p 00004000 103:02 54426274                  /usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0.24.0
+ 77fa16686000-77fa16687000 r--p 00004000 103:02 54426274                  /usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0.24.0
+ 77fa16687000-77fa1668b000 rw-p 00005000 103:02 54426274                  /usr/lib/x86_64-linux-gnu/libwayland-cursor.so.0.24.0
+ 77fa1668b000-77fa16691000 r--p 00000000 103:02 54426273                  /usr/lib/x86_64-linux-gnu/libwayland-client.so.0.24.0
+ 77fa16691000-77fa16698000 r-xp 00006000 103:02 54426273                  /usr/lib/x86_64-linux-gnu/libwayland-client.so.0.24.0
+ 77fa16698000-77fa1669b000 r--p 0000d000 103:02 54426273                  /usr/lib/x86_64-linux-gnu/libwayland-client.so.0.24.0
+ 77fa1669b000-77fa1669d000 r--p 0000f000 103:02 54426273                  /usr/lib/x86_64-linux-gnu/libwayland-client.so.0.24.0
+ 77fa1669d000-77fa1669e000 rw-p 00011000 103:02 54426273                  /usr/lib/x86_64-linux-gnu/libwayland-client.so.0.24.0
+ 77fa1669e000-77fa1669f000 r--p 00000000 103:02 54426275                  /usr/lib/x86_64-linux-gnu/libwayland-egl.so.1.24.0
+ 77fa1669f000-77fa166a0000 r-xp 00001000 103:02 54426275                  /usr/lib/x86_64-linux-gnu/libwayland-egl.so.1.24.0
+ 77fa166a0000-77fa166a1000 r--p 00002000 103:02 54426275                  /usr/lib/x86_64-linux-gnu/libwayland-egl.so.1.24.0
+ 77fa166a1000-77fa166a2000 r--p 00002000 103:02 54426275                  /usr/lib/x86_64-linux-gnu/libwayland-egl.so.1.24.0
+ 77fa166a2000-77fa166a3000 rw-p 00003000 103:02 54426275                  /usr/lib/x86_64-linux-gnu/libwayland-egl.so.1.24.0
+ 77fa166a3000-77fa166a5000 r--p 00000000 103:02 54425951                  /usr/lib/x86_64-linux-gnu/libgbm.so.1.0.0
+ 77fa166a5000-77fa166a7000 r-xp 00002000 103:02 54425951                  /usr/lib/x86_64-linux-gnu/libgbm.so.1.0.0
+ 77fa166a7000-77fa166a8000 r--p 00004000 103:02 54425951                  /usr/lib/x86_64-linux-gnu/libgbm.so.1.0.0
+ 77fa166a8000-77fa166a9000 r--p 00004000 103:02 54425951                  /usr/lib/x86_64-linux-gnu/libgbm.so.1.0.0
+ 77fa166a9000-77fa166aa000 rw-p 00005000 103:02 54425951                  /usr/lib/x86_64-linux-gnu/libgbm.so.1.0.0
+ 77fa166aa000-77fa166af000 r--p 00000000 103:02 54425891                  /usr/lib/x86_64-linux-gnu/libdrm.so.2.131.0
+ 77fa166af000-77fa166bb000 r-xp 00005000 103:02 54425891                  /usr/lib/x86_64-linux-gnu/libdrm.so.2.131.0
+ 77fa166bb000-77fa166bf000 r--p 00011000 103:02 54425891                  /usr/lib/x86_64-linux-gnu/libdrm.so.2.131.0
+ 77fa166bf000-77fa166c0000 r--p 00015000 103:02 54425891                  /usr/lib/x86_64-linux-gnu/libdrm.so.2.131.0
+ 77fa166c0000-77fa166c1000 rw-p 00016000 103:02 54425891                  /usr/lib/x86_64-linux-gnu/libdrm.so.2.131.0
+ 77fa166c1000-77fa166c2000 r--p 00000000 103:02 54425788                  /usr/lib/x86_64-linux-gnu/libXss.so.1.0.0
+ 77fa166c2000-77fa166c3000 r-xp 00001000 103:02 54425788                  /usr/lib/x86_64-linux-gnu/libXss.so.1.0.0
+ 77fa166c3000-77fa166c4000 r--p 00002000 103:02 54425788                  /usr/lib/x86_64-linux-gnu/libXss.so.1.0.0
+ 77fa166c4000-77fa166c5000 r--p 00002000 103:02 54425788                  /usr/lib/x86_64-linux-gnu/libXss.so.1.0.0
+ 77fa166c5000-77fa166c6000 rw-p 00003000 103:02 54425788                  /usr/lib/x86_64-linux-gnu/libXss.so.1.0.0
+ 77fa166c6000-77fa166c8000 r--p 00000000 103:02 54425786                  /usr/lib/x86_64-linux-gnu/libXrandr.so.2.2.0
+ 77fa166c8000-77fa166cf000 r-xp 00002000 103:02 54425786                  /usr/lib/x86_64-linux-gnu/libXrandr.so.2.2.0
+ 77fa166cf000-77fa166d1000 r--p 00009000 103:02 54425786                  /usr/lib/x86_64-linux-gnu/libXrandr.so.2.2.0
+ 77fa166d1000-77fa166d2000 r--p 0000a000 103:02 54425786                  /usr/lib/x86_64-linux-gnu/libXrandr.so.2.2.0
+ 77fa166d2000-77fa166d3000 rw-p 0000b000 103:02 54425786                  /usr/lib/x86_64-linux-gnu/libXrandr.so.2.2.0
+ 77fa166d3000-77fa166d5000 r--p 00000000 103:02 54425778                  /usr/lib/x86_64-linux-gnu/libXfixes.so.3.1.0
+ 77fa166d5000-77fa166d8000 r-xp 00002000 103:02 54425778                  /usr/lib/x86_64-linux-gnu/libXfixes.so.3.1.0
+ 77fa166d8000-77fa166d9000 r--p 00005000 103:02 54425778                  /usr/lib/x86_64-linux-gnu/libXfixes.so.3.1.0
+ 77fa166d9000-77fa166da000 r--p 00005000 103:02 54425778                  /usr/lib/x86_64-linux-gnu/libXfixes.so.3.1.0
+ 77fa166da000-77fa166db000 rw-p 00006000 103:02 54425778                  /usr/lib/x86_64-linux-gnu/libXfixes.so.3.1.0
+ 77fa166db000-77fa166de000 r--p 00000000 103:02 54425781                  /usr/lib/x86_64-linux-gnu/libXi.so.6.1.0
+ 77fa166de000-77fa166eb000 r-xp 00003000 103:02 54425781                  /usr/lib/x86_64-linux-gnu/libXi.so.6.1.0
+ 77fa166eb000-77fa166ed000 r--p 00010000 103:02 54425781                  /usr/lib/x86_64-linux-gnu/libXi.so.6.1.0
+ 77fa166ed000-77fa166ee000 r--p 00012000 103:02 54425781                  /usr/lib/x86_64-linux-gnu/libXi.so.6.1.0
+ 77fa166ee000-77fa166ef000 rw-p 00013000 103:02 54425781                  /usr/lib/x86_64-linux-gnu/libXi.so.6.1.0
+ 77fa166ef000-77fa166f2000 r--p 00000000 103:02 54425774                  /usr/lib/x86_64-linux-gnu/libXcursor.so.1.0.2
+ 77fa166f2000-77fa166f8000 r-xp 00003000 103:02 54425774                  /usr/lib/x86_64-linux-gnu/libXcursor.so.1.0.2
+ 77fa166f8000-77fa166fa000 r--p 00009000 103:02 54425774                  /usr/lib/x86_64-linux-gnu/libXcursor.so.1.0.2
+ 77fa166fa000-77fa166fb000 r--p 0000a000 103:02 54425774                  /usr/lib/x86_64-linux-gnu/libXcursor.so.1.0.2
+ 77fa166fb000-77fa166fc000 rw-p 0000b000 103:02 54425774                  /usr/lib/x86_64-linux-gnu/libXcursor.so.1.0.2
+ 77fa166fc000-77fa16700000 r--p 00000000 103:02 54425777                  /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+ 77fa16700000-77fa1670b000 r-xp 00004000 103:02 54425777                  /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+ 77fa1670b000-77fa1670e000 r--p 0000f000 103:02 54425777                  /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+ 77fa1670e000-77fa1670f000 r--p 00011000 103:02 54425777                  /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+ 77fa1670f000-77fa16710000 rw-p 00012000 103:02 54425777                  /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+ 77fa16710000-77fa16729000 r--p 00000000 103:02 54425769                  /usr/lib/x86_64-linux-gnu/libX11.so.6.4.0
+ 77fa16729000-77fa167be000 r-xp 00019000 103:02 54425769                  /usr/lib/x86_64-linux-gnu/libX11.so.6.4.0
+ 77fa167be000-77fa1684d000 r--p 000ae000 103:02 54425769                  /usr/lib/x86_64-linux-gnu/libX11.so.6.4.0
+ 77fa1684d000-77fa1684e000 r--p 0013d000 103:02 54425769                  /usr/lib/x86_64-linux-gnu/libX11.so.6.4.0
+ 77fa1684e000-77fa16852000 rw-p 0013e000 103:02 54425769                  /usr/lib/x86_64-linux-gnu/libX11.so.6.4.0
+ 77fa16852000-77fa16854000 r--p 00000000 103:02 54426176                  /usr/lib/x86_64-linux-gnu/libsamplerate.so.0.2.2
+ 77fa16854000-77fa16859000 r-xp 00002000 103:02 54426176                  /usr/lib/x86_64-linux-gnu/libsamplerate.so.0.2.2
+ 77fa16859000-77fa169bf000 r--p 00007000 103:02 54426176                  /usr/lib/x86_64-linux-gnu/libsamplerate.so.0.2.2
+ 77fa169bf000-77fa169c0000 r--p 0016d000 103:02 54426176                  /usr/lib/x86_64-linux-gnu/libsamplerate.so.0.2.2
+ 77fa169c0000-77fa169c1000 rw-p 0016e000 103:02 54426176                  /usr/lib/x86_64-linux-gnu/libsamplerate.so.0.2.2
+ 77fa169c1000-77fa169cd000 r--p 00000000 103:02 54426157                  /usr/lib/x86_64-linux-gnu/libpulse.so.0.24.3
+ 77fa169cd000-77fa169fe000 r-xp 0000c000 103:02 54426157                  /usr/lib/x86_64-linux-gnu/libpulse.so.0.24.3
+ 77fa169fe000-77fa16a0f000 r--p 0003d000 103:02 54426157                  /usr/lib/x86_64-linux-gnu/libpulse.so.0.24.3
+ 77fa16a0f000-77fa16a11000 r--p 0004d000 103:02 54426157                  /usr/lib/x86_64-linux-gnu/libpulse.so.0.24.3
+ 77fa16a11000-77fa16a12000 rw-p 0004f000 103:02 54426157                  /usr/lib/x86_64-linux-gnu/libpulse.so.0.24.3
+ 77fa16a12000-77fa16a3f000 r--p 00000000 103:02 54396473                  /usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+ 77fa16a3f000-77fa16ae8000 r-xp 0002d000 103:02 54396473                  /usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+ 77fa16ae8000-77fa16b29000 r--p 000d6000 103:02 54396473                  /usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+ 77fa16b29000-77fa16b30000 r--p 00117000 103:02 54396473                  /usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+ 77fa16b30000-77fa16b31000 rw-p 0011e000 103:02 54396473                  /usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+ 77fa16b31000-77fa16b61000 r--p 00000000 103:02 54428732                  /usr/lib/x86_64-linux-gnu/sdl2-classic/libSDL2-2.0.so.0.3200.10
+ 77fa16b61000-77fa16c99000 r-xp 00030000 103:02 54428732                  /usr/lib/x86_64-linux-gnu/sdl2-classic/libSDL2-2.0.so.0.3200.10
+ 77fa16c99000-77fa16cff000 r--p 00168000 103:02 54428732                  /usr/lib/x86_64-linux-gnu/sdl2-classic/libSDL2-2.0.so.0.3200.10
+ 77fa16cff000-77fa16d0a000 r--p 001cd000 103:02 54428732                  /usr/lib/x86_64-linux-gnu/sdl2-classic/libSDL2-2.0.so.0.3200.10
+ 77fa16d0a000-77fa16d11000 rw-p 001d8000 103:02 54428732                  /usr/lib/x86_64-linux-gnu/sdl2-classic/libSDL2-2.0.so.0.3200.10
+ 77fa16d11000-77fa16d17000 rw-p 00000000 00:00 0 
+ 77fa16d17000-77fa16d18000 r--p 00000000 103:02 54408062                  /usr/lib/locale/C.utf8/LC_ADDRESS
+ 77fa16d18000-77fa16d1b000 r--p 00000000 103:02 56493187                  /usr/lib/python3/dist-packages/pygame/rect.cpython-314-x86_64-linux-gnu.so
+ 77fa16d1b000-77fa16d21000 r-xp 00003000 103:02 56493187                  /usr/lib/python3/dist-packages/pygame/rect.cpython-314-x86_64-linux-gnu.so
+ 77fa16d21000-77fa16d24000 r--p 00009000 103:02 56493187                  /usr/lib/python3/dist-packages/pygame/rect.cpython-314-x86_64-linux-gnu.so
+ 77fa16d24000-77fa16d25000 r--p 0000b000 103:02 56493187                  /usr/lib/python3/dist-packages/pygame/rect.cpython-314-x86_64-linux-gnu.so
+ 77fa16d25000-77fa16d26000 rw-p 0000c000 103:02 56493187                  /usr/lib/python3/dist-packages/pygame/rect.cpython-314-x86_64-linux-gnu.so
+ 77fa16d26000-77fa16d28000 r--p 00000000 103:02 56493124                  /usr/lib/python3/dist-packages/pygame/base.cpython-314-x86_64-linux-gnu.so
+ 77fa16d28000-77fa16d2d000 r-xp 00002000 103:02 56493124                  /usr/lib/python3/dist-packages/pygame/base.cpython-314-x86_64-linux-gnu.so
+ 77fa16d2d000-77fa16d2f000 r--p 00007000 103:02 56493124                  /usr/lib/python3/dist-packages/pygame/base.cpython-314-x86_64-linux-gnu.so
+ 77fa16d2f000-77fa16d30000 r--p 00008000 103:02 56493124                  /usr/lib/python3/dist-packages/pygame/base.cpython-314-x86_64-linux-gnu.so
+ 77fa16d30000-77fa16d31000 rw-p 00009000 103:02 56493124                  /usr/lib/python3/dist-packages/pygame/base.cpython-314-x86_64-linux-gnu.so
+ 77fa16d31000-77fa16e31000 rw-p 00000000 00:00 0 
+ 77fa16e31000-77fa16e32000 r--p 00000000 103:02 54408071                  /usr/lib/locale/C.utf8/LC_TELEPHONE
+ 77fa16e32000-77fa16e33000 r--p 00000000 103:02 54408066                  /usr/lib/locale/C.utf8/LC_MEASUREMENT
+ 77fa16e33000-77fa16e34000 r--p 00000000 103:02 54408065                  /usr/lib/locale/C.utf8/LC_IDENTIFICATION
+ 77fa16e34000-77fa16e36000 r--p 00000000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 77fa16e36000-77fa16e39000 r-xp 00002000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 77fa16e39000-77fa16e3b000 r--p 00005000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 77fa16e3b000-77fa16e3c000 r--p 00006000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 77fa16e3c000-77fa16e3d000 rw-p 00007000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 77fa16e3d000-77fa16e44000 r--p 00000000 103:02 54398667                  /usr/lib/python3.14/lib-dynload/_ctypes.cpython-314-x86_64-linux-gnu.so
+ 77fa16e44000-77fa16e59000 r-xp 00007000 103:02 54398667                  /usr/lib/python3.14/lib-dynload/_ctypes.cpython-314-x86_64-linux-gnu.so
+ 77fa16e59000-77fa16e60000 r--p 0001c000 103:02 54398667                  /usr/lib/python3.14/lib-dynload/_ctypes.cpython-314-x86_64-linux-gnu.so
+ 77fa16e60000-77fa16e61000 r--p 00023000 103:02 54398667                  /usr/lib/python3.14/lib-dynload/_ctypes.cpython-314-x86_64-linux-gnu.so
+ 77fa16e61000-77fa16e64000 rw-p 00024000 103:02 54398667                  /usr/lib/python3.14/lib-dynload/_ctypes.cpython-314-x86_64-linux-gnu.so
+ 77fa16e64000-77fa171a5000 rw-p 00000000 00:00 0 
+ 77fa171a5000-77fa17200000 r--p 00000000 103:02 54408064                  /usr/lib/locale/C.utf8/LC_CTYPE
+ 77fa17200000-77fa17228000 r--p 00000000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 77fa17228000-77fa173c0000 r-xp 00028000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 77fa173c0000-77fa1740e000 r--p 001c0000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 77fa1740e000-77fa17412000 r--p 0020d000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 77fa17412000-77fa17414000 rw-p 00211000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 77fa17414000-77fa17422000 rw-p 00000000 00:00 0 
+ 77fa17422000-77fa17445000 rw-p 00000000 00:00 0 
+ 77fa17445000-77fa17449000 r--p 00000000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 77fa17449000-77fa17467000 r-xp 00004000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 77fa17467000-77fa1746f000 r--p 00022000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 77fa1746f000-77fa17471000 r--p 0002a000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 77fa17471000-77fa17472000 rw-p 0002c000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 77fa17472000-77fa17475000 r--p 00000000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 77fa17475000-77fa17488000 r-xp 00003000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 77fa17488000-77fa1748e000 r--p 00016000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 77fa1748e000-77fa1748f000 r--p 0001c000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 77fa1748f000-77fa17490000 rw-p 0001d000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 77fa17490000-77fa174a2000 r--p 00000000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 77fa174a2000-77fa17542000 r-xp 00012000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 77fa17542000-77fa175b4000 r--p 000b2000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 77fa175b4000-77fa175b5000 r--p 00123000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 77fa175b5000-77fa175b6000 rw-p 00124000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 77fa175b6000-77fa175b7000 r-xp 0000b000 103:02 54425916                  /usr/lib/x86_64-linux-gnu/libffi.so.8.2.0
+ 77fa175b7000-77fa175bd000 rw-p 00000000 00:00 0 
+ 77fa175bd000-77fa175be000 rw-p 00000000 00:00 0 
+ 77fa175be000-77fa175c5000 r--s 00000000 103:02 54427006                  /usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache
+ 77fa175c5000-77fa175c7000 rw-p 00000000 00:00 0 
+ 77fa175c7000-77fa175cb000 r--p 00000000 00:00 0                          [vvar]
+ 77fa175cb000-77fa175cd000 r--p 00000000 00:00 0                          [vvar_vclock]
+ 77fa175cd000-77fa175cf000 r-xp 00000000 00:00 0                          [vdso]
+ 77fa175cf000-77fa175d0000 r--p 00000000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 77fa175d0000-77fa175ff000 r-xp 00001000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 77fa175ff000-77fa1760a000 r--p 00030000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 77fa1760a000-77fa1760c000 r--p 0003b000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 77fa1760c000-77fa1760d000 rw-p 0003d000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 77fa1760d000-77fa1760e000 rw-p 00000000 00:00 0 
+ 7ffc884fe000-7ffc8851f000 rw-p 00000000 00:00 0                          [stack]
+ ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]
+ProcStatus:
+ Name:	python3
+ Umask:	0022
+ State:	R (running)
+ Tgid:	3824677
+ Ngid:	3824677
+ Pid:	3824677
+ PPid:	3824674
+ TracerPid:	0
+ Uid:	1000	1000	1000	1000
+ Gid:	1000	1000	1000	1000
+ FDSize:	64
+ Groups:	4 20 24 27 29 30 44 46 100 101 987 991 995 1000 
+ NStgid:	3824677
+ NSpid:	3824677
+ NSpgid:	3824498
+ NSsid:	3647877
+ Kthread:	0
+ VmPeak:	  720732 kB
+ VmSize:	  720732 kB
+ VmLck:	       0 kB
+ VmPin:	       0 kB
+ VmHWM:	  253636 kB
+ VmRSS:	  253636 kB
+ RssAnon:	  151236 kB
+ RssFile:	  102308 kB
+ RssShmem:	      92 kB
+ VmData:	  215328 kB
+ VmStk:	     132 kB
+ VmExe:	    3608 kB
+ VmLib:	  146176 kB
+ VmPTE:	     784 kB
+ VmSwap:	       0 kB
+ HugetlbPages:	       0 kB
+ CoreDumping:	0
+ THP_enabled:	1
+ untag_mask:	0xffffffffffffffff
+ Threads:	5
+ SigQ:	1/61047
+ SigPnd:	0000000000000000
+ ShdPnd:	0000000000000000
+ SigBlk:	0000000000000000
+ SigIgn:	0000000001001001
+ SigCgt:	0000000100004002
+ CapInh:	0000000000000000
+ CapPrm:	0000000000000000
+ CapEff:	0000000000000000
+ CapBnd:	000001ffffffffff
+ CapAmb:	0000000000000000
+ NoNewPrivs:	0
+ Seccomp:	0
+ Seccomp_filters:	0
+ Speculation_Store_Bypass:	thread vulnerable
+ SpeculationIndirectBranch:	conditional enabled
+ Cpus_allowed:	ff,ffffffff
+ Cpus_allowed_list:	0-39
+ Mems_allowed:	00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000003
+ Mems_allowed_list:	0-1
+ voluntary_ctxt_switches:	985
+ nonvoluntary_ctxt_switches:	82
+ x86_Thread_features:	
+ x86_Thread_features_locked:
+PythonArgs: ['/opt/pincabos/launchers/pincabos-hybrid-chooser.py', '/opt/pincabos/launchers/assets/PCOSGamesChoices.png', '/run/pincabos-hybrid-launchers/choice-3824498.json', 'original', '20']
+Traceback:
+ Traceback (most recent call last):
+   File "/opt/pincabos/launchers/pincabos-hybrid-chooser.py", line 214, in <module>
+     tmp.write_text(
+     ~~~~~~~~~~~~~~^
+         json.dumps(
+         ^^^^^^^^^^^
+     ...<6 lines>...
+         encoding="utf-8",
+         ^^^^^^^^^^^^^^^^^
+     )
+     ^
+   File "/usr/lib/python3.14/pathlib/__init__.py", line 810, in write_text
+     with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+          ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   File "/usr/lib/python3.14/pathlib/__init__.py", line 772, in open
+     return io.open(self, mode, buffering, encoding, errors, newline)
+            ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ PermissionError: [Errno 13] Permission denied: '/run/pincabos-hybrid-launchers/choice-3824498.json.tmp'
+UserGroups: adm audio cdrom dialout dip input lxd pincabusb plugdev render sudo users video
+_HooksRun: no

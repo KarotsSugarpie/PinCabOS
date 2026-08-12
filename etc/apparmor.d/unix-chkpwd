@@ -1,0 +1,52 @@
+# profile initially developed in apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# SPDX-License-Identifier: GPL-2.0-only
+
+# The apparmor.d project comes with several variables and abstractions
+# that are not part of upstream AppArmor yet. Therefore this profile was
+# adopted to use abstractions and variables that are available.
+# Copyright (C) Christian Boltz 2024-2026
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile unix-chkpwd /{,usr/}{,s}bin/unix_chkpwd flags=(attach_disconnected.path=/att/unix-chkpwd/) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+
+  # Temporarily needed until fd delegation lands
+  # Also needed while delegation from unconfined is broken
+  include <abstractions/consoles>
+
+  # To write records to the kernel auditing log.
+  capability audit_write,
+  # To read shadow with 000 permissions.
+  capability dac_read_search,
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  /etc/shadow r,
+
+  # systemd userdb, used in nspawn
+  /run/host/userdb/*.user r,
+  /run/host/userdb/*.user-privileged r,
+
+  # TODO: we might want to move these into an abstraction
+  # for pam_extrausers.so
+  /var/lib/extrausers/shadow r,
+
+  # file_inherit
+  owner /dev/pts/[0-9]* rw,
+  owner /dev/tty[0-9]* rw,
+
+  # disconnected paths - their non-disconnected counterpart is allowed via abstractions
+  /att/unix-chkpwd/run/authd.sock rw,
+  /att/unix-chkpwd/run/systemd/journal/dev-log w,
+  /att/unix-chkpwd/run/systemd/userdb/io.systemd.DynamicUser rw,
+  /att/unix-chkpwd/run/systemd/userdb/org.gnome.DisplayManager rw,
+
+  include if exists <local/unix-chkpwd>
+}

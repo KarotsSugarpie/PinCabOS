@@ -1,0 +1,30 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+#
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile ssh-keyscan /usr/bin/ssh-keyscan {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  # Allow executable mapping and read for the binary
+  file mr /usr/bin/ssh-keyscan,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/ssh-keyscan>
+}
+

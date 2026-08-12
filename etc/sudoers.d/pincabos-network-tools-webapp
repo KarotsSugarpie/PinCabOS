@@ -1,0 +1,6 @@
+# PinCabOs-File created by Karots Sugarpie
+# PinCabOS WebApp - Network tools helpers only
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/network-info.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/network-current-mode.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/network-set-dhcp.sh *
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/network-set-static.sh *

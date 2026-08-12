@@ -1,0 +1,15 @@
+[Unit]
+Description=PinCabOS DMD per-table runtime persistence
+After=display-manager.service pincabos-scoreview-router.service
+Wants=display-manager.service pincabos-scoreview-router.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/pincabos-dmd-persistence-watcher
+Restart=always
+RestartSec=1
+User=root
+Group=root
+
+[Install]
+WantedBy=graphical.target

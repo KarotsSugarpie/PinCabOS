@@ -1,0 +1,10 @@
+# PinCabOS USB secure lock for DudesCab / Ultimate VPinball / LED-Wiz.
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{product}=="*Ultimate VPinball*", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1", RUN+="/bin/systemctl --no-block start pincabos-usb-secure-lock.service"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{manufacturer}=="*DudesCab*", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1", RUN+="/bin/systemctl --no-block start pincabos-usb-secure-lock.service"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{product}=="*LED-Wiz*", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1", RUN+="/bin/systemctl --no-block start pincabos-usb-secure-lock.service"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{product}=="*LedWiz*", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1", RUN+="/bin/systemctl --no-block start pincabos-usb-secure-lock.service"
+
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{product}=="*Ultimate VPinball*", MODE="0660", GROUP="input", TAG+="uaccess"
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{manufacturer}=="*DudesCab*", MODE="0660", GROUP="input", TAG+="uaccess"
+KERNEL=="ttyACM*", ATTRS{product}=="*Ultimate VPinball*", MODE="0660", GROUP="dialout", TAG+="uaccess"
+KERNEL=="ttyACM*", ATTRS{manufacturer}=="*DudesCab*", MODE="0660", GROUP="dialout", TAG+="uaccess"

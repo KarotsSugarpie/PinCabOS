@@ -1,0 +1,52 @@
+# vim: ft=apparmor
+#------------------------------------------------------------------
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    Author: Hlib Korzhynskyy <hlib.korzhynskyy@canonical.com>
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+
+abi <abi/5.0>,
+include <tunables/global>
+
+profile lsblk /usr/bin/lsblk {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} mr,
+
+  @{sys}/block/ r,
+  @{sys}/class/block/ r,
+  @{sys}/dev/block/ r,
+
+  @{sys}/devices/@{pci_bus}/** r,
+  @{sys}/devices/virtual/** r,
+  @{sys}/devices/platform/** r,
+
+  # Needed for Xen PVH guests
+  @{sys}/devices/vbd-@{int}/block/** r,
+
+  # Needed for disks over network e.g. Hyper-V VMs (including Azure), IBM Power, ...
+  @{sys}/devices/**/host@{int}/** r,
+
+  # Needed for channel subsystem for IBM Z
+  @{sys}/devices/css@{int}/** r,
+
+  # Needed for Azure ACPI/NVMe
+  @{sys}/devices/LNXSYSTM:00/LNXSYBUS:00/ACPI*:00/MSFT1000:00/** r,
+
+  /dev/sr@{int} rk,
+
+  @{run}/udev/data/** r,
+
+  @{run}/mount/** r,
+  @{PROC}/swaps r,
+  @{PROC}/cmdline r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  include if exists <local/lsblk>
+}

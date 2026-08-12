@@ -1,0 +1,11 @@
+[Unit]
+Description=PinCabOS display role periodic verification
+
+[Timer]
+OnBootSec=20
+OnUnitActiveSec=30
+AccuracySec=5
+Unit=pincabos-display-roles.service
+
+[Install]
+WantedBy=timers.target

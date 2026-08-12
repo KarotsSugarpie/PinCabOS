@@ -1,0 +1,6 @@
+# PinCabOS Keyboard Widget — helper root-only, arguments strictly validated internally.
+pinball ALL=(root) NOPASSWD: \
+  /usr/local/sbin/pincabos-keyboard-layout status, \
+  /usr/local/sbin/pincabos-keyboard-layout layouts, \
+  /usr/local/sbin/pincabos-keyboard-layout variants *, \
+  /usr/local/sbin/pincabos-keyboard-layout set *

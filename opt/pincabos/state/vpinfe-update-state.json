@@ -1,0 +1,32 @@
+{
+  "installed": {
+    "asset_name": "vpinfe-v2.6.1-linux-x64-slim.zip",
+    "asset_sha256": "95d439593412986c3e53cf77ce0ee71111bc6bd1e33a99eaf52c1b7d547ac6ee",
+    "backup": "/opt/pincabos/backups/vpinfe-update/20260812-113748/vpinfe",
+    "binary_mtime_ns": 1786549071722535382,
+    "binary_sha256": "19127bbfb955b207d4efb8fb665caa40400df6c881e83b82856a6ca7d6820630",
+    "binary_size": 15796736,
+    "installed_at": "2026-08-12T15:38:03+00:00",
+    "tag": "v2.6.1"
+  },
+  "last_check": {
+    "at": "2026-08-12T15:38:13+00:00",
+    "remote": {
+      "asset_digest": "sha256:95d439593412986c3e53cf77ce0ee71111bc6bd1e33a99eaf52c1b7d547ac6ee",
+      "asset_name": "vpinfe-v2.6.1-linux-x64-slim.zip",
+      "asset_size": 130830904,
+      "asset_url": "https://github.com/superhac/vpinfe/releases/download/v2.6.1/vpinfe-v2.6.1-linux-x64-slim.zip",
+      "checked_at": "2026-08-12T15:37:47+00:00",
+      "html_url": "https://github.com/superhac/vpinfe/releases/tag/v2.6.1",
+      "ok": true,
+      "published_at": "2026-08-08T12:26:14Z",
+      "tag": "v2.6.1"
+    }
+  },
+  "last_operation": {
+    "at": "2026-08-12T15:38:13+00:00",
+    "message": "VPinFE mis \u00e0 jour vers v2.6.1.",
+    "ok": true,
+    "stage": "complete"
+  }
+}

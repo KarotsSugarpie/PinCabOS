@@ -1,0 +1,15 @@
+# vim:ft=apparmor
+#
+# for allowing access to gnome-terminal
+#
+
+  abi <abi/5.0>,
+
+  include <abstractions/gnome>
+
+  # do not use ux or PUx here. Use at a minimum ix
+  /usr/bin/gnome-terminal ix,
+
+
+  # Include additions to the abstraction
+  include if exists <abstractions/ubuntu-gnome-terminal.d>

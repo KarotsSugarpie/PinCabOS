@@ -1,0 +1,5 @@
+#!/bin/bash
+exec git \
+  --git-dir=/opt/pincabos/.git-rootfs \
+  --work-tree=/ \
+  "$@"

@@ -1,0 +1,4 @@
+# PinCabOS WebApp may close only the active Chrome tab/window helper.
+www-data ALL=(pinball) NOPASSWD: /usr/bin/xdotool, /usr/bin/wmctrl
+pinball ALL=(pinball) NOPASSWD: /usr/bin/xdotool, /usr/bin/wmctrl
+root ALL=(pinball) NOPASSWD: /usr/bin/xdotool, /usr/bin/wmctrl

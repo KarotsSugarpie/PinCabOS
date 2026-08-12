@@ -1,0 +1,27 @@
+# vim:ft=apparmor
+# Common rules for Qt6-based applications
+
+  abi <abi/5.0>,
+
+  # Additional libraries
+
+  /usr/lib{,64,/@{multiarch}}/qt6/plugins/**.so mr,
+  /usr/lib{,64,/@{multiarch}}/qt6/qml/**.so mr,
+  /usr/lib{,64,/@{multiarch}}/qt6/qml/**.{qmlc,jsc} mr, # Precompiled QML/JavaScript modules
+
+  # System files
+
+  /etc/xdg/QtProject/qtlogging.ini r,
+  /usr/share/qt6/translations/*.qm r,
+  /usr/lib{,64,/@{multiarch}}/qt6/plugins/** r,
+  /usr/lib{,64,/@{multiarch}}/qt6/qml/** r,
+
+  # User files
+
+  owner @{HOME}/.config/QtProject/qtlogging.ini r,
+  owner @{HOME}/.config/QtProject.conf r, # common settings for QFileDialog, etc (application might need write access)
+  owner @{HOME}/.cache/qt_compose_cache_{little,big}_endian_* r, # for "platforminputcontexts" plugins
+
+
+  # Include additions to the abstraction
+  include if exists <abstractions/qt6.d>

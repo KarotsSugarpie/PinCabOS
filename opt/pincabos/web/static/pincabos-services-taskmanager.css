@@ -1,0 +1,247 @@
+/* PinCabOS-File created by Karots Sugarpie */
+/* PinCabOS Services Task Manager - icon buttons */
+
+.svc-control-cell {
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.svc-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.svc-form {
+  display: inline-flex !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.svc-btn {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+
+  padding: 0 !important;
+  margin: 1px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  font-size: 15px !important;
+  line-height: 1 !important;
+  font-weight: bold !important;
+
+  border-radius: 8px !important;
+}
+
+.svc-kill {
+  opacity: 0.92 !important;
+}
+
+/* === PinCabOS Services Full Width + PID details === */
+.svc-full-card {
+  width: 100% !important;
+}
+
+.svc-block {
+  border: 1px solid rgba(255,176,0,.22);
+  border-radius: 14px;
+  padding: 10px;
+  margin-top: 10px;
+  background: rgba(0,0,0,.16);
+}
+
+.svc-head {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) minmax(180px, .8fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.svc-head h3 {
+  margin: 0 0 3px 0 !important;
+}
+
+.svc-desc {
+  opacity: .86;
+  font-size: 12px;
+}
+
+.svc-meta {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.svc-details {
+  margin-top: 8px;
+}
+
+.svc-pid-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+
+.svc-pid-table th,
+.svc-pid-table td {
+  vertical-align: top;
+}
+
+.svc-pid-row small {
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .svc-head {
+    grid-template-columns: 1fr;
+  }
+
+  .svc-control-cell,
+  .svc-actions {
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+}\n\n/* === PinCabOS Services Full Width + PID details START === */
+.svc-full-card {
+  width: 100% !important;
+}
+
+.svc-block {
+  border: 1px solid rgba(255,176,0,.22);
+  border-radius: 14px;
+  padding: 10px;
+  margin-top: 10px;
+  background: rgba(0,0,0,.16);
+}
+
+.svc-head {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) minmax(180px, .8fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.svc-head h3 {
+  margin: 0 0 3px 0 !important;
+}
+
+.svc-desc {
+  opacity: .86;
+  font-size: 12px;
+}
+
+.svc-meta {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.svc-details {
+  margin-top: 8px;
+}
+
+.svc-pid-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+
+.svc-pid-table th,
+.svc-pid-table td {
+  vertical-align: top;
+}
+
+.svc-pid-row small {
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .svc-head {
+    grid-template-columns: 1fr;
+  }
+
+  .svc-control-cell,
+  .svc-actions {
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+}
+/* === PinCabOS Services Full Width + PID details END === */
+\n
+/* === PinCabOS Services Card Height Boost START === */
+.svc-full-card {
+  min-height: 720px !important;
+  padding-top: 18px !important;
+  padding-bottom: 22px !important;
+}
+
+.svc-full-card .svc-block {
+  min-height: 145px !important;
+  padding: 16px !important;
+  margin-top: 16px !important;
+}
+
+.svc-full-card .svc-details {
+  min-height: 72px !important;
+}
+
+.svc-full-card .svc-pid-table {
+  margin-top: 10px !important;
+}
+
+.svc-full-card .svc-head {
+  min-height: 82px !important;
+}
+/* === PinCabOS Services Card Height Boost END === */
+
+/* === PinCabOS Services Margins 5px START === */
+.svc-full-card {
+  margin-top: 5px !important;
+}
+
+.svc-block {
+  margin-top: 5px !important;
+}
+
+.svc-full-card .svc-block {
+  margin-top: 5px !important;
+}
+/* === PinCabOS Services Margins 5px END === */
+
+/* === PinCabOS Services Inner Spacing 5px START === */
+.svc-full-card {
+  padding: 5px !important;
+}
+
+.svc-full-card .svc-block {
+  padding: 5px !important;
+  margin-top: 5px !important;
+  margin-bottom: 5px !important;
+}
+
+.svc-full-card .svc-head {
+  gap: 5px !important;
+  min-height: 50px !important;
+}
+
+.svc-full-card .svc-details {
+  margin-top: 5px !important;
+  min-height: 40px !important;
+}
+
+.svc-full-card h2,
+.svc-full-card h3,
+.svc-full-card p {
+  margin-top: 3px !important;
+  margin-bottom: 3px !important;
+}
+
+.svc-full-card .svc-pid-table {
+  margin-top: 5px !important;
+}
+/* === PinCabOS Services Inner Spacing 5px END === */

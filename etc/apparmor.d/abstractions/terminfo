@@ -1,0 +1,10 @@
+  abi <abi/5.0>,
+
+  # Default hardcoded locations searched by ncurses for terminfo
+  @{HOME}/.terminfo/** r,
+  /etc/terminfo/** r,
+  /{usr/,}lib/terminfo/** r,
+  /usr/share/terminfo/** r,
+
+  # Local overrides for systems with TERMINFO env vars, etc.
+  include if exists <abstractions/terminfo.d>

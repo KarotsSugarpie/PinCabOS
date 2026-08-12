@@ -1,0 +1,12 @@
+[Unit]
+Description=Run PinCabOS finalizer after first boot settles
+ConditionPathExists=!/var/lib/pincabos/doctor-firstboot.done
+
+[Timer]
+OnBootSec=45s
+AccuracySec=5s
+Unit=pincabos-finalize-firstboot.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

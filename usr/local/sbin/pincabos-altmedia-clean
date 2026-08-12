@@ -1,0 +1,401 @@
+#!/usr/bin/env bash
+clear 2>/dev/null || true
+set -Eeuo pipefail
+
+MODE="${1:---audit}"
+TABLES_ROOT="${TABLES_ROOT:-/home/pinball/Tables}"
+BACKUP_BASE="${BACKUP_BASE:-/opt/pincabos/backups}"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="${BACKUP_BASE}/altmedia-contamination-${STAMP}"
+REPORT="/root/pincabos-altmedia-audit-${STAMP}.txt"
+
+case "$MODE" in
+  --audit|--apply|--guard-run) ;;
+  *)
+    echo "Usage: $0 --audit | --apply | --guard-run" >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$MODE" != "--guard-run" ]]; then
+  exec > >(tee -a "$REPORT") 2>&1
+fi
+
+C_RESET='\033[0m'
+C_GREEN='\033[1;32m'
+C_YELLOW='\033[1;33m'
+C_RED='\033[1;31m'
+C_CYAN='\033[1;36m'
+
+go()   { printf "${C_GREEN}GO [√]${C_RESET} %s\n" "$*"; }
+warn() { printf "${C_YELLOW}ATTENTION [!]${C_RESET} %s\n" "$*"; }
+fail() { printf "${C_RED}NOGO [X]${C_RESET} %s\n" "$*"; exit 1; }
+info() { printf "${C_CYAN}%s${C_RESET}\n" "$*"; }
+
+[[ $EUID -eq 0 ]] || fail "Exécuter ce script en root."
+[[ -d "$TABLES_ROOT" ]] || fail "Dossier Tables introuvable : $TABLES_ROOT"
+command -v python3 >/dev/null 2>&1 || fail "python3 est requis."
+
+if [[ "$MODE" != "--guard-run" ]]; then
+  echo "==============================================================="
+  echo " PINCABOS — AUDIT / NETTOYAGE DES ALT-MÉDIAS CONTAMINÉS"
+  echo " Garde : .cRZ · .cROMc · .pal · .vni"
+  echo "==============================================================="
+  echo "Mode       : $MODE"
+  echo "Tables     : $TABLES_ROOT"
+  echo "Rapport    : $REPORT"
+  [[ "$MODE" == "--apply" ]] && echo "Quarantaine: $BACKUP_DIR"
+  echo
+fi
+
+python3 - "$MODE" "$TABLES_ROOT" "$BACKUP_DIR" <<'PY'
+from __future__ import annotations
+
+import hashlib
+import os
+import pwd
+import grp
+import shutil
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+mode = sys.argv[1]
+tables_root = Path(sys.argv[2]).resolve()
+backup_dir = Path(sys.argv[3]).resolve()
+apply_mode = mode in {"--apply", "--guard-run"}
+quiet = mode == "--guard-run"
+
+ALLOWED_SUFFIXES = {".crz", ".cromc", ".pal", ".vni"}
+CATEGORIES = ("altsound", "altrom", "altcolor")
+MARKER_NAMES = {
+    ".bashrc", ".profile", ".gitconfig", ".lesshst",
+    ".cache", ".config", ".ssh", ".vpinball", "__pycache__",
+}
+
+try:
+    PINBALL_UID = pwd.getpwnam("pinball").pw_uid
+    PINBALL_GID = grp.getgrnam("pinball").gr_gid
+except KeyError:
+    PINBALL_UID = -1
+    PINBALL_GID = -1
+
+@dataclass(frozen=True)
+class Candidate:
+    table: Path
+    category: str
+    rom: str
+    path: Path
+    markers: tuple[str, ...]
+
+
+def human_size(value: int) -> str:
+    units = ["o", "Ko", "Mo", "Go", "To"]
+    size = float(value)
+    for unit in units:
+        if size < 1024 or unit == units[-1]:
+            return f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{value} o"
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def detect_markers(folder: Path) -> tuple[str, ...]:
+    found: set[str] = set()
+    for root, dirs, files in os.walk(folder, followlinks=False):
+        root_path = Path(root)
+        depth = len(root_path.relative_to(folder).parts)
+        if depth > 2:
+            dirs[:] = []
+            continue
+
+        for name in dirs + files:
+            low = name.lower()
+            if name in MARKER_NAMES:
+                found.add(name)
+            elif low.startswith("pincabos-") and low.endswith((".sh", ".py")):
+                found.add(name)
+
+        # Ne pas parcourir les gros arbres légitimes au-delà de deux niveaux.
+        if depth >= 2:
+            dirs[:] = []
+
+    return tuple(sorted(found))
+
+
+def collect_candidates() -> list[Candidate]:
+    candidates: list[Candidate] = []
+    for table in sorted(tables_root.iterdir(), key=lambda p: p.name.casefold()):
+        if not table.is_dir() or table.is_symlink():
+            continue
+        pinmame = table / "pinmame"
+        if not pinmame.is_dir():
+            continue
+
+        for category in CATEGORIES:
+            category_dir = pinmame / category
+            if not category_dir.is_dir():
+                continue
+
+            for child in sorted(category_dir.iterdir(), key=lambda p: p.name.casefold()):
+                if not child.is_dir() or child.is_symlink():
+                    continue
+                markers = detect_markers(child)
+                if markers:
+                    candidates.append(
+                        Candidate(
+                            table=table,
+                            category=category,
+                            rom=child.name,
+                            path=child,
+                            markers=markers,
+                        )
+                    )
+    return candidates
+
+
+def folder_stats(folder: Path) -> tuple[int, int, list[Path], int]:
+    total_files = 0
+    total_bytes = 0
+    allowed: list[Path] = []
+    rejected = 0
+    for path in folder.rglob("*"):
+        if path.is_symlink() or not path.is_file():
+            continue
+        total_files += 1
+        try:
+            total_bytes += path.stat().st_size
+        except OSError:
+            pass
+        if path.suffix.lower() in ALLOWED_SUFFIXES:
+            allowed.append(path)
+        else:
+            rejected += 1
+    return total_files, total_bytes, allowed, rejected
+
+
+def safe_destination(dest_dir: Path, source: Path) -> tuple[Path, str]:
+    dest = dest_dir / source.name
+    if not dest.exists():
+        return dest, "nouveau"
+
+    try:
+        if sha256(dest) == sha256(source):
+            return dest, "identique"
+    except OSError:
+        pass
+
+    digest = sha256(source)[:10]
+    dest = dest_dir / f"{source.stem}.recovered-{digest}{source.suffix}"
+    counter = 1
+    while dest.exists():
+        dest = dest_dir / f"{source.stem}.recovered-{digest}-{counter}{source.suffix}"
+        counter += 1
+    return dest, "renommé"
+
+
+def set_pinball_ownership(path: Path) -> None:
+    if PINBALL_UID < 0 or PINBALL_GID < 0:
+        return
+    try:
+        os.chown(path, PINBALL_UID, PINBALL_GID, follow_symlinks=False)
+    except OSError:
+        pass
+
+
+candidates = collect_candidates()
+
+if not quiet:
+    print("=== 1. Détection des dossiers contaminés ===")
+
+if not candidates:
+    if not quiet:
+        print("GO [√] Aucun dossier contaminé détecté par les signatures connues.")
+    sys.exit(0)
+
+if not quiet:
+    print(f"ATTENTION [!] {len(candidates)} dossier(s) contaminé(s) détecté(s).")
+    print()
+
+summaries: list[tuple[Candidate, int, int, list[Path], int]] = []
+for index, candidate in enumerate(candidates, start=1):
+    total_files, total_bytes, allowed, rejected = folder_stats(candidate.path)
+    summaries.append((candidate, total_files, total_bytes, allowed, rejected))
+    if not quiet:
+        rel = candidate.path.relative_to(tables_root)
+        print(f"[{index}] {rel}")
+        print(f"    Signatures : {', '.join(candidate.markers)}")
+        print(f"    Fichiers   : {total_files} ({human_size(total_bytes)})")
+        print(f"    À garder   : {len(allowed)} fichier(s) .cRZ/.cROMc/.pal/.vni")
+        print(f"    À sortir   : {rejected} autre(s) fichier(s)")
+        for item in allowed[:20]:
+            print(f"      GARDER -> {item.relative_to(candidate.path)}")
+        if len(allowed) > 20:
+            print(f"      ... {len(allowed) - 20} autre(s)")
+        print()
+
+if not apply_mode:
+    print("=== 2. Résultat ===")
+    print("GO [√] Audit seulement : aucun fichier modifié.")
+    print("Pour corriger après vérification :")
+    print("  sudo /root/pincabos-altmedia-clean-v1.sh --apply")
+    sys.exit(0)
+
+backup_dir.mkdir(parents=True, exist_ok=False)
+quarantine_root = backup_dir / "quarantine"
+quarantine_root.mkdir(parents=True, exist_ok=True)
+
+manifest = backup_dir / "manifest.txt"
+with manifest.open("w", encoding="utf-8") as log:
+    log.write(f"Tables root: {tables_root}\n")
+    log.write(f"Candidates: {len(candidates)}\n\n")
+
+    recovered_count = 0
+    moved_count = 0
+
+    for candidate, total_files, total_bytes, allowed, rejected in summaries:
+        rel = candidate.path.relative_to(tables_root)
+        quarantine_dest = quarantine_root / rel
+        quarantine_dest.parent.mkdir(parents=True, exist_ok=True)
+
+        log.write(f"SOURCE={candidate.path}\n")
+        log.write(f"QUARANTINE={quarantine_dest}\n")
+        log.write(f"MARKERS={','.join(candidate.markers)}\n")
+        log.write(f"FILES={total_files}\n")
+        log.write(f"BYTES={total_bytes}\n")
+        log.write(f"ALLOWED={len(allowed)}\n")
+        log.write(f"REJECTED={rejected}\n")
+
+        shutil.move(str(candidate.path), str(quarantine_dest))
+        moved_count += 1
+
+        destination_dir = candidate.table / "pinmame" / "altcolor" / candidate.rom
+        valid_sources = [
+            p for p in quarantine_dest.rglob("*")
+            if p.is_file() and not p.is_symlink() and p.suffix.lower() in ALLOWED_SUFFIXES
+        ]
+
+        if valid_sources:
+            destination_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                destination_dir.chmod(0o755)
+            except OSError:
+                pass
+            set_pinball_ownership(destination_dir)
+
+        for source in valid_sources:
+            destination, status = safe_destination(destination_dir, source)
+            if status == "identique":
+                log.write(f"KEEP_IDENTICAL={source} -> {destination}\n")
+                continue
+            shutil.copy2(source, destination)
+            try:
+                destination.chmod(0o644)
+            except OSError:
+                pass
+            set_pinball_ownership(destination)
+            recovered_count += 1
+            log.write(f"RECOVERED={source} -> {destination} ({status})\n")
+
+        # Nettoyer seulement les parents devenus vides.
+        parent = candidate.path.parent
+        try:
+            if parent.name in {"altsound", "altrom"} and not any(parent.iterdir()):
+                parent.rmdir()
+        except OSError:
+            pass
+
+        log.write("\n")
+
+if not quiet:
+    print("=== 2. Correction appliquée ===")
+    print(f"GO [√] {moved_count} dossier(s) retiré(s) des Tables et placé(s) en quarantaine.")
+    print(f"GO [√] {recovered_count} fichier(s) valide(s) restauré(s) dans pinmame/altcolor/<ROM>.")
+    print(f"GO [√] Quarantaine : {backup_dir}")
+    print(f"GO [√] Manifeste   : {manifest}")
+else:
+    print(f"PinCabOS altmedia guard: {moved_count} dossier(s) mis en quarantaine, {recovered_count} fichier(s) valide(s) restauré(s).")
+PY
+
+if [[ "$MODE" == "--apply" ]]; then
+  mkdir -p "$BACKUP_DIR"
+  echo
+  echo "=== 3. Installation de la protection automatique ==="
+
+  install -m 0755 "$0" /usr/local/sbin/pincabos-altmedia-clean
+
+  cat > /etc/systemd/system/pincabos-altmedia-guard.service <<'UNIT'
+[Unit]
+Description=PinCabOS guard against contaminated altmedia imports
+ConditionPathIsDirectory=/home/pinball/Tables
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-altmedia-clean --guard-run
+Nice=10
+IOSchedulingClass=idle
+UNIT
+
+  cat > /etc/systemd/system/pincabos-altmedia-guard.timer <<'UNIT'
+[Unit]
+Description=Run PinCabOS contaminated altmedia guard
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=20s
+Persistent=true
+Unit=pincabos-altmedia-guard.service
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+  systemctl daemon-reload
+  systemctl enable --now pincabos-altmedia-guard.timer
+  systemctl start pincabos-altmedia-guard.service
+
+  go "Protection automatique installée et active."
+  systemctl --no-pager --full status pincabos-altmedia-guard.timer || true
+
+  echo
+  echo "=== 4. Audit du code d'import pour trouver la cause exacte ==="
+  CODE_REPORT="${BACKUP_DIR}/import-code-matches.txt"
+  : > "$CODE_REPORT"
+
+  SEARCH_ROOTS=()
+  for root in /opt/pincabos/web /opt/pincabos/bin /opt/pincabos /usr/local/sbin /etc/systemd/system; do
+    [[ -e "$root" ]] && SEARCH_ROOTS+=("$root")
+  done
+
+  if ((${#SEARCH_ROOTS[@]})); then
+    grep -RInE \
+      --include='*.py' --include='*.sh' --include='*.js' --include='*.html' --include='*.service' \
+      '(altsound|altrom|altcolor|copytree\(|copy2\(|shutil\.copy|extractall\(|unpack_archive|rsync|cp[[:space:]]+-a|Path\.home|expanduser|/home/pinball)' \
+      "${SEARCH_ROOTS[@]}" 2>/dev/null | sort -u > "$CODE_REPORT" || true
+  fi
+
+  if [[ -s "$CODE_REPORT" ]]; then
+    warn "Correspondances trouvées dans le code d'import."
+    echo "Rapport complet : $CODE_REPORT"
+    sed -n '1,220p' "$CODE_REPORT"
+    [[ $(wc -l < "$CODE_REPORT") -gt 220 ]] && echo "... sortie tronquée; voir le rapport complet."
+  else
+    warn "Aucune correspondance concluante trouvée dans les chemins standards."
+  fi
+
+  echo
+  echo "=== 5. Validation finale ==="
+  /usr/local/sbin/pincabos-altmedia-clean --audit || true
+  go "Nettoyage terminé sans toucher aux dossiers altsound légitimes non contaminés."
+  go "Le garde automatique remettra en quarantaine toute récidive portant les mêmes signatures."
+  echo
+  echo "Rapport principal : $REPORT"
+fi

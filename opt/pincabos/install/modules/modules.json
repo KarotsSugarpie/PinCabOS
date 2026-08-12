@@ -1,0 +1,96 @@
+{
+  "name": "PinCabOS install modules",
+  "created_by": "Karots Sugarpie",
+  "updated": "2026-06-12T04:13:38",
+  "root": "/var/www/html/install/modules",
+  "directories": [
+    "audio",
+    "network",
+    "system",
+    "system/assets",
+    "system/assets/plymouth"
+  ],
+  "files": [
+    {
+      "path": "README-MODULES.txt",
+      "size": 690,
+      "sha256": "c8ca2554720bd41f6ca3418be79dc8c1faef979b8a9fb24e899fd1a6f1fa274d",
+      "modified": "2026-06-10T21:36:12"
+    },
+    {
+      "size": 5196,
+      "sha256": "6bc396132c1f9636542866d8428d527873995ba33d097a88b550b984cf0b1c5f",
+      "modified": "2026-06-11T18:01:53"
+    },
+    {
+      "path": "modules.json",
+      "size": 4059,
+      "sha256": "7d7a34b1ac5784b363cc1469d7b03c5ffd229140f1f64995d1d39ef7b532c9b7",
+      "modified": "2026-06-12T03:27:41"
+    },
+    {
+      "path": "network/mod-dhcp4.sh",
+      "size": 13529,
+      "sha256": "e327729010fe9c85c51332bc988e76b84fbc18a78ca2f5618327a3bab93c7ba9",
+      "modified": "2026-06-11T16:06:38",
+      "packages": [
+        "network-manager",
+        "wpasupplicant"
+      ]
+    },
+    {
+      "path": "network/mod-ssid.sh",
+      "size": 18355,
+      "sha256": "b6276eee80d5ffdfcb6555a4f7567090b3f3823492c49e5d9819a95328473b1b",
+      "modified": "2026-06-11T16:06:38"
+    },
+    {
+      "path": "system/assets/plymouth/pkg-plymouth-install.tar.zst",
+      "size": 1922279,
+      "sha256": "b2b2c741535cf828115b721e12cd6a50d287dbc088261b27616b89559e2eb32a",
+      "modified": "2026-06-12T02:54:49"
+    },
+    {
+      "path": "system/assets/plymouth/pkg-plymouth-install.tar.zst.sha256",
+      "size": 133,
+      "sha256": "68f4d04f32bb40b7a8a4a3bc7817f647dad7ab55d934d0358782b82a96a96295",
+      "modified": "2026-06-12T02:54:49"
+    },
+    {
+      "path": "system/assets/plymouth/pkg-plymouth-load.tar.zst",
+      "size": 1926164,
+      "sha256": "21a6db85c471e732fff62de3f1781b8ab8739d347f2e157744082444a3e3ce46",
+      "modified": "2026-06-12T03:01:41"
+    },
+    {
+      "path": "system/assets/plymouth/pkg-plymouth-load.tar.zst.sha256",
+      "size": 130,
+      "sha256": "a21cc1b275032733c2776e0c6d3ced7bdde33d79cd5feb613f8c1e4d1b2a0497",
+      "modified": "2026-06-12T03:01:41"
+    },
+    {
+      "path": "system/mod-plymouth-install.sh",
+      "size": 6298,
+      "sha256": "8f9506553a4d89bc30801ecaf91aea595016f1d3f987cc366727924a2f1ab9c2",
+      "modified": "2026-06-12T04:13:38"
+    },
+    {
+      "path": "system/mod-plymouth-load.sh",
+      "size": 6288,
+      "sha256": "bfc12decd9061da7dbed2767ecfe1b9666aaee789209c99d00ad04826c02c161",
+      "modified": "2026-06-12T04:13:38"
+    },
+    {
+      "path": "system/mod-splash.sh",
+      "size": 14519,
+      "sha256": "73bcb0b1c0ab8353fdfcc3328f3534c4847c3b1f225cc5ee41c6ca5a6d9a1cf0",
+      "modified": "2026-06-11T16:06:37"
+    }
+  ],
+  "plymouth_dependency_owner": "01-install-system.sh",
+  "plymouth_modules_do_not_run_apt": true,
+  "plymouth_modules_system": true,
+  "plymouth_install_module": "system/mod-plymouth-install.sh",
+  "plymouth_load_module": "system/mod-plymouth-load.sh",
+  "plymouth_assets": "system/assets/plymouth"
+}

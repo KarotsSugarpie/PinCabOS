@@ -1,0 +1,35 @@
+{
+  "version": "1.2.5",
+  "running": false,
+  "mode": "idle",
+  "message": "Terminé",
+  "started_at": "2026-07-16T20:47:03-0400",
+  "updated_at": "2026-07-16T20:47:39-0400",
+  "finished_at": "2026-07-16T20:47:39-0400",
+  "current_table": "",
+  "current_media": "",
+  "processed": 4381,
+  "total": 4381,
+  "downloaded": 1,
+  "found": 1,
+  "not_found": 4380,
+  "errors": 22,
+  "stop_requested": false,
+  "log": [
+    {
+      "time": "2026-07-16T20:47:03-0400",
+      "level": "info",
+      "message": "Recherche et installation des médias manquants démarrée"
+    },
+    {
+      "time": "2026-07-16T20:47:27-0400",
+      "level": "info",
+      "message": "Midnight Magic (Atari 1986) · wheel: installé depuis wheel"
+    },
+    {
+      "time": "2026-07-16T20:47:39-0400",
+      "level": "success",
+      "message": "Terminé"
+    }
+  ]
+}

@@ -1,0 +1,308 @@
+#!/usr/bin/env python3
+# PINCABOS_DUDESCAB_MAINTENANCE_HELPER_V323_PERSISTENT
+from __future__ import annotations
+
+import argparse
+import fcntl
+import json
+import os
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+STATE_DIR = Path('/run/pincabos-dudescab-maintenance')
+STATE_FILE = STATE_DIR / 'state.json'
+LOCK_FILE = Path('/run/lock/pincabos-dudescab-maintenance.lock')
+VPINFE_SERVICE = 'pincabos-vpinfe.service'
+DEFAULT_TIMEOUT = 0
+
+
+def command(args: list[str], timeout: int = 20, check: bool = False) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(args, text=True, capture_output=True, timeout=timeout, check=check)
+
+
+def systemctl(*args: str, timeout: int = 20) -> subprocess.CompletedProcess[str]:
+    return command(['/bin/systemctl', *args], timeout=timeout)
+
+
+def service_active(service: str) -> bool:
+    try:
+        return systemctl('is-active', '--quiet', service, timeout=5).returncode == 0
+    except Exception:
+        return False
+
+
+def read_state() -> dict[str, Any]:
+    try:
+        value = json.loads(STATE_FILE.read_text(encoding='utf-8'))
+        return value if isinstance(value, dict) else {}
+    except Exception:
+        return {}
+
+
+def write_state(value: dict[str, Any]) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = STATE_FILE.with_suffix('.tmp')
+    tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, STATE_FILE)
+
+
+def clear_state() -> None:
+    try:
+        STATE_FILE.unlink()
+    except FileNotFoundError:
+        pass
+
+
+def vpx_processes() -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    current = os.getpid()
+    for item in Path('/proc').iterdir():
+        if not item.name.isdigit():
+            continue
+        pid = int(item.name)
+        if pid in {1, current, os.getppid()}:
+            continue
+        try:
+            raw = (item / 'cmdline').read_bytes()
+            cmdline = raw.replace(b'\x00', b' ').decode('utf-8', errors='replace').strip()
+        except Exception:
+            continue
+        if not cmdline:
+            continue
+        matched = (
+            'VPinballX' in cmdline
+            or '/opt/pincabos/bin/vpx.sh' in cmdline
+            or '/opt/pincabos/bin/vpx-lowlatency.sh' in cmdline
+        )
+        if matched and 'pincabos-dudescab-maintenance' not in cmdline:
+            rows.append({'pid': pid, 'cmdline': cmdline[:800]})
+    return sorted(rows, key=lambda row: int(row['pid']))
+
+
+def stop_vpx(timeout: float = 8.0) -> dict[str, Any]:
+    initial = vpx_processes()
+    for row in initial:
+        try:
+            os.kill(int(row['pid']), signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            pass
+    deadline = time.monotonic() + timeout
+    remaining = vpx_processes()
+    while remaining and time.monotonic() < deadline:
+        time.sleep(0.25)
+        remaining = vpx_processes()
+    # Exact remaining VPX PIDs only. This is a last resort after a graceful TERM.
+    for row in remaining:
+        try:
+            os.kill(int(row['pid']), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+    time.sleep(0.15)
+    final = vpx_processes()
+    return {'initial': initial, 'remaining': final, 'stopped': not final}
+
+
+def stop_vpinfe() -> dict[str, Any]:
+    was_active = service_active(VPINFE_SERVICE)
+    result = systemctl('stop', VPINFE_SERVICE, timeout=25)
+    active_after = service_active(VPINFE_SERVICE)
+    return {
+        'was_active': was_active,
+        'active_after': active_after,
+        'ok': result.returncode == 0 and not active_after,
+        'detail': ((result.stdout or '') + (result.stderr or '')).strip()[-500:],
+    }
+
+
+def start_vpinfe() -> dict[str, Any]:
+    result = systemctl('start', VPINFE_SERVICE, timeout=25)
+    active_after = service_active(VPINFE_SERVICE)
+    return {
+        'active_after': active_after,
+        'ok': result.returncode == 0 and active_after,
+        'detail': ((result.stdout or '') + (result.stderr or '')).strip()[-500:],
+    }
+
+
+def public_status(state: dict[str, Any] | None = None) -> dict[str, Any]:
+    current = state if isinstance(state, dict) else read_state()
+    heartbeat = float(current.get('heartbeat_at') or 0)
+    return {
+        'ok': True,
+        'marker': 'PINCABOS_DUDESCAB_MAINTENANCE_HELPER_V323_PERSISTENT',
+        'active': bool(current.get('active')),
+        'token': str(current.get('token') or ''),
+        'entered_at': current.get('entered_at'),
+        'heartbeat_at': heartbeat or None,
+        'heartbeat_age': round(max(0.0, time.time() - heartbeat), 1) if heartbeat else None,
+        'vpinfe_was_active': bool(current.get('vpinfe_was_active')),
+        'vpinfe_active_now': service_active(VPINFE_SERVICE),
+        'vpx_was_running': bool(current.get('vpx_was_running')),
+        'vpx_processes_now': vpx_processes(),
+        'restores_vpx_table': False,
+        'persistent_session': True,
+        'automatic_expiry': False,
+        'recovery_command': '/usr/local/sbin/pincabos-dudescab-maintenance recover',
+        'note': 'VPinFE est restauré à la sortie seulement s’il était actif. Une table VPX arrêtée n’est jamais relancée automatiquement.',
+    }
+
+
+def validate_token(token: str) -> str:
+    value = str(token or '').strip()
+    if not (16 <= len(value) <= 128) or not all(ch.isalnum() or ch in '-_' for ch in value):
+        raise ValueError('Jeton de session maintenance invalide.')
+    return value
+
+
+def restore_locked(state: dict[str, Any], reason: str) -> dict[str, Any]:
+    restore_result: dict[str, Any] = {'requested': bool(state.get('vpinfe_was_active')), 'ok': True}
+    if state.get('vpinfe_was_active'):
+        restore_result = start_vpinfe()
+    state['active'] = False
+    state['restored_at'] = time.time()
+    state['restore_reason'] = reason
+    state['restore_vpinfe'] = restore_result
+    final = public_status(state)
+    final['restore'] = restore_result
+    clear_state()
+    return final
+
+
+def enter(token: str, timeout: int) -> dict[str, Any]:
+    token = validate_token(token)
+    now = time.time()
+    state = read_state()
+    if state.get('active'):
+        if state.get('token') == token:
+            state['heartbeat_at'] = now
+            state['last_seen_at'] = now
+            # Reattach to the persistent session and enforce the safe state.
+            systemctl('stop', VPINFE_SERVICE, timeout=25)
+            stop_vpx()
+            write_state(state)
+            result = public_status(state)
+            result['reused'] = True
+            result['persistent'] = True
+            return result
+        raise RuntimeError(
+            'Une autre session DudesCabConfig possède le verrou persistant. '
+            'Rouvre le navigateur qui a créé la session ou utilise la commande SSH recover.'
+        )
+
+    vpinfe = stop_vpinfe()
+    vpx_before = vpx_processes()
+    vpx = stop_vpx()
+    if not vpinfe['ok'] or not vpx['stopped']:
+        if vpinfe['was_active']:
+            start_vpinfe()
+        raise RuntimeError(
+            'Impossible de sécuriser le mode DudesCabConfig. '
+            f"VPinFE ok={vpinfe['ok']}; VPX restant={len(vpx['remaining'])}."
+        )
+
+    state = {
+        'active': True,
+        'token': token,
+        'entered_at': now,
+        'heartbeat_at': now,
+        'timeout_seconds': 0,
+        'persistent_session': True,
+        'automatic_expiry': False,
+        'vpinfe_was_active': bool(vpinfe['was_active']),
+        'vpx_was_running': bool(vpx_before),
+        'vpx_initial': vpx_before,
+        'vpinfe_stop': vpinfe,
+    }
+    write_state(state)
+    result = public_status(state)
+    result['entered'] = True
+    return result
+
+
+def heartbeat(token: str) -> dict[str, Any]:
+    token = validate_token(token)
+    state = read_state()
+    if not state.get('active') or state.get('token') != token:
+        raise RuntimeError('Session de maintenance absente ou remplacée.')
+    state['heartbeat_at'] = time.time()
+    # Prevent VPinFE or VPX from being relaunched while the page is active.
+    if service_active(VPINFE_SERVICE):
+        systemctl('stop', VPINFE_SERVICE, timeout=25)
+    stopped = stop_vpx()
+    state['last_enforced_at'] = time.time()
+    state['last_vpx_enforcement'] = stopped
+    write_state(state)
+    result = public_status(state)
+    result['heartbeat'] = True
+    return result
+
+
+def leave(token: str, reason: str = 'sortie explicite') -> dict[str, Any]:
+    token = validate_token(token)
+    state = read_state()
+    if not state.get('active'):
+        return public_status({})
+    if state.get('token') != token:
+        raise RuntimeError('Cette page ne possède pas la session de maintenance active.')
+    return restore_locked(state, reason)
+
+
+def expire(timeout: int) -> dict[str, Any]:
+    """Compatibility action: persistent sessions never expire automatically."""
+    state = read_state()
+    result = public_status(state)
+    result['expired'] = False
+    result['expiration_disabled'] = True
+    result['note'] = (
+        'Session persistante: sortie uniquement par Déconnecter, '
+        'Quitter DudesCabConfig ou recover.'
+    )
+    return result
+
+
+def recover() -> dict[str, Any]:
+    state = read_state()
+    if state.get('active'):
+        result = restore_locked(state, 'récupération forcée')
+    else:
+        result = public_status(state)
+    result['recovered'] = True
+    return result
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('action', choices=['enter', 'heartbeat', 'exit', 'status', 'expire', 'recover'])
+    parser.add_argument('--token', default='')
+    parser.add_argument('--timeout', type=int, default=DEFAULT_TIMEOUT)
+    args = parser.parse_args()
+    LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with LOCK_FILE.open('a+', encoding='utf-8') as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            if args.action == 'enter':
+                result = enter(args.token, 0)
+            elif args.action == 'heartbeat':
+                result = heartbeat(args.token)
+            elif args.action == 'exit':
+                result = leave(args.token)
+            elif args.action == 'expire':
+                result = expire(0)
+            elif args.action == 'recover':
+                result = recover()
+            else:
+                result = public_status()
+            print(json.dumps(result, ensure_ascii=False, separators=(',', ':')))
+            return 0
+        except Exception as exc:
+            print(json.dumps({'ok': False, 'error': str(exc), 'type': type(exc).__name__}, ensure_ascii=False, separators=(',', ':')))
+            return 3
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

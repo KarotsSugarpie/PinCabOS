@@ -1,0 +1,823 @@
+#!/usr/bin/env python3
+"""PinCabOS global VPX -> VBS -> Popper/VPSDB mapping audit.
+
+Read-only for the NAS. It does not create .PinCabOs archives.
+"""
+from __future__ import annotations
+
+import csv
+import datetime as dt
+import hashlib
+import json
+import os
+import pwd
+import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import unicodedata
+import urllib.request
+from collections import Counter, defaultdict
+from pathlib import Path
+from typing import Any, Iterable
+
+SCRIPT_VERSION = "PINCABOS_VPSDB_GLOBAL_MAP_V2"
+
+NAS = Path("/home/pinball/NetworkDrives/192-168-254-253")
+TABLES = NAS / "vPinball - Copie/VisualPinball/Tables"
+PINUP = NAS / "vPinball - Copie/PinUPSystem"
+POPPER_DB = PINUP / "PUPBackup/20230708212533_PUPDatabase.db"
+ROMS = NAS / "vPinball - Copie/VisualPinball/VPinMAME/roms"
+ALTCOLOR = NAS / "vPinball - Copie/VisualPinball/VPinMAME/altcolor"
+ALTSOUND = NAS / "vPinball - Copie/VisualPinball/VPinMAME/altsound"
+PUPVIDEOS = PINUP / "PUPVideos"
+
+REPORT_ROOT = Path("/opt/pincabos/logs/audits")
+STATE_ROOT = REPORT_ROOT / "vpsdb-global-map-state-v2"
+LEGACY_STATE_ROOT = REPORT_ROOT / "vpsdb-global-map-state-v1"
+STATE_ITEMS = STATE_ROOT / "items"
+STATE_VBS = STATE_ROOT / "vbs"
+VPSDB_CACHE = STATE_ROOT / "vpsdb.json"
+VPSDB_META = STATE_ROOT / "vpsdb-meta.json"
+LEGACY_VPSDB_CACHE = LEGACY_STATE_ROOT / "vpsdb.json"
+VPSDB_URL = (
+    "https://raw.githubusercontent.com/"
+    "VirtualPinballSpreadsheet/vps-db/main/db/vpsdb.json"
+)
+
+RUNTIME_USER = os.environ.get("PINCABOS_VPX_USER", "pinball")
+ONLY_TABLE = os.environ.get("PINCABOS_MAP_ONLY", "").strip()
+
+VPX_CANDIDATES = (
+    Path("/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX"),
+    Path("/opt/pincabos/apps/vpinball/VPinballX_BGFX"),
+    Path("/opt/pincabos/apps/vpinball/VPinballX"),
+    Path("/opt/pincabos/bin/VPinballX_BGFX"),
+    Path("/opt/pincabos/bin/VPinballX"),
+)
+
+MEDIA_EXTENSIONS = {
+    ".mp4", ".mkv", ".avi", ".mov", ".webm",
+    ".mp3", ".wav", ".ogg", ".flac",
+    ".png", ".jpg", ".jpeg", ".gif", ".bmp",
+}
+RESOURCE_EXTENSIONS = MEDIA_EXTENSIONS | {
+    ".mid", ".midi", ".json", ".ini", ".cfg", ".res", ".fnt",
+}
+
+RUN_STAMP = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+RUN_DIR = REPORT_ROOT / f"vpsdb-global-map-{RUN_STAMP}"
+LOG_PATH = RUN_DIR / "terminal.txt"
+
+
+def norm(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = text.encode("ascii", "ignore").decode("ascii").casefold()
+    return re.sub(r"[^a-z0-9]+", "", text)
+
+
+def clean_text(value: Any) -> str:
+    return " ".join(str(value or "").replace("\x00", "").split()).strip()
+
+
+def sha256_file(path: Path, block_size: int = 4 * 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(block_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def json_dump(path: Path, data: Any) -> None:
+    temp = path.with_suffix(path.suffix + ".part")
+    temp.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temp, path)
+
+
+def log(message: str = "") -> None:
+    print(message, flush=True)
+    with LOG_PATH.open("a", encoding="utf-8") as handle:
+        handle.write(message + "\n")
+
+
+def decode_script(path: Path) -> str:
+    raw = path.read_bytes()
+    for encoding in ("utf-8-sig", "utf-16", "cp1252", "latin1"):
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("latin1", "ignore")
+
+
+def find_vpx_binary() -> Path:
+    for candidate in VPX_CANDIDATES:
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
+    for root in (Path("/home/pinball"), Path("/opt/pincabos")):
+        if not root.exists():
+            continue
+        for name in ("VPinballX_BGFX", "VPinballX"):
+            for candidate in root.rglob(name):
+                if candidate.is_file() and os.access(candidate, os.X_OK):
+                    return candidate
+    raise RuntimeError("Binaire VPinballX/VPinballX_BGFX introuvable")
+
+
+def ensure_vpsdb_snapshot() -> tuple[list[dict[str, Any]], str]:
+    if not VPSDB_CACHE.is_file() and LEGACY_VPSDB_CACHE.is_file():
+        try:
+            legacy_payload = LEGACY_VPSDB_CACHE.read_bytes()
+            legacy_parsed = json.loads(legacy_payload)
+            if isinstance(legacy_parsed, (list, dict)):
+                VPSDB_CACHE.write_bytes(legacy_payload)
+                json_dump(
+                    VPSDB_META,
+                    {
+                        "copied_from": str(LEGACY_VPSDB_CACHE),
+                        "copied_at": dt.datetime.now().isoformat(),
+                        "sha256": hashlib.sha256(legacy_payload).hexdigest(),
+                    },
+                )
+        except Exception:
+            pass
+
+    if not VPSDB_CACHE.is_file():
+        request = urllib.request.Request(
+            VPSDB_URL,
+            headers={"User-Agent": "PinCabOS-VPSDB-Global-Mapper/1.0"},
+        )
+        with urllib.request.urlopen(request, timeout=120) as response:
+            payload = response.read()
+        parsed = json.loads(payload)
+        if not isinstance(parsed, (list, dict)):
+            raise RuntimeError("Format VPSDB inattendu")
+        VPSDB_CACHE.write_bytes(payload)
+        json_dump(
+            VPSDB_META,
+            {
+                "url": VPSDB_URL,
+                "downloaded_at": dt.datetime.now().isoformat(),
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            },
+        )
+    payload = VPSDB_CACHE.read_bytes()
+    parsed = json.loads(payload)
+    if isinstance(parsed, list):
+        games = parsed
+    elif isinstance(parsed, dict):
+        games = parsed.get("games") or parsed.get("data") or []
+    else:
+        games = []
+    if not isinstance(games, list) or not games:
+        raise RuntimeError("Aucun jeu lisible dans l'instantané VPSDB")
+    return [item for item in games if isinstance(item, dict)], hashlib.sha256(payload).hexdigest()
+
+
+def canonical_game_name(game: dict[str, Any]) -> str:
+    name = clean_text(game.get("name") or game.get("gameName"))
+    manufacturer = clean_text(game.get("manufacturer"))
+    year = clean_text(game.get("year"))
+    suffix = " ".join(part for part in (manufacturer, year) if part)
+    if not suffix:
+        return name
+    if norm(suffix) and norm(suffix) in norm(name):
+        return name
+    return f"{name} ({suffix})".strip()
+
+
+def collect_rom_versions(game: dict[str, Any]) -> list[str]:
+    versions: list[str] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, str):
+            value = clean_text(value)
+            if value:
+                versions.append(Path(value).stem)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+        elif isinstance(value, dict):
+            preferred = False
+            for key in ("version", "rom", "name", "fileName", "filename"):
+                if key in value and isinstance(value[key], (str, list)):
+                    walk(value[key])
+                    preferred = True
+            if not preferred:
+                for child in value.values():
+                    if isinstance(child, (list, dict)):
+                        walk(child)
+
+    for key in ("romFiles", "roms", "rom"):
+        if key in game:
+            walk(game[key])
+    return list(dict.fromkeys(item for item in versions if item))
+
+
+def build_vps_indexes(games: list[dict[str, Any]]) -> tuple[dict[str, list[dict[str, Any]]], dict[str, list[dict[str, Any]]]]:
+    rom_index: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    name_index: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for game in games:
+        master_id = clean_text(game.get("id") or game.get("masterId") or game.get("masterID"))
+        if not master_id:
+            continue
+        entry = {
+            "id": master_id,
+            "canonical": canonical_game_name(game),
+            "name": clean_text(game.get("name") or game.get("gameName")),
+            "manufacturer": clean_text(game.get("manufacturer")),
+            "year": clean_text(game.get("year")),
+            "roms": collect_rom_versions(game),
+        }
+        for key in {norm(entry["canonical"]), norm(entry["name"])}:
+            if key:
+                name_index[key].append(entry)
+        for rom in entry["roms"]:
+            key = norm(rom)
+            if key:
+                rom_index[key].append(entry)
+    return rom_index, name_index
+
+
+def qident(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
+
+
+def load_popper_map(path: Path) -> dict[str, list[dict[str, Any]]]:
+    result: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    connection = sqlite3.connect(f"file:{path.as_posix()}?mode=ro&immutable=1", uri=True)
+    try:
+        tables = [row[0] for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+        )]
+        for table_name in tables:
+            columns = [row[1] for row in connection.execute(f"PRAGMA table_info({qident(table_name)})")]
+            lower = {column.casefold(): column for column in columns}
+            if "gamefilename" not in lower:
+                continue
+            wanted = [lower[key] for key in (
+                "gamefilename", "gamedisplay", "gamename", "rom", "mediasearch",
+                "dateadded", "dateupdated",
+            ) if key in lower]
+            query = f"SELECT {','.join(qident(column) for column in wanted)} FROM {qident(table_name)}"
+            for values in connection.execute(query):
+                record = {wanted[index]: values[index] for index in range(len(wanted))}
+                filename = clean_text(record.get(lower["gamefilename"]))
+                if filename:
+                    record["_table"] = table_name
+                    result[norm(Path(filename).stem)].append(record)
+    finally:
+        connection.close()
+    return result
+
+
+def record_field(record: dict[str, Any], requested: str) -> str:
+    for key, value in record.items():
+        if key.casefold() == requested.casefold():
+            return clean_text(value)
+    return ""
+
+
+def build_file_index(root: Path, *, directories: bool = False, suffix: str | None = None) -> dict[str, list[Path]]:
+    index: dict[str, list[Path]] = defaultdict(list)
+    if not root.is_dir():
+        return index
+    for item in root.iterdir():
+        if directories and not item.is_dir():
+            continue
+        if not directories and not item.is_file():
+            continue
+        if suffix and item.suffix.casefold() != suffix.casefold():
+            continue
+        key = norm(item.name if directories else item.stem)
+        if key:
+            index[key].append(item)
+    return index
+
+
+def parse_vbs(text: str) -> dict[str, Any]:
+    assignments: dict[str, str] = {}
+    for match in re.finditer(
+        r'''(?im)^\s*(?:const\s+|dim\s+|set\s+)?([A-Za-z_]\w*)\s*=\s*["']([^"']+)["']''',
+        text,
+    ):
+        assignments[match.group(1).casefold()] = clean_text(match.group(2))
+
+    roms: list[str] = []
+    patterns = (
+        r'''(?im)^\s*(?:const\s+)?cGameName\s*=\s*["']([^"']+)''',
+        r'''(?im)^\s*(?:const\s+)?GameName\s*=\s*["']([^"']+)''',
+        r'''(?im)Controller\.GameName\s*=\s*["']([^"']+)''',
+    )
+    for pattern in patterns:
+        roms.extend(re.findall(pattern, text))
+    for match in re.finditer(r"(?im)Controller\.GameName\s*=\s*([A-Za-z_]\w*)", text):
+        value = assignments.get(match.group(1).casefold())
+        if value:
+            roms.append(value)
+    roms = list(dict.fromkeys(clean_text(item) for item in roms if clean_text(item)))
+
+    pup_aliases: list[str] = []
+    pup_markers = re.compile(r"(?i)puplayer|pup[-_ ]?pack|pupvideos|pupevent|pup_event|pupinit")
+    for line in text.splitlines():
+        if not pup_markers.search(line):
+            continue
+        for value in re.findall(r'''["']([^"']{2,120})["']''', line):
+            value = clean_text(value).strip("/\\")
+            if re.fullmatch(r"[A-Za-z0-9_. ()\-]{2,100}", value):
+                if Path(value).suffix.casefold() not in RESOURCE_EXTENSIONS:
+                    pup_aliases.append(value)
+    pup_aliases = list(dict.fromkeys(pup_aliases))
+
+    resources: list[str] = []
+    for value in re.findall(r'''["']([^"']+)["']''', text):
+        value = clean_text(value).replace("\\", "/")
+        if Path(value).suffix.casefold() in RESOURCE_EXTENSIONS:
+            resources.append(value)
+    resources = list(dict.fromkeys(resources))
+    return {"rom_candidates": roms, "pup_aliases": pup_aliases, "resource_references": resources}
+
+
+def choose_rom(vbs_roms: list[str], popper_rom: str, rom_index: dict[str, list[Path]]) -> tuple[str, str]:
+    if popper_rom and any(norm(item) == norm(popper_rom) for item in vbs_roms):
+        return popper_rom, "ROM_VBS_POPPER_CONFIRMÉE"
+    if len(vbs_roms) == 1:
+        if popper_rom and norm(vbs_roms[0]) != norm(popper_rom):
+            return vbs_roms[0], "CONFLIT_VBS_POPPER"
+        return vbs_roms[0], "ROM_VBS"
+    if len(vbs_roms) > 1:
+        existing = [item for item in vbs_roms if norm(item) in rom_index]
+        if len(existing) == 1:
+            return existing[0], "ROM_VBS_MULTIPLE_RÉSOLUE_PAR_ZIP"
+        if popper_rom and any(norm(item) == norm(popper_rom) for item in vbs_roms):
+            return popper_rom, "ROM_VBS_MULTIPLE_RÉSOLUE_PAR_POPPER"
+        return "", "ROM_VBS_AMBIGUË"
+    if popper_rom:
+        return popper_rom, "ROM_POPPER"
+    return "", "SANS_ROM_DÉTECTÉE"
+
+
+def inspect_pup(path: Path) -> dict[str, Any]:
+    files = [item for item in path.rglob("*") if item.is_file()]
+    screens = [item for item in files if item.name.casefold() == "screens.pup"]
+    playlists = [item for item in files if item.name.casefold() == "playlists.pup"]
+    media = [item for item in files if item.suffix.casefold() in MEDIA_EXTENSIONS]
+    if not files:
+        status = "PUP_VIDE"
+    elif screens or playlists:
+        status = "PUP_VALIDE"
+    elif len(media) >= 3:
+        status = "PUP_PROBABLE"
+    else:
+        status = "PUP_NON_STANDARD"
+    return {
+        "path": str(path),
+        "status": status,
+        "files": len(files),
+        "media": len(media),
+        "screens_pup": len(screens),
+        "playlists_pup": len(playlists),
+    }
+
+
+def choose_pup(candidate_names: Iterable[str], pup_index: dict[str, list[Path]]) -> dict[str, Any]:
+    seen: set[str] = set()
+    matches: list[dict[str, Any]] = []
+    for name in candidate_names:
+        key = norm(name)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        for path in pup_index.get(key, []):
+            info = inspect_pup(path)
+            info["matched_by"] = name
+            matches.append(info)
+    if not matches:
+        return {"status": "SANS_PUP", "path": "", "matches": []}
+    rank = {"PUP_VALIDE": 4, "PUP_PROBABLE": 3, "PUP_NON_STANDARD": 2, "PUP_VIDE": 1}
+    matches.sort(key=lambda item: (rank[item["status"]], item["files"]), reverse=True)
+    best_rank = rank[matches[0]["status"]]
+    best = [item for item in matches if rank[item["status"]] == best_rank]
+    if len({item["path"] for item in best}) > 1:
+        return {"status": "PUP_AMBIGU", "path": "", "matches": matches}
+    selected = dict(matches[0])
+    selected["matches"] = matches
+    return selected
+
+
+def match_vpsdb(
+    rom: str,
+    names: list[str],
+    rom_index: dict[str, list[dict[str, Any]]],
+    name_index: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    scored: dict[str, dict[str, Any]] = {}
+
+    def add(entry: dict[str, Any], points: int, reason: str) -> None:
+        master_id = entry["id"]
+        current = scored.setdefault(master_id, {"entry": entry, "score": 0, "reasons": []})
+        current["score"] += points
+        current["reasons"].append(reason)
+
+    if rom:
+        for entry in rom_index.get(norm(rom), []):
+            add(entry, 1000, "ROM_EXACTE")
+    for index, name in enumerate(names):
+        if not name:
+            continue
+        points = 400 if index == 0 else 200
+        for entry in name_index.get(norm(name), []):
+            add(entry, points, "NOM_EXACT")
+    candidates = sorted(scored.values(), key=lambda item: (item["score"], item["entry"]["id"]), reverse=True)
+    if not candidates:
+        return {"status": "VPSDB_NON_TROUVÉ", "selected": None, "candidates": []}
+    top_score = candidates[0]["score"]
+    top = [item for item in candidates if item["score"] == top_score]
+    if len(top) != 1:
+        return {"status": "VPSDB_AMBIGU", "selected": None, "candidates": candidates[:20]}
+    selected = top[0]
+    strong = "ROM_EXACTE" in selected["reasons"] or (selected["score"] >= 400 and "NOM_EXACT" in selected["reasons"])
+    return {
+        "status": "VPSDB_CONFIRMÉ" if strong else "VPSDB_AMBIGU",
+        "selected": selected if strong else None,
+        "candidates": candidates[:20],
+    }
+
+
+def exact_sidecars(vpx: Path) -> list[str]:
+    allowed = {".directb2s", ".vbs", ".pov", ".ini", ".json", ".res", ".cfg", ".nv"}
+    result = []
+    try:
+        for item in vpx.parent.iterdir():
+            if item.is_file() and item.suffix.casefold() in allowed and norm(item.stem) == norm(vpx.stem):
+                result.append(str(item))
+    except OSError:
+        pass
+    return sorted(result)
+
+
+def extract_vbs(
+    vpx_bin: Path,
+    source: Path,
+    work_dir: Path,
+    failure_log: Path,
+) -> tuple[Path | None, int, str]:
+    account = pwd.getpwnam(RUNTIME_USER)
+    uid = account.pw_uid
+    gid = account.pw_gid
+    home = account.pw_dir
+
+    # Le répertoire parent temporaire est root:root, mais traversable.
+    # Chaque espace de travail est privé et appartient à l'utilisateur VPX.
+    os.chown(work_dir, uid, gid)
+    os.chmod(work_dir, 0o700)
+
+    local_vpx = work_dir / source.name
+    shutil.copy2(source, local_vpx)
+    os.chown(local_vpx, uid, gid)
+    os.chmod(local_vpx, 0o600)
+
+    command = [
+        "runuser", "-u", RUNTIME_USER, "--", "env",
+        f"HOME={home}", "DISPLAY=:0", f"XAUTHORITY={home}/.Xauthority",
+        f"XDG_RUNTIME_DIR=/run/user/{uid}", "SDL_VIDEODRIVER=x11",
+        str(vpx_bin), "-ExtractVBS", str(local_vpx),
+    ]
+    completed = subprocess.run(
+        command,
+        cwd=work_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+        timeout=300,
+        check=False,
+    )
+    output = completed.stdout or ""
+    vbs_files = sorted(work_dir.glob("*.vbs"))
+    if completed.returncode != 0 or not vbs_files:
+        failure_log.write_text(output, encoding="utf-8")
+        return None, completed.returncode, output
+    return vbs_files[0], completed.returncode, output
+
+
+def compact_record(record: dict[str, Any]) -> dict[str, Any]:
+    vps_selected = (record.get("vpsdb") or {}).get("selected") or {}
+    vps_entry = vps_selected.get("entry") or {}
+    pup = record.get("pup") or {}
+    return {
+        "index": record.get("index"),
+        "decision": record.get("decision"),
+        "source_vpx": record.get("source_vpx"),
+        "vpx_sha256": record.get("vpx_sha256"),
+        "vbs_status": record.get("vbs_status"),
+        "vbs_saved": record.get("vbs_saved"),
+        "popper_display": record.get("popper_display"),
+        "rom_vbs": " | ".join(record.get("rom_vbs_candidates") or []),
+        "rom_popper": record.get("rom_popper"),
+        "rom_selected": record.get("rom_selected"),
+        "rom_status": record.get("rom_status"),
+        "rom_zip": record.get("rom_zip"),
+        "altcolor": record.get("altcolor"),
+        "altsound": record.get("altsound"),
+        "pup_status": pup.get("status"),
+        "pup_path": pup.get("path"),
+        "vpsdb_status": (record.get("vpsdb") or {}).get("status"),
+        "vps_master_id": vps_entry.get("id"),
+        "vps_canonical": vps_entry.get("canonical"),
+        "sidecars": " | ".join(record.get("sidecars") or []),
+        "resource_reference_count": len(record.get("resource_references") or []),
+        "proposed_package_name": record.get("proposed_package_name"),
+        "collision_count": record.get("collision_count", 1),
+        "error": record.get("error", ""),
+    }
+
+
+def main() -> int:
+    if os.geteuid() != 0:
+        print("ERREUR: exécuter avec sudo/root.", file=sys.stderr)
+        return 1
+
+    REPORT_ROOT.mkdir(parents=True, exist_ok=True)
+    RUN_DIR.mkdir(parents=True, exist_ok=False)
+    STATE_ITEMS.mkdir(parents=True, exist_ok=True)
+    STATE_VBS.mkdir(parents=True, exist_ok=True)
+
+    required = (TABLES, PINUP, POPPER_DB, ROMS, ALTCOLOR, ALTSOUND, PUPVIDEOS)
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        log("ERREUR: chemins requis absents:")
+        for path in missing:
+            log(f" - {path}")
+        return 2
+
+    vpx_bin = find_vpx_binary()
+    games, vpsdb_sha = ensure_vpsdb_snapshot()
+    popper_sha = sha256_file(POPPER_DB)
+    vps_rom_index, vps_name_index = build_vps_indexes(games)
+    popper_map = load_popper_map(POPPER_DB)
+    local_rom_index = build_file_index(ROMS, suffix=".zip")
+    altcolor_index = build_file_index(ALTCOLOR, directories=True)
+    altsound_index = build_file_index(ALTSOUND, directories=True)
+    pup_index = build_file_index(PUPVIDEOS, directories=True)
+
+    tables = sorted(
+        (item for item in TABLES.rglob("*") if item.is_file() and item.suffix.casefold() == ".vpx"),
+        key=lambda item: str(item).casefold(),
+    )
+    if ONLY_TABLE:
+        tables = [item for item in tables if item.name.casefold() == ONLY_TABLE.casefold()]
+    if not tables:
+        if ONLY_TABLE:
+            log(f"ERREUR: table pilote introuvable: {ONLY_TABLE}")
+        else:
+            log("ERREUR: aucune table VPX trouvée.")
+        return 3
+
+    log("===============================================================")
+    log(" PINCABOS — CARTOGRAPHIE GLOBALE VBS / ROM / PUP / VPSDB")
+    log("===============================================================")
+    log(f"Rapport                 : {RUN_DIR}")
+    log(f"État reprenable         : {STATE_ROOT}")
+    log(f"Tables détectées        : {len(tables)}")
+    if ONLY_TABLE:
+        log(f"Filtre table pilote     : {ONLY_TABLE}")
+    log(f"Binaire VPX             : {vpx_bin}")
+    log(f"Utilisateur VPX         : {RUNTIME_USER}")
+    log(f"Base Popper             : {POPPER_DB}")
+    log(f"SHA-256 Popper          : {popper_sha}")
+    log(f"SHA-256 VPSDB           : {vpsdb_sha}")
+    log("Création .PinCabOs      : NON")
+    log("Écriture sur le NAS     : NON")
+    log("")
+
+    temp_root = Path(tempfile.mkdtemp(prefix="pincabos-vpsdb-map-", dir="/var/tmp"))
+    # tempfile crée 0700 pour root. VPX tourne comme pinball et doit pouvoir
+    # traverser ce parent pour atteindre son sous-dossier privé.
+    os.chmod(temp_root, 0o711)
+    results: list[dict[str, Any]] = []
+    reused = 0
+
+    try:
+        for index, source in enumerate(tables, 1):
+            relative = str(source.relative_to(TABLES))
+            state_key = hashlib.sha256(relative.encode("utf-8")).hexdigest()[:24]
+            state_path = STATE_ITEMS / f"{state_key}.json"
+            stat = source.stat()
+            fingerprint = hashlib.sha256(
+                f"{SCRIPT_VERSION}|{relative}|{stat.st_size}|{stat.st_mtime_ns}|{popper_sha}|{vpsdb_sha}".encode("utf-8")
+            ).hexdigest()
+
+            if state_path.is_file():
+                try:
+                    previous = json.loads(state_path.read_text(encoding="utf-8"))
+                    reusable = (
+                        previous.get("fingerprint") == fingerprint
+                        and previous.get("vbs_status") == "VBS_EXTRAIT"
+                        and previous.get("decision") not in {"BLOQUÉ_VBS", "ERREUR"}
+                    )
+                    if reusable:
+                        previous["index"] = index
+                        results.append(previous)
+                        reused += 1
+                        log(f"[{index:04}/{len(tables):04}] REPRISE  {relative} -> {previous.get('decision')}")
+                        continue
+                except Exception:
+                    pass
+
+            work_dir = temp_root / state_key
+            work_dir.mkdir(parents=True, exist_ok=False)
+            failure_log = RUN_DIR / f"extract-failure-{state_key}.log"
+            record: dict[str, Any] = {
+                "fingerprint": fingerprint,
+                "index": index,
+                "source_vpx": str(source),
+                "source_relative": relative,
+                "source_size": stat.st_size,
+                "source_mtime_ns": stat.st_mtime_ns,
+                "popper_database": str(POPPER_DB),
+                "error": "",
+            }
+
+            try:
+                extracted_vbs, return_code, extract_output = extract_vbs(
+                    vpx_bin, source, work_dir, failure_log
+                )
+                record["extract_return_code"] = return_code
+                record["vpx_sha256"] = sha256_file(work_dir / source.name)
+                if extracted_vbs is None:
+                    useful_lines = [line.strip() for line in extract_output.splitlines() if line.strip()]
+                    record.update({
+                        "vbs_status": "VBS_EXTRACTION_ÉCHEC",
+                        "decision": "BLOQUÉ_VBS",
+                        "proposed_package_name": "",
+                        "error": useful_lines[-1] if useful_lines else f"VPX code retour {return_code}",
+                    })
+                else:
+                    text = decode_script(extracted_vbs)
+                    parsed = parse_vbs(text)
+                    saved_vbs = STATE_VBS / f"{state_key}.vbs"
+                    shutil.copy2(extracted_vbs, saved_vbs)
+                    record["vbs_status"] = "VBS_EXTRAIT"
+                    record["vbs_saved"] = str(saved_vbs)
+                    record["vbs_sha256"] = sha256_file(saved_vbs)
+                    record.update(parsed)
+
+                    popper_rows = popper_map.get(norm(source.stem), [])
+                    popper = popper_rows[0] if popper_rows else {}
+                    popper_display = record_field(popper, "gamedisplay") or record_field(popper, "gamename")
+                    popper_rom = record_field(popper, "rom")
+                    selected_rom, rom_status = choose_rom(parsed["rom_candidates"], popper_rom, local_rom_index)
+                    record["popper_rows"] = popper_rows
+                    record["popper_display"] = popper_display
+                    record["rom_popper"] = popper_rom
+                    record["rom_vbs_candidates"] = parsed["rom_candidates"]
+                    record["rom_selected"] = selected_rom
+                    record["rom_status"] = rom_status
+                    record["rom_zip"] = str((local_rom_index.get(norm(selected_rom)) or [""])[0]) if selected_rom else ""
+                    record["altcolor"] = str((altcolor_index.get(norm(selected_rom)) or [""])[0]) if selected_rom else ""
+                    record["altsound"] = str((altsound_index.get(norm(selected_rom)) or [""])[0]) if selected_rom else ""
+                    record["sidecars"] = exact_sidecars(source)
+
+                    pup_candidates = [selected_rom, popper_rom] + parsed["pup_aliases"]
+                    pup = choose_pup(pup_candidates, pup_index)
+                    record["pup"] = pup
+
+                    vps = match_vpsdb(
+                        selected_rom,
+                        [popper_display, source.stem],
+                        vps_rom_index,
+                        vps_name_index,
+                    )
+                    record["vpsdb"] = vps
+
+                    proposed = ""
+                    if vps["status"] == "VPSDB_CONFIRMÉ" and vps["selected"]:
+                        entry = vps["selected"]["entry"]
+                        prefix = "PUP-" if pup.get("status") == "PUP_VALIDE" else ""
+                        proposed = f"{entry['canonical']} - {prefix}VPSId {entry['id']}.PinCabOs"
+                    record["proposed_package_name"] = proposed
+
+                    if vps["status"] != "VPSDB_CONFIRMÉ":
+                        decision = "BLOQUÉ_VPSDB"
+                    elif rom_status in {"CONFLIT_VBS_POPPER", "ROM_VBS_AMBIGUË"}:
+                        decision = "À_VÉRIFIER_ROM"
+                    elif pup.get("status") in {"PUP_AMBIGU", "PUP_PROBABLE", "PUP_NON_STANDARD"}:
+                        decision = "À_VÉRIFIER_PUP"
+                    else:
+                        decision = "PRÊT_CARTOGRAPHIE"
+                    record["decision"] = decision
+
+            except subprocess.TimeoutExpired:
+                record.update({
+                    "vbs_status": "VBS_EXTRACTION_TIMEOUT",
+                    "decision": "BLOQUÉ_VBS",
+                    "proposed_package_name": "",
+                    "error": "Extraction VBS dépassée (300 secondes)",
+                })
+            except Exception as error:
+                record.update({
+                    "decision": "ERREUR",
+                    "proposed_package_name": "",
+                    "error": f"{type(error).__name__}: {error}",
+                })
+            finally:
+                shutil.rmtree(work_dir, ignore_errors=True)
+
+            json_dump(state_path, record)
+            results.append(record)
+            log(
+                f"[{index:04}/{len(tables):04}] {record.get('decision','ERREUR'):18} "
+                f"{relative} -> {record.get('proposed_package_name') or '-'}"
+            )
+
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+    collisions: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for record in results:
+        proposed = record.get("proposed_package_name") or ""
+        if proposed:
+            collisions[proposed.casefold()].append(record)
+    for group in collisions.values():
+        count = len(group)
+        for record in group:
+            record["collision_count"] = count
+            if count > 1 and record.get("decision") == "PRÊT_CARTOGRAPHIE":
+                record["decision"] = "À_VÉRIFIER_DOUBLON_NOM"
+
+    json_dump(RUN_DIR / "mapping-complet.json", results)
+    columns = list(compact_record(results[0]).keys())
+    compact = [compact_record(record) for record in results]
+    for filename, rows in (
+        ("mapping-global.tsv", compact),
+        ("pret-cartographie.tsv", [row for row in compact if row["decision"] == "PRÊT_CARTOGRAPHIE"]),
+        ("a-verifier.tsv", [row for row in compact if row["decision"] != "PRÊT_CARTOGRAPHIE"]),
+    ):
+        with (RUN_DIR / filename).open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=columns, delimiter="\t", extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+
+    counts = Counter(record.get("decision", "INCONNU") for record in results)
+    pup_counts = Counter((record.get("pup") or {}).get("status", "INCONNU") for record in results)
+    vps_counts = Counter((record.get("vpsdb") or {}).get("status", "INCONNU") for record in results)
+    summary = {
+        "script_version": SCRIPT_VERSION,
+        "run_dir": str(RUN_DIR),
+        "state_dir": str(STATE_ROOT),
+        "tables_total": len(results),
+        "state_reused": reused,
+        "decisions": dict(counts),
+        "pup_status": dict(pup_counts),
+        "vpsdb_status": dict(vps_counts),
+        "packages_proposed": sum(bool(item.get("proposed_package_name")) for item in results),
+        "package_name_collisions": sum(1 for group in collisions.values() if len(group) > 1),
+        "nas_write": False,
+        "archives_created": 0,
+    }
+    json_dump(RUN_DIR / "resume.json", summary)
+    lines = [
+        "===============================================================",
+        " RÉSUMÉ CARTOGRAPHIE GLOBALE",
+        "===============================================================",
+        f"Tables traitées           : {summary['tables_total']}",
+        f"Tables reprises           : {summary['state_reused']}",
+        f"Noms de package proposés  : {summary['packages_proposed']}",
+        f"Collisions de noms        : {summary['package_name_collisions']}",
+        "",
+        "Décisions:",
+    ]
+    lines.extend(f"  {key}: {value}" for key, value in sorted(counts.items()))
+    lines.extend(["", "États PuP:"])
+    lines.extend(f"  {key}: {value}" for key, value in sorted(pup_counts.items()))
+    lines.extend(["", "États VPSDB:"])
+    lines.extend(f"  {key}: {value}" for key, value in sorted(vps_counts.items()))
+    lines.extend([
+        "",
+        "Archives .PinCabOs créées : 0",
+        "Écriture sur le NAS       : NON",
+        "",
+        f"Rapport complet : {RUN_DIR / 'mapping-global.tsv'}",
+        f"À vérifier      : {RUN_DIR / 'a-verifier.tsv'}",
+        f"Résumé          : {RUN_DIR / 'resume.txt'}",
+    ])
+    summary_text = "\n".join(lines) + "\n"
+    (RUN_DIR / "resume.txt").write_text(summary_text, encoding="utf-8")
+    log("")
+    for line in lines:
+        log(line)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        print("\nARRÊT DEMANDÉ — l'état local permet une reprise.", file=sys.stderr)
+        raise SystemExit(130)

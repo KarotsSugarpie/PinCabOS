@@ -1,0 +1,1 @@
+/opt/pincabos/tools/pincabos-freeze-dev-for-iso.sh

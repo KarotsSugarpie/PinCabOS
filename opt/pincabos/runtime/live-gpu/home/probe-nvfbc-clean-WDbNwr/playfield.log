@@ -1,0 +1,6 @@
+gsr warning: your FFmpeg version is known to be buggy (it doesn't have working hybrid_fragmented movflags). If you experience stutter in the mp4 file then update your FFmpeg to at least version 8 or record to a mkv file
+gsr info: live streaming but no audio track was added. Adding a silent audio track
+[h264_nvenc @ 0x621ecabf42c0] ignoring invalid SAR: 0/0
+update fps: 3, damage fps: 3
+
+Session terminated, killing shell... ...killed.

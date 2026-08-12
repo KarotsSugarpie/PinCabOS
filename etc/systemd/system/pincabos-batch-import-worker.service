@@ -1,0 +1,24 @@
+[Unit]
+Description=PinCabOS Batch Import persistent sequential worker
+After=network-online.target pincabos-webapp.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=pinball
+WorkingDirectory=/opt/pincabos/web
+Environment=PYTHONUNBUFFERED=1
+Environment=PINCABOS_BATCH_IMPORT_LIVE_DIR=/var/lib/pincabos/batch-live-import
+ExecStart=/opt/pincabos/web/.venv/bin/python -u /opt/pincabos/web/pincabos_batch_import_worker_v2.py
+Restart=always
+RestartSec=2
+TimeoutStopSec=45
+KillSignal=SIGTERM
+UMask=0007
+Nice=5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+
+[Install]
+WantedBy=multi-user.target

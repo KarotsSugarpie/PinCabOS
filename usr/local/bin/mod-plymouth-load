@@ -1,0 +1,1 @@
+/opt/pincabos/modules/system/mod-plymouth-load.sh

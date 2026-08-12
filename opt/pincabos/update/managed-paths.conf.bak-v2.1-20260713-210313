@@ -1,0 +1,23 @@
+# PinCabOS — chemins distribués
+# Une entrée absolue par ligne. Les jokers shell (* ? []) sont acceptés.
+# Les données utilisateur, tables, réglages matériels et environnements virtuels
+# sont volontairement exclus par build-update.sh.
+
+/opt/pincabos/web
+/opt/pincabos/bin
+/opt/pincabos/script
+/opt/pincabos/update
+
+/etc/systemd/system/pincabos-*.service
+/etc/systemd/system/pincabos-*.timer
+/etc/systemd/system/pincabos-*.path
+/etc/systemd/system/pincabos-*.socket
+/etc/systemd/system/pincabos-*.target
+/etc/systemd/system/pincabos-*.service.d
+
+/etc/udev/rules.d/*pincabos*.rules
+/etc/sudoers.d/*pincabos*
+/etc/polkit-1/rules.d/*pincabos*.rules
+
+/usr/local/bin/getpcos
+/usr/local/sbin/getpcos

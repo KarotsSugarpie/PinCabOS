@@ -1,0 +1,4 @@
+# PINCABOS_DUDESCAB_HOTPLUG_RECOVERY_V1
+#
+# Déclenche la récupération uniquement pour le DudesCab 2e8a:106f.
+ACTION=="add|bind", SUBSYSTEM=="usb", ATTR{idVendor}=="2e8a", ATTR{idProduct}=="106f", TAG+="systemd", ENV{SYSTEMD_WANTS}+="pincabos-dudescab-hotplug-recovery.service"

@@ -1,0 +1,2 @@
+/opt/pincabos/runtime-patches
+import importlib.util; __import__("pincabos_webapp_bootstrap") if importlib.util.find_spec("flask") is not None else None

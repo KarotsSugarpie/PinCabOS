@@ -1,0 +1,1 @@
+/opt/pincabos/tools/wifi-join.sh

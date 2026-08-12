@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+CACHE_DIR="/var/cache/pincabos/table-analysis"
+
+find "$CACHE_DIR"     -maxdepth 1     -type f     \(         -name '*.json'         -o -name '*.body'         -o -name '*.tmp'     \)     -delete
+
+echo "GO [√] Cache d'analyse des tables vidé."

@@ -1,0 +1,2 @@
+# PinCabOS — DudesCab réservé au runtime pinball / DOF
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="106f", OWNER="pinball", GROUP="dialout", MODE="0660", SYMLINK+="dudescab"

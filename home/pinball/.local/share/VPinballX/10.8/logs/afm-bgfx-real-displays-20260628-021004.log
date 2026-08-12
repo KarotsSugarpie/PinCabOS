@@ -1,0 +1,226 @@
+2026-06-28 02:10:07.288 INFO  [235295] [VPApp::InitInstance@329] Starting VPX - v10.8.1 Beta (Rev. 5231 (7ca174632), linux BGFX 64bits)
+2026-06-28 02:10:07.288 INFO  [235295] [VPApp::InitInstance@330] Settings file was loaded from /home/pinball/.local/share/VPinballX/10.8/VPinballX.ini
+2026-06-28 02:10:07.288 INFO  [235295] [VPApp::InitInstance@331] Number of logical CPU cores: 40
+2026-06-28 02:10:07.288 INFO  [235295] [VPApp::InitInstance@332] Application path: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/
+2026-06-28 02:10:07.288 INFO  [235295] [VPApp::InitInstance@333] Preference path: /home/pinball/.local/share/VPinballX/10.8
+2026-06-28 02:10:07.291 INFO  [235295] [PinTable::LoadGameFromFilename@1419] LoadGameFromFilename /home/pinball/Tables/Attack from Mars (Bally 1995)/Attack from Mars (Midway 1995).vpx
+2026-06-28 02:10:07.304 INFO  [235295] [PinTable::LoadGameFromFilename@1545] PinTable Data loaded
+2026-06-28 02:10:07.362 INFO  [235295] [PinTable::LoadGameFromFilename@1810] Images, Sounds and Items loaded
+2026-06-28 02:10:07.372 INFO  [235295] [PinTable::LoadGameFromFilename@2146] InitTablePostLoad
+2026-06-28 02:10:07.372 INFO  [235295] [PinTable::LoadScriptOverride@2218] Loading script: /home/pinball/Tables/Attack from Mars (Bally 1995)/Attack from Mars (Midway 1995).vbs
+2026-06-28 02:10:07.373 INFO  [235295] [MsgPI::MsgPlugin::Load@522] Plugin vpx loaded (statically linked plugin) [id=1]
+2026-06-28 02:10:07.373 INFO  [235295] [SDLInputHandler::SDLInputHandler@17] SDL input handler registered
+2026-06-28 02:10:07.807 INFO  [235295] [SDLInputHandler::OnJoystickAdded@287] Joystick connected: L'atelier d'Arnoz DudesCab #1 (SDL ID: 4, Axes: 6, Buttons: 32, Hats: 1, VPX UID: SDLJoy_0300a1eb8a2e00006f10000011010000_1)
+2026-06-28 02:10:07.807 INFO  [235295] [OpenPinDevHandler::OpenPinDevHandler@242] OpenPinDev input handler registered
+2026-06-28 02:10:07.825 INFO  [235295] [VPX::AudioPlayer::AudioPlayer@226] Table sound device was not found (), using default: CMI8738/CMI8768 PCI Audio (CMI8738/C3DX PCI Audio Device) Analog Stereo
+2026-06-28 02:10:07.825 INFO  [235295] [VPX::AudioPlayer::AudioPlayer@230] Backglass sound device was not found (), using default: CMI8738/CMI8768 PCI Audio (CMI8738/C3DX PCI Audio Device) Analog Stereo
+2026-06-28 02:10:07.855 INFO  [235295] [ma_device_init__sdl@154] Audio device initialized. Device: 'CMI8738/CMI8768 PCI Audio (CMI8738/C3DX PCI Audio Device) Analog Stereo', Freq : 48000, Format: SDL_AUDIO_S16LE, Channels: 2, Driver: pipewire
+2026-06-28 02:10:07.855 INFO  [235295] [ma_device_init__sdl@154] Audio device initialized. Device: 'CMI8738/CMI8768 PCI Audio (CMI8738/C3DX PCI Audio Device) Analog Stereo', Freq : 48000, Format: SDL_AUDIO_S16LE, Channels: 2, Driver: pipewire
+2026-06-28 02:10:07.879 INFO  [235295] [Player::Player@112] SDL video driver: x11
+2026-06-28 02:10:07.879 INFO  [235295] [Player::Player@120] Loading player plugins
+2026-06-28 02:10:07.880 INFO  [235295] [Player::Player@166] Plugin vpx was found but is disabled ()
+2026-06-28 02:10:07.880 INFO  [235295] [Player::Player@166] Plugin DMDUtil was found but is disabled (/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/dmdutil/plugin-dmdutil.so)
+2026-06-28 02:10:07.880 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin Serum loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/serum/plugin-serum.so) [id=3]
+2026-06-28 02:10:07.880 INFO  [235295] [Player::Player@166] Plugin UpscaleDMD was found but is disabled (/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/upscaledmd/plugin-upscaledmd.so)
+2026-06-28 02:10:07.883 INFO  [235295] [DOF:DOFPlugin::OnDevSrcChanged@249] OnDevSrcChanged - No source
+2026-06-28 02:10:07.883 INFO  [235295] [DOF:DOFPlugin::OnInputSrcChanged@309] OnInputSrcChanged - Found 0 PinMAME inputs
+2026-06-28 02:10:07.900 INFO  [235295] [DOF:DOFPlugin::OnDOFLog@89] Pinscape device scan found 0 devices
+2026-06-28 02:10:07.910 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin DOF loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/dof/plugin-dof.so) [id=5]
+2026-06-28 02:10:07.914 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin PinMAME loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/pinmame/plugin-pinmame.so) [id=6]
+2026-06-28 02:10:07.914 INFO  [235295] [Player::Player@166] Plugin HelloWorld was found but is disabled (/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/helloworld/plugin-helloworld.so)
+2026-06-28 02:10:07.915 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin B2SLegacy loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/b2slegacy/plugin-b2slegacy.so) [id=8]
+2026-06-28 02:10:07.916 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin ScoreView loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/scoreview/plugin-scoreview.so) [id=9]
+2026-06-28 02:10:07.916 INFO  [235295] [Player::Player@166] Plugin RemoteControl was found but is disabled (/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/remote-control/plugin-remote-control.so)
+2026-06-28 02:10:07.919 INFO  [235295] [PUP:PUPPluginLoad@292] No global PUP folder configured; per-table 'pupvideos' used when present
+2026-06-28 02:10:07.919 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin PUP loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/pup/plugin-pup.so) [id=11]
+2026-06-28 02:10:07.919 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin VNI loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/vni/plugin-vni.so) [id=12]
+2026-06-28 02:10:07.920 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin FlexDMD loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/flexdmd/plugin-flexdmd.so) [id=13]
+2026-06-28 02:10:07.920 INFO  [235295] [Player::Player@166] Plugin AlphaDMD was found but is disabled (/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/alphadmd/plugin-alphadmd.so)
+2026-06-28 02:10:07.920 INFO  [235295] [Player::Player@166] Plugin B2S was found but is disabled (/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/b2s/plugin-b2s.so)
+2026-06-28 02:10:07.920 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin WMP loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/wmp/plugin-wmp.so) [id=16]
+2026-06-28 02:10:07.921 INFO  [235295] [MsgPI::MsgPlugin::Load@518] Plugin AltSound loaded (library: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/altsound/plugin-altsound.so) [id=17]
+2026-06-28 02:10:07.921 INFO  [235295] [Player::Player@166] Plugin HelloScript was found but is disabled (/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/helloscript/plugin-helloscript.so)
+2026-06-28 02:10:07.921 INFO  [235295] [Player::Player@172] Compiling script
+2026-06-28 02:10:07.921 INFO  [235295] [ProgressDialog::SetProgress@35] Creating Player... 1%
+2026-06-28 02:10:07.921 INFO  [235295] [Player::Player@283] Creating main window
+2026-06-28 02:10:07.921 WARN  [235295] [VPX::Window::Window@90] The selected display "N43" is not available. Using display "N43 32"" instead.
+2026-06-28 02:10:07.933 INFO  [235295] [VPX::Window::Window@276] Window #0 (3840x2160) was created on display N43 32" [3840x2160 60Hz SDL_PIXELFORMAT_XRGB8888]
+2026-06-28 02:10:07.933 INFO  [235295] [Player::Player@337] Synchronization mode: 0 with maximum FPS: 10000, display FPS: 60
+2026-06-28 02:10:07.933 INFO  [235295] [Player::Player@348] Initializing player
+2026-06-28 02:10:07.933 INFO  [235295] [ProgressDialog::SetProgress@35] Initializing Visuals... 10%
+2026-06-28 02:10:07.934 INFO  [235295] [Player::Player@362] Initializing renderer (global states & resources)
+2026-06-28 02:10:07.934 INFO  [235295] [RenderDevice::RenderDevice@1269] Requested graphics backend: Vulkan (valid values: Default, Direct3D11, OpenGL, Vulkan)
+2026-06-28 02:10:08.268 ERROR [235386] [RenderDevice::SelectBackBufferFormat@290] Driver did not report any supported backbuffer format for Visual Pinball Player. Defaulting to BGRA8
+2026-06-28 02:10:08.689 INFO  [235386] [RenderDevice::RenderThread@466] BGFX initialized using Vulkan backend (3840x2160 BGRA8)
+2026-06-28 02:10:08.714 INFO  [235295] [Renderer::Renderer@213] Computing environment map radiance
+2026-06-28 02:10:09.234 INFO  [235295] [Renderer::Renderer@242] Environment map radiance computed
+2026-06-28 02:10:09.234 WARN  [235295] [VPX::Window::Window@90] The selected display "HP 27vc" is not available. Using display "N43 32"" instead.
+2026-06-28 02:10:09.245 INFO  [235295] [VPX::Window::Window@276] Window #1 (3840x2160) was created on display N43 32" [3840x2160 60Hz SDL_PIXELFORMAT_XRGB8888]
+2026-06-28 02:10:09.245 WARN  [235295] [VPX::Window::Window@90] The selected display "F-415" is not available. Using display "N43 32"" instead.
+2026-06-28 02:10:09.257 INFO  [235295] [VPX::Window::Window@276] Window #2 (3840x2160) was created on display N43 32" [3840x2160 60Hz SDL_PIXELFORMAT_XRGB8888]
+2026-06-28 02:10:09.257 INFO  [235295] [Player::Player@398] Initializing inputs & implicit objects
+2026-06-28 02:10:09.257 INFO  [235295] [Player::Player@487] Initializing physics
+2026-06-28 02:10:09.257 INFO  [235295] [ProgressDialog::SetProgress@35] Initializing Physics... 30%
+2026-06-28 02:10:09.270 INFO  [235295] [PhysicsEngine::PhysicsEngine@54] Initializing octree
+2026-06-28 02:10:09.298 INFO  [235295] [ProgressDialog::SetProgress@35] Loading Textures... 50%
+2026-06-28 02:10:09.304 ERROR [235453] [Texture::GetRawBitmap@1135] Corrupted file: image 'ramp' height (5) does not match the height (8) of the image datablock.
+2026-06-28 02:10:09.632 INFO  [235295] [Player::Player@684] Initializing renderer
+2026-06-28 02:10:09.632 INFO  [235295] [ProgressDialog::SetProgress@35] Initializing Renderer... 60%
+2026-06-28 02:10:09.673 INFO  [235295] [Player::Player@709] Starting script
+2026-06-28 02:10:09.676 INFO  [235295] [ScriptGlobalTable::GetTextFile@359] Reading script: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/scripts/controller.vbs
+2026-06-28 02:10:09.676 INFO  [235295] [VPXPluginAPIImpl::ApplyScriptCOMObjectOverrides@377] COM script object b2s.server overriden to be provided by a plugin
+2026-06-28 02:10:09.676 INFO  [235295] [VPXPluginAPIImpl::ApplyScriptCOMObjectOverrides@377] COM script object vpinmame.controller overriden to be provided by a plugin
+2026-06-28 02:10:09.676 INFO  [235295] [VPXPluginAPIImpl::ApplyScriptCOMObjectOverrides@377] COM script object vpinmame.controller overriden to be provided by a plugin
+2026-06-28 02:10:09.676 INFO  [235295] [VPXPluginAPIImpl::ApplyScriptCOMObjectOverrides@377] COM script object b2s.server overriden to be provided by a plugin
+2026-06-28 02:10:09.676 INFO  [235295] [VPXPluginAPIImpl::ApplyScriptCOMObjectOverrides@377] COM script object b2s.server overriden to be provided by a plugin
+2026-06-28 02:10:09.677 INFO  [235295] [find_case_insensitive_file_path@630] case insensitive file match: requested "/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/scripts/WPC.VBS", actual "/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/scripts/WPC.vbs"
+2026-06-28 02:10:09.677 INFO  [235295] [ScriptGlobalTable::GetTextFile@359] Reading script: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/scripts/core.vbs
+2026-06-28 02:10:09.684 INFO  [235295] [ScriptGlobalTable::GetTextFile@359] Reading script: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/scripts/VPMKeys.vbs
+2026-06-28 02:10:09.685 INFO  [235295] [PinMAME:PinMAME::OnLogMessage@230] PinmameSetConfig(): sampleRate=44100, vpmPath=/home/pinball/Tables/Attack from Mars (Bally 1995)/pinmame/
+2026-06-28 02:10:09.686 INFO  [235295] [PinMAME:PinMAME::Controller::SetGameName@103] Game found: name=afm_113b, description=Attack From Mars (1.13b / S1.1), manufacturer=Bally, year=1999
+2026-06-28 02:10:09.686 INFO  [235295] [B2SLegacy:B2SLegacy::PinMAMEAPI::HandleCall@97] Setting GameName to 'afm_113b' in B2S settings
+2026-06-28 02:10:09.686 ERROR [235295] [PinMAME:PinMAME::Controller::SetShowTitle@140] ShowTitle is deprecated
+2026-06-28 02:10:09.686 ERROR [235295] [PinMAME:PinMAME::Controller::SetShowDMDOnly@138] ShowDMDOnly is deprecated
+2026-06-28 02:10:09.686 ERROR [235295] [PinMAME:PinMAME::Controller::SetShowFrame@136] ShowFrame is deprecated
+2026-06-28 02:10:09.687 INFO  [235486] [PinMAME:PinMAME::OnLogMessage@230] osd_display_loading_rom_message(): loading afm_113b.bin...
+2026-06-28 02:10:09.694 INFO  [235486] [PinMAME:PinMAME::OnLogMessage@230] osd_display_loading_rom_message(): loading afm_s2.l1   ...
+2026-06-28 02:10:09.703 INFO  [235486] [PinMAME:PinMAME::OnLogMessage@230] osd_display_loading_rom_message(): loading afm_s3.l1   ...
+2026-06-28 02:10:09.711 INFO  [235486] [PinMAME:PinMAME::OnLogMessage@230] osd_display_loading_rom_message(): loading afm_s4.l1   ...
+2026-06-28 02:10:09.719 INFO  [235486] [PinMAME:PinMAME::OnLogMessage@230] osd_display_loading_rom_message():
+2026-06-28 02:10:09.719 INFO  [235486] [PinMAME:PinMAME::OnLogMessage@230] osd_create_display: 60.00 fps
+2026-06-28 02:10:09.734 INFO  [235486] [PinMAME:PinMAME::OnAudioAvailable@280] format=INT16, channels=1, sampleRate=44100.00, framesPerSecond=60.00, samplesPerFrame=735, bufferSize=16384
+2026-06-28 02:10:09.761 INFO  [235295] [B2SLegacy:B2SLegacy::Server::Startup@1717] B2S table filename set to '/home/pinball/Tables/Attack from Mars (Bally 1995)/Attack from Mars (Midway 1995).vpx'
+2026-06-28 02:10:09.761 INFO  [235295] [B2SLegacy:B2SLegacy::FormBackglass::LoadB2SData@336] directb2s file found at: /home/pinball/Tables/Attack from Mars (Bally 1995)/Attack from Mars (Midway 1995).directb2s
+2026-06-28 02:10:11.394 INFO  [235295] [Renderer::RenderStaticPrepass@1702] Performing prerendering of static parts.
+2026-06-28 02:10:11.394 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 70%
+2026-06-28 02:10:11.876 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 71%
+2026-06-28 02:10:11.888 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 72%
+2026-06-28 02:10:11.899 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 73%
+2026-06-28 02:10:11.914 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 74%
+2026-06-28 02:10:11.926 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 75%
+2026-06-28 02:10:11.937 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 76%
+2026-06-28 02:10:11.948 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 77%
+2026-06-28 02:10:11.963 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 78%
+2026-06-28 02:10:11.974 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 79%
+2026-06-28 02:10:11.986 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 80%
+2026-06-28 02:10:11.997 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 81%
+2026-06-28 02:10:12.011 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 82%
+2026-06-28 02:10:12.023 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 83%
+2026-06-28 02:10:12.034 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 84%
+2026-06-28 02:10:12.046 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 85%
+2026-06-28 02:10:12.060 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 86%
+2026-06-28 02:10:12.071 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 87%
+2026-06-28 02:10:12.083 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 88%
+2026-06-28 02:10:12.097 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 89%
+2026-06-28 02:10:12.109 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 90%
+2026-06-28 02:10:12.120 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 91%
+2026-06-28 02:10:12.131 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 92%
+2026-06-28 02:10:12.146 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 93%
+2026-06-28 02:10:12.157 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 94%
+2026-06-28 02:10:12.169 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 95%
+2026-06-28 02:10:12.180 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 96%
+2026-06-28 02:10:12.194 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 97%
+2026-06-28 02:10:12.206 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 98%
+2026-06-28 02:10:12.217 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 99%
+2026-06-28 02:10:12.229 INFO  [235295] [ProgressDialog::SetProgress@35] Prerendering Static Parts... 100%
+2026-06-28 02:10:12.233 INFO  [235295] [Renderer::RenderStaticPrepass@1889] Starting Reflection Probe prerendering
+2026-06-28 02:10:12.233 INFO  [235295] [Renderer::RenderStaticPrepass@1898] Static PreRender done
+2026-06-28 02:10:12.259 INFO  [235295] [DOF:DOFPlugin::OnDevSrcChanged@279] OnDevSrcChanged - Found 145 PinMAME devices and 0 B2S devices
+2026-06-28 02:10:12.259 INFO  [235295] [B2SLegacy:B2SLegacy::Server::OnDevSrcChanged@166] Device state updated - 145 devices
+2026-06-28 02:10:12.259 INFO  [235295] [DOF:DOFPlugin::OnInputSrcChanged@309] OnInputSrcChanged - Found 104 PinMAME inputs
+2026-06-28 02:10:12.259 INFO  [235295] [Serum:Serum::OnControllerGameStart@367] Loading from /home/pinball/Tables/Attack from Mars (Bally 1995)/pinmame/altcolor for afm_113b
+2026-06-28 02:10:12.274 INFO  [235295] [DOF:DOFPlugin::OnControllerGameStart@210] OnControllerGameStart: gameId=afm_113b
+2026-06-28 02:10:12.274 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Global config filename is "/home/pinball/.local/share/VPinballX/10.8/directoutputconfig/GlobalConfig_B2SServer.xml"
+2026-06-28 02:10:12.274 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] No global config file loaded
+2026-06-28 02:10:12.274 INFO  [235295] [VNI:Vni::OnControllerGameStart@264] No PAL file found for afm_113b
+2026-06-28 02:10:12.275 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Install folder lookup: executable: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX, install folder: /home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64 (EXECUTABLE folder -> original flat install configuration)
+2026-06-28 02:10:12.275 INFO  [235295] [AltSound:AltSound::OnControllerGameStart@215] Found altsound directory for game: afm_113b at /home/pinball/Tables/Attack from Mars (Bally 1995)/pinmame/altsound/afm_113b
+2026-06-28 02:10:12.275 INFO  [235295] [AltSound:AltSound::StartAltSound@131] Initializing AltSound for game: afm_113b, basePath: /home/pinball/Tables/Attack from Mars (Bally 1995)/pinmame
+2026-06-28 02:10:12.275 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Could not find or load the global config file /home/pinball/.local/share/VPinballX/10.8/directoutputconfig/GlobalConfig_B2SServer.xml
+2026-06-28 02:10:12.275 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Loading Pinball parts
+2026-06-28 02:10:12.275 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Loading cabinet
+2026-06-28 02:10:12.275 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] No cabinet config file loaded. Will use AutoConfig.
+2026-06-28 02:10:12.282 INFO  [235295] [AltSound:AltSound::StartAltSound@148] AltSound initialized successfully for game: afm_113b
+2026-06-28 02:10:12.285 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Pinscape device scan found 0 devices
+2026-06-28 02:10:12.294 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Cabinet auto configuration started
+2026-06-28 02:10:12.294 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Pinscape auto-configuration starting
+2026-06-28 02:10:12.304 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Pinscape device scan found 0 devices
+2026-06-28 02:10:12.304 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] PinscapePico auto-configuration starting
+2026-06-28 02:10:12.323 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] DudesCab auto-configuration starting
+2026-06-28 02:10:12.386 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Ultimate VPinball says : Beertime, DudesCab is Connected
+2026-06-28 02:10:12.390 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] DudesCab Controller Informations : Device [DudesCab,RID:3] Name [Ultimate VPinball], v2.0.4, unit #1, Max extensions 8
+2026-06-28 02:10:12.394 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89]     Pwm Informations : Max outputs per extensions 16, Extension Mask 0x0
+2026-06-28 02:10:12.394 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89]     Output configuration received, highest configured output is #0
+2026-06-28 02:10:12.394 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Detected and added DudesCab Controller DudesCab Controller 01 with 0 outputs
+2026-06-28 02:10:12.394 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Added LedwizEquivalent Nr. 90 with name DudesCab Controller 01 Equivalent 1 for DudesCab Controller with Unit 1
+2026-06-28 02:10:12.394 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] PacLed64 auto-configuration starting
+2026-06-28 02:10:12.399 INFO  [235295] [Player::Player@791] Startup done
+2026-06-28 02:10:12.413 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] PacDrive auto-configuration starting
+2026-06-28 02:10:12.413 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] PacUIO auto-configuration starting
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling7", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling8", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling9", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling10", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling11", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling12", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling13", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling14", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling15", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling16", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling17", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling18", but sound was not found.
+2026-06-28 02:10:12.417 WARN  [235295] [PinTable::StopSound@4174] Request to stop "fx_ballrolling19", but sound was not found.
+2026-06-28 02:10:12.422 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] FTDI auto-configuration starting
+2026-06-28 02:10:12.429 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] FTDI device scan found 0 devices
+2026-06-28 02:10:12.893 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Cabinet auto configuration finished
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Cabinet loaded
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Loading table config
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Will try to load configs from DirectOutput.ini or LedControl.ini file(s) for RomName afm_113b
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] No directoutputconfig.ini or ledcontrol.ini files found.
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] No config for table found in LedControl data for RomName afm_113b.
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Table config loading finished: romname=afm_113b, tablename=Attack from Mars (Midway 1995)
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Pinball parts loaded
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Starting processes
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Initializing cabinet
+2026-06-28 02:10:12.894 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Initializing output controllers
+2026-06-28 02:10:12.895 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] DudesCab DudesCab Controller 01 initialized and updater thread started.
+2026-06-28 02:10:12.895 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Output controllers initialized
+2026-06-28 02:10:12.895 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Initializing 1 toys
+2026-06-28 02:10:12.895 INFO  [235498] [DOF:DOFPlugin::OnDOFLog@89] Updater thread started for DudesCab DudesCab Controller 01
+2026-06-28 02:10:12.895 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Initializing LedWizEquivalent: DudesCab Controller 01 Equivalent 1 (LedWiz 90)
+2026-06-28 02:10:12.895 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] LedWizEquivalent 90: Resolved 0 of 0 outputs
+2026-06-28 02:10:12.895 INFO  [235498] [DOF:DOFPlugin::OnDOFLog@89] Updater thread connected to DudesCab DudesCab Controller 01
+2026-06-28 02:10:12.895 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] LedWizEquivalent 90 initialized with 0 outputs
+2026-06-28 02:10:12.895 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Cabinet initialized
+2026-06-28 02:10:12.895 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Framework initialized.
+2026-06-28 02:10:12.895 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Have fun! :)
+2026-06-28 02:10:13.471 INFO  [235295] [B2SLegacy:B2SLegacy::Server::TimerElapsed@336] B2S polling status: lamps=false, solenoids=false, giStrings=false, leds=false
+2026-06-28 02:15:03.281 INFO  [235295] [Player::~Player@832] Closing player...
+2026-06-28 02:15:03.301 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin vpx unloaded [id=1]
+2026-06-28 02:15:03.302 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin Serum unloaded [id=3]
+2026-06-28 02:15:03.311 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Finishing framework
+2026-06-28 02:15:03.311 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Finishing cabinet
+2026-06-28 02:15:03.311 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Finishing 1 toys
+2026-06-28 02:15:03.311 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Finishing LedWizEquivalent: DudesCab Controller 01 Equivalent 1 (LedWiz 90)
+2026-06-28 02:15:03.311 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Finishing output controllers
+2026-06-28 02:15:03.312 INFO  [235498] [DOF:DOFPlugin::OnDOFLog@89] Updater thread disconnected and will terminate
+2026-06-28 02:15:03.322 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] DudesCab DudesCab Controller 01 finished and updater thread stopped.
+2026-06-28 02:15:03.322 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Output controllers finished
+2026-06-28 02:15:03.322 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Cabinet finished
+2026-06-28 02:15:03.322 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] DirectOutput framework finished.
+2026-06-28 02:15:03.322 INFO  [235491] [DOF:DOFPlugin::OnDOFLog@89] Bye and thanks for using!
+2026-06-28 02:15:03.322 INFO  [235295] [DOF:DOFPlugin::OnDOFLog@89] DudesCab DudesCab Controller 01 finished and updater thread stopped.
+2026-06-28 02:15:03.323 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin DOF unloaded [id=5]
+2026-06-28 02:15:03.326 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin PinMAME unloaded [id=6]
+2026-06-28 02:15:03.326 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin B2SLegacy unloaded [id=8]
+2026-06-28 02:15:03.327 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin ScoreView unloaded [id=9]
+2026-06-28 02:15:03.327 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin PUP unloaded [id=11]
+2026-06-28 02:15:03.327 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin VNI unloaded [id=12]
+2026-06-28 02:15:03.327 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin FlexDMD unloaded [id=13]
+2026-06-28 02:15:03.327 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin WMP unloaded [id=16]
+2026-06-28 02:15:03.327 INFO  [235295] [MsgPI::MsgPlugin::Unload@548] Plugin AltSound unloaded [id=17]
+2026-06-28 02:15:03.327 INFO  [235295] [FileLocator::GetTablePath@298] Cache folder was created for table '/home/pinball/Tables/Attack from Mars (Bally 1995)/Attack from Mars (Midway 1995).vpx': /home/pinball/Tables/Attack from Mars (Bally 1995)/cache/Attack from Mars (Midway 1995)
+2026-06-28 02:15:03.588 INFO  [235295] [Player::~Player@1075] Player closed.
+2026-06-28 02:15:03.635 INFO  [235295] [WinMain@232] Closing VPX...
+
+

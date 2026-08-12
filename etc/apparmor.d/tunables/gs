@@ -1,0 +1,14 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    Author: Giampaolo Fresi Roglia (gianz)
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+
+@{gs_file_ext}=[pP][dD][fF] [pP][sS] [eE][pP][sS] [eE][pP][sS][iI] [pP][nN][gG] [jJ][pP][gG] [jJ][pP][eE][gG] [pP][nN][mM] [tT][iI][fF] [tT][iI][fF][fF] [bB][mM][pP] [pP][cC][xX] [pP][sS][dD] [tT][xX][tT] [pP][xX][lL] [dD][oO][cC][xX] [xX][pP][sS] [xX][mM][lL] [iI][cC][cC] [rR][dD][fF]
+
+include if exists <tunables/gs.d>

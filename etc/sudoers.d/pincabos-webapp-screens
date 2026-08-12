@@ -1,0 +1,6 @@
+# PinCabOs-File created by Karots Sugarpie
+# PinCabOS WebApp - local screen launcher only
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/launch-webapp-screen.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/launch-webapp-screen.sh *
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/close-webapp-screen.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/close-webapp-screen.sh *

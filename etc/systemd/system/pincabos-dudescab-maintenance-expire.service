@@ -1,0 +1,8 @@
+# PINCABOS_DUDESCAB_MAINTENANCE_SERVICE_V323_PERSISTENT
+[Unit]
+Description=PinCabOS DudesCabConfig persistent maintenance compatibility check
+After=pincabos-webapp.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-dudescab-maintenance expire --timeout 0

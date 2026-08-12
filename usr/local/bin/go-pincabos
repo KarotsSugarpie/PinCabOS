@@ -1,0 +1,1 @@
+/opt/pincabos/install/go-pincabos.sh

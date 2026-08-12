@@ -1,0 +1,186 @@
+{
+  "completed_tables": 8,
+  "conflict_mode": "skip",
+  "created_at": "2026-07-14T01:28:03Z",
+  "current_item": "",
+  "error": "",
+  "events": [
+    {
+      "at": "2026-07-14T01:28:03Z",
+      "level": "info",
+      "message": "Job créé : 10 archive(s) sélectionnée(s)."
+    },
+    {
+      "at": "2026-07-14T01:28:03Z",
+      "level": "info",
+      "message": "Les archives seront traitées une à la fois par le moteur Batch Import V1."
+    },
+    {
+      "at": "2026-07-14T01:28:03Z",
+      "level": "info",
+      "message": "Import V1 démarré en arrière-plan : 10 archive(s)."
+    },
+    {
+      "at": "2026-07-14T01:28:03Z",
+      "level": "info",
+      "message": "Mode de conflit conservé : skip."
+    },
+    {
+      "at": "2026-07-14T01:28:04Z",
+      "level": "info",
+      "message": "Archive 1/10 en cours : 1-2-3 (Automaticos 1973) - VPSId HhMnyw53.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:04Z",
+      "level": "info",
+      "message": "Archive 2/10 en cours : 2 in 1 (Bally 1964) - VPSId NuaJjZ2y.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:05Z",
+      "level": "info",
+      "message": "Archive 3/10 en cours : 4 Queens (Bally 1970) - VPSId eHXaMJjh.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:05Z",
+      "level": "info",
+      "message": "Archive 4/10 en cours : 4 Square (Gottlieb 1971) - VPSId HBj7RE1v.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:06Z",
+      "level": "info",
+      "message": "Archive 5/10 en cours : 8 Ball (Williams 1966) - VPSId 4Ty-Lm_X.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:07Z",
+      "level": "info",
+      "message": "Archive 6/10 en cours : 24 (Stern 2009) - VPSId P15WeTaO.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:08Z",
+      "level": "info",
+      "message": "Archive 7/10 en cours : 250 cc (Inder 1992) - VPSId bafGvcae.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:09Z",
+      "level": "info",
+      "message": "Archive 8/10 en cours : 300_ (Gottlieb 1975) - VPSId H2bL8wJ-.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:11Z",
+      "level": "info",
+      "message": "Archive 9/10 en cours : 301 Bullseye (Grand Products 1986) - VPSId jJ-U4acSur.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:12Z",
+      "level": "info",
+      "message": "Archive 10/10 en cours : 2001 (Gottlieb 1971) - VPSId sMBqx5fp.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:28:13Z",
+      "level": "info",
+      "message": "Table importée : Audio (9/10)."
+    },
+    {
+      "at": "2026-07-14T01:28:13Z",
+      "level": "info",
+      "message": "Table importée : Loading (9/10)."
+    },
+    {
+      "at": "2026-07-14T01:28:13Z",
+      "level": "info",
+      "message": "Table importée : BackGlass (9/10)."
+    },
+    {
+      "at": "2026-07-14T01:28:13Z",
+      "level": "info",
+      "message": "Table importée : Wheel (9/10)."
+    },
+    {
+      "at": "2026-07-14T01:28:13Z",
+      "level": "info",
+      "message": "Table importée : AudioLaunch (9/10)."
+    },
+    {
+      "at": "2026-07-14T01:28:13Z",
+      "level": "info",
+      "message": "Table importée : PlayField (9/10)."
+    },
+    {
+      "at": "2026-07-14T01:28:13Z",
+      "level": "info",
+      "message": "Table importée : medias (9/10)."
+    },
+    {
+      "at": "2026-07-14T01:28:13Z",
+      "level": "info",
+      "message": "Table importée : 2001 (Gottlieb 1971) (9/10)."
+    },
+    {
+      "at": "2026-07-14T01:28:13Z",
+      "level": "info",
+      "message": "Import terminé : 10/10 archive(s) traitée(s)."
+    }
+  ],
+  "finished_at": "2026-07-14T01:28:13Z",
+  "id": "a8118f4db7a24c7ca3f5ee4c44236a10",
+  "imported_tables": 8,
+  "processed_archives": 10,
+  "progress": {
+    "completed": 10,
+    "current_item": "",
+    "imported_tables": 8,
+    "label": "Terminé",
+    "mode": "archives",
+    "percent": 100,
+    "total": 10
+  },
+  "result_excerpt": "PinCabOS - Batch Import terminé Langue : Français English Español Italiano Deutsch Nederlands 📊 Tableau de bord 🎛️ Inputs 🧰 Outils PinCabOS ℹ️ À propos 📌 X Accès rapides Ouvrir VPinFE Ouvrir VPS PinCab Explorer PinCab Console Afficher PinCabOS WebApp sur : PlayField BackGlass Batch Import terminé Mode de conflit: skip Journal : /opt/pincabos/logs/batch-import-20260713-212804.log Élément Résultat Détail 1-2-3 (Automaticos 1973) Ignoré Table déjà installée. 2 in 1 (Bally 1964) Ignoré Table déjà installée. 4 Queens (Bally 1970) Ignoré Table déjà installée. 4 Square (Gottlieb 1971) Ignoré Table déjà installée. 8 Ball (Williams 1966) Ignoré Table déjà installée. 24 (Stern 2009) Ignoré Table déjà installée. 250 cc (Inder 1992) Ignoré Table déjà installée. &#x27;300&#x27; (Gottlieb 1975) Ignoré Table déjà installée. 301 Bullseye (Grand Products 1986) Ignoré Table déjà installée. 2001 (Gottlieb 1971) Succès Importé dans /home/pinball/Tables/2001 (Gottlieb 1971) Retour Outils Soutenir PinCabOS QR Code PayPal PinCabOS Notes de version Nom : PinCabOS Version : Alpha 2.0 Build : dev Canal : ins.pincabos.cc Codename : Stark Auteur : Karots Sugarpie Site : pincabos.cc Si vous aimez PinCabOS, vous pouvez me le montrer en offrant ce que vous voulez. Merci pour votre soutien. Optimisé par ★ ★ Testeurs ★ / ★★ Soutiens Fondateurs ★★ ★ Merci aux personnes qui aident à tester PinCabOs, rapporter les problèmes, proposer des idées et soutenir le développement du projet. ★★ Karots Sugarpie ★★ ★ Strung Flo ★ ★ Nicolas Prou ★ ★ Olivier Chéron ★ 🚀 Bienvenue dans PinCabOS Avant d’utiliser PinCabOS, Jarvis recommande de compléter l’assistant Premier Démarrage. Checklist : accès WebApp réseau, GPU/pilotes, puis détection et assignation des écrans. 🚀 Démarrer l’assistant Plus tard Ne plus afficher automatiquement",
+  "started_archives": 10,
+  "started_at": "2026-07-14T01:28:03Z",
+  "state": "completed",
+  "total_archives": 10,
+  "updated_at": "2026-07-14T01:28:13Z",
+  "upload_dir": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10",
+  "uploads": [
+    {
+      "name": "1-2-3 (Automaticos 1973) - VPSId HhMnyw53.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0001--1-2-3 (Automaticos 1973) - VPSId HhMnyw53.PinCabOs"
+    },
+    {
+      "name": "2 in 1 (Bally 1964) - VPSId NuaJjZ2y.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0002--2 in 1 (Bally 1964) - VPSId NuaJjZ2y.PinCabOs"
+    },
+    {
+      "name": "4 Queens (Bally 1970) - VPSId eHXaMJjh.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0003--4 Queens (Bally 1970) - VPSId eHXaMJjh.PinCabOs"
+    },
+    {
+      "name": "4 Square (Gottlieb 1971) - VPSId HBj7RE1v.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0004--4 Square (Gottlieb 1971) - VPSId HBj7RE1v.PinCabOs"
+    },
+    {
+      "name": "8 Ball (Williams 1966) - VPSId 4Ty-Lm_X.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0005--8 Ball (Williams 1966) - VPSId 4Ty-Lm_X.PinCabOs"
+    },
+    {
+      "name": "24 (Stern 2009) - VPSId P15WeTaO.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0006--24 (Stern 2009) - VPSId P15WeTaO.PinCabOs"
+    },
+    {
+      "name": "250 cc (Inder 1992) - VPSId bafGvcae.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0007--250 cc (Inder 1992) - VPSId bafGvcae.PinCabOs"
+    },
+    {
+      "name": "300_ (Gottlieb 1975) - VPSId H2bL8wJ-.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0008--300_ (Gottlieb 1975) - VPSId H2bL8wJ-.PinCabOs"
+    },
+    {
+      "name": "301 Bullseye (Grand Products 1986) - VPSId jJ-U4acSur.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0009--301 Bullseye (Grand Products 1986) - VPSId jJ-U4acSur.PinCabOs"
+    },
+    {
+      "name": "2001 (Gottlieb 1971) - VPSId sMBqx5fp.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a8118f4db7a24c7ca3f5ee4c44236a10/0010--2001 (Gottlieb 1971) - VPSId sMBqx5fp.PinCabOs"
+    }
+  ]
+}

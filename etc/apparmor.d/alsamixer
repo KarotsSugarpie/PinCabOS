@@ -1,0 +1,49 @@
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile alsamixer /{usr,}/bin/alsamixer {
+    include <abstractions/base>
+    include <abstractions/consoles>
+    include <abstractions/nameservice-strict>
+    include <abstractions/terminfo>
+
+    include <abstractions/dbus-session-strict>
+
+    @{exec_path} mr,
+
+    @{sys}/devices/virtual/dmi/id/sys_vendor r,
+
+    @{PROC}/@{pid}/task/@{tid}/comm rw,
+
+    # pipewire configs
+    /usr/share/pipewire/*.conf r,
+    # pulseaudio configs
+    @{etc_ro}/pulse/*.conf r,
+    @{etc_ro}/pulse/*.conf.d/ r,
+    @{etc_ro}/pulse/*.conf.d/*.conf r,
+    # alsa configs
+    /usr/share/alsa/*.conf r,
+    /usr/share/alsa/**/*.conf r,
+    @{etc_ro}/alsa/conf.d/ r,
+    @{etc_ro}/alsa/conf.d/*.conf r,
+    # alsa info files
+    @{PROC}/asound/** r,
+
+    # openSUSE-Leap 15.6 version needs to ls /dev/shm for some reason
+    /dev/shm/ r,
+    # /dev/snd devices
+    /dev/snd/controlC[0-9]* rw,
+    # Folders contain symlinks to device files in /dev/snd
+    /dev/snd/by-id/ r,
+    /dev/snd/by-path/ r,
+
+    # PulseAudio communication channels
+    owner @{HOME}/.config/pulse/cookie rk,
+    owner /run/user/@{uid}/pulse/ r,
+
+    # Pipewire communication channels
+    owner /run/user/@{uid}/pipewire-[0-9] rw,
+
+    include if exists <local/alsamixer>
+}

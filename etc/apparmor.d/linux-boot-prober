@@ -1,0 +1,48 @@
+#------------------------------------------------------------------
+# Copyright (C) 2025 Canonical Ltd.
+#
+# Author: Maxime Bélair <maxime.belair@canonical.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of version 2 of the GNU General Public
+# License published by the Free Software Foundation.
+#------------------------------------------------------------------
+#vim ft=apparmor
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+profile linux-boot-prober /usr/bin/linux-boot-prober flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/private-files-strict>
+
+  capability dac_read_search sys_admin,
+
+  mount options=(rprivate, rw) -> /,
+  mount options=(rw, nosuid, nodev) -> /var/lib/os-prober/mount/,
+  umount,
+
+  # linux-boot-prober uses a lot of dependencies: we allow everything
+  # in /usr/bin to avoid breakages on dependency updates
+  file /usr/bin/* ix,
+  file @{coreutil_dirs}* ix,
+
+  file /usr/lib/linux-boot-probes/** ix,
+
+  file /usr/sbin/grub-probe ix,
+  file /usr/sbin/blkid ix,
+
+  file /dev/fuse w,
+  file /dev/mapper/control w,
+  file /mounted-map w,
+  file /tmp/os-prober.*/{,*} w,
+  file /var/lib/os-prober/mount/ w,
+
+  # linux-boot-prober may read the whole filesystem
+  file /{,**} r,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/linux-boot-prober>
+
+}

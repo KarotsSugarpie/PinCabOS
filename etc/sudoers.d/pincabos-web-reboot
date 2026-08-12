@@ -1,0 +1,1 @@
+pinball ALL=(root) NOPASSWD: /opt/pincabos/bin/pincabos-web-reboot.sh

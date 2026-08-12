@@ -1,0 +1,8 @@
+# PinCabOs-File created by Karots Sugarpie
+# PinCabOS WebApp update runner
+# Autorise seulement le runner update PinCabOS en mode webapp ou system.
+Cmnd_Alias PINCABOS_UPDATE_RUNNER = \
+    /opt/pincabos/bin/pincabos-update-engine-runner.sh webapp, \
+    /opt/pincabos/bin/pincabos-update-engine-runner.sh system
+
+pinball ALL=(root) NOPASSWD: PINCABOS_UPDATE_RUNNER

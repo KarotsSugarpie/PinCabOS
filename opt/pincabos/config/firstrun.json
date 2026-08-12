@@ -1,0 +1,6 @@
+{
+  "show_popup": false,
+  "network": true,
+  "gpu": true,
+  "screens": true
+}

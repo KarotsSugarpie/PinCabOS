@@ -1,0 +1,7 @@
+#!/bin/sh
+# A micro-version of setupcon with static configuration.
+kbd_mode '-u' 
+loadkeys '/etc/console-setup/cached_UTF-8_del.kmap' > '/dev/null' 
+mkdir /run/console-setup
+>/run/console-setup/keymap_loaded
+exit 0

@@ -1,0 +1,91 @@
+/* PinCabOS menu tools FORCE INI offset v5 */
+:root {
+  --pco-menu-pinned-offset: 0px;
+}
+
+.pco-menu-tools {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-left: 10px !important;
+  vertical-align: middle !important;
+  position: relative !important;
+  z-index: 2147483000 !important;
+}
+
+.pco-menu-tool-btn {
+  width: 35px !important;
+  height: 35px !important;
+  min-width: 35px !important;
+  min-height: 35px !important;
+  max-width: 35px !important;
+  max-height: 35px !important;
+  padding: 0 !important;
+  border: 2px solid rgba(255,255,255,.35) !important;
+  border-radius: 9px !important;
+  font-size: 18px !important;
+  line-height: 31px !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  text-decoration: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  position: relative !important;
+  z-index: 2147483001 !important;
+  pointer-events: auto !important;
+}
+
+.pco-menu-pin-btn {
+  background: rgba(255,138,0,.24) !important;
+  color: #ffffff !important;
+}
+
+.pco-menu-pin-btn:hover {
+  background: rgba(255,138,0,.55) !important;
+}
+
+.pco-menu-pin-btn.pco-pinned {
+  background: #ff8a00 !important;
+  color: #000000 !important;
+  border-color: #ffd000 !important;
+}
+
+.pco-menu-close-btn {
+  background: #d90000 !important;
+  color: #ffffff !important;
+  border-color: #ff6b6b !important;
+  font-weight: 900 !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+.pco-menu-close-btn:hover {
+  background: #ff1f1f !important;
+}
+
+.pco-menu-force-fixed {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+  max-width: none !important;
+  z-index: 2147482999 !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,.70) !important;
+  border-bottom: 3px solid #ff8a00 !important;
+}
+
+/* JS applies this class to the INI Navigation/Safe editor block */
+.pco-ini-offset-forced {
+  z-index: 2147482500 !important;
+  box-sizing: border-box !important;
+}
+
+body.pco-menu-is-pinned .pco-ini-offset-forced {
+  top: calc(var(--pco-menu-pinned-offset) + 12px) !important;
+}

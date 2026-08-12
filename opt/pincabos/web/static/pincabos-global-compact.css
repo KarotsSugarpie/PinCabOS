@@ -1,0 +1,302 @@
+/* PinCabOS-File created by Karots Sugarpie */
+/* PinCabOS Global Compact UI */
+
+/* Base globale */
+body {
+  font-size: 13px !important;
+}
+
+/* Cartes / fenêtres */
+.card {
+  font-size: 13px !important;
+  padding: 10px 12px !important;
+  margin-top: 10px !important;
+  margin-bottom: 10px !important;
+  border-radius: 12px !important;
+}
+
+/* Titres */
+h1 {
+  font-size: 22px !important;
+  margin: 0 0 8px 0 !important;
+}
+
+h2 {
+  font-size: 16px !important;
+  margin: 0 0 7px 0 !important;
+}
+
+h3 {
+  font-size: 14px !important;
+  margin: 7px 0 5px 0 !important;
+}
+
+/* Texte */
+p {
+  margin: 3px 0 !important;
+  line-height: 1.22 !important;
+}
+
+/* Listes */
+ul,
+ol {
+  margin-top: 5px !important;
+  margin-bottom: 5px !important;
+  padding-left: 20px !important;
+}
+
+li {
+  margin: 2px 0 !important;
+}
+
+/* Tableaux */
+table {
+  font-size: 12px !important;
+  border-collapse: collapse !important;
+  width: 100%;
+}
+
+th,
+td {
+  padding: 4px 6px !important;
+  line-height: 1.2 !important;
+}
+
+/* Blocs techniques */
+pre {
+  max-height: 160px !important;
+  overflow: auto !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  padding: 7px !important;
+  margin: 5px 0 !important;
+  border-radius: 8px !important;
+}
+
+code {
+  font-size: 11px !important;
+}
+
+/* Boutons */
+.button,
+button,
+input[type="submit"] {
+  padding: 5px 8px !important;
+  font-size: 12px !important;
+  border-radius: 8px !important;
+}
+
+/* Formulaires */
+input,
+select,
+textarea {
+  font-size: 13px !important;
+  padding: 6px 8px !important;
+  border-radius: 8px !important;
+}
+
+label {
+  font-size: 13px !important;
+}
+
+/* Grilles */
+.grid,
+.cards,
+.dashboard-grid,
+.dashboard-grid-compact {
+  gap: 8px !important;
+}
+
+/* Tuiles / métriques */
+.metric,
+.stat,
+.tile {
+  padding: 7px !important;
+  min-height: auto !important;
+}
+
+/* Cartes longues : scroll raisonnable */
+.card pre,
+.card textarea {
+  max-height: 180px !important;
+  overflow: auto !important;
+}
+
+/* Tables larges */
+.card table {
+  overflow-x: auto;
+}
+
+/* Sections de logs */
+.progress-log,
+.task-log,
+.update-log,
+.log,
+pre.log {
+  max-height: 150px !important;
+  overflow: auto !important;
+}
+
+/* PinCab Explorer garde son style mais plus compact */
+.pcx-page {
+  font-size: 12px !important;
+}
+
+.pcx-top,
+.pcx-side,
+.pcx-main {
+  padding: 12px !important;
+  border-radius: 14px !important;
+}
+
+.pcx-btn {
+  padding: 6px 9px !important;
+  font-size: 12px !important;
+}
+
+.pcx-table th,
+.pcx-table td {
+  padding: 5px 7px !important;
+}
+
+.pcx-card {
+  padding: 9px !important;
+  min-height: 90px !important;
+}
+
+.pcx-card-icon {
+  font-size: 28px !important;
+}
+
+/* Page réseau / outils / about plus dense */
+.warn,
+.ok,
+.bad {
+  font-size: 12px !important;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .card {
+    padding: 9px 10px !important;
+  }
+
+  h1 {
+    font-size: 20px !important;
+  }
+
+  h2 {
+    font-size: 15px !important;
+  }
+
+  h3 {
+    font-size: 13px !important;
+  }
+}
+
+/* PinCabOS - copies boutons Tools dans topbar
+   Garder l'apparence/dimension bouton Tools et éviter le style mauve nav-action.
+*/
+html body .nav-row.nav-tools-clean .nav-vpinfe-vps-group > a.button.pco-topbar-tool-copy,
+html body .pincabos-shell .nav-row.nav-tools-clean .nav-vpinfe-vps-group > a.button.pco-topbar-tool-copy {
+  display: inline-block !important;
+  flex: 0 0 auto !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+
+  padding: 8px 12px !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  text-decoration: none !important;
+
+  background: linear-gradient(135deg, #ff8a00, #ffb000) !important;
+  border: 1px solid rgba(255,176,0,.85) !important;
+  color: #1b1024 !important;
+  box-shadow: 0 0 10px rgba(255,122,0,.25) !important;
+}
+
+html body .nav-row.nav-tools-clean .nav-vpinfe-vps-group > a.button.pco-topbar-tool-copy:hover,
+html body .pincabos-shell .nav-row.nav-tools-clean .nav-vpinfe-vps-group > a.button.pco-topbar-tool-copy:hover {
+  filter: brightness(1.08) !important;
+}
+
+/* /PinCabOS - copies boutons Tools dans topbar */
+
+/* PINCABOS_TOOLS_PARITY_V2 BEGIN */
+/*
+  Les pages standard utilisent maintenant le meme fond et le meme
+  espace central que la page Tools.
+*/
+
+:root {
+  --pco-content-rail-width: 100%;
+  --pco-tools-content-rail: 100%;
+}
+
+html body {
+  background: linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.72)),
+        url('/static/pincabos-logo.png') center center / min(70vw, 760px) auto no-repeat fixed,
+        #000000 !important;
+}
+
+html body .card {
+  background: var(--pco-appearance-card-bg, rgba(29, 11, 46, 0.76)) !important;
+}
+
+@media (min-width: 851px) {
+  html body main,
+  html body .content,
+  html body .container,
+  html body .page-content,
+  html body .grid,
+  html body .cards,
+  html body .dashboard-grid,
+  html body .dashboard-grid-compact,
+  html body .tools-shell,
+  html body .tools-wrap {
+    width: 100% !important;
+    max-width: var(--pco-tools-content-rail) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  html body > .card,
+  html body > form,
+  html body > form > .card {
+    width: 100% !important;
+    max-width: var(--pco-tools-content-rail) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+}
+
+@media (max-width: 850px) {
+  html body main,
+  html body .content,
+  html body .container,
+  html body .page-content,
+  html body .grid,
+  html body .cards,
+  html body .dashboard-grid,
+  html body .dashboard-grid-compact,
+  html body .tools-shell,
+  html body .tools-wrap,
+  html body > .card,
+  html body > form,
+  html body > form > .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+/* PINCABOS_TOOLS_PARITY_V2 END */

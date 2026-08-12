@@ -1,0 +1,11 @@
+[Unit]
+Description=PinCabOS USB Secure Lock for DudesCab / LED-Wiz toys
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/pincabos/pincabos-usb-secure-lock.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

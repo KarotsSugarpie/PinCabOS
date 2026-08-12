@@ -1,0 +1,47 @@
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile plasmashell /usr/bin/plasmashell {
+  include <abstractions/dbus-session>
+
+  capability,
+  userns,
+  network,
+  dbus,
+  mount,
+  umount,
+  remount,
+  signal,
+  mqueue,
+  unix,
+  ptrace,
+
+  # allow executing QtWebEngineProcess with full permissions including userns (using profile stacking to avoid no_new_privs issues)
+  priority=1 /usr/lib{,64,exec}/{,@{multiarch}/}qt{,5,6}/{,libexec/}QtWebEngineProcess cx -> &plasmashell//QtWebEngineProcess,
+
+  # allow to execute all other programs under their own profile, or to run unconfined
+  /** pux,
+
+  /{,**} mrwlk,
+  @{exec_path} mr,
+
+  profile QtWebEngineProcess {
+    capability,
+    userns,
+    network,
+    dbus,
+    mount,
+    umount,
+    remount,
+    signal,
+    mqueue,
+    unix,
+    ptrace,
+    /** pux,
+    /{,**} mrwlk,
+  }
+
+  # Site-specific additions and overrides.  See local/README for details.
+  include if exists <local/plasmashell>
+}

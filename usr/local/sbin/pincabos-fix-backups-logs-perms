@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+for d in /opt/pincabos/backups /opt/pincabos/logs; do
+  install -d -o pinball -g pinball -m 2775 "$d"
+  chown pinball:pinball "$d"
+  chmod u-s,g+s,o-t "$d"
+  chmod 2775 "$d"
+done
+
+chown -R pinball:pinball /opt/pincabos/backups /opt/pincabos/logs
+
+find /opt/pincabos/backups /opt/pincabos/logs -type d -exec chmod u-s,o-t {} \;
+find /opt/pincabos/backups /opt/pincabos/logs -type d -exec chmod g+rwxs {} \;
+find /opt/pincabos/backups /opt/pincabos/logs -type d -exec chmod o+rx {} \;
+
+find /opt/pincabos/backups /opt/pincabos/logs -type f -exec chmod u-s,g-s,o-t {} \;
+find /opt/pincabos/backups /opt/pincabos/logs -type f -exec chmod ug+rw,o+r {} \;
+
+if command -v setfacl >/dev/null 2>&1; then
+  find /opt/pincabos/backups /opt/pincabos/logs -type d -exec setfacl -m u:pinball:rwx,g:pinball:rwx,m:rwx {} \;
+  find /opt/pincabos/backups /opt/pincabos/logs -type d -exec setfacl -d -m u:pinball:rwx,g:pinball:rwx,m:rwx {} \;
+fi

@@ -1,0 +1,27 @@
+{
+  "roles": {
+    "playfield": {
+      "path": "/opt/pincabos/media/wallpapers/playfield.png",
+      "original_name": "PCOSPFWall.png",
+      "last_status": "GO: wallpaper appliqué avec feh\n+ /usr/bin/feh --bg-fill /opt/pincabos/media/wallpapers/playfield.png\n",
+      "selected_at": "2026-06-17T18:23:21",
+      "applied_at": "2026-08-02T10:15:46"
+    },
+    "backglass": {
+      "path": "/opt/pincabos/media/wallpapers/backglass.png",
+      "original_name": "PCOSBGWall.png",
+      "last_status": "Configuration des wallpapers :\n  Écran 0 HDMI-0 <- playfield <- /opt/pincabos/media/wallpapers/playfield.png\n  Écran 1 DP-2 <- fulldmd <- /opt/pincabos/media/wallpapers/fulldmd.png\n  Écran 2 DP-1 <- backglass <- /opt/pincabos/media/wallpapers/backglass.png\nGO: wallpapers appliqués séparément sur les écrans PinCabOS.\nCommande : /usr/bin/feh --bg-fill /opt/pincabos/media/wallpapers/playfield.png /opt/pincabos/media/wallpapers/fulldmd.png /opt/pincabos/media/wallpapers/backglass.png",
+      "selected_at": "2026-06-17T18:23:49",
+      "applied_at": "2026-08-02T17:08:41"
+    },
+    "fulldmd": {
+      "path": "/opt/pincabos/media/wallpapers/fulldmd.png",
+      "original_name": "PCOSDMDWall.png",
+      "last_status": "Configuration des wallpapers :\n  Écran 0 HDMI-0 <- playfield <- /opt/pincabos/media/wallpapers/playfield.png\n  Écran 1 DP-2 <- fulldmd <- /opt/pincabos/media/wallpapers/fulldmd.png\n  Écran 2 DP-1 <- backglass <- /opt/pincabos/media/wallpapers/backglass.png\nGO: wallpapers appliqués séparément sur les écrans PinCabOS.\nCommande : /usr/bin/feh --bg-fill /opt/pincabos/media/wallpapers/playfield.png /opt/pincabos/media/wallpapers/fulldmd.png /opt/pincabos/media/wallpapers/backglass.png",
+      "selected_at": "2026-06-17T18:24:02",
+      "applied_at": "2026-08-02T17:08:47"
+    }
+  },
+  "updated_by": "PinCabOS WebApp GPU wallpapers",
+  "updated_at": "2026-08-02T17:08:47"
+}

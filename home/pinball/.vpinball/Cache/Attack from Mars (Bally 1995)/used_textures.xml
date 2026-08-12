@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<textures>
+    <texture linear="false" age="0">Metal_short</texture>
+    <texture linear="false" age="0">Metal_long</texture>
+    <texture linear="false" age="0">lramp2</texture>
+    <texture linear="false" age="2">flare_red</texture>
+    <texture linear="false" age="0">DropTargetSimple</texture>
+    <texture linear="false" age="0">lramp</texture>
+    <texture linear="false" age="0">rampborder_grey_reflex2</texture>
+    <texture linear="false" age="0">ramp</texture>
+    <texture linear="false" age="0">shadow</texture>
+    <texture linear="false" age="0">saucer3</texture>
+    <texture linear="false" age="0">Left_rail_brighter</texture>
+    <texture linear="false" age="0">rubber-post-t1-black</texture>
+    <texture linear="false" age="0">saucer4</texture>
+    <texture linear="true" age="0">LUT0</texture>
+    <texture linear="false" age="2">saucer1</texture>
+    <texture linear="false" age="0">rramp</texture>
+    <texture linear="false" age="0">Metal_long2</texture>
+    <texture linear="false" age="0">bottom_ramp4b</texture>
+    <texture linear="false" age="3">saucer7</texture>
+    <texture linear="false" age="0">steel</texture>
+    <texture linear="false" age="0">flipperx</texture>
+    <texture linear="false" age="1">target-t2-red</texture>
+    <texture linear="false" age="1">FlasherT2-R(2)</texture>
+    <texture linear="false" age="0">sidewood2</texture>
+    <texture linear="false" age="0">target1-red</texture>
+    <texture linear="false" age="0">JPBall-Scratches</texture>
+    <texture linear="false" age="1">target-t2-green</texture>
+    <texture linear="false" age="0">Metal_long3</texture>
+    <texture linear="false" age="0">JPBall_Equirectangular</texture>
+    <texture linear="false" age="0">backufo2</texture>
+    <texture linear="false" age="0">Cube</texture>
+    <texture linear="false" age="0">backwall</texture>
+    <texture linear="false" age="0">sidewall</texture>
+    <texture linear="false" age="0">pf-lights</texture>
+    <texture linear="false" age="0">plastics</texture>
+    <texture linear="false" age="3">saucer6</texture>
+    <texture linear="false" age="0">saucer2</texture>
+    <texture linear="false" age="2">metal_side</texture>
+    <texture linear="false" age="2">Right_rail_brighter</texture>
+    <texture linear="false" age="1">saucer8</texture>
+    <texture linear="true" age="0">LUT Warm 4</texture>
+    <texture linear="false" age="1">pf</texture>
+    <texture linear="false" age="1">level_green</texture>
+    <texture linear="false" age="1">bigufo1</texture>
+    <texture linear="true" age="1">LUT Warm 5</texture>
+    <texture linear="false" age="0">saucer5</texture>
+    <texture linear="false" age="0">cupulaverde</texture>
+    <texture linear="false" age="0">bumper-jp</texture>
+    <texture linear="true" age="0">LUT Warm 0</texture>
+</textures>

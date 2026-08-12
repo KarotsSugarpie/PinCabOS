@@ -1,0 +1,34 @@
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile iotop-c /usr/sbin/iotop-c {
+  include <abstractions/base>
+  include <abstractions/bash>
+  include <abstractions/nameservice-strict>
+
+  capability net_admin,
+  # The ioprio_set syscall checks for sys_admin or sys_nice
+  # (with sys_admin checked first, with OR shortcut logic)
+  # when used to set a real-time scheduler, and later checks
+  # for sys_nice if the target uid is not equal to the caller's
+  # uid or euid (e.g the sys_nice check will not be exercised
+  # when changing euid via sudo). sys_nice covers the perms
+  # required for this syscall and is less broad than sys_admin,
+  # so silence a denial of sys_admin and force reliance on sys_nice.
+  deny capability sys_admin,
+  capability sys_nice,
+
+  network netlink raw,
+
+  /proc/*/cmdline r,
+  /proc/*/task/ r,
+  @{exec_path} mr,
+  /proc/ r,
+  /proc/sys/kernel/task_delayacct rw,
+  /proc/vmstat r,
+  owner @{HOME}/.config/iotop/ rw,
+  owner @{HOME}/.config/iotop/iotoprc rw,
+
+  include if exists <local/iotop-c>
+}

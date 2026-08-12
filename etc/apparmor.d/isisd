@@ -1,0 +1,30 @@
+# vim:ft=apparmor
+# ------------------------------------------------------------------
+#
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#
+# ------------------------------------------------------------------
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile isisd /usr/lib/frr/isisd flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/frr>
+  include <abstractions/frr-snmp>
+
+  capability net_raw,
+
+  @{exec_path} mr,
+
+  /var/lib/frr/ r, 
+  /var/lib/frr/isisd.json{,.sav} rw,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/isisd>
+}

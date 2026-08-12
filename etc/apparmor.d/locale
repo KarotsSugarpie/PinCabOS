@@ -1,0 +1,40 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    Author: Giampaolo Fresi Roglia (gianz)
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+
+abi <abi/5.0>,
+
+#include <tunables/global>
+
+@{compressors}=/usr/bin/gzip /usr/bin/bzip2
+
+profile locale /usr/bin/locale {
+  include <abstractions/base>
+
+  # Temporarily needed until fd delegation lands
+  # Also needed while delegation from unconfined is broken
+  include <abstractions/consoles>
+
+  file r /usr/share/i18n/charmaps/,
+  file r /usr/share/i18n/charmaps/*,
+  file mr /usr/bin/locale,
+
+  file Cxrm @{compressors} -> compressor,
+
+  profile compressor {
+    include <abstractions/base>
+    file mr @{compressors},
+    file r /usr/share/i18n/charmaps/,
+    file r /usr/share/i18n/charmaps/*,
+  }
+
+  include if exists <local/locale>
+}
+

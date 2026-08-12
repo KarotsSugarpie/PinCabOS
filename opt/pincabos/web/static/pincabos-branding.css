@@ -1,0 +1,21 @@
+/* PinCabOS-File created by Karots Sugarpie */
+html, body {
+  min-height: 100%;
+  background-color: #080012 !important;
+  background-image:
+    linear-gradient(rgba(8,0,18,.78), rgba(8,0,18,.78)),
+    url("/static/branding/pincabos-bg.png") !important;
+  background-position: center center, center center !important;
+  background-size: cover, 60% auto !important;
+  background-attachment: fixed, fixed !important;
+  background-repeat: no-repeat, no-repeat !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(255,122,0,.08), rgba(0,0,0,.40));
+  z-index: -1;
+}

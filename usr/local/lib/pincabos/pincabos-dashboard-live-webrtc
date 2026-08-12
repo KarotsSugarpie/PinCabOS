@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+# Root-only single-screen GPU WebRTC engine for PinCabOS Dashboard V15.
+set -Eeuo pipefail
+PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+LAN_IP='192.168.254.237'
+WEBRTC_PORT='8889'
+ICE_PORT='8189'
+LEASE_TTL='20'
+GSR='/opt/pincabos/apps/gpu-screen-recorder/5.14.0-9ac80b4/bin/gpu-screen-recorder'
+MTX='/opt/pincabos/apps/mediamtx/1.19.2/mediamtx'
+GSR_HOME='/opt/pincabos/runtime/live-gpu/home'
+RUNTIME='/opt/pincabos/runtime/live-gpu/dashboard-webrtc'
+RUN='/run/pincabos-dashboard-webrtc'
+LEASE="$RUN/lease"
+STATUS="$RUN/status"
+DAEMON_PID="$RUN/daemon.pid"
+MTX_PID="$RUN/mediamtx.pid"
+GSR_PID="$RUN/gsr.pid"
+ACTIVE="$RUN/active"
+XAUTH="$RUN/xauthority"
+LOCK="$RUN/control.lock"
+LOG="$RUNTIME/engine.log"
+MTX_LOG="$RUNTIME/mediamtx.log"
+GSR_LOG="$RUNTIME/gsr.log"
+CFG="$RUNTIME/mediamtx.yml"
+
+mkdir -p "$RUNTIME" "$RUN"
+chmod 0755 "$RUNTIME" "$RUN"
+log(){ printf '%s %s\n' "$(date '+%F %T')" "$*" >> "$LOG"; }
+alive(){ local pid="${1:-}"; [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; }
+pidfile_alive(){ [ -s "$1" ] && alive "$(cat "$1" 2>/dev/null || true)"; }
+valid_slot(){ [[ "${1:-}" =~ ^[0-2]$ ]]; }
+
+path_for_slot(){ case "$1" in 0) echo playfield;; 1) echo backglass;; 2) echo fulldmd;; esac; }
+size_for_slot(){ case "$1" in 0) echo 640x360;; 1) echo 480x270;; 2) echo 320x240;; esac; }
+bitrate_for_slot(){ case "$1" in 0) echo 700;; 1) echo 450;; 2) echo 350;; esac; }
+port_for_slot(){ case "$1" in 0) echo 12000;; 1) echo 12001;; 2) echo 12002;; esac; }
+
+write_status() {
+  local value="$1" tmp="$RUN/.status.$$"
+  printf '%s\n' "$value" > "$tmp"; chmod 0644 "$tmp"; mv -f "$tmp" "$STATUS"
+}
+write_lease() {
+  local slot="$1" tmp="$RUN/.lease.$$"
+  printf '%s\n' "$slot" > "$tmp"; chmod 0644 "$tmp"; mv -f "$tmp" "$LEASE"
+}
+lease_fresh() {
+  [ -s "$LEASE" ] || return 1
+  local now then
+  now="$(date +%s)"; then="$(stat -c %Y "$LEASE" 2>/dev/null || echo 0)"
+  [ $((now - then)) -le "$LEASE_TTL" ]
+}
+stop_pidfile() {
+  local file="$1" pid=''
+  [ -s "$file" ] || return 0
+  pid="$(cat "$file" 2>/dev/null || true)"
+  if alive "$pid"; then
+    kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+    for _ in $(seq 1 30); do alive "$pid" || break; sleep 0.1; done
+    alive "$pid" && kill -KILL -- "-$pid" 2>/dev/null || true
+  fi
+  rm -f "$file"
+}
+stop_stream(){ stop_pidfile "$GSR_PID"; stop_pidfile "$MTX_PID"; rm -f "$ACTIVE"; }
+stop_all(){
+  stop_stream
+  rm -f "$LEASE" "$STATUS" "$DAEMON_PID" "$XAUTH" "${XAUTH}-c" "${XAUTH}-l" "${XAUTH}-i"
+}
+
+make_xauth() {
+  local source
+  source="$(ps -eo args= | sed -n 's/.*\/Xorg .* -auth \([^ ]*\).*/\1/p' | head -n1 || true)"
+  [ -n "$source" ] && [ -r "$source" ] || { log 'Xorg cookie LightDM introuvable.'; return 1; }
+  rm -f "$XAUTH" "${XAUTH}-c" "${XAUTH}-l" "${XAUTH}-i"
+  : > "$XAUTH"; chmod 0600 "$XAUTH"
+  xauth -f "$source" nlist :0 | xauth -f "$XAUTH" nmerge -
+  chown pinball:pinball "$XAUTH"; chmod 0600 "$XAUTH"
+}
+
+slot_output() {
+  local slot="$1" line output geometry width height xpos ypos
+  local records=()
+  while IFS= read -r line; do
+    [[ "$line" =~ ^([A-Za-z0-9-]+)[[:space:]]connected ]] || continue
+    output="${BASH_REMATCH[1]}"
+    geometry="$(grep -oE '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+' <<< "$line" | head -n1 || true)"
+    [ -n "$geometry" ] || continue
+    IFS='x+' read -r width height xpos ypos <<< "$geometry"
+    records+=("${xpos}|${output}|${geometry}")
+  done < <(runuser -u pinball -- env DISPLAY=:0 XAUTHORITY="$XAUTH" xrandr --query 2>/dev/null)
+  [ "${#records[@]}" -ge 3 ] || return 1
+  mapfile -t records < <(printf '%s\n' "${records[@]}" | sort -t'|' -n -k1,1)
+  local selected="${records[$slot]}"
+  IFS='|' read -r xpos output geometry <<< "$selected"
+  printf '%s|%s\n' "$output" "$geometry"
+}
+
+write_config() {
+  local path="$1" port="$2"
+  cat > "$CFG" <<YAML
+logLevel: info
+api: false
+metrics: false
+pprof: false
+playback: false
+rtsp: false
+rtmp: false
+hls: false
+srt: false
+moq: false
+webrtc: true
+webrtcAddress: ${LAN_IP}:${WEBRTC_PORT}
+webrtcEncryption: false
+webrtcAllowOrigins: ["http://${LAN_IP}", "http://${LAN_IP}:80", "http://${LAN_IP}:${WEBRTC_PORT}"]
+webrtcLocalUDPAddress: ${LAN_IP}:${ICE_PORT}
+webrtcLocalTCPAddress: ""
+webrtcIPsFromInterfaces: false
+webrtcAdditionalHosts: ["${LAN_IP}"]
+webrtcICEServers2: []
+authInternalUsers:
+  - user: any
+    pass:
+    ips: ["192.168.254.0/24"]
+    permissions:
+      - action: read
+        path: ${path}
+paths:
+  ${path}:
+    source: udp+mpegts://127.0.0.1:${port}
+    record: false
+YAML
+  chmod 0644 "$CFG"
+}
+
+start_stream() {
+  local slot="$1" detected output geometry path size bitrate port
+  valid_slot "$slot" || { write_status 'error:invalid-slot'; return 1; }
+  detected="$(slot_output "$slot" || true)"
+  [ -n "$detected" ] || { log "Slot ${slot}: écran X11 indisponible."; write_status 'error:x11-screen'; return 1; }
+  IFS='|' read -r output geometry <<< "$detected"
+  path="$(path_for_slot "$slot")"; size="$(size_for_slot "$slot")"
+  bitrate="$(bitrate_for_slot "$slot")"; port="$(port_for_slot "$slot")"
+  write_status "starting:${slot}:${output}:${path}"
+  write_config "$path" "$port"
+
+  : > "$MTX_LOG"
+  "$MTX" "$CFG" >> "$MTX_LOG" 2>&1 &
+  echo "$!" > "$MTX_PID"
+  for _ in $(seq 1 35); do
+    if grep -q 'WebRTC.*started' "$MTX_LOG" 2>/dev/null && ss -H -lnt "sport = :${WEBRTC_PORT}" 2>/dev/null | grep -q .; then break; fi
+    pidfile_alive "$MTX_PID" || { write_status 'error:mediamtx'; stop_stream; return 1; }
+    sleep 0.15
+  done
+  pidfile_alive "$MTX_PID" || { write_status 'error:mediamtx'; stop_stream; return 1; }
+
+  : > "$GSR_LOG"
+  setsid runuser -u pinball -- env \
+    HOME="$GSR_HOME" DISPLAY=:0 XAUTHORITY="$XAUTH" \
+    "$GSR" -w "$output" -s "$size" -f 2 -k h264 -c mpegts \
+    -bm cbr -q "$bitrate" -fm cfr -tune performance -cursor no -keyint 1 -v yes \
+    -o "udp://127.0.0.1:${port}?pkt_size=1316" \
+    >> "$GSR_LOG" 2>&1 &
+  echo "$!" > "$GSR_PID"
+
+  sleep 2
+  if grep -Eqi 'gsr error:|gsr_capture_.*failed|error:.*NvFBC|fatal' "$GSR_LOG"; then
+    log "Slot ${slot}: GSR/NvFBC a échoué."; write_status 'error:gsr'; stop_stream; return 1
+  fi
+  pidfile_alive "$GSR_PID" || { log "Slot ${slot}: GSR a quitté."; write_status 'error:gsr'; stop_stream; return 1; }
+
+  printf '%s\n' "$slot" > "$ACTIVE"
+  write_status "running:${slot}:${output}:${path}"
+  log "Slot ${slot}: ${path} actif (${output}, ${geometry}, ${size}, 2 FPS)."
+}
+
+stream_matches() {
+  local slot="$1" active=''
+  active="$(cat "$ACTIVE" 2>/dev/null || true)"
+  [ "$active" = "$slot" ] && pidfile_alive "$GSR_PID" && pidfile_alive "$MTX_PID"
+}
+daemon() {
+  local wanted=''
+  echo "$$" > "$DAEMON_PID"
+  trap 'stop_all' EXIT INT TERM
+  make_xauth || { write_status 'error:x11-cookie'; exit 1; }
+  while lease_fresh; do
+    wanted="$(cat "$LEASE" 2>/dev/null || true)"
+    if valid_slot "$wanted"; then
+      if ! stream_matches "$wanted"; then stop_stream; start_stream "$wanted" || true; fi
+    else
+      write_status 'error:invalid-slot'
+    fi
+    sleep 1
+  done
+  log 'Lease Dashboard expirée : arrêt WebRTC automatique.'
+}
+heartbeat() {
+  local slot="${1:-}" state=''
+  valid_slot "$slot" || { echo 'error:invalid-slot'; exit 2; }
+  exec 9>"$LOCK"
+  flock -n 9 || { cat "$STATUS" 2>/dev/null || echo starting; exit 0; }
+  write_lease "$slot"
+  if ! pidfile_alive "$DAEMON_PID"; then
+    nohup setsid "$0" daemon >> "$LOG" 2>&1 < /dev/null &
+    echo "$!" > "$DAEMON_PID"
+  fi
+  for _ in $(seq 1 40); do
+    state="$(cat "$STATUS" 2>/dev/null || true)"
+    [[ "$state" == "running:${slot}:"* || "$state" == error:* ]] && break
+    sleep 0.15
+  done
+  echo "${state:-starting}"
+}
+case "${1:-}" in
+  heartbeat) heartbeat "${2:-}" ;;
+  status) cat "$STATUS" 2>/dev/null || echo stopped ;;
+  stop) stop_all; echo stopped ;;
+  daemon) daemon ;;
+  *) echo 'usage: heartbeat <0|1|2>|status|stop|daemon' >&2; exit 64 ;;
+esac

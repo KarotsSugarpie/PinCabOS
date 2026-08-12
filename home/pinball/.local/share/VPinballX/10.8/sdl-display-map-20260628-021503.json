@@ -1,0 +1,33 @@
+{
+  "displays": [
+    {
+      "id": 1,
+      "name": "N43 32\"",
+      "x": 0,
+      "y": 0,
+      "w": 3840,
+      "h": 2160
+    },
+    {
+      "id": 2,
+      "name": "HP 27vc 27\"",
+      "x": 3840,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "id": 3,
+      "name": "F-415 15\"",
+      "x": 5760,
+      "y": 0,
+      "w": 1024,
+      "h": 768
+    }
+  ],
+  "mapping": {
+    "PlayfieldDisplay": "N43 32\"",
+    "BackglassDisplay": "HP 27vc 27\"",
+    "ScoreViewDisplay": "F-415 15\""
+  }
+}

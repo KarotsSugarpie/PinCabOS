@@ -1,0 +1,49 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+#
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile dig /usr/bin/dig {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/private-files-strict>
+  include <abstractions/ssl_certs>
+  # Temporarily needed until fd delegation lands
+  # Also needed while delegation from unconfined is broken
+  include <abstractions/consoles>
+
+  /usr/bin/dig mr,
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+
+  capability dac_override,
+  capability dac_read_search,
+
+  # +trace
+  network (create,bind,getattr,send,receive) netlink raw,
+
+  file r /proc/version_signature,
+
+  # -f, -k, +tls-ca, +tls-certfile, +tls-keyfile 
+  file r @{HOME}/[^.]**,
+  owner rw @{HOME}/.dig/**,
+  
+  ## denied by private-files-strict
+  priority=1 owner r @{HOME}/.digrc,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/dig>
+}
+

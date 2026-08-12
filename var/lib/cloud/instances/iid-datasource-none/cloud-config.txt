@@ -1,0 +1,20 @@
+#cloud-config
+
+# from 1 files
+# part-001
+
+---
+growpart:
+    mode: 'off'
+preserve_hostname: true
+resize_rootfs: false
+ssh_pwauth: true
+users:
+-   lock_passwd: false
+    name: pinball
+write_files:
+-   content: "Disabled by Ubuntu live installer after first boot.\nTo re-enable cloud-init\
+        \ on this image run:\n  sudo cloud-init clean --machine-id\n"
+    defer: true
+    path: /etc/cloud/cloud-init.disabled
+...

@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+MODE="repair"
+FIRSTBOOT=0
+SERVICE_RESTART=1
+REPORT_ONLY=0
+
+usage() {
+  cat <<'EOF'
+Usage:
+  pincabos                 Audit complet + réparations sécuritaires
+  pincabos --check         Audit en lecture seule
+  pincabos --repair        Audit + réparations sécuritaires
+  pincabos --report        Affiche le dernier rapport
+  pincabos --no-restart    N’effectue pas de restart de services
+  pincabos --firstboot     Mode de finalisation automatique
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --check) MODE="check" ;;
+    --repair) MODE="repair" ;;
+    --report) REPORT_ONLY=1 ;;
+    --no-restart) SERVICE_RESTART=0 ;;
+    --firstboot) FIRSTBOOT=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Argument inconnu : $arg" >&2; usage; exit 1 ;;
+  esac
+done
+
+LOG_DIR="/var/log/pincabos"
+STATE_DIR="/var/lib/pincabos"
+LAST_LOG="$STATE_DIR/doctor-last.log"
+LAST_JSON="$STATE_DIR/doctor-last.json"
+
+if [ "$REPORT_ONLY" -eq 1 ]; then
+  if [ -f "$LAST_LOG" ]; then
+    cat "$LAST_LOG"
+  else
+    echo "Aucun rapport PinCabOS Doctor disponible."
+  fi
+  exit 0
+fi
+
+if [ "$MODE" = "repair" ] && [ "$(id -u)" -ne 0 ]; then
+  exec sudo "$0" "$@"
+fi
+
+mkdir -p "$LOG_DIR" "$STATE_DIR"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+LOG="$LOG_DIR/doctor-${STAMP}.log"
+STATE_TSV="/run/pincabos-doctor-${STAMP}.tsv"
+: > "$STATE_TSV"
+
+exec > >(tee -a "$LOG") 2>&1
+
+export PCO_MODE="$MODE"
+export PCO_FIRSTBOOT="$FIRSTBOOT"
+export PCO_SERVICE_RESTART="$SERVICE_RESTART"
+export PCO_STATE_TSV="$STATE_TSV"
+
+source /usr/local/libexec/pincabos/doctor-lib.sh
+
+echo "==============================================================="
+echo " PINCABOS — SYSTEM DOCTOR"
+echo " Mode: $MODE"
+echo " Rapport: $LOG"
+echo "==============================================================="
+
+for module in /usr/local/libexec/pincabos/doctor.d/*.sh; do
+  source "$module"
+done
+
+echo
+echo "==============================================================="
+echo " PINCABOS — RÉSUMÉ FINAL"
+echo "==============================================================="
+printf 'GO   : %s\n' "$PCO_GO"
+printf 'WARN : %s\n' "$PCO_WARN"
+printf 'NOGO : %s\n' "$PCO_FAIL"
+
+python3 - "$STATE_TSV" "$LAST_JSON" "$LOG" "$MODE" <<'PY'
+import json, pathlib, sys, datetime
+src, dst, log, mode = sys.argv[1:]
+rows=[]
+for line in pathlib.Path(src).read_text(encoding='utf-8').splitlines():
+    parts=line.split('\t', 2)
+    if len(parts)==3:
+        rows.append({'check':parts[0],'status':parts[1],'detail':parts[2]})
+payload={
+    'generated_at': datetime.datetime.now().astimezone().isoformat(),
+    'mode': mode,
+    'log': log,
+    'results': rows,
+}
+pathlib.Path(dst).write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding='utf-8')
+PY
+
+ln -sfn "$LOG" "$LAST_LOG"
+rm -f "$STATE_TSV"
+
+if [ "$PCO_FAIL" -gt 0 ]; then
+  echo
+  echo "PINCABOS NOT READY [***]"
+  echo "Consulte : $LOG"
+  exit 1
+fi
+
+if [ "$PCO_WARN" -gt 0 ]; then
+  echo
+  echo "PINCABOS READY WITH WARNINGS [!]"
+  echo "Rapport : $LOG"
+  exit 0  # WARN sans NOGO = succès
+fi
+
+echo
+echo "PINCABOS READY [√]"
+echo "Vous pouvez importer une table et jouer."
+exit 0

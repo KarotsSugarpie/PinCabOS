@@ -1,0 +1,12 @@
+[Unit]
+Description=PinCabOS DudesCab hotplug recovery for VPinFE DOF Helper
+Documentation=https://pincabos.cc/
+After=pincabos-usb-secure-lock.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/pincabos/pincabos-dudescab-hotplug-recovery.sh
+TimeoutStartSec=infinity
+
+[Install]
+WantedBy=multi-user.target

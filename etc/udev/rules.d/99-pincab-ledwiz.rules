@@ -1,0 +1,2 @@
+# LED-Wiz original (fafa:00f0) — acces exclusif au compte PinCabOS
+SUBSYSTEM=="usb", ATTR{idVendor}=="fafa", ATTR{idProduct}=="00f0", MODE="0660", GROUP="pinball"

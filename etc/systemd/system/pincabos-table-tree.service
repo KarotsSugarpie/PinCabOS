@@ -1,0 +1,10 @@
+[Unit]
+Description=PinCabOS normalize per-table PinMAME structure
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/pincabos/tools/pincabos-table-tree.sh --apply --quiet
+User=root
+Group=root
+Nice=10

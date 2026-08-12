@@ -1,0 +1,3 @@
+Disabled by Ubuntu live installer after first boot.
+To re-enable cloud-init on this image run:
+  sudo cloud-init clean --machine-id

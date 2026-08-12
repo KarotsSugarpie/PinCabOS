@@ -1,0 +1,2 @@
+# PINCABOS_DUDESCAB_MAINTENANCE_SUDOERS_V320
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-dudescab-maintenance

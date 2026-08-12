@@ -1,0 +1,88 @@
+/* PINCABOS_LIVE_TABLE_STATUS_CARD_V3 */
+
+#pincabos-live-table-status-root {
+  position: fixed;
+  top: 76px;
+  right: 16px;
+  z-index: 2147483000;
+  width: min(430px, calc(100vw - 32px));
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+#pincabos-live-table-status-root[hidden] {
+  display: none !important;
+}
+
+#pincabos-live-table-status-root * {
+  box-sizing: border-box;
+}
+
+.pincabos-live-table-status-card {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 62px;
+  padding: 12px 14px;
+  border: 1px solid rgba(129,154,179,.24);
+  border-radius: 14px;
+  background: rgba(10, 21, 35, .98);
+  color: #f5f7fb;
+  box-shadow: 0 14px 34px rgba(0,0,0,.32);
+  font-family: inherit;
+}
+
+.pincabos-live-table-status-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pincabos-live-table-status-kicker {
+  margin: 0 0 2px;
+  color: #aeb9c8;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.pincabos-live-table-status-name {
+  overflow: hidden;
+  font-size: .95rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pincabos-live-table-stop-button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 11px 16px;
+  background: #ff8c00;
+  color: #111;
+}
+
+.pincabos-live-table-stop-button:hover {
+  filter: brightness(1.06);
+}
+
+.pincabos-live-table-stop-button[disabled] {
+  cursor: wait;
+  opacity: .65;
+}
+
+@media (max-width: 640px) {
+  #pincabos-live-table-status-root {
+    right: 10px !important;
+    width: min(430px, calc(100vw - 20px));
+  }
+}

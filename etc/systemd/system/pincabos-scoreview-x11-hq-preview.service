@@ -1,0 +1,20 @@
+[Unit]
+Description=PinCabOS ScoreView X11 high quality DP-2 preview
+After=display-manager.service pincabos-screen-topology-boot.service
+Wants=display-manager.service pincabos-screen-topology-boot.service
+
+[Service]
+Type=simple
+User=pinball
+Group=pinball
+Environment=DISPLAY=:0.0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+RuntimeDirectory=pincabos-scoreview-x11-hq
+RuntimeDirectoryMode=0755
+ExecStart=/opt/pincabos/bin/pincabos-scoreview-x11-hq-preview.sh
+Restart=always
+RestartSec=2
+Nice=8
+
+[Install]
+WantedBy=graphical.target

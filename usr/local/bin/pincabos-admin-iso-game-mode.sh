@@ -1,0 +1,1 @@
+/opt/pincabos/tools/pincabos-admin-iso-game-mode.sh

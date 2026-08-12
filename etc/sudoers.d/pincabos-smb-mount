@@ -1,0 +1,4 @@
+# PinCabOS — helpers SMB/USB valident strictement leurs chemins.
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-smb-mount *
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-smb-umount *
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-usb-umount *

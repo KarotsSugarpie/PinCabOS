@@ -1,0 +1,10 @@
+# PINCABOS_DUDESCAB_MAINTENANCE_TIMER_V323_DISABLED
+[Unit]
+Description=DudesCabConfig automatic expiration disabled
+
+[Timer]
+OnBootSec=24h
+Unit=pincabos-dudescab-maintenance-expire.service
+
+[Install]
+WantedBy=timers.target

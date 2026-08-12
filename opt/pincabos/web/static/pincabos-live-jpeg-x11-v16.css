@@ -1,0 +1,25 @@
+/* PINCABOS_DASHBOARD_JPEG_X11_V16 */
+#pco-lobby .pco-live.pco-live-jpeg {
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+#pco-lobby .pco-live.pco-live-jpeg img {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+  background: #000;
+}
+
+#pco-lobby .pco-live.pco-live-jpeg .pco-live-state {
+  pointer-events: none;
+  background: linear-gradient(0deg, rgba(0,0,0,.88), rgba(0,0,0,.08));
+}
+
+#pco-lobby .pco-live.pco-live-jpeg .pco-live-state strong {
+  color: #ffb000;
+}

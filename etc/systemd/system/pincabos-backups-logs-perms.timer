@@ -1,0 +1,11 @@
+[Unit]
+Description=Run PinCabOS backups/logs permissions guard regularly
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=15min
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

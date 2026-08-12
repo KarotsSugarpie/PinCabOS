@@ -1,0 +1,9 @@
+[Unit]
+Description=PinCabOS guard against contaminated altmedia imports
+ConditionPathIsDirectory=/home/pinball/Tables
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-altmedia-clean --guard-run
+Nice=10
+IOSchedulingClass=idle

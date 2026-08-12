@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# PinCabOS Console Shell
+# Affiche le splash ASCII seulement pour la console Web ttyd.
+
+export TERM="${TERM:-xterm-256color}"
+export HOME="${HOME:-/home/pinball}"
+export USER="${USER:-pinball}"
+export LOGNAME="${LOGNAME:-pinball}"
+export SHELL="/bin/bash"
+
+clear 2>/dev/null || true
+
+ORANGE=$'\033[38;5;208m'
+PURPLE=$'\033[38;5;93m'
+WHITE=$'\033[97m'
+DIM=$'\033[2m'
+RESET=$'\033[0m'
+
+HOST="$(hostname 2>/dev/null || echo PinCabOS)"
+IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+NOW="$(date '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null)"
+
+printf '%s\n' "${ORANGE}"
+cat <<'EOF'
+██████╗ ██╗███╗   ██╗ ██████╗ █████╗ ██████╗  ██████╗ ███████╗
+██╔══██╗██║████╗  ██║██╔════╝██╔══██╗██╔══██╗██╔═══██╗██╔════╝
+██████╔╝██║██╔██╗ ██║██║     ███████║██████╔╝██║   ██║███████╗
+██╔═══╝ ██║██║╚██╗██║██║     ██╔══██║██╔══██╗██║   ██║╚════██║
+██║     ██║██║ ╚████║╚██████╗██║  ██║██████╔╝╚██████╔╝███████║
+╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚══════╝
+EOF
+printf '%s' "${RESET}"
+
+printf '%s\n' "${PURPLE}────────────────────────────────────────────────────────────────${RESET}"
+printf '%s%s%s\n' "${WHITE}" " PinCabOS Console prête" "${RESET}"
+printf '%s%s%s\n' "${DIM}" " Hôte : ${HOST}    IP : ${IP:-non détectée}    ${NOW}" "${RESET}"
+printf '%s%s%s\n' "${DIM}" " Utilisateur : ${USER}    Shell : bash" "${RESET}"
+printf '%s\n\n' "${PURPLE}────────────────────────────────────────────────────────────────${RESET}"
+
+cd "$HOME" 2>/dev/null || cd /home/pinball 2>/dev/null || true
+
+exec /bin/bash -i

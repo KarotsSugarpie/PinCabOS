@@ -1,0 +1,26 @@
+# vim:ft=apparmor
+# ------------------------------------------------------------------
+#
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#
+# ------------------------------------------------------------------
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile ldpd /usr/lib/frr/ldpd flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/frr>
+  include <abstractions/frr-snmp>
+
+  @{exec_path} mrix,
+  @{run}/frr/ldpd.sock rw,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/ldpd>
+}

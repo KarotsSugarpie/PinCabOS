@@ -1,0 +1,106 @@
+{
+  "id": "4ac2797e2af746658afcac399f2ad154",
+  "state": "completed",
+  "created_at": "2026-07-07T14:47:37Z",
+  "updated_at": "2026-07-07T14:48:42Z",
+  "started_at": "2026-07-07T14:47:37Z",
+  "finished_at": "2026-07-07T14:48:42Z",
+  "selected_tables": [
+    "24 (Stern 2009)",
+    "AC DC Power Up (Original 2022)",
+    "Al's Garage Band Goes on a World Tour (Alvin G. 1992)",
+    "Apollo 13 (Sega 1995)"
+  ],
+  "total_tables": 4,
+  "completed_tables": 4,
+  "completed_names": [
+    "24 (Stern 2009)",
+    "AC DC Power Up (Original 2022)",
+    "Al's Garage Band Goes on a World Tour (Alvin G. 1992)",
+    "Apollo 13 (Sega 1995)"
+  ],
+  "current_table": "",
+  "current_package": "Apollo 13 (Sega 1995) - VPSId dhgyex0l.PinCabOs",
+  "events": [
+    {
+      "at": "2026-07-07T14:47:37Z",
+      "level": "info",
+      "message": "Job créé : 4 table(s) sélectionnée(s)."
+    },
+    {
+      "at": "2026-07-07T14:47:37Z",
+      "level": "info",
+      "message": "Le moteur V1 créera un fichier .PinCabOS individuel pour chaque table."
+    },
+    {
+      "at": "2026-07-07T14:47:37Z",
+      "level": "info",
+      "message": "Export V1 démarré en arrière-plan : 4 table(s)."
+    },
+    {
+      "at": "2026-07-07T14:47:37Z",
+      "level": "info",
+      "message": "Première table planifiée : 24 (Stern 2009)"
+    },
+    {
+      "at": "2026-07-07T14:47:37Z",
+      "level": "info",
+      "message": "Requête interne envoyée au moteur V1. La page reste utilisable."
+    },
+    {
+      "at": "2026-07-07T14:47:52Z",
+      "level": "info",
+      "message": "Table 1/4 en cours : 24 (Stern 2009)"
+    },
+    {
+      "at": "2026-07-07T14:47:55Z",
+      "level": "info",
+      "message": "Package terminé : 24 (Stern 2009) (1/4). Prochaine table : AC DC Power Up (Original 2022)"
+    },
+    {
+      "at": "2026-07-07T14:48:10Z",
+      "level": "info",
+      "message": "Table 2/4 en cours : AC DC Power Up (Original 2022)"
+    },
+    {
+      "at": "2026-07-07T14:48:12Z",
+      "level": "info",
+      "message": "Package terminé : AC DC Power Up (Original 2022) (2/4). Prochaine table : Al's Garage Band Goes on a World Tour (Alvin G. 1992)"
+    },
+    {
+      "at": "2026-07-07T14:48:27Z",
+      "level": "info",
+      "message": "Table 3/4 en cours : Al's Garage Band Goes on a World Tour (Alvin G. 1992)"
+    },
+    {
+      "at": "2026-07-07T14:48:29Z",
+      "level": "info",
+      "message": "Package terminé : Al's Garage Band Goes on a World Tour (Alvin G. 1992) (3/4). Prochaine table : Apollo 13 (Sega 1995)"
+    },
+    {
+      "at": "2026-07-07T14:48:40Z",
+      "level": "info",
+      "message": "Table 4/4 en cours : Apollo 13 (Sega 1995)"
+    },
+    {
+      "at": "2026-07-07T14:48:41Z",
+      "level": "info",
+      "message": "Package terminé : Apollo 13 (Sega 1995) (4/4)."
+    },
+    {
+      "at": "2026-07-07T14:48:42Z",
+      "level": "info",
+      "message": "Export terminé : 4/4 fichier(s) .PinCabOS copiés."
+    }
+  ],
+  "result_excerpt": "QR Code PayPal PinCabOS\nNotes de version\nNom : PinCabOS\nVersion : Alpha 2.0\nBuild : dev\nCanal : ins.pincabos.cc\nCodename : Stark\nAuteur : Karots Sugarpie\nSite : pincabos.cc\nSi vous aimez PinCabOS,\nvous pouvez me le montrer en offrant ce que vous voulez.\nMerci pour votre soutien.\nOptimisé par\n★ ★ Testeurs ★ / ★★ Soutiens Fondateurs ★★ ★\nMerci aux personnes qui aident à tester PinCabOs, rapporter les problèmes, proposer des idées et soutenir le développement du projet.\n★★ Karots Sugarpie ★★ ★ Strung Flo ★ ★ Nicolas Prou ★ ★ Olivier Chéron ★\n🚀 Bienvenue dans PinCabOS\nAvant d’utiliser PinCabOS, Jarvis recommande de compléter l’assistant Premier Démarrage.\nChecklist : accès WebApp réseau, GPU/pilotes, puis détection et assignation des écrans.\n🚀 Démarrer l’assistant\nPlus tard\nNe plus afficher automatiquement",
+  "error": "",
+  "progress": {
+    "percent": 100,
+    "label": "Terminé",
+    "current_table": "",
+    "completed": 4,
+    "total": 4,
+    "mode": "packages"
+  }
+}

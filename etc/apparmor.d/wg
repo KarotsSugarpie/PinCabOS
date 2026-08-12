@@ -1,0 +1,34 @@
+# vim: ft=apparmor
+#------------------------------------------------------------------
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile wg /usr/bin/wg flags=(attach_disconnected){
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability net_admin,
+  capability net_bind_service,
+
+  # Network access rules
+  network netlink raw,
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+
+  # wireguard configuration and key files
+  file rw @{etc_rw}/wireguard/{,**},
+
+  mr @{exec_path},
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/wg>
+}

@@ -1,0 +1,82 @@
+# ===============================================================
+# PINCABOS ROOTFS RSYNC FILTER V3 BETA ACCESS
+#
+# Objectif:
+# - garder les accès root/pinball/WebApp bêta
+# - exclure tables/logs/caches/runtime
+# - garder version.json
+# ===============================================================
+
+# Garder le dossier Tables, mais pas son contenu
++ /home/
++ /home/pinball/
++ /home/pinball/Tables/
++ /home/pinball/Tables/.pincabos-keep
+- /home/pinball/Tables/***
+
+# Garder version.json
++ /opt/
++ /opt/pincabos/
++ /opt/pincabos/version.json
+
+# Garder structure logs, exclure contenu
++ /opt/pincabos/logs/
++ /opt/pincabos/logs/audits/
++ /opt/pincabos/logs/cleanup/
++ /opt/pincabos/logs/runtime/
++ /opt/pincabos/logs/install/
++ /opt/pincabos/logs/updates/
+- /opt/pincabos/logs/audits/**
+- /opt/pincabos/logs/cleanup/**
+- /opt/pincabos/logs/runtime/**
+- /opt/pincabos/logs/install/**
+- /opt/pincabos/logs/updates/**
+
+# Garder les accès utilisateurs/root/pinball
++ /root/
++ /root/.ssh/
++ /root/.ssh/**
++ /home/pinball/.ssh/
++ /home/pinball/.ssh/**
+
+# Option propre clone: machine-id et host keys régénérés au premier boot
+# Les comptes/mots de passe/authorized_keys restent, donc les accès beta restent.
+- /etc/machine-id
+- /var/lib/dbus/machine-id
+- /etc/ssh/ssh_host_*
+
+# Historiques de commande: pas requis pour accès
+- /root/.bash_history
+- /home/pinball/.bash_history
+
+# Caches utilisateur
+- /root/.cache/**
+- /home/pinball/.cache/**
+- /home/pinball/.config/google-chrome/Crash Reports/**
+- /home/pinball/.config/google-chrome/Singleton*
+- /home/pinball/.local/share/Trash/**
+
+# Logs système: garder /var/log, exclure contenu
++ /var/
++ /var/log/
+- /var/log/**
+
+# Fichiers temporaires/runtime
+- /tmp/**
+- /var/tmp/**
+- /run/**
+- /var/run/**
+- /var/log/journal/**
+- /run/log/journal/**
+
+# Cache apt
+- /var/cache/apt/archives/*.deb
+- /var/lib/apt/lists/**
+
+# Python généré
+- **/__pycache__/**
+- **/*.pyc
+- **/*.pyo
+
+# Inclure le reste
++ /**

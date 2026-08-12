@@ -1,0 +1,424 @@
+--- a/usr/local/sbin/pincabos-live-installer
++++ b/usr/local/sbin/pincabos-live-installer
+@@ -153,6 +153,8 @@
+ REG_KEYBOARD_LABEL="US English"
+ 
+ REG_TIMEZONE="America/Montreal"
++REG_FBROTATE=0
++REG_ORIENT_LABEL="Paysage (aucune rotation)"
+ 
+ apply_live_keyboard() {
+     echo
+@@ -205,181 +207,265 @@
+     return 0
+ }
+ 
+-regional_setup() {
+-    local CHOICE
+-
+-    while true; do
++# ==============================================================
++# PINCABOS_REGIONAL_SETUP_DYNAMIC_V1  (full-language, data-driven)
++#   locales  -> /usr/share/i18n/SUPPORTED
++#   claviers -> /usr/share/X11/xkb/rules/base.lst
++#   fuseaux  -> /usr/share/zoneinfo/zone1970.tab
++# Le pays de la locale choisie pre-filtre clavier + fuseau.
++# ==============================================================
+ 
+-        echo
+-        pco_hr
+-        echo " PinCabOS Regional Setup"
+-        pco_hr
+-        echo
++pco_gen_locales() {
++    awk '/UTF-8/{print $1"\t"$1}' /usr/share/i18n/SUPPORTED 2>/dev/null | sort -u
++}
+ 
+-        echo " Language / Region"
+-        echo
+-        echo "  [1] Français (Canada)"
+-        echo "  [2] English (Canada)"
+-        echo "  [3] English (United States)"
+-        echo "  [4] Français (France)"
+-        echo
++pco_gen_layouts() {
++    awk 'BEGIN{f=0}
++         /^! layout/{f=1;next}
++         /^!/{f=0}
++         f&&NF{ c=$1; d=""; for(i=2;i<=NF;i++) d=d (i>2?" ":"") $i; print c"\t"c" - "d }' \
++        /usr/share/X11/xkb/rules/base.lst 2>/dev/null
++}
+ 
+-        while true; do
+-            pco_prompt "Choice: "
+-            read -r CHOICE
++pco_gen_variants() {
++    local L="$1"
++    printf '\t%s\n' "(disposition par defaut, sans variante)"
++    awk -v L="$L" 'BEGIN{f=0}
++         /^! variant/{f=1;next}
++         /^!/{f=0}
++         f&&NF{ v=$1; b=$2; sub(/:$/,"",b);
++                if(b==L){ d=""; for(i=3;i<=NF;i++) d=d (i>3?" ":"") $i; print v"\t"v" - "d } }' \
++        /usr/share/X11/xkb/rules/base.lst 2>/dev/null
++}
+ 
+-            case "$CHOICE" in
+-                1)
+-                    REG_LOCALE="fr_CA.UTF-8"
+-                    REG_LANGUAGE="fr_CA:fr"
+-                    REG_LOCALE_LABEL="Français (Canada)"
+-                    break
+-                    ;;
+-                2)
+-                    REG_LOCALE="en_CA.UTF-8"
+-                    REG_LANGUAGE="en_CA:en"
+-                    REG_LOCALE_LABEL="English (Canada)"
+-                    break
+-                    ;;
+-                3)
+-                    REG_LOCALE="en_US.UTF-8"
+-                    REG_LANGUAGE="en_US:en"
+-                    REG_LOCALE_LABEL="English (United States)"
+-                    break
+-                    ;;
+-                4)
+-                    REG_LOCALE="fr_FR.UTF-8"
+-                    REG_LANGUAGE="fr_FR:fr"
+-                    REG_LOCALE_LABEL="Français (France)"
+-                    break
+-                    ;;
+-                *)
+-                    pco_warn "Invalid choice."
+-                    ;;
+-            esac
+-        done
++pco_gen_timezones() {
++    awk -F'\t' '!/^#/ && NF>=3 { cm=(NF>=4?$4:""); print $3"\t"$1"  "$3 (cm!=""?"  ("cm")":"") }' \
++        /usr/share/zoneinfo/zone1970.tab 2>/dev/null | sort -u
++}
+ 
++# pco_pick <titre> <filtre_initial> <data:VALEUR\tLIBELLE>  ->  PICK_RESULT
++pco_pick() {
++    local title="$1" filt="${2:-}" data="$3"
++    local sel kw matches n line _restore=0
++    case $- in *e*) _restore=1;; esac
++    set +e
++    PICK_RESULT=""
++    while true; do
+         echo
+-        pco_hr
+-        echo " Keyboard"
+-        pco_hr
++        pco_hr; echo " $title"; pco_hr; echo
++        [ -n "$filt" ] && echo " ${DIM}Filtre : \"$filt\"${NC}"
++        matches="$(printf '%s\n' "$data" | grep -iF -- "$filt")"
++        if [ -z "$matches" ]; then
++            pco_warn "Aucun resultat pour \"$filt\"."
++            pco_prompt "Mot-cle : "; read -r filt || filt=""
++            continue
++        fi
++        n="$(printf '%s\n' "$matches" | grep -c .)"
++        if [ "$n" -gt 60 ]; then
++            echo " $n resultats — affine la recherche (ou tape: all)."
++            pco_prompt "Mot-cle : "; read -r kw || kw=""
++            [ "$kw" != "all" ] && { filt="$kw"; continue; }
++        fi
++        printf '%s\n' "$matches" | cut -f2 | nl -w3 -s ') ' -ba | sed 's/^/  /'
+         echo
++        pco_prompt "Numero (ou 'f' = filtrer) : "; read -r sel || sel=""
++        [ "$sel" = "f" ] && { pco_prompt "Mot-cle : "; read -r filt || filt=""; continue; }
++        case "$sel" in ''|*[!0-9]*) pco_warn "Entree invalide."; continue;; esac
++        if [ "$sel" -lt 1 ] || [ "$sel" -gt "$n" ]; then pco_warn "Hors plage."; continue; fi
++        line="$(printf '%s\n' "$matches" | sed -n "${sel}p")"
++        PICK_RESULT="${line%%$'\t'*}"
++        break
++    done
++    [ "$_restore" = 1 ] && set -e
++    return 0
++}
+ 
+-        echo "  [1] Français canadien"
+-        echo "      Canadian French"
+-        echo
+-        echo "  [2] Canadien multilingue standard"
+-        echo "      Canadian Multilingual Standard"
+-        echo
+-        echo "  [3] US English"
+-        echo
+-        echo "  [4] Français AZERTY"
+-        echo
++regional_setup() {
++    local CHOICE loc lang country cc_l cc_u kbfilt tzcc tzdata
++    local LOCALES LAYOUTS VARIANTS TZS
+ 
+-        while true; do
+-            pco_prompt "Choice: "
+-            read -r CHOICE
++    LOCALES="$(pco_gen_locales)"
++    LAYOUTS="$(pco_gen_layouts)"
++    TZS="$(pco_gen_timezones)"
+ 
+-            case "$CHOICE" in
+-                1)
+-                    REG_XKB_LAYOUT="ca"
+-                    REG_XKB_VARIANT="fr-legacy"
+-                    REG_KEYBOARD_LABEL="Français canadien"
+-                    break
+-                    ;;
+-                2)
+-                    REG_XKB_LAYOUT="ca"
+-                    REG_XKB_VARIANT="multix"
+-                    REG_KEYBOARD_LABEL="Canadien multilingue standard"
+-                    break
+-                    ;;
+-                3)
+-                    REG_XKB_LAYOUT="us"
+-                    REG_XKB_VARIANT=""
+-                    REG_KEYBOARD_LABEL="US English"
+-                    break
+-                    ;;
+-                4)
+-                    REG_XKB_LAYOUT="fr"
+-                    REG_XKB_VARIANT=""
+-                    REG_KEYBOARD_LABEL="Français AZERTY"
+-                    break
+-                    ;;
+-                *)
+-                    pco_warn "Invalid choice."
+-                    ;;
+-            esac
+-        done
++    while true; do
++        # --- 1) Langue / locale ---
++        pco_pick "Langue / locale  (ex: fr, de, es, pt_BR, en_GB)" "" "$LOCALES"
++        loc="$PICK_RESULT"
++        REG_LOCALE="$loc"
++        REG_LOCALE_LABEL="$loc"
++        lang="${loc%%_*}"
++        country="${loc#*_}"; country="${country%%.*}"; country="${country%%@*}"
++        REG_LANGUAGE="${lang}_${country}:${lang}"
++        cc_l="$(printf '%s' "$country" | tr 'A-Z' 'a-z')"
++        cc_u="$country"
++
++        # --- 2) Clavier : disposition (pre-filtree sur le pays) ---
++        kbfilt="$cc_l"
++        printf '%s\n' "$LAYOUTS" | grep -iqF -- "$cc_l" || kbfilt=""
++        pco_pick "Clavier — disposition XKB  [pays: $cc_u]" "$kbfilt" "$LAYOUTS"
++        REG_XKB_LAYOUT="$PICK_RESULT"
++
++        VARIANTS="$(pco_gen_variants "$REG_XKB_LAYOUT")"
++        pco_pick "Clavier — variante de '$REG_XKB_LAYOUT'" "" "$VARIANTS"
++        REG_XKB_VARIANT="$PICK_RESULT"
++
++        if [ -n "$REG_XKB_VARIANT" ]; then
++            REG_KEYBOARD_LABEL="$REG_XKB_LAYOUT ($REG_XKB_VARIANT)"
++        else
++            REG_KEYBOARD_LABEL="$REG_XKB_LAYOUT"
++        fi
+ 
+-        # Le clavier change MAINTENANT dans le système Live.
+         apply_live_keyboard
+ 
+-        echo
+-        pco_hr
+-        echo " Timezone"
+-        pco_hr
+-        echo
++        # --- 3) Fuseau horaire : fuseaux du pays d'abord, sinon le monde ---
++        tzcc="$(awk -F'\t' -v C="$cc_u" '!/^#/{n=split($1,a,","); for(k=1;k<=n;k++) if(a[k]==C) print $3}' /usr/share/zoneinfo/zone1970.tab 2>/dev/null)"
++        if [ -n "$tzcc" ]; then
++            tzdata="$(printf '%s\n' "$tzcc" | awk 'NF{print $0"\t"$0}')"
++            tzdata="$tzdata"$'\n'"__WORLD__"$'\t'">> Autres fuseaux (monde entier)..."
++        else
++            tzdata="$TZS"
++        fi
++        pco_pick "Fuseau horaire  [pays: $cc_u]" "" "$tzdata"
++        if [ "$PICK_RESULT" = "__WORLD__" ]; then
++            pco_pick "Fuseau horaire (monde entier)" "" "$TZS"
++        fi
++        REG_TIMEZONE="$PICK_RESULT"
+ 
+-        echo "  [1] America/Montreal"
+-        echo "  [2] America/Toronto"
+-        echo "  [3] America/Halifax"
+-        echo "  [4] America/St_Johns"
+-        echo "  [5] America/Winnipeg"
+-        echo "  [6] America/Edmonton"
+-        echo "  [7] America/Vancouver"
+-        echo "  [8] UTC"
++        # --- 4) Orientation de l'ecran (pincab TV en portrait) ---
++        echo
++        pco_hr; echo " Orientation de l'ecran"; pco_hr; echo
++        echo "  [1] Paysage (aucune rotation)"
++        echo "  [2] Portrait — 90 horaire"
++        echo "  [3] Portrait — 90 anti-horaire"
++        echo "  [4] Retourne — 180"
+         echo
+-
+         while true; do
+-            pco_prompt "Choice: "
+-            read -r CHOICE
+-
++            pco_prompt "Choice: "; read -r CHOICE
+             case "$CHOICE" in
+-                1) REG_TIMEZONE="America/Montreal"; break ;;
+-                2) REG_TIMEZONE="America/Toronto";  break ;;
+-                3) REG_TIMEZONE="America/Halifax";  break ;;
+-                4) REG_TIMEZONE="America/St_Johns"; break ;;
+-                5) REG_TIMEZONE="America/Winnipeg"; break ;;
+-                6) REG_TIMEZONE="America/Edmonton"; break ;;
+-                7) REG_TIMEZONE="America/Vancouver"; break ;;
+-                8) REG_TIMEZONE="UTC"; break ;;
++                1) REG_FBROTATE=0; REG_ORIENT_LABEL="Paysage"; break ;;
++                2) REG_FBROTATE=1; REG_ORIENT_LABEL="Portrait 90 horaire"; break ;;
++                3) REG_FBROTATE=3; REG_ORIENT_LABEL="Portrait 90 anti-horaire"; break ;;
++                4) REG_FBROTATE=2; REG_ORIENT_LABEL="Retourne 180"; break ;;
+                 *) pco_warn "Invalid choice." ;;
+             esac
+         done
+ 
++        # --- Recapitulatif ---
+         echo
+-        pco_hr
+-        echo " Regional configuration"
+-        pco_hr
+-        echo
++        pco_hr; echo " Regional configuration"; pco_hr; echo
+         echo " Language : $REG_LOCALE_LABEL"
+         echo " Locale   : $REG_LOCALE"
+         echo " Keyboard : $REG_KEYBOARD_LABEL"
+         echo " XKB      : $REG_XKB_LAYOUT ${REG_XKB_VARIANT:-}"
+         echo " Timezone : $REG_TIMEZONE"
++        echo " Ecran    : $REG_ORIENT_LABEL"
+         echo
+         echo "  [1] Continue"
+         echo "  [2] Change"
+         echo
+-
+-        pco_prompt "Choice: "
+-        read -r CHOICE
+-
++        pco_prompt "Choice: "; read -r CHOICE
+         case "$CHOICE" in
+-            1)
+-                pco_go "Regional configuration accepted"
+-                break
+-                ;;
+-            2)
+-                continue
+-                ;;
+-            *)
+-                pco_warn "Invalid choice. Returning to regional setup."
+-                ;;
++            1) pco_go "Regional configuration accepted"; break ;;
++            2) continue ;;
++            *) pco_warn "Invalid choice. Returning to regional setup." ;;
+         esac
+     done
+ }
+ 
++apply_target_orientation() {
++    echo
++    pco_step "Applying screen orientation to installed PinCabOS"
++
++    local N="${REG_FBROTATE:-0}"
++    local GRUBF="$TARGET/etc/default/grub"
++
++    # 1) Console + noyau : fbcon=rotate:N (retire toute valeur precedente)
++    if [ -f "$GRUBF" ]; then
++        sed -i -E 's/ *fbcon=rotate:[0-9]//g' "$GRUBF"
++        if [ "$N" != "0" ]; then
++            if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' "$GRUBF"; then
++                sed -i -E "s/^(GRUB_CMDLINE_LINUX_DEFAULT=\")(.*)(\")[[:space:]]*\$/\1\2 fbcon=rotate:$N\3/" "$GRUBF"
++            else
++                printf 'GRUB_CMDLINE_LINUX_DEFAULT="fbcon=rotate:%s"\n' "$N" >> "$GRUBF"
++            fi
++        fi
++    else
++        pco_warn "target /etc/default/grub absent — rotation console ignoree"
++    fi
++
++    # 2) Splash Plymouth : rotation du theme pincabos (si portrait)
++    local THEME="$TARGET/usr/share/plymouth/themes/pincabos/pincabos.script"
++    if [ -f "$THEME" ] && [ "$N" != "0" ]; then
++        local DEG=0
++        [ "$N" = "1" ] && DEG=90
++        [ "$N" = "2" ] && DEG=180
++        [ "$N" = "3" ] && DEG=270
++        [ -f "$THEME.pcosorig" ] || cp "$THEME" "$THEME.pcosorig"
++        cat > "$THEME" <<'PLYSCRIPT'
++# PINCABOS rotation-aware splash (genere par l'installeur)
++rot = __ROT_DEG__;
++sw = Window.GetWidth();
++sh = Window.GetHeight();
++PI = 3.14159265358979;
++rad = rot * PI / 180;
++if (rot == 90 || rot == 270) { lw = sh; lh = sw; } else { lw = sw; lh = sh; }
++
++bg = Image("pincabos.png").Scale(lw, lh);
++if (rot != 0) bg = bg.Rotate(rad);
++bgs = Sprite(bg);
++bgs.SetX((sw - bg.GetWidth()) / 2);
++bgs.SetY((sh - bg.GetHeight()) / 2);
++bgs.SetZ(-100);
++
++bar_width = lw * 0.193;
++bar_height = 6;
++bar_lx = (lw - bar_width) / 2;
++bar_ly = lh * 0.728;
++bcx = bar_lx + bar_width / 2;
++bcy = bar_ly + bar_height / 2;
++
++if (rot == 0)   { pcx = bcx;      pcy = bcy;      }
++if (rot == 180) { pcx = sw - bcx; pcy = sh - bcy; }
++if (rot == 90)  { pcx = sw - bcy; pcy = bcx;      }
++if (rot == 270) { pcx = bcy;      pcy = sh - bcx; }
++
++box_img = Image("progress_box.png").Scale(bar_width, bar_height);
++if (rot != 0) box_img = box_img.Rotate(rad);
++box_sprite = Sprite(box_img);
++box_sprite.SetX(pcx - box_img.GetWidth() / 2);
++box_sprite.SetY(pcy - box_img.GetHeight() / 2);
++box_sprite.SetZ(10);
++
++bar_img0 = Image("progress_bar.png");
++bar_sprite = Sprite();
++bar_sprite.SetZ(11);
++
++fun boot_progress_callback(duration, progress) {
++    if (progress < 0) progress = 0;
++    if (progress > 1) progress = 1;
++    cw = bar_width * progress;
++    if (cw < 1) cw = 1;
++    img = bar_img0.Scale(cw, bar_height);
++    if (rot != 0) img = img.Rotate(rad);
++    bar_sprite.SetImage(img);
++    bar_sprite.SetX(pcx - img.GetWidth() / 2);
++    bar_sprite.SetY(pcy - img.GetHeight() / 2);
++}
++Plymouth.SetBootProgressFunction(boot_progress_callback);
++PLYSCRIPT
++        sed -i "s/__ROT_DEG__/$DEG/" "$THEME"
++        pco_go "Splash Plymouth pivote ($DEG deg)"
++    fi
++
++    # 3) trace de configuration
++    mkdir -p "$TARGET/etc/pincabos"
++    printf 'PINCABOS_FBCON_ROTATE="%s"\nPINCABOS_ORIENT_LABEL="%s"\n' \
++        "$N" "${REG_ORIENT_LABEL:-}" > "$TARGET/etc/pincabos/orientation.conf"
++
++    pco_go "Orientation appliquee : ${REG_ORIENT_LABEL:-Paysage}"
++}
++
+ apply_target_regional() {
+     echo
+     pco_step "Applying regional settings to installed PinCabOS"
+@@ -646,6 +732,7 @@
+     "$PAYLOAD_DIR/pincabos-v8.1g-install-cab-payload-to-target.sh" "$TARGET" "$PAYLOAD_DIR"
+ 
+   apply_target_regional
++  apply_target_orientation
+ 
+   test -d "$TARGET/opt/pincabos"
+   test -d "$TARGET/home/pinball/vpinfe"

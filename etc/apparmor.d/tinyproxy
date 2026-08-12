@@ -1,0 +1,58 @@
+# -*- mode: apparmor; -*-
+# vim: ft=apparmor
+# ------------------------------------------------------------------
+#
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#
+# ------------------------------------------------------------------
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile tinyproxy /usr/bin/tinyproxy {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  # allow to drop privileges
+  capability setuid,
+  capability setgid,
+
+  # to provide flexibility, when run as root tinyproxy may need to read files
+  # owned by other users
+  capability dac_override,
+  capability dac_read_search,
+  # also tinyproxy may be configured to bind to a privileged port so ensure we
+  # allow this as well
+  capability net_bind_service,
+
+  mr @{exec_path},
+
+  file r @{etc_ro}/tinyproxy/tinyproxy.conf,
+  # tinyproxy.conf allows to configure the locations of various files that will
+  # be written to by tinyproxy including ErrorFile, DefaultErrorFile, LogFile,
+  # and StatFile as well as PidFile. This profile allows tinyproxy to write to
+  # the default locations but if these are changed in the configuration file,
+  # additional rules should be added to the /etc/apparmor.d/local/tinyproxy file
+  # to allow this access
+  file rw /run/tinyproxy/tinyproxy.pid,  # PidFile
+  file rw /var/log/tinyproxy/tinyproxy.log, # LogFile
+
+  file r /usr/share/tinyproxy/*, #ErrorFile, DefaultErrorFile, StatFile etc
+
+  # for network access
+  network inet stream,
+  network inet dgram,
+  network inet6 stream,
+  network inet6 dgram,
+
+  # for DNS resolution
+  network netlink raw,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/tinyproxy>
+}

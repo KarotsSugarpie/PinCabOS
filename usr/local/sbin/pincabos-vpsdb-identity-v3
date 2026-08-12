@@ -1,0 +1,2135 @@
+#!/usr/bin/env python3
+"""PinCabOS V3 - disentangle VPX identity, technical ROM use, and PuP-Pack.
+
+Read-only on the NAS. Reuses VBS files extracted by the V2 mapper, then:
+1. audits VBS evidence for ROM / B2S identifier / PuP-Pack;
+2. identifies the represented table independently from the ROM;
+3. verifies the identity against VPSDB;
+4. flags borrowed ROMs, ROM-less tables, ambiguity, and real PuP-Packs.
+
+It does not create .PinCabOs archives and never writes to the NAS.
+"""
+from __future__ import annotations
+
+import csv
+import datetime as dt
+import difflib
+import hashlib
+import json
+import os
+import pwd
+import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import unicodedata
+import urllib.request
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Iterable, Iterator, Sequence
+
+SCRIPT_VERSION = "PINCABOS_VPSDB_IDENTITY_V3_5"
+
+NAS = Path(os.environ.get(
+    "PINCABOS_NAS_ROOT",
+    "/home/pinball/NetworkDrives/192-168-254-253",
+))
+TABLES = Path(os.environ.get(
+    "PINCABOS_TABLES_ROOT",
+    str(NAS / "vPinball - Copie/VisualPinball/Tables"),
+))
+PINUP = Path(os.environ.get(
+    "PINCABOS_PINUP_ROOT",
+    str(NAS / "vPinball - Copie/PinUPSystem"),
+))
+POPPER_DB = Path(os.environ.get(
+    "PINCABOS_POPPER_DB",
+    str(PINUP / "PUPBackup/20230708212533_PUPDatabase.db"),
+))
+ROMS = Path(os.environ.get(
+    "PINCABOS_ROMS_ROOT",
+    str(NAS / "vPinball - Copie/VisualPinball/VPinMAME/roms"),
+))
+ALTCOLOR = Path(os.environ.get(
+    "PINCABOS_ALTCOLOR_ROOT",
+    str(NAS / "vPinball - Copie/VisualPinball/VPinMAME/altcolor"),
+))
+ALTSOUND = Path(os.environ.get(
+    "PINCABOS_ALTSOUND_ROOT",
+    str(NAS / "vPinball - Copie/VisualPinball/VPinMAME/altsound"),
+))
+PUPVIDEOS = Path(os.environ.get(
+    "PINCABOS_PUPVIDEOS_ROOT",
+    str(PINUP / "PUPVideos"),
+))
+
+REPORT_ROOT = Path(os.environ.get(
+    "PINCABOS_REPORT_ROOT",
+    "/opt/pincabos/logs/audits",
+))
+V2_STATE_ROOT = REPORT_ROOT / "vpsdb-global-map-state-v2"
+V2_VPSDB_CACHE = V2_STATE_ROOT / "vpsdb.json"
+V3_STATE_ROOT = REPORT_ROOT / "vpsdb-identity-state-v3"
+V3_VBS_ROOT = V3_STATE_ROOT / "vbs"
+V3_VBS_META_ROOT = V3_STATE_ROOT / "vbs-meta"
+V3_VPSDB_CACHE = V3_STATE_ROOT / "vpsdb.json"
+V3_VPSDB_META = V3_STATE_ROOT / "vpsdb-meta.json"
+VPSDB_URL = (
+    "https://raw.githubusercontent.com/"
+    "VirtualPinballSpreadsheet/vps-db/main/db/vpsdb.json"
+)
+
+RUN_STAMP = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+RUN_DIR = REPORT_ROOT / f"vpsdb-identity-v3-5-{RUN_STAMP}"
+LOG_PATH = RUN_DIR / "terminal.txt"
+PROGRESS_DIR = V3_STATE_ROOT / "progress"
+PROGRESS_PATH = PROGRESS_DIR / f"vpsdb-identity-v3-5-{RUN_STAMP}.jsonl"
+
+ONLY_TABLE = os.environ.get("PINCABOS_MAP_ONLY", "").strip()
+REFRESH_VPSDB = os.environ.get("PINCABOS_VPSDB_REFRESH", "1").strip() not in {
+    "0", "false", "False", "non", "NON",
+}
+RUNTIME_USER = os.environ.get("PINCABOS_VPX_USER", "pinball").strip() or "pinball"
+VPX_CANDIDATES = (
+    Path("/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX"),
+    Path("/opt/pincabos/apps/vpinball/VPinballX_BGFX"),
+    Path("/opt/pincabos/apps/vpinball/VPinballX"),
+    Path("/opt/pincabos/bin/VPinballX_BGFX"),
+    Path("/opt/pincabos/bin/VPinballX"),
+)
+
+MEDIA_EXTENSIONS = {
+    ".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v",
+    ".mp3", ".wav", ".ogg", ".flac", ".aac",
+    ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp",
+}
+
+MANUFACTURER_ALIASES = {
+    "automaticos": {"automaticos"},
+    "atari": {"atari"},
+    "bally": {"bally"},
+    "bally midway": {"ballymidway", "midway", "bally"},
+    "capcom": {"capcom"},
+    "chicago coin": {"chicagocoin", "chicagocoinmachine"},
+    "data east": {"dataeast", "de"},
+    "game plan": {"gameplan"},
+    "gottlieb": {"gottlieb", "gtb"},
+    "inder": {"inder"},
+    "midway": {"midway"},
+    "original": {"original", "originaltable"},
+    "sega": {"sega"},
+    "spooky": {"spooky", "spookypinball"},
+    "stern": {"stern"},
+    "taito": {"taito"},
+    "williams": {"williams", "wms"},
+    "zaccaria": {"zaccaria"},
+}
+
+NOISE_TOKENS = {
+    "vpx", "table", "visual", "pinball", "release", "final", "cab", "cabinet",
+    "desktop", "fs", "fss", "vr", "pup", "mod", "edition", "update", "updated",
+    "night", "day", "color", "colour", "lut", "physics", "nfozzy", "fleep",
+    "alt", "sound", "altsound", "altcolor", "serum", "dmd", "flexdmd", "ultradmd",
+    "vpinworkshop", "vpw", "beta", "rev", "revision", "version",
+}
+
+ROM_VAR_NAMES = {
+    "cgamename", "gamename", "romname", "cromname", "romset", "romname1",
+    "romname2", "rom", "crom", "vpmrom", "pinmamerom", "b2sname",
+}
+PUP_VAR_RE = re.compile(
+    r"(?i)^(?:c?pup(?:pack|packname|name|folder|alias)|pupfolder|pupalias|packname)$"
+)
+TITLE_VAR_RE = re.compile(
+    r"(?i)^(?:table(?:name|title)|game(?:title|display)|title|tablename|mytable)$"
+)
+
+
+@dataclass
+class Evidence:
+    value: str
+    line: int
+    kind: str
+    expression: str
+    confidence: str
+    variable: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "value": self.value,
+            "line": self.line,
+            "kind": self.kind,
+            "expression": self.expression,
+            "confidence": self.confidence,
+            "variable": self.variable,
+        }
+
+
+@dataclass
+class VbsAudit:
+    rom_evidence: list[Evidence] = field(default_factory=list)
+    b2s_id_evidence: list[Evidence] = field(default_factory=list)
+    pup_evidence: list[Evidence] = field(default_factory=list)
+    title_evidence: list[Evidence] = field(default_factory=list)
+    resource_references: list[str] = field(default_factory=list)
+    pinmame_markers: list[dict[str, Any]] = field(default_factory=list)
+    pup_markers: list[dict[str, Any]] = field(default_factory=list)
+    load_em: bool = False
+    use_pup_values: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class VpsEntry:
+    id: str
+    canonical: str
+    name: str
+    manufacturer: str
+    year: str
+    roms: list[str]
+    raw: dict[str, Any]
+    core: str = ""
+    canonical_norm: str = ""
+    name_norm: str = ""
+    core_norm: str = ""
+    tokens: set[str] = field(default_factory=set)
+
+    def compact(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "canonical": self.canonical,
+            "name": self.name,
+            "manufacturer": self.manufacturer,
+            "year": self.year,
+            "roms": self.roms,
+        }
+
+
+def clean_text(value: Any) -> str:
+    return " ".join(str(value or "").replace("\x00", "").split()).strip()
+
+
+def ascii_text(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    return text.encode("ascii", "ignore").decode("ascii")
+
+
+def norm(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "", ascii_text(value).casefold())
+
+
+def tokenise(value: Any) -> list[str]:
+    text = ascii_text(value).casefold()
+    text = re.sub(r"\b(?:v(?:er(?:sion)?)?\s*)?\d+(?:[._-]\d+){1,4}[a-z]?\b", " ", text)
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return [token for token in text.split() if token and token not in NOISE_TOKENS]
+
+
+def unique(values: Iterable[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        value = clean_text(value)
+        key = value.casefold()
+        if value and key not in seen:
+            seen.add(key)
+            result.append(value)
+    return result
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def sha256_file(path: Path, block_size: int = 4 * 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(block_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def json_dump(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(path.suffix + ".part")
+    temp.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2, default=str) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temp, path)
+
+
+def log(message: str = "") -> None:
+    """Print and persist a line without ever aborting the batch on a log failure."""
+    print(message, flush=True)
+    try:
+        LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with LOG_PATH.open("a", encoding="utf-8") as handle:
+            handle.write(message + "\n")
+    except OSError as exc:
+        print(
+            f"AVERTISSEMENT JOURNAL: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+
+def append_progress(record: dict[str, Any]) -> None:
+    """Durable per-table checkpoint outside the disposable run report directory."""
+    try:
+        PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "script_version": SCRIPT_VERSION,
+            "run_stamp": RUN_STAMP,
+            "saved_at": dt.datetime.now().isoformat(),
+            "record": record,
+        }
+        with PROGRESS_PATH.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+    except OSError as exc:
+        print(
+            f"AVERTISSEMENT POINT DE REPRISE: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+
+def decode_script(path: Path) -> str:
+    """Decode a VPX/VBS script without mistaking ANSI text for UTF-16.
+
+    Python's generic ``utf-16`` decoder can successfully decode ordinary
+    even-length ANSI/ASCII bytes into unreadable CJK-looking characters.
+    Therefore UTF-16 is accepted only with a BOM or a strong NUL-byte
+    pattern. Normal VPX scripts are tried as UTF-8/Windows-1252 first.
+    """
+    raw = path.read_bytes()
+
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw.decode("utf-8-sig")
+    if raw.startswith(b"\xff\xfe"):
+        return raw.decode("utf-16-le")[1:]
+    if raw.startswith(b"\xfe\xff"):
+        return raw.decode("utf-16-be")[1:]
+
+    # Detect UTF-16 without BOM only when NUL bytes strongly alternate on
+    # one byte parity. Plain ANSI text such as the Addams Family VBS must
+    # never enter this branch.
+    if len(raw) >= 8:
+        even = raw[0::2]
+        odd = raw[1::2]
+        even_nul = even.count(0) / max(1, len(even))
+        odd_nul = odd.count(0) / max(1, len(odd))
+        total_nul = raw.count(0) / len(raw)
+
+        if total_nul >= 0.15:
+            if odd_nul >= 0.45 and even_nul <= 0.10:
+                try:
+                    return raw.decode("utf-16-le")
+                except UnicodeDecodeError:
+                    pass
+            if even_nul >= 0.45 and odd_nul <= 0.10:
+                try:
+                    return raw.decode("utf-16-be")
+                except UnicodeDecodeError:
+                    pass
+
+    for encoding in ("utf-8-sig", "cp1252", "latin1"):
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+
+    return raw.decode("latin1", "replace")
+
+
+
+
+def find_vpx_binary() -> Path:
+    explicit = os.environ.get("PINCABOS_VPX_BIN", "").strip()
+    if explicit:
+        candidate = Path(explicit)
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
+        raise RuntimeError(f"Binaire VPX explicite invalide: {candidate}")
+    for candidate in VPX_CANDIDATES:
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
+    for root in (Path("/home/pinball"), Path("/opt/pincabos")):
+        if not root.exists():
+            continue
+        for name in ("VPinballX_BGFX", "VPinballX"):
+            for candidate in root.rglob(name):
+                if candidate.is_file() and os.access(candidate, os.X_OK):
+                    return candidate
+    raise RuntimeError("Binaire VPinballX/VPinballX_BGFX introuvable")
+
+
+def vbs_state_key(source_vpx: Path) -> str:
+    try:
+        relative = source_vpx.relative_to(TABLES).as_posix()
+    except ValueError:
+        relative = str(source_vpx)
+    return hashlib.sha256(relative.encode("utf-8", "surrogateescape")).hexdigest()[:24]
+
+
+def extract_vbs_self_heal(vpx_bin: Path, source_vpx: Path, expected_vpx_sha: str = "") -> tuple[Path | None, str, str]:
+    """Reuse a V3 copy when the source fingerprint matches, otherwise re-extract."""
+    V3_VBS_ROOT.mkdir(parents=True, exist_ok=True)
+    V3_VBS_META_ROOT.mkdir(parents=True, exist_ok=True)
+    key = vbs_state_key(source_vpx)
+    saved_vbs = V3_VBS_ROOT / f"{key}.vbs"
+    meta_path = V3_VBS_META_ROOT / f"{key}.json"
+
+    if not source_vpx.is_file():
+        return None, "SOURCE_VPX_ABSENTE", f"VPX source absent: {source_vpx}"
+
+    source_stat = source_vpx.stat()
+    if saved_vbs.is_file() and meta_path.is_file():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            same_source = str(meta.get("source_vpx") or "") == str(source_vpx)
+            same_size = int(meta.get("source_size", -1)) == source_stat.st_size
+            same_mtime = int(meta.get("source_mtime_ns", -1)) == source_stat.st_mtime_ns
+            same_sha = not expected_vpx_sha or str(meta.get("vpx_sha256") or "") == expected_vpx_sha
+            if same_source and same_size and same_mtime and same_sha:
+                return saved_vbs, "V3_RÉUTILISÉ", ""
+        except Exception:
+            pass
+
+    account = pwd.getpwnam(RUNTIME_USER)
+    uid = account.pw_uid
+    gid = account.pw_gid
+    home = account.pw_dir
+
+    temp_root = Path(tempfile.mkdtemp(prefix="pincabos-vpsdb-v3-3-", dir="/var/tmp"))
+    try:
+        os.chown(temp_root, 0, 0)
+        os.chmod(temp_root, 0o711)
+        work_dir = temp_root / key
+        work_dir.mkdir(mode=0o700)
+        os.chown(work_dir, uid, gid)
+        os.chmod(work_dir, 0o700)
+
+        local_vpx = work_dir / source_vpx.name
+        shutil.copy2(source_vpx, local_vpx)
+        os.chown(local_vpx, uid, gid)
+        os.chmod(local_vpx, 0o600)
+
+        command = [
+            "runuser", "-u", RUNTIME_USER, "--", "env",
+            f"HOME={home}", "DISPLAY=:0", f"XAUTHORITY={home}/.Xauthority",
+            f"XDG_RUNTIME_DIR=/run/user/{uid}", "SDL_VIDEODRIVER=x11",
+            str(vpx_bin), "-ExtractVBS", str(local_vpx),
+        ]
+        completed = subprocess.run(
+            command, cwd=work_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, errors="replace", timeout=300, check=False,
+        )
+        output = completed.stdout or ""
+        candidates = sorted(work_dir.glob("*.vbs"))
+        if completed.returncode != 0 or not candidates:
+            useful = [line.strip() for line in output.splitlines() if line.strip()]
+            detail = useful[-1] if useful else f"VPX code retour {completed.returncode}"
+            return None, "RÉEXTRACTION_ÉCHEC", detail
+
+        shutil.copy2(candidates[0], saved_vbs)
+        os.chown(saved_vbs, 0, 0)
+        os.chmod(saved_vbs, 0o644)
+        source_sha = expected_vpx_sha or sha256_file(local_vpx)
+        json_dump(meta_path, {
+            "script_version": SCRIPT_VERSION,
+            "source_vpx": str(source_vpx),
+            "source_size": source_stat.st_size,
+            "source_mtime_ns": source_stat.st_mtime_ns,
+            "vpx_sha256": source_sha,
+            "vbs_sha256": sha256_file(saved_vbs),
+            "vpx_binary": str(vpx_bin),
+            "extracted_at": dt.datetime.now().isoformat(),
+            "return_code": completed.returncode,
+        })
+        return saved_vbs, "VBS_RÉEXTRAIT", ""
+    except subprocess.TimeoutExpired:
+        return None, "RÉEXTRACTION_TIMEOUT", "Extraction VPX dépassée (300 s)"
+    except Exception as exc:
+        return None, "RÉEXTRACTION_ERREUR", str(exc)
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def strip_vb_comment(line: str) -> str:
+    output: list[str] = []
+    in_string = False
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if char == '"':
+            if in_string and index + 1 < len(line) and line[index + 1] == '"':
+                output.extend(['"', '"'])
+                index += 2
+                continue
+            in_string = not in_string
+            output.append(char)
+            index += 1
+            continue
+        if char == "'" and not in_string:
+            break
+        output.append(char)
+        index += 1
+    code = "".join(output)
+    if re.match(r"(?i)^\s*rem(?:\s|$)", code):
+        return ""
+    return code.rstrip()
+
+
+def split_outside(text: str, separator: str) -> list[str]:
+    parts: list[str] = []
+    current: list[str] = []
+    in_string = False
+    depth = 0
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char == '"':
+            if in_string and index + 1 < len(text) and text[index + 1] == '"':
+                current.extend(['"', '"'])
+                index += 2
+                continue
+            in_string = not in_string
+            current.append(char)
+            index += 1
+            continue
+        if not in_string:
+            if char == "(":
+                depth += 1
+            elif char == ")" and depth:
+                depth -= 1
+            if char == separator and depth == 0:
+                parts.append("".join(current).strip())
+                current = []
+                index += 1
+                continue
+        current.append(char)
+        index += 1
+    parts.append("".join(current).strip())
+    return parts
+
+
+def split_statements(line: str) -> list[str]:
+    return [part for part in split_outside(line, ":") if part]
+
+
+def parse_string_literal(value: str) -> str | None:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+        inner = value[1:-1].replace('""', '"')
+        return clean_text(inner)
+    return None
+
+
+def unwrap_call(expression: str, function_name: str) -> str | None:
+    match = re.fullmatch(rf"(?is)\s*{re.escape(function_name)}\s*\((.*)\)\s*", expression)
+    return match.group(1).strip() if match else None
+
+
+def eval_expr(
+    expression: str,
+    assignments: dict[str, list[Evidence]],
+    depth: int = 0,
+) -> list[str]:
+    if depth > 6:
+        return []
+    expression = expression.strip()
+    if not expression:
+        return []
+
+    literal = parse_string_literal(expression)
+    if literal is not None:
+        return [literal]
+
+    for function_name in ("CStr", "Trim", "LCase", "UCase"):
+        inner = unwrap_call(expression, function_name)
+        if inner is not None:
+            values = eval_expr(inner, assignments, depth + 1)
+            if function_name.casefold() == "lcase":
+                values = [value.lower() for value in values]
+            elif function_name.casefold() == "ucase":
+                values = [value.upper() for value in values]
+            return unique(values)
+
+    replace_inner = unwrap_call(expression, "Replace")
+    if replace_inner is not None:
+        args = split_outside(replace_inner, ",")
+        if len(args) >= 3:
+            bases = eval_expr(args[0], assignments, depth + 1)
+            old = eval_expr(args[1], assignments, depth + 1)
+            new = eval_expr(args[2], assignments, depth + 1)
+            if bases and old and new:
+                return unique(base.replace(old[0], new[0]) for base in bases)
+
+    concat = split_outside(expression, "&")
+    if len(concat) > 1:
+        combinations = [""]
+        for part in concat:
+            values = eval_expr(part, assignments, depth + 1)
+            if not values:
+                return []
+            combinations = [left + right for left in combinations for right in values]
+            if len(combinations) > 32:
+                combinations = combinations[:32]
+        return unique(combinations)
+
+    variable_match = re.fullmatch(r"(?i)([A-Za-z_]\w*)", expression)
+    if variable_match:
+        key = variable_match.group(1).casefold()
+        return unique(item.value for item in assignments.get(key, []))
+
+    return []
+
+
+def plausible_identifier(value: str) -> bool:
+    value = clean_text(value).strip("/\\")
+    return bool(
+        1 <= len(value) <= 120
+        and re.fullmatch(r"[A-Za-z0-9À-ÿ_. ()\-]+", value)
+        and value.casefold() not in {"true", "false", "none", "nothing"}
+    )
+
+
+def add_evidence(target: list[Evidence], evidence: Evidence) -> None:
+    if not plausible_identifier(evidence.value):
+        return
+    key = (evidence.value.casefold(), evidence.line, evidence.kind, evidence.variable.casefold())
+    if all(
+        (item.value.casefold(), item.line, item.kind, item.variable.casefold()) != key
+        for item in target
+    ):
+        target.append(evidence)
+
+
+def audit_vbs(text: str) -> VbsAudit:
+    audit = VbsAudit()
+    lines = text.splitlines()
+    assignments: dict[str, list[Evidence]] = defaultdict(list)
+    statements: list[tuple[int, str]] = []
+
+    for line_number, raw_line in enumerate(lines, 1):
+        code = strip_vb_comment(raw_line)
+        for statement in split_statements(code):
+            statements.append((line_number, statement))
+
+    # Multiple passes resolve simple variables and concatenations.
+    for _pass in range(4):
+        changed = False
+        for line_number, statement in statements:
+            match = re.match(
+                r"(?is)^\s*(?:public\s+|private\s+)?(?:const\s+|dim\s+|set\s+)?"
+                r"([A-Za-z_]\w*)\s*=\s*(.+?)\s*$",
+                statement,
+            )
+            if not match:
+                continue
+            variable = match.group(1)
+            expression = match.group(2)
+            values = eval_expr(expression, assignments)
+            for value in values:
+                evidence = Evidence(
+                    value=value,
+                    line=line_number,
+                    kind="AFFECTATION",
+                    expression=clean_text(statement),
+                    confidence="MOYENNE",
+                    variable=variable,
+                )
+                bucket = assignments[variable.casefold()]
+                before = len(bucket)
+                add_evidence(bucket, evidence)
+                changed = changed or len(bucket) != before
+        if not changed:
+            break
+
+    pinmame_re = re.compile(
+        r"(?i)VPinMAME\.Controller|Controller\.GameName|\.GameName\s*=|"
+        r"LoadVPM\b|vpmInit\b|Controller\.Games\s*\(|PinMAME"
+    )
+    load_em_re = re.compile(r"(?i)\bLoadEM\b")
+    pup_object_re = re.compile(r"(?i)PinUpPlayer\.PinDisplay|PuPlayer\.B2SInit|\bPuPStart\b")
+
+    with_controller = False
+    for line_number, statement in statements:
+        lowered = statement.casefold().strip()
+        if re.match(r"(?i)^with\s+(?:controller|vpmcontroller)\b", statement):
+            with_controller = True
+        elif re.match(r"(?i)^end\s+with\b", statement):
+            with_controller = False
+
+        if pinmame_re.search(statement):
+            audit.pinmame_markers.append({"line": line_number, "statement": clean_text(statement)})
+        if load_em_re.search(statement):
+            audit.load_em = True
+        if pup_object_re.search(statement):
+            audit.pup_markers.append({"line": line_number, "statement": clean_text(statement)})
+
+        use_pup_match = re.match(r"(?is)^\s*(?:usePUP|HasPUP)\s*=\s*(True|False|0|1)\b", statement)
+        if use_pup_match:
+            audit.use_pup_values.append({
+                "line": line_number,
+                "value": use_pup_match.group(1),
+                "statement": clean_text(statement),
+            })
+
+        assignment_match = re.match(
+            r"(?is)^\s*(?:public\s+|private\s+)?(?:const\s+|dim\s+|set\s+)?"
+            r"([A-Za-z_]\w*)\s*=\s*(.+?)\s*$",
+            statement,
+        )
+        if assignment_match:
+            variable = assignment_match.group(1)
+            expression = assignment_match.group(2)
+            values = eval_expr(expression, assignments)
+            if variable.casefold() in ROM_VAR_NAMES:
+                for value in values:
+                    add_evidence(audit.rom_evidence, Evidence(
+                        value=value,
+                        line=line_number,
+                        kind="VARIABLE_ROM",
+                        expression=clean_text(statement),
+                        confidence="MOYENNE",
+                        variable=variable,
+                    ))
+            if PUP_VAR_RE.match(variable):
+                for value in values:
+                    add_evidence(audit.pup_evidence, Evidence(
+                        value=value,
+                        line=line_number,
+                        kind="VARIABLE_PUP",
+                        expression=clean_text(statement),
+                        confidence="MOYENNE",
+                        variable=variable,
+                    ))
+            if TITLE_VAR_RE.match(variable):
+                for value in values:
+                    add_evidence(audit.title_evidence, Evidence(
+                        value=value,
+                        line=line_number,
+                        kind="TITRE_VBS",
+                        expression=clean_text(statement),
+                        confidence="FAIBLE",
+                        variable=variable,
+                    ))
+
+        controller_match = re.match(
+            r"(?is)^\s*(?:Controller\.|\.)(?:GameName)\s*=\s*(.+?)\s*$",
+            statement,
+        )
+        if controller_match and (statement.lstrip().startswith("Controller.") or with_controller):
+            expression = controller_match.group(1)
+            for value in eval_expr(expression, assignments):
+                add_evidence(audit.rom_evidence, Evidence(
+                    value=value,
+                    line=line_number,
+                    kind="CONTROLLER_GAMENAME",
+                    expression=clean_text(statement),
+                    confidence="FORTE",
+                ))
+
+        games_match = re.search(r"(?is)Controller\.Games\s*\((.+?)\)", statement)
+        if games_match:
+            expression = games_match.group(1)
+            for value in eval_expr(expression, assignments):
+                add_evidence(audit.rom_evidence, Evidence(
+                    value=value,
+                    line=line_number,
+                    kind="CONTROLLER_GAMES",
+                    expression=clean_text(statement),
+                    confidence="FORTE",
+                ))
+
+        # Actual PuP pack consumers. Ignore Sub/Function declarations.
+        if not re.match(r"(?i)^\s*(?:Sub|Function)\b", statement):
+            b2s_init = re.search(r"(?is)PuPlayer\.B2SInit\s+(.+)$", statement)
+            if b2s_init:
+                args = split_outside(b2s_init.group(1), ",")
+                candidate_exprs = args[1:2] if len(args) >= 2 else args[:1]
+                for expression in candidate_exprs:
+                    for value in eval_expr(expression, assignments):
+                        add_evidence(audit.pup_evidence, Evidence(
+                            value=value,
+                            line=line_number,
+                            kind="PUP_B2SINIT",
+                            expression=clean_text(statement),
+                            confidence="FORTE",
+                        ))
+
+            player_init = re.search(r"(?is)PuPlayer\.Init\b\s+(.+)$", statement)
+            if player_init:
+                args = split_outside(player_init.group(1), ",")
+                if len(args) >= 2:
+                    expression = args[1]
+                    for value in eval_expr(expression, assignments):
+                        add_evidence(audit.pup_evidence, Evidence(
+                            value=value,
+                            line=line_number,
+                            kind="PUP_PLAYER_INIT",
+                            expression=clean_text(statement),
+                            confidence="FORTE",
+                        ))
+
+            pup_start = re.search(r"(?is)(?<!Sub\s)\bPuPStart\s*\(?\s*([^,)]+)", statement)
+            if pup_start:
+                expression = pup_start.group(1).strip()
+                for value in eval_expr(expression, assignments):
+                    add_evidence(audit.pup_evidence, Evidence(
+                        value=value,
+                        line=line_number,
+                        kind="PUP_START",
+                        expression=clean_text(statement),
+                        confidence="FORTE",
+                    ))
+
+        for quoted in re.findall(r'"((?:[^"]|"")+)"', statement):
+            value = clean_text(quoted.replace('""', '"')).replace("\\", "/")
+            if Path(value).suffix.casefold() in MEDIA_EXTENSIONS | {
+                ".json", ".ini", ".cfg", ".res", ".fnt", ".mid", ".midi",
+            }:
+                audit.resource_references.append(value)
+
+    # Standard cGameName becomes strong only when PinMAME is actually present.
+    if audit.pinmame_markers:
+        for key in ("cgamename", "gamename", "romname", "cromname", "rom"):
+            for item in assignments.get(key, []):
+                add_evidence(audit.rom_evidence, Evidence(
+                    value=item.value,
+                    line=item.line,
+                    kind="VARIABLE_ROM_AVEC_PINMAME",
+                    expression=item.expression,
+                    confidence="FORTE",
+                    variable=item.variable,
+                ))
+    else:
+        # In EM/original scripts cGameName is commonly only a B2S identifier.
+        for key in ("cgamename", "gamename", "b2sname"):
+            for item in assignments.get(key, []):
+                add_evidence(audit.b2s_id_evidence, Evidence(
+                    value=item.value,
+                    line=item.line,
+                    kind="IDENTIFIANT_B2S_SANS_PINMAME",
+                    expression=item.expression,
+                    confidence="MOYENNE",
+                    variable=item.variable,
+                ))
+        # Remove weak ROM-variable evidence if no PinMAME marker exists.
+        audit.rom_evidence = [
+            item for item in audit.rom_evidence
+            if item.kind in {"CONTROLLER_GAMENAME", "CONTROLLER_GAMES"}
+        ]
+
+    # Fallback brut V3.3: certains scripts anciens utilisent des syntaxes que le
+    # parseur d'expressions strict peut ignorer (déclarations groupées, virgules,
+    # With Controller, etc.). On relit le code sans commentaires, mais sans jamais
+    # exécuter le VBS. Une valeur cGameName n'est une ROM que si un marqueur
+    # PinMAME d'exécution est aussi présent.
+    code_without_comments = "\n".join(strip_vb_comment(line) for line in lines)
+    raw_runtime_patterns = (
+        r'(?i)CreateObject\s*\(\s*"VPinMAME\.Controller"',
+        r'(?i)\bLoadVPM\b',
+        r'(?i)\bvpmInit\b',
+        r'(?i)\bPinMAMETimer\b',
+        r'(?i)\bController\.Run\b',
+        r'(?i)\bController\.Games\s*\(',
+        r'(?i)\bController\.SolMask\b',
+        r'(?i)\bController\.Pause\b',
+        r'(?i)\bVPinMAME\b',
+        r'(?i)\b(?:SAM|WPC|SYS80|S11|S4|S6|S7|S9|DE|SEGA)\.VBS\b',
+    )
+    raw_runtime_hits: list[dict[str, Any]] = []
+    for line_number, raw_line in enumerate(code_without_comments.splitlines(), 1):
+        for pattern in raw_runtime_patterns:
+            if re.search(pattern, raw_line):
+                raw_runtime_hits.append({
+                    "line": line_number,
+                    "statement": clean_text(raw_line),
+                    "kind": "PINMAME_BRUT_V3_3",
+                })
+                break
+    if raw_runtime_hits:
+        known = {(item.get("line"), item.get("statement")) for item in audit.pinmame_markers}
+        for item in raw_runtime_hits:
+            key = (item["line"], item["statement"])
+            if key not in known:
+                audit.pinmame_markers.append(item)
+                known.add(key)
+
+    raw_assignments: dict[str, list[Evidence]] = defaultdict(list)
+    for line_number, raw_line in enumerate(lines, 1):
+        code = strip_vb_comment(raw_line)
+        for statement in split_statements(code):
+            # Capture le premier littéral même si la déclaration continue avec
+            # une virgule ou d'autres constantes sur la même ligne.
+            match = re.match(
+                r'(?is)^\s*(?:public\s+|private\s+)?(?:const\s+|dim\s+|set\s+)?'
+                r'([A-Za-z_]\w*)\s*=\s*"((?:[^"]|"")*)"',
+                statement,
+            )
+            if match:
+                variable = match.group(1)
+                value = clean_text(match.group(2).replace('""', '"'))
+                add_evidence(raw_assignments[variable.casefold()], Evidence(
+                    value=value,
+                    line=line_number,
+                    kind="AFFECTATION_BRUTE_V3_3",
+                    expression=clean_text(statement),
+                    confidence="MOYENNE",
+                    variable=variable,
+                ))
+
+    if audit.pinmame_markers:
+        for key in ("cgamename", "gamename", "romname", "cromname", "romset", "rom", "crom", "vpmrom", "pinmamerom"):
+            for item in raw_assignments.get(key, []):
+                add_evidence(audit.rom_evidence, Evidence(
+                    value=item.value,
+                    line=item.line,
+                    kind="ROM_BRUTE_AVEC_PINMAME_V3_3",
+                    expression=item.expression,
+                    confidence="FORTE",
+                    variable=item.variable,
+                ))
+
+        # Résout aussi Controller.GameName = variable et .GameName = variable
+        # dans un bloc With Controller.
+        with_controller_raw = False
+        for line_number, raw_line in enumerate(lines, 1):
+            code = strip_vb_comment(raw_line)
+            for statement in split_statements(code):
+                if re.match(r'(?i)^\s*with\s+(?:controller|vpmcontroller)\b', statement):
+                    with_controller_raw = True
+                    continue
+                if re.match(r'(?i)^\s*end\s+with\b', statement):
+                    with_controller_raw = False
+                    continue
+                match = re.match(
+                    r'(?is)^\s*(?:Controller\.|\.)(?:GameName)\s*=\s*([A-Za-z_]\w*)',
+                    statement,
+                )
+                if match and (statement.lstrip().casefold().startswith("controller.") or with_controller_raw):
+                    variable = match.group(1).casefold()
+                    for item in raw_assignments.get(variable, []) + assignments.get(variable, []):
+                        add_evidence(audit.rom_evidence, Evidence(
+                            value=item.value,
+                            line=line_number,
+                            kind="CONTROLLER_GAMENAME_BRUT_V3_3",
+                            expression=clean_text(statement),
+                            confidence="FORTE",
+                            variable=match.group(1),
+                        ))
+    elif not audit.rom_evidence:
+        # Sans preuve PinMAME, ces identifiants restent B2S/original et ne
+        # deviennent jamais une ROM par simple présence de cGameName.
+        for key in ("cgamename", "gamename", "b2sname"):
+            for item in raw_assignments.get(key, []):
+                add_evidence(audit.b2s_id_evidence, Evidence(
+                    value=item.value,
+                    line=item.line,
+                    kind="IDENTIFIANT_B2S_BRUT_SANS_PINMAME_V3_3",
+                    expression=item.expression,
+                    confidence="MOYENNE",
+                    variable=item.variable,
+                ))
+
+    audit.resource_references = unique(audit.resource_references)
+    return audit
+
+
+def title_core(value: str) -> str:
+    value = clean_text(value).replace("_", " ")
+    value = re.sub(r"(?i)\.(?:vpx|directb2s|vbs)$", "", value)
+    value = re.sub(r"\[[^\]]*\]", " ", value)
+    value = re.sub(r"(?i)\b(?:v|ver|version|rev)\s*\d+(?:[._-]\d+){0,4}[a-z]?\b", " ", value)
+    value = re.sub(r"(?i)\b(?:VPW|VPinWorkshop|MOD|FS|FSS|VR|CAB|PUP|4K)\b", " ", value)
+    value = re.sub(r"(?i)\b(?:night|day)\s*mod\b", " ", value)
+    value = re.sub(r"\((?:19|20)\d{2}\)", " ", value)
+    value = re.sub(
+        r"\((?:Williams|Bally|Stern|Gottlieb|Sega|Data\s*East|Midway|Atari|"
+        r"Capcom|Zaccaria|Taito|Inder|Original|Automaticos)(?:\s+(?:19|20)\d{2})?\)",
+        " ", value, flags=re.I,
+    )
+    value = re.sub(r"(?i)^007\s+", "", value)
+    value = re.sub(r"\s+", " ", value).strip(" -_.()")
+    return value
+
+
+def extract_years(values: Iterable[str]) -> set[str]:
+    result: set[str] = set()
+    for value in values:
+        result.update(re.findall(r"\b(?:19|20)\d{2}\b", str(value or "")))
+    return result
+
+
+def manufacturer_keys(value: str) -> set[str]:
+    text = ascii_text(value).casefold()
+    text = re.sub(r"[^a-z0-9]+", " ", text).strip()
+    tokens = set(text.split())
+    found: set[str] = set()
+    for canonical, aliases in MANUFACTURER_ALIASES.items():
+        for alias in aliases:
+            alias_text = re.sub(r"[^a-z0-9]+", " ", ascii_text(alias).casefold()).strip()
+            if not alias_text:
+                continue
+            if " " in alias_text:
+                if re.search(rf"(?<![a-z0-9]){re.escape(alias_text)}(?![a-z0-9])", text):
+                    found.add(canonical)
+                    break
+            elif len(alias_text) >= 3 and alias_text in tokens:
+                found.add(canonical)
+                break
+    return found
+
+
+def canonical_game_name(game: dict[str, Any]) -> str:
+    name = clean_text(game.get("name") or game.get("gameName"))
+    manufacturer = clean_text(game.get("manufacturer"))
+    year = clean_text(game.get("year"))
+    suffix = " ".join(part for part in (manufacturer, year) if part)
+    if not suffix:
+        return name
+    if norm(suffix) and norm(suffix) in norm(name):
+        return name
+    return f"{name} ({suffix})".strip()
+
+
+def collect_rom_versions(game: dict[str, Any]) -> list[str]:
+    versions: list[str] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, str):
+            value = clean_text(value)
+            if value:
+                versions.append(Path(value).stem)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+        elif isinstance(value, dict):
+            used = False
+            for key in ("version", "rom", "name", "fileName", "filename"):
+                if key in value and isinstance(value[key], (str, list)):
+                    walk(value[key])
+                    used = True
+            if not used:
+                for child in value.values():
+                    if isinstance(child, (list, dict)):
+                        walk(child)
+
+    for key in ("romFiles", "roms", "rom"):
+        if key in game:
+            walk(game[key])
+    return unique(versions)
+
+
+def parse_vpsdb(payload: bytes) -> list[VpsEntry]:
+    parsed = json.loads(payload)
+    if isinstance(parsed, dict):
+        games = parsed.get("games") or parsed.get("data") or []
+    elif isinstance(parsed, list):
+        games = parsed
+    else:
+        games = []
+    entries: list[VpsEntry] = []
+    for game in games:
+        if not isinstance(game, dict):
+            continue
+        master_id = clean_text(game.get("id") or game.get("masterId") or game.get("masterID"))
+        name = clean_text(game.get("name") or game.get("gameName"))
+        if not master_id or not name:
+            continue
+        entry = VpsEntry(
+            id=master_id,
+            canonical=canonical_game_name(game),
+            name=name,
+            manufacturer=clean_text(game.get("manufacturer")),
+            year=clean_text(game.get("year")),
+            roms=collect_rom_versions(game),
+            raw=game,
+        )
+        entry.core = title_core(entry.name)
+        entry.canonical_norm = norm(entry.canonical)
+        entry.name_norm = norm(entry.name)
+        entry.core_norm = norm(entry.core)
+        entry.tokens = set(tokenise(entry.core or entry.name))
+        entries.append(entry)
+    if not entries:
+        raise RuntimeError("Aucune entrée VPSDB lisible")
+    return entries
+
+
+def ensure_vpsdb_snapshot() -> tuple[bytes, str, str]:
+    V3_STATE_ROOT.mkdir(parents=True, exist_ok=True)
+    source = ""
+    payload: bytes | None = None
+    error = ""
+
+    if REFRESH_VPSDB:
+        try:
+            request = urllib.request.Request(
+                VPSDB_URL,
+                headers={"User-Agent": "PinCabOS-VPSDB-Identity-V3.3/1.0"},
+            )
+            with urllib.request.urlopen(request, timeout=120) as response:
+                candidate = response.read()
+            parse_vpsdb(candidate)
+            payload = candidate
+            source = VPSDB_URL
+            V3_VPSDB_CACHE.write_bytes(candidate)
+        except Exception as exc:  # network fallback is intentional
+            error = str(exc)
+
+    if payload is None and V3_VPSDB_CACHE.is_file():
+        candidate = V3_VPSDB_CACHE.read_bytes()
+        parse_vpsdb(candidate)
+        payload = candidate
+        source = str(V3_VPSDB_CACHE)
+
+    if payload is None and V2_VPSDB_CACHE.is_file():
+        candidate = V2_VPSDB_CACHE.read_bytes()
+        parse_vpsdb(candidate)
+        payload = candidate
+        source = str(V2_VPSDB_CACHE)
+        V3_VPSDB_CACHE.write_bytes(candidate)
+
+    if payload is None:
+        raise RuntimeError(f"VPSDB indisponible: {error or 'aucun cache'}")
+
+    digest = sha256_bytes(payload)
+    json_dump(V3_VPSDB_META, {
+        "script_version": SCRIPT_VERSION,
+        "source": source,
+        "url": VPSDB_URL,
+        "sha256": digest,
+        "obtained_at": dt.datetime.now().isoformat(),
+        "refresh_requested": REFRESH_VPSDB,
+        "refresh_error": error,
+    })
+    return payload, digest, source
+
+
+def find_latest_v2_report() -> Path | None:
+    """Return an optional V2 report. V3.3 never requires it."""
+    explicit = os.environ.get("PINCABOS_V2_REPORT", "").strip()
+    if explicit:
+        path = Path(explicit)
+        if path.is_dir():
+            path = path / "mapping-complet.json"
+        return path if path.is_file() else None
+
+    candidates: list[tuple[float, Path]] = []
+    for path in REPORT_ROOT.glob("vpsdb-global-map-*/mapping-complet.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                valid_vbs = sum(
+                    1 for item in data
+                    if isinstance(item, dict)
+                    and item.get("vbs_status") == "VBS_EXTRAIT"
+                )
+                candidates.append((valid_vbs * 10_000_000 + path.stat().st_mtime, path))
+        except Exception:
+            continue
+    return max(candidates, key=lambda item: item[0])[1] if candidates else None
+
+
+def qident(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
+
+
+def load_popper_map(path: Path) -> dict[str, list[dict[str, Any]]]:
+    """Read the selected Popper database without modifying it."""
+    result: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    connection = sqlite3.connect(
+        f"file:{path.as_posix()}?mode=ro&immutable=1",
+        uri=True,
+    )
+    try:
+        table_names = [row[0] for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+        )]
+        for table_name in table_names:
+            columns = [
+                row[1]
+                for row in connection.execute(
+                    f"PRAGMA table_info({qident(table_name)})"
+                )
+            ]
+            lower = {column.casefold(): column for column in columns}
+            if "gamefilename" not in lower:
+                continue
+            wanted = [
+                lower[key]
+                for key in (
+                    "gamefilename", "gamedisplay", "gamename", "rom",
+                    "mediasearch", "dateadded", "dateupdated",
+                )
+                if key in lower
+            ]
+            query = (
+                "SELECT "
+                + ",".join(qident(column) for column in wanted)
+                + " FROM "
+                + qident(table_name)
+            )
+            for values in connection.execute(query):
+                record = dict(zip(wanted, values))
+                filename = record_field(record, "gamefilename")
+                if filename:
+                    record["_table"] = table_name
+                    result[norm(Path(filename).stem)].append(record)
+    finally:
+        connection.close()
+    return result
+
+
+def record_field(record: dict[str, Any], requested: str) -> str:
+    for key, value in record.items():
+        if key.casefold() == requested.casefold():
+            return clean_text(value)
+    return ""
+
+
+def exact_sidecars(vpx: Path) -> list[str]:
+    allowed = {".directb2s", ".vbs", ".pov", ".ini", ".json", ".res", ".cfg", ".nv"}
+    result: list[str] = []
+    try:
+        for item in vpx.parent.iterdir():
+            if (
+                item.is_file()
+                and item.suffix.casefold() in allowed
+                and norm(item.stem) == norm(vpx.stem)
+            ):
+                result.append(str(item))
+    except OSError:
+        pass
+    return sorted(result)
+
+
+def load_optional_v2_records(path: Path | None) -> dict[str, dict[str, Any]]:
+    if path is None or not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(payload, list):
+        return {}
+    result: dict[str, dict[str, Any]] = {}
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        source = clean_text(item.get("source_vpx"))
+        relative = clean_text(item.get("source_relative"))
+        if source:
+            result[str(Path(source))] = item
+        if relative:
+            result["REL:" + relative.casefold()] = item
+    return result
+
+
+def build_current_records(
+    popper_map: dict[str, list[dict[str, Any]]],
+    v2_index: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Build the inventory directly from the current NAS, optionally enriched by V2."""
+    tables = sorted(
+        (
+            item
+            for item in TABLES.rglob("*")
+            if item.is_file() and item.suffix.casefold() == ".vpx"
+        ),
+        key=lambda item: str(item).casefold(),
+    )
+    records: list[dict[str, Any]] = []
+    for index, source in enumerate(tables, 1):
+        relative = source.relative_to(TABLES).as_posix()
+        old = (
+            v2_index.get(str(source))
+            or v2_index.get("REL:" + relative.casefold())
+            or {}
+        )
+        popper_rows = popper_map.get(norm(source.stem), [])
+        popper = popper_rows[0] if popper_rows else {}
+        records.append({
+            "index": index,
+            "source_vpx": str(source),
+            "source_relative": relative,
+            "vpx_sha256": clean_text(old.get("vpx_sha256")),
+            "vbs_saved": clean_text(old.get("vbs_saved")),
+            "vbs_sha256": clean_text(old.get("vbs_sha256")),
+            "popper_database": str(POPPER_DB),
+            "popper_rows": popper_rows,
+            "popper_display": (
+                record_field(popper, "gamedisplay")
+                or record_field(popper, "gamename")
+            ),
+            "rom_popper": record_field(popper, "rom"),
+            "sidecars": exact_sidecars(source),
+            "vpsdb": old.get("vpsdb") or {},
+        })
+    return records
+
+
+def build_path_index(root: Path, directories: bool = False, suffix: str | None = None) -> dict[str, list[Path]]:
+    index: dict[str, list[Path]] = defaultdict(list)
+    if not root.is_dir():
+        return index
+    for item in root.iterdir():
+        if directories and not item.is_dir():
+            continue
+        if not directories and not item.is_file():
+            continue
+        if suffix and item.suffix.casefold() != suffix.casefold():
+            continue
+        key = norm(item.name if directories else item.stem)
+        if key:
+            index[key].append(item)
+    return index
+
+
+@lru_cache(maxsize=4096)
+def inspect_pup(path: Path) -> dict[str, Any]:
+    files = [item for item in path.rglob("*") if item.is_file()]
+    screens = [item for item in files if item.name.casefold() == "screens.pup"]
+    playlists = [item for item in files if item.name.casefold() == "playlists.pup"]
+    media = [item for item in files if item.suffix.casefold() in MEDIA_EXTENSIONS]
+    if not files:
+        structure = "VIDE"
+    elif (screens or playlists) and media:
+        structure = "VALIDE"
+    elif screens or playlists:
+        structure = "CONTROLE_SANS_MEDIA"
+    elif len(media) >= 3:
+        structure = "PROBABLE"
+    else:
+        structure = "NON_STANDARD"
+    return {
+        "path": str(path),
+        "structure": structure,
+        "files": len(files),
+        "media": len(media),
+        "screens_pup": len(screens),
+        "playlists_pup": len(playlists),
+        "size_bytes": sum(item.stat().st_size for item in files),
+    }
+
+
+def resolve_pup(
+    audit: VbsAudit,
+    rom_values: list[str],
+    pup_index: dict[str, list[Path]],
+) -> dict[str, Any]:
+    explicit_values = unique(item.value for item in audit.pup_evidence if item.confidence == "FORTE")
+
+    explicit_matches: list[dict[str, Any]] = []
+    rom_matches: list[dict[str, Any]] = []
+
+    def collect(values: Iterable[str], method: str) -> list[dict[str, Any]]:
+        found: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for value in values:
+            key = norm(value)
+            if not key:
+                continue
+            for path in pup_index.get(key, []):
+                path_key = str(path)
+                if path_key in seen:
+                    continue
+                seen.add(path_key)
+                info = inspect_pup(path)
+                info["matched_by"] = value
+                info["method"] = method
+                found.append(info)
+        return found
+
+    explicit_matches = collect(explicit_values, "VBS_EXPLICITE")
+    rom_matches = collect(rom_values, "ROM_EXACTE")
+
+    # VBS explicit aliases always have priority. A ROM-named pack may be shown as
+    # an alternative, but it may never silently replace an explicit missing alias.
+    candidates = explicit_matches if explicit_values else rom_matches
+    valid = [item for item in candidates if item["structure"] == "VALIDE"]
+    probable = [item for item in candidates if item["structure"] == "PROBABLE"]
+    empty = [item for item in candidates if item["structure"] == "VIDE"]
+
+    if explicit_values:
+        if len(valid) > 1:
+            status = "PUP_AMBIGU"
+            selected = None
+        elif len(valid) == 1:
+            status = "PUP_VBS_EXPLICITE_VALIDE"
+            selected = valid[0]
+        elif len(probable) == 1:
+            status = "PUP_VBS_EXPLICITE_PROBABLE"
+            selected = probable[0]
+        elif len(probable) > 1:
+            status = "PUP_AMBIGU"
+            selected = None
+        elif empty:
+            status = "PUP_VBS_EXPLICITE_VIDE"
+            selected = empty[0] if len(empty) == 1 else None
+        elif explicit_matches:
+            status = "PUP_NON_STANDARD"
+            selected = explicit_matches[0] if len(explicit_matches) == 1 else None
+        else:
+            status = "PUP_VBS_EXPLICITE_MANQUANT"
+            selected = None
+    else:
+        if len(valid) > 1:
+            status = "PUP_AMBIGU"
+            selected = None
+        elif len(valid) == 1:
+            status = "PUP_ROM_VALIDE"
+            selected = valid[0]
+        elif len(probable) == 1:
+            status = "PUP_ROM_PROBABLE"
+            selected = probable[0]
+        elif len(probable) > 1:
+            status = "PUP_AMBIGU"
+            selected = None
+        elif empty:
+            status = "PUP_VIDE"
+            selected = empty[0] if len(empty) == 1 else None
+        elif rom_matches:
+            status = "PUP_NON_STANDARD"
+            selected = rom_matches[0] if len(rom_matches) == 1 else None
+        else:
+            status = "SANS_PUP"
+            selected = None
+
+    use_pup = "INCONNU"
+    if audit.use_pup_values:
+        last = audit.use_pup_values[-1]["value"].casefold()
+        use_pup = "ACTIVÉ" if last in {"true", "1"} else "DÉSACTIVÉ"
+
+    all_matches: list[dict[str, Any]] = []
+    seen_paths: set[str] = set()
+    for item in explicit_matches + rom_matches:
+        if item["path"] not in seen_paths:
+            seen_paths.add(item["path"])
+            all_matches.append(item)
+
+    return {
+        "status": status,
+        "selected": selected,
+        "matches": all_matches,
+        "explicit_matches": explicit_matches,
+        "rom_matches": rom_matches,
+        "explicit_aliases": explicit_values,
+        "use_pup": use_pup,
+        "prefix_allowed": status in {"PUP_VBS_EXPLICITE_VALIDE", "PUP_ROM_VALIDE"},
+        "evidence": [item.as_dict() for item in audit.pup_evidence],
+    }
+
+
+def choose_rom_status(
+    audit: VbsAudit,
+    popper_rom: str,
+    rom_index: dict[str, list[Path]],
+) -> dict[str, Any]:
+    strong_values = unique(item.value for item in audit.rom_evidence if item.confidence == "FORTE")
+    all_values = unique(item.value for item in audit.rom_evidence)
+    values = strong_values or all_values
+
+    existing = [value for value in values if norm(value) in rom_index]
+    selected = ""
+    if len(existing) == 1:
+        selected = existing[0]
+    elif len(values) == 1:
+        selected = values[0]
+    elif popper_rom and any(norm(value) == norm(popper_rom) for value in values):
+        selected = next(value for value in values if norm(value) == norm(popper_rom))
+
+    if len(values) > 1 and not selected:
+        status = "ROM_MULTIPLE_AMBIGUË"
+    elif selected and norm(selected) in rom_index:
+        status = "ROM_PINMAME_CONFIRMÉE"
+    elif selected and audit.pinmame_markers:
+        status = "ROM_PINMAME_ZIP_MANQUANT"
+    elif audit.b2s_id_evidence and not audit.pinmame_markers:
+        status = "SANS_ROM_IDENTIFIANT_B2S"
+    elif not values and popper_rom:
+        status = "ROM_VBS_NON_DÉTECTÉE_POPPER_PRÉSENTE"
+    elif not values:
+        status = "SANS_ROM"
+    else:
+        status = "ROM_NON_CONFIRMÉE"
+
+    popper_relation = "AUCUNE"
+    if popper_rom and selected:
+        popper_relation = "CONFIRME" if norm(popper_rom) == norm(selected) else "CONFLIT"
+    elif popper_rom:
+        popper_relation = "POPPER_SEULE"
+
+    selected_zip = ""
+    if selected and rom_index.get(norm(selected)):
+        selected_zip = str(rom_index[norm(selected)][0])
+
+    return {
+        "status": status,
+        "selected": selected,
+        "values": values,
+        "strong_values": strong_values,
+        "zip": selected_zip,
+        "popper": popper_rom,
+        "popper_relation": popper_relation,
+        "evidence": [item.as_dict() for item in audit.rom_evidence],
+        "b2s_identifier_evidence": [item.as_dict() for item in audit.b2s_id_evidence],
+        "pinmame_markers": audit.pinmame_markers,
+    }
+
+
+def build_vps_indexes(entries: Sequence[VpsEntry]) -> dict[str, Any]:
+    exact: dict[str, set[int]] = defaultdict(set)
+    core: dict[str, set[int]] = defaultdict(set)
+    token: dict[str, set[int]] = defaultdict(set)
+    rom: dict[str, set[int]] = defaultdict(set)
+    by_id: dict[str, int] = {}
+    for index, entry in enumerate(entries):
+        by_id[entry.id] = index
+        for key in {entry.canonical_norm, entry.name_norm}:
+            if key:
+                exact[key].add(index)
+        if entry.core_norm:
+            core[entry.core_norm].add(index)
+        for item in entry.tokens:
+            token[item].add(index)
+        for version in entry.roms:
+            if norm(version):
+                rom[norm(version)].add(index)
+    return {"exact": exact, "core": core, "token": token, "rom": rom, "by_id": by_id}
+
+
+def identity_sources(record: dict[str, Any], audit: VbsAudit) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+
+    def add(kind: str, value: str, weight: int) -> None:
+        value = clean_text(value)
+        if not value:
+            return
+        item = {
+            "kind": kind,
+            "value": value,
+            "core": title_core(value),
+            "weight": weight,
+            "years": sorted(extract_years([value])),
+            "manufacturers": sorted(manufacturer_keys(value)),
+        }
+        key = (kind, norm(value))
+        if not any((existing["kind"], norm(existing["value"])) == key for existing in sources):
+            sources.append(item)
+
+    add("POPPER_DISPLAY", record.get("popper_display") or "", 1000)
+    for row in record.get("popper_rows") or []:
+        if isinstance(row, dict):
+            for requested, weight in (("GameName", 850), ("MediaSearch", 650), ("GameDisplay", 1000)):
+                for key, value in row.items():
+                    if key.casefold() == requested.casefold():
+                        kind = "POPPER_DISPLAY" if requested == "GameDisplay" else f"POPPER_{requested.upper()}"
+                        add(kind, clean_text(value), weight)
+    source = Path(str(record.get("source_vpx") or ""))
+    add("VPX_FILENAME", source.stem, 700)
+    for sidecar in record.get("sidecars") or []:
+        add("SIDECAR", Path(str(sidecar)).stem, 600)
+    for evidence in audit.title_evidence:
+        add("VBS_TITLE", evidence.value, 250)
+    return sources
+
+
+def similarity(left: str, right: str) -> tuple[float, float]:
+    left_core = title_core(left)
+    right_core = title_core(right)
+    left_norm = norm(left_core)
+    right_norm = norm(right_core)
+    if not left_norm or not right_norm:
+        return 0.0, 0.0
+    sequence = difflib.SequenceMatcher(None, left_norm, right_norm).ratio()
+    left_tokens = set(tokenise(left_core))
+    right_tokens = set(tokenise(right_core))
+    if left_tokens and right_tokens:
+        jaccard = len(left_tokens & right_tokens) / len(left_tokens | right_tokens)
+    else:
+        jaccard = 0.0
+    return sequence, jaccard
+
+
+def match_identity(
+    entries: Sequence[VpsEntry],
+    indexes: dict[str, Any],
+    sources: list[dict[str, Any]],
+    rom_value: str,
+) -> dict[str, Any]:
+    candidate_ids: set[int] = set()
+    source_tokens: set[str] = set()
+
+    for source in sources:
+        full_key = norm(source["value"])
+        core_key = norm(source["core"])
+        candidate_ids.update(indexes["exact"].get(full_key, set()))
+        candidate_ids.update(indexes["core"].get(core_key, set()))
+        tokens = set(tokenise(source["core"]))
+        source_tokens.update(tokens)
+        for token in tokens:
+            if len(token) >= 3:
+                candidate_ids.update(indexes["token"].get(token, set()))
+
+    # ROM entries are diagnostic only. They may not create identity candidates.
+    rom_only_ids = set(indexes["rom"].get(norm(rom_value), set())) if rom_value else set()
+
+    scored: list[dict[str, Any]] = []
+    for candidate_id in candidate_ids:
+        entry = entries[candidate_id]
+        score = 0
+        reasons: list[str] = []
+        exact_identity = False
+        best_similarity = 0.0
+
+        for source in sources:
+            source_full = norm(source["value"])
+            source_core = norm(source["core"])
+            weight = int(source["weight"])
+            if source_full and source_full in {entry.canonical_norm, entry.name_norm}:
+                points = weight
+                score += points
+                reasons.append(f"{source['kind']}:NOM_EXACT:+{points}")
+                exact_identity = True
+            elif source_core and source_core == entry.core_norm:
+                points = int(weight * 0.90)
+                score += points
+                reasons.append(f"{source['kind']}:TITRE_EXACT:+{points}")
+                exact_identity = True
+            else:
+                seq, jac = similarity(source["core"], entry.core)
+                metric = max(seq, jac)
+                best_similarity = max(best_similarity, metric)
+                if metric >= 0.94:
+                    points = int(weight * 0.62)
+                    score += points
+                    reasons.append(f"{source['kind']}:SIM_{metric:.2f}:+{points}")
+                elif metric >= 0.86:
+                    points = int(weight * 0.38)
+                    score += points
+                    reasons.append(f"{source['kind']}:SIM_{metric:.2f}:+{points}")
+
+            source_years = set(source["years"])
+            if source_years and entry.year:
+                if entry.year in source_years:
+                    score += 120
+                    reasons.append(f"{source['kind']}:ANNÉE_EXACTE:+120")
+                else:
+                    score -= 220
+                    reasons.append(f"{source['kind']}:ANNÉE_CONFLIT:-220")
+
+            source_makers = set(source["manufacturers"])
+            entry_makers = manufacturer_keys(entry.manufacturer)
+            if source_makers and entry_makers:
+                if source_makers & entry_makers:
+                    score += 140
+                    reasons.append(f"{source['kind']}:FABRICANT_EXACT:+140")
+                else:
+                    score -= 180
+                    reasons.append(f"{source['kind']}:FABRICANT_CONFLIT:-180")
+
+        rom_match = bool(rom_value and any(norm(item) == norm(rom_value) for item in entry.roms))
+        if rom_match:
+            score += 100
+            reasons.append("ROM_CONFIRMATION_SECONDAIRE:+100")
+
+        scored.append({
+            "entry": entry.compact(),
+            "score": score,
+            "reasons": reasons,
+            "exact_identity": exact_identity,
+            "best_similarity": round(best_similarity, 4),
+            "rom_match": rom_match,
+        })
+
+    scored.sort(key=lambda item: (item["score"], item["entry"]["id"]), reverse=True)
+    top = scored[0] if scored else None
+    second_score = scored[1]["score"] if len(scored) > 1 else -10_000
+    margin = (top["score"] - second_score) if top else 0
+
+    status = "VPSDB_NON_TROUVÉ"
+    selected = None
+    if top:
+        if top["exact_identity"] and top["score"] >= 850 and margin >= 160:
+            status = "VPSDB_IDENTITÉ_CONFIRMÉE"
+            selected = top
+        elif top["exact_identity"] and top["score"] >= 1200 and margin >= 80:
+            status = "VPSDB_IDENTITÉ_CONFIRMÉE"
+            selected = top
+        elif top["score"] >= 1100 and top["best_similarity"] >= 0.94 and margin >= 220:
+            status = "VPSDB_IDENTITÉ_PROBABLE"
+            selected = top
+        elif top["score"] >= 650:
+            status = "VPSDB_IDENTITÉ_AMBIGUË"
+        else:
+            status = "VPSDB_NON_TROUVÉ"
+
+    rom_only = [entries[index].compact() for index in sorted(rom_only_ids)][:30]
+    return {
+        "status": status,
+        "selected": selected,
+        "candidates": scored[:20],
+        "margin": margin,
+        "rom_only_candidates": rom_only,
+        "rom_was_identity_generator": False,
+    }
+
+
+def classify_rom_relation(rom: dict[str, Any], vps: dict[str, Any]) -> str:
+    selected = vps.get("selected") or {}
+    entry = selected.get("entry") or {}
+    rom_value = clean_text(rom.get("selected"))
+    if not rom_value:
+        return "SANS_ROM"
+    if not entry:
+        return "ROM_SANS_IDENTITÉ_VPSDB"
+    if any(norm(item) == norm(rom_value) for item in entry.get("roms") or []):
+        return "ROM_DU_JEU_CONFIRMÉE"
+    rom_only = vps.get("rom_only_candidates") or []
+    if rom_only:
+        return "ROM_EMPRUNTÉE_PROBABLE"
+    return "ROM_NON_RÉPERTORIÉE_POUR_CE_JEU"
+
+
+def compact_record(record: dict[str, Any]) -> dict[str, Any]:
+    vps = record.get("vpsdb") or {}
+    selected = (vps.get("selected") or {}).get("entry") or {}
+    rom = record.get("rom") or {}
+    pup = record.get("pup") or {}
+    pup_selected = pup.get("selected") or {}
+    return {
+        "index": record.get("index"),
+        "decision": record.get("decision"),
+        "source_vpx": record.get("source_vpx"),
+        "popper_display": record.get("popper_display"),
+        "identity_status": vps.get("status"),
+        "vps_master_id": selected.get("id"),
+        "vps_canonical": selected.get("canonical"),
+        "identity_score": (vps.get("selected") or {}).get("score"),
+        "identity_margin": vps.get("margin"),
+        "rom_status": rom.get("status"),
+        "rom_selected": rom.get("selected"),
+        "rom_relation": record.get("rom_relation"),
+        "rom_zip": rom.get("zip"),
+        "rom_popper": rom.get("popper"),
+        "pup_status": pup.get("status"),
+        "pup_aliases": " | ".join(pup.get("explicit_aliases") or []),
+        "pup_path": pup_selected.get("path", ""),
+        "pup_use_vbs": pup.get("use_pup"),
+        "proposed_package_name": record.get("proposed_package_name"),
+        "v2_vps_master_id": record.get("v2_vps_master_id"),
+        "v2_vps_canonical": record.get("v2_vps_canonical"),
+        "v2_association_changed": record.get("v2_association_changed"),
+        "error": record.get("error", ""),
+    }
+
+
+def write_tsv(path: Path, rows: Sequence[dict[str, Any]], fields: Sequence[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(fields), delimiter="\t", extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def self_test() -> int:
+    tests: list[tuple[str, str, dict[str, Any]]] = []
+    tests.append((
+        "ROM_STANDARD",
+        'Const cGameName = "twenty4_150"\nSet Controller=CreateObject("VPinMAME.Controller")\nController.GameName=cGameName',
+        {"rom": "twenty4_150", "pup": []},
+    ))
+    tests.append((
+        "EM_SANS_ROM",
+        'Const cGameName = "TlD_123"\nLoadEM\nExecuteGlobal GetTextFile("controller.vbs")',
+        {"rom": "", "b2s": "TlD_123"},
+    ))
+    tests.append((
+        "PUP_EXPLICITE",
+        'Dim cPuPPack\ncPuPPack = "FNAF"\nPuPlayer.B2SInit "",cPuPPack\nPuPStart(cPuPPack)',
+        {"pup": ["FNAF"]},
+    ))
+    tests.append((
+        "PUP_PLAYER_INIT",
+        'Dim HasPup:HasPup=True\nSet PuPlayer=CreateObject("PinUpPlayer.PinDisplay")\nPuPlayer.Init pBackglass,"TopGun"',
+        {"pup": ["TopGun"]},
+    ))
+    tests.append((
+        "ROM_CONSTRUITE",
+        'Const base="acd"\nConst suffix="_170h"\nConst cGameName=base & suffix\nSet Controller=CreateObject("VPinMAME.Controller")\nController.GameName=cGameName',
+        {"rom": "acd_170h"},
+    ))
+    tests.append((
+        "ROM_DECLARATION_GROUPÉE",
+        'Const cGameName = "twenty4_150", UseSolenoids = 2\nLoadVPM "01560000", "SAM.VBS", 3.10\nWith Controller\n.GameName = cGameName\n.Run GetPlayerHWnd\nEnd With',
+        {"rom": "twenty4_150"},
+    ))
+    tests.append((
+        "ROM_WITH_CONTROLLER",
+        "cGameName = \"twenty4_150\" ' commentaire\nSet Controller = CreateObject(\"VPinMAME.Controller\")\nWith Controller: .GameName = cGameName: .Run GetPlayerHWnd: End With",
+        {"rom": "twenty4_150"},
+    ))
+
+    failures = 0
+
+    # Regression tests for the Addams Family bug: an even-length ANSI VBS
+    # must not be decoded as UTF-16 merely because that codec accepts it.
+    with tempfile.TemporaryDirectory(prefix="pincabos-v3-5-selftest-") as tmp:
+        tmp_path = Path(tmp)
+        ansi_script = (
+            "'//////////////// IMPORTANT NOTE ////////////////\r\n"
+            "Const cGameName = \"taf_l7\"\r\n"
+            "LoadVPM \"01560000\", \"WPC.VBS\", 3.26\r\n"
+            "With Controller: .GameName = cGameName: .Run GetPlayerHWnd: End With\r\n"
+        )
+        ansi_path = tmp_path / "ansi.vbs"
+        ansi_path.write_bytes(ansi_script.encode("cp1252"))
+        decoded_ansi = decode_script(ansi_path)
+        if "taf_l7" not in decoded_ansi or "IMPORTANT NOTE" not in decoded_ansi:
+            print("ÉCHEC ENCODAGE_ANSI: texte corrompu")
+            failures += 1
+
+        utf16_path = tmp_path / "utf16.vbs"
+        utf16_path.write_bytes(("Const cGameName = \"taf_l7\"\r\n").encode("utf-16"))
+        decoded_utf16 = decode_script(utf16_path)
+        if "taf_l7" not in decoded_utf16:
+            print("ÉCHEC ENCODAGE_UTF16: texte corrompu")
+            failures += 1
+    for name, script, expected in tests:
+        audit = audit_vbs(script)
+        roms = unique(item.value for item in audit.rom_evidence)
+        pups = unique(item.value for item in audit.pup_evidence)
+        b2s = unique(item.value for item in audit.b2s_id_evidence)
+        if "rom" in expected:
+            if expected["rom"]:
+                if expected["rom"] not in roms:
+                    print(f"ÉCHEC {name}: ROM {roms}")
+                    failures += 1
+            elif roms:
+                print(f"ÉCHEC {name}: ROM inattendue {roms}")
+                failures += 1
+        if "pup" in expected and any(item not in pups for item in expected["pup"]):
+            print(f"ÉCHEC {name}: PUP {pups}")
+            failures += 1
+        if expected.get("b2s") and expected["b2s"] not in b2s:
+            print(f"ÉCHEC {name}: B2S {b2s}")
+            failures += 1
+    if failures:
+        print(f"AUTO-TEST V3: {failures} échec(s)")
+        return 1
+    print("AUTO-TEST V3: OK")
+    return 0
+
+
+def main() -> int:
+    if "--self-test" in sys.argv:
+        return self_test()
+    if os.geteuid() != 0:
+        print("ERREUR: exécuter avec sudo/root.", file=sys.stderr)
+        return 1
+
+    REPORT_ROOT.mkdir(parents=True, exist_ok=True)
+    RUN_DIR.mkdir(parents=True, exist_ok=False)
+    V3_STATE_ROOT.mkdir(parents=True, exist_ok=True)
+    V3_VBS_ROOT.mkdir(parents=True, exist_ok=True)
+    V3_VBS_META_ROOT.mkdir(parents=True, exist_ok=True)
+    PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
+
+    required = (TABLES, PINUP, POPPER_DB, ROMS, PUPVIDEOS)
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        log("ERREUR: chemins requis absents:")
+        for path in missing:
+            log(f" - {path}")
+        return 2
+
+    log("===============================================================")
+    log(" PINCABOS — V3.5 ENCODAGE VBS FIABLE / IDENTITÉ / ROM / PUP / VPSDB")
+    log("===============================================================")
+    log(f"Version             : {SCRIPT_VERSION}")
+    log(f"Rapport             : {RUN_DIR}")
+    log("Archives .PinCabOs  : AUCUNE")
+    log("Écriture sur le NAS : AUCUNE")
+    log()
+
+    v2_report = find_latest_v2_report()
+    v2_index = load_optional_v2_records(v2_report)
+    popper_map = load_popper_map(POPPER_DB)
+    v2_records = build_current_records(popper_map, v2_index)
+
+    if v2_report is None:
+        log("Rapport V2 utilisé  : AUCUN — inventaire reconstruit depuis le NAS")
+    else:
+        log(f"Rapport V2 utilisé  : {v2_report} (historique facultatif)")
+    log(f"Tables inventoriées : {len(v2_records)}")
+
+    vpx_bin = find_vpx_binary()
+    existing_external_vbs = sum(
+        1 for item in v2_records
+        if Path(str(item.get("vbs_saved") or "")).is_file()
+    )
+    existing_v3_vbs = sum(
+        1 for item in v2_records
+        if (V3_VBS_ROOT / f"{vbs_state_key(Path(str(item['source_vpx'])))}.vbs").is_file()
+    )
+    log(f"VBS V2 encore présents : {existing_external_vbs}")
+    log(f"VBS V3 réutilisables    : {existing_v3_vbs}")
+    log(f"Binaire VPX              : {vpx_bin}")
+
+    payload, vps_sha, vps_source = ensure_vpsdb_snapshot()
+    entries = parse_vpsdb(payload)
+    indexes = build_vps_indexes(entries)
+    log(f"VPSDB source        : {vps_source}")
+    log(f"VPSDB SHA-256       : {vps_sha}")
+    log(f"Jeux VPSDB          : {len(entries)}")
+
+    rom_index = build_path_index(ROMS, suffix=".zip")
+    altcolor_index = build_path_index(ALTCOLOR, directories=True)
+    altsound_index = build_path_index(ALTSOUND, directories=True)
+    pup_index = build_path_index(PUPVIDEOS, directories=True)
+
+    selected_records = []
+    for item in v2_records:
+        if not isinstance(item, dict):
+            continue
+        source_name = Path(str(item.get("source_vpx") or "")).name
+        if ONLY_TABLE and source_name.casefold() != ONLY_TABLE.casefold():
+            continue
+        selected_records.append(item)
+
+    log(f"Tables à analyser    : {len(selected_records)}")
+    log()
+
+    results: list[dict[str, Any]] = []
+    for position, old in enumerate(selected_records, 1):
+        source_vpx = Path(str(old.get("source_vpx") or ""))
+        original_vbs_text = clean_text(old.get("vbs_saved"))
+        original_vbs_path = Path(original_vbs_text) if original_vbs_text else Path("/__absent_v2_vbs__")
+        vbs_path = original_vbs_path
+        vbs_origin = "V2_RÉUTILISÉ" if original_vbs_text and vbs_path.is_file() else ""
+        vbs_recovery_error = ""
+        if not vbs_origin:
+            recovered, vbs_origin, vbs_recovery_error = extract_vbs_self_heal(
+                vpx_bin, source_vpx, str(old.get("vpx_sha256") or "")
+            )
+            if recovered is not None:
+                vbs_path = recovered
+        log(f"[{position}/{len(selected_records)}] {source_vpx.name} [{vbs_origin or 'VBS_ABSENT'}]")
+
+        record: dict[str, Any] = {
+            "index": old.get("index") or position,
+            "source_vpx": str(source_vpx),
+            "source_relative": old.get("source_relative") or source_vpx.name,
+            "vpx_sha256": old.get("vpx_sha256") or "",
+            "vbs_path": str(vbs_path),
+            "vbs_sha256": sha256_file(vbs_path) if vbs_path.is_file() else (old.get("vbs_sha256") or ""),
+            "vbs_origin": vbs_origin,
+            "popper_database": old.get("popper_database") or str(POPPER_DB),
+            "popper_rows": old.get("popper_rows") or [],
+            "popper_display": old.get("popper_display") or "",
+            "sidecars": old.get("sidecars") or [],
+            "error": "",
+            "v2_vps_master_id": (((old.get("vpsdb") or {}).get("selected") or {}).get("entry") or {}).get("id", ""),
+            "v2_vps_canonical": (((old.get("vpsdb") or {}).get("selected") or {}).get("entry") or {}).get("canonical", ""),
+        }
+
+        if not vbs_path.is_file():
+            record["error"] = vbs_recovery_error or f"VBS introuvable: {original_vbs_path}"
+            record["decision"] = "BLOQUÉ_VBS"
+            results.append(record)
+            append_progress(record)
+            continue
+
+        try:
+            text = decode_script(vbs_path)
+            audit = audit_vbs(text)
+            popper_rom = clean_text(old.get("rom_popper") or "")
+            rom = choose_rom_status(audit, popper_rom, rom_index)
+            sources = identity_sources(old, audit)
+            vps = match_identity(entries, indexes, sources, rom.get("selected") or "")
+            relation = classify_rom_relation(rom, vps)
+            pup = resolve_pup(audit, rom.get("values") or [], pup_index)
+
+            record.update({
+                "vbs_audit": {
+                    "vbs_size_bytes": vbs_path.stat().st_size,
+                    "rom_evidence": [item.as_dict() for item in audit.rom_evidence],
+                    "b2s_id_evidence": [item.as_dict() for item in audit.b2s_id_evidence],
+                    "pup_evidence": [item.as_dict() for item in audit.pup_evidence],
+                    "title_evidence": [item.as_dict() for item in audit.title_evidence],
+                    "pinmame_markers": audit.pinmame_markers,
+                    "pup_markers": audit.pup_markers,
+                    "load_em": audit.load_em,
+                    "use_pup_values": audit.use_pup_values,
+                    "resource_references": audit.resource_references,
+                },
+                "identity_sources": sources,
+                "rom": rom,
+                "rom_relation": relation,
+                "altcolor": str((altcolor_index.get(norm(rom.get("selected"))) or [""])[0]) if rom.get("selected") else "",
+                "altsound": str((altsound_index.get(norm(rom.get("selected"))) or [""])[0]) if rom.get("selected") else "",
+                "pup": pup,
+                "vpsdb": vps,
+            })
+
+            selected_vps = (vps.get("selected") or {}).get("entry") or {}
+            current_id = selected_vps.get("id", "")
+            old_id = record.get("v2_vps_master_id") or ""
+            record["v2_association_changed"] = bool(old_id and old_id != current_id)
+
+            proposed = ""
+            if vps.get("status") == "VPSDB_IDENTITÉ_CONFIRMÉE" and selected_vps:
+                prefix = "PUP-" if pup.get("prefix_allowed") else ""
+                proposed = (
+                    f"{selected_vps['canonical']} - {prefix}"
+                    f"VPSId {selected_vps['id']}.PinCabOs"
+                )
+            record["proposed_package_name"] = proposed
+
+            if vps.get("status") == "VPSDB_IDENTITÉ_CONFIRMÉE":
+                if rom.get("status") == "ROM_MULTIPLE_AMBIGUË":
+                    decision = "À_VÉRIFIER_ROM_MULTIPLE"
+                elif pup.get("status") in {
+                    "PUP_AMBIGU", "PUP_VBS_EXPLICITE_PROBABLE", "PUP_ROM_PROBABLE",
+                    "PUP_VBS_EXPLICITE_MANQUANT", "PUP_NON_STANDARD",
+                }:
+                    decision = "À_VÉRIFIER_PUP"
+                else:
+                    decision = "PRÊT_IDENTITÉ_VPSDB"
+            elif vps.get("status") in {"VPSDB_IDENTITÉ_PROBABLE", "VPSDB_IDENTITÉ_AMBIGUË"}:
+                decision = "À_VÉRIFIER_IDENTITÉ"
+            else:
+                decision = "BLOQUÉ_VPSDB"
+            record["decision"] = decision
+
+        except Exception as exc:
+            record["error"] = f"{type(exc).__name__}: {exc}"
+            record["decision"] = "ERREUR_ANALYSE"
+
+        results.append(record)
+        append_progress(record)
+
+    # Recreate the report directory if an external cleanup removed it mid-run.
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    compact = [compact_record(item) for item in results]
+    fields = list(compact[0].keys()) if compact else ["index", "decision", "source_vpx", "error"]
+
+    write_tsv(RUN_DIR / "mapping-identite-v3.tsv", compact, fields)
+    write_tsv(
+        RUN_DIR / "pret-identite-vpsdb.tsv",
+        [item for item in compact if item.get("decision") == "PRÊT_IDENTITÉ_VPSDB"],
+        fields,
+    )
+    write_tsv(
+        RUN_DIR / "a-verifier-v3.tsv",
+        [item for item in compact if item.get("decision") != "PRÊT_IDENTITÉ_VPSDB"],
+        fields,
+    )
+    write_tsv(
+        RUN_DIR / "roms-empruntees.tsv",
+        [item for item in compact if item.get("rom_relation") == "ROM_EMPRUNTÉE_PROBABLE"],
+        fields,
+    )
+    write_tsv(
+        RUN_DIR / "sans-rom.tsv",
+        [item for item in compact if item.get("rom_status") in {"SANS_ROM", "SANS_ROM_IDENTIFIANT_B2S"}],
+        fields,
+    )
+    write_tsv(
+        RUN_DIR / "puppacks.tsv",
+        [item for item in compact if item.get("pup_status") != "SANS_PUP"],
+        fields,
+    )
+    write_tsv(
+        RUN_DIR / "associations-v2-corrigees.tsv",
+        [item for item in compact if item.get("v2_association_changed")],
+        fields,
+    )
+
+    json_dump(RUN_DIR / "mapping-complet-v3.json", results)
+
+    decisions = Counter(item.get("decision", "INCONNU") for item in results)
+    identities = Counter((item.get("vpsdb") or {}).get("status", "INCONNU") for item in results)
+    rom_statuses = Counter((item.get("rom") or {}).get("status", "INCONNU") for item in results)
+    rom_relations = Counter(item.get("rom_relation", "INCONNU") for item in results)
+    pup_statuses = Counter((item.get("pup") or {}).get("status", "INCONNU") for item in results)
+
+    summary = {
+        "script_version": SCRIPT_VERSION,
+        "generated_at": dt.datetime.now().isoformat(),
+        "v2_report": str(v2_report) if v2_report else "",
+        "vpsdb_source": vps_source,
+        "vpsdb_sha256": vps_sha,
+        "tables": len(results),
+        "decisions": dict(decisions),
+        "identity_statuses": dict(identities),
+        "rom_statuses": dict(rom_statuses),
+        "rom_relations": dict(rom_relations),
+        "pup_statuses": dict(pup_statuses),
+        "proposed_names": sum(bool(item.get("proposed_package_name")) for item in results),
+        "v2_associations_changed": sum(bool(item.get("v2_association_changed")) for item in results),
+        "archives_created": 0,
+        "nas_write": False,
+    }
+    json_dump(RUN_DIR / "resume.json", summary)
+
+    lines = [
+        "===============================================================",
+        " RÉSUMÉ V3.5 — IDENTITÉ / ROM / PUP / VPSDB",
+        "===============================================================",
+        f"Tables analysées             : {len(results)}",
+        f"Noms proposés                : {summary['proposed_names']}",
+        f"Associations V2 corrigées    : {summary['v2_associations_changed']}",
+        "",
+        "Décisions:",
+    ]
+    lines.extend(f"  {key}: {value}" for key, value in sorted(decisions.items()))
+    lines.extend(["", "Identité VPSDB:"])
+    lines.extend(f"  {key}: {value}" for key, value in sorted(identities.items()))
+    lines.extend(["", "État ROM:"])
+    lines.extend(f"  {key}: {value}" for key, value in sorted(rom_statuses.items()))
+    lines.extend(["", "Relation ROM / identité:"])
+    lines.extend(f"  {key}: {value}" for key, value in sorted(rom_relations.items()))
+    lines.extend(["", "État PuP:"])
+    lines.extend(f"  {key}: {value}" for key, value in sorted(pup_statuses.items()))
+    lines.extend([
+        "",
+        "Archives .PinCabOs créées : 0",
+        "Écriture sur le NAS       : NON",
+        "",
+        f"Rapport complet : {RUN_DIR / 'mapping-identite-v3.tsv'}",
+        f"À vérifier      : {RUN_DIR / 'a-verifier-v3.tsv'}",
+        f"ROMs empruntées : {RUN_DIR / 'roms-empruntees.tsv'}",
+        f"Sans ROM        : {RUN_DIR / 'sans-rom.tsv'}",
+        f"PuP-Packs       : {RUN_DIR / 'puppacks.tsv'}",
+        f"Résumé          : {RUN_DIR / 'resume.txt'}",
+        f"Point de reprise: {PROGRESS_PATH}",
+    ])
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    (RUN_DIR / "resume.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    log()
+    for line in lines:
+        log(line)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        print("\nInterrompu par l'utilisateur.", file=sys.stderr)
+        raise SystemExit(130)
+    except Exception as error:
+        print(f"ERREUR FATALE: {type(error).__name__}: {error}", file=sys.stderr)
+        raise SystemExit(1)

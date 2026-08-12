@@ -1,0 +1,1133 @@
+#!/usr/bin/env python3
+# PinCabOS legacy-library portable package builder
+# PILOT V1: builds one verified .PinCabOs package from a V3.5 identity report.
+#
+# Safety:
+# - source NAS is read-only from this script's point of view;
+# - no source file is modified, moved, renamed, or deleted;
+# - staging and manifests are created locally;
+# - destination archive is copied as .part then atomically renamed;
+# - existing destination archives are never overwritten.
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import hashlib
+import json
+import os
+import re
+import shutil
+import stat
+import sys
+import tempfile
+import unicodedata
+import zipfile
+from pathlib import Path
+from typing import Any, Iterable
+
+VERSION = "PINCABOS_LEGACY_PACKAGE_BUILDER_PILOT_V1_1"
+
+AUDIT_ROOT = Path("/opt/pincabos/logs/audits")
+BUILD_ROOT = Path("/opt/pincabos/build/legacy-package-builder")
+EXPORT_LOG_ROOT = Path("/opt/pincabos/logs/exports")
+DEFAULT_DESTINATION = Path(
+    "/home/pinball/NetworkDrives/192-168-254-253/Tables PinCabOS"
+)
+
+NAS_ROOT = Path("/home/pinball/NetworkDrives/192-168-254-253")
+LEGACY_ROOT = NAS_ROOT / "vPinball - Copie"
+LEGACY_TABLES = LEGACY_ROOT / "VisualPinball" / "Tables"
+LEGACY_MUSIC = LEGACY_ROOT / "VisualPinball" / "Music"
+LEGACY_PINMAME = LEGACY_ROOT / "VisualPinball" / "VPinMAME"
+LEGACY_ROM_ROOT = LEGACY_PINMAME / "roms"
+LEGACY_ALT_COLOR = LEGACY_PINMAME / "altcolor"
+LEGACY_ALT_SOUND = LEGACY_PINMAME / "altsound"
+LEGACY_PUP = LEGACY_ROOT / "PinUPSystem" / "PUPVideos"
+LEGACY_POPMEDIA = (
+    LEGACY_ROOT / "PinUPSystem" / "POPMedia" / "Visual Pinball X"
+)
+
+OPTIONAL_SIDECAR_SUFFIXES = {
+    ".directb2s",
+    ".pov",
+    ".ini",
+    ".res",
+    ".info",
+    ".scv",
+}
+
+MEDIA_SUFFIXES = {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp",
+    ".mp4", ".mkv", ".avi", ".mov", ".webm",
+    ".mp3", ".wav", ".ogg", ".flac", ".m4a",
+}
+
+MUSIC_SUFFIXES = {".mp3", ".wav", ".ogg", ".flac", ".m4a"}
+
+
+class BuildError(RuntimeError):
+    pass
+
+
+def now_iso() -> str:
+    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def sha256_file(path: Path, chunk_size: int = 4 * 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while True:
+            block = handle.read(chunk_size)
+            if not block:
+                break
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def normalize(value: str) -> str:
+    value = unicodedata.normalize("NFKD", str(value or ""))
+    value = value.encode("ascii", "ignore").decode("ascii").casefold()
+    value = re.sub(r"\b(the|a|an|le|la|les|un|une)\b", " ", value)
+    return re.sub(r"[^a-z0-9]+", "", value)
+
+
+def safe_filename(value: str) -> str:
+    value = str(value or "").replace("/", " ").replace("\\", " ")
+    value = re.sub(r'[:*?"<>|]+', " ", value)
+    value = re.sub(r"\s+", " ", value).strip().rstrip(".")
+    return value or "PinCabOS Table"
+
+
+def is_regular_source(path: Path) -> bool:
+    try:
+        mode = path.lstat().st_mode
+    except OSError:
+        return False
+    return stat.S_ISREG(mode) and not path.is_symlink()
+
+
+def is_known_junk_file(path: Path) -> bool:
+    """Reject workstation/session artifacts that must not enter a package."""
+    name = path.name.casefold()
+
+    if name in {
+        "thumbs.db",
+        "desktop.ini",
+        ".ds_store",
+    }:
+        return True
+
+    if name.startswith(".bash_history"):
+        return True
+
+    if name.startswith("~$"):
+        return True
+
+    if name.endswith((
+        ".tmp",
+        ".part",
+        ".crdownload",
+        ".download",
+    )):
+        return True
+
+    return False
+
+
+def ensure_required_paths(destination: Path) -> None:
+    required = [
+        LEGACY_TABLES,
+        LEGACY_ROM_ROOT,
+        AUDIT_ROOT,
+    ]
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        raise BuildError(
+            "Chemins requis absents:\n - " + "\n - ".join(missing)
+        )
+
+    if not destination.exists():
+        raise BuildError(f"Destination absente: {destination}")
+    if not destination.is_dir():
+        raise BuildError(f"Destination non-dossier: {destination}")
+    if not os.access(destination, os.W_OK):
+        raise BuildError(f"Destination non inscriptible: {destination}")
+
+
+def find_latest_report(explicit: str | None) -> Path:
+    if explicit:
+        path = Path(explicit)
+        if path.is_dir():
+            path = path / "mapping-complet-v3.json"
+        if not path.is_file():
+            raise BuildError(f"Rapport V3.5 introuvable: {path}")
+        return path
+
+    candidates = sorted(
+        AUDIT_ROOT.glob("vpsdb-identity-v3-5-*/mapping-complet-v3.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    if not candidates:
+        raise BuildError("Aucun mapping-complet-v3.json V3.5 trouvé.")
+    return candidates[0]
+
+
+def load_record(report_path: Path, table_name: str) -> dict[str, Any]:
+    data = json.loads(report_path.read_text(encoding="utf-8"))
+    if not isinstance(data, list):
+        raise BuildError("Le mapping V3.5 n'est pas une liste JSON.")
+
+    wanted = table_name.casefold()
+    matches = [
+        record
+        for record in data
+        if Path(str(record.get("source_vpx") or "")).name.casefold() == wanted
+        or str(record.get("source_relative") or "").casefold() == wanted
+    ]
+
+    if len(matches) != 1:
+        raise BuildError(
+            f"Table demandée non unique dans V3.5: {table_name} "
+            f"(résultats={len(matches)})"
+        )
+    return matches[0]
+
+
+def selected_vps_entry(record: dict[str, Any]) -> dict[str, Any]:
+    selected = ((record.get("vpsdb") or {}).get("selected") or {})
+    entry = selected.get("entry") or {}
+    if not isinstance(entry, dict):
+        return {}
+    return entry
+
+
+def validate_record(record: dict[str, Any]) -> None:
+    source = Path(str(record.get("source_vpx") or ""))
+    if not source.is_file():
+        raise BuildError(f"VPX source absent: {source}")
+
+    if record.get("decision") != "PRÊT_IDENTITÉ_VPSDB":
+        raise BuildError(
+            f"Table non prête selon V3.5: {record.get('decision')}"
+        )
+
+    vps = record.get("vpsdb") or {}
+    if vps.get("status") != "VPSDB_IDENTITÉ_CONFIRMÉE":
+        raise BuildError(
+            f"Identité VPSDB non confirmée: {vps.get('status')}"
+        )
+
+    entry = selected_vps_entry(record)
+    if not entry.get("id") or not entry.get("canonical"):
+        raise BuildError("MasterID ou nom canonique VPSDB absent.")
+
+    proposed = str(record.get("proposed_package_name") or "")
+    expected_fragment = f"VPSId {entry['id']}"
+    if not proposed.endswith(".PinCabOs") or expected_fragment not in proposed:
+        raise BuildError(f"Nom de package V3.5 invalide: {proposed}")
+
+    vbs = Path(str(record.get("vbs_path") or ""))
+    if not vbs.is_file() or vbs.stat().st_size == 0:
+        raise BuildError(f"VBS extrait absent ou vide: {vbs}")
+
+    rom = record.get("rom") or {}
+    rom_status = str(rom.get("status") or "")
+    if rom_status in {"ROM_MULTIPLE", "ROM_VBS_MULTIPLE"}:
+        raise BuildError(f"ROM ambiguë: {rom_status}")
+
+    selected_rom = str(rom.get("selected") or "")
+    if selected_rom:
+        rom_zip = Path(str(rom.get("zip") or ""))
+        if not rom_zip.is_file():
+            raise BuildError(
+                f"ROM demandée mais ZIP absent: {selected_rom} -> {rom_zip}"
+            )
+
+    pup = record.get("pup") or {}
+    if str(pup.get("status") or "") in {
+        "PUP_VBS_EXPLICITE_MANQUANT",
+        "PUP_AMBIGU",
+    }:
+        raise BuildError(
+            f"PuP-Pack requis mais non exportable: {pup.get('status')}"
+        )
+
+
+def copy_regular_file(source: Path, destination: Path) -> None:
+    if not is_regular_source(source):
+        raise BuildError(f"Source non régulière ou lien symbolique: {source}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+
+
+def copy_tree_safe(
+    source: Path,
+    destination: Path,
+    skipped: list[str],
+) -> int:
+    if not source.is_dir():
+        return 0
+
+    count = 0
+    for current_root, dirnames, filenames in os.walk(source, followlinks=False):
+        current = Path(current_root)
+
+        kept_dirs: list[str] = []
+        for dirname in dirnames:
+            candidate = current / dirname
+            if candidate.is_symlink():
+                skipped.append(f"SYMLINK_DIR:{candidate}")
+            else:
+                kept_dirs.append(dirname)
+        dirnames[:] = kept_dirs
+
+        relative_dir = current.relative_to(source)
+        target_dir = destination / relative_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        for filename in filenames:
+            src = current / filename
+
+            if is_known_junk_file(src):
+                skipped.append(f"JUNK_FILE:{src}")
+                continue
+
+            if src.is_symlink() or not is_regular_source(src):
+                skipped.append(f"NON_REGULAR:{src}")
+                continue
+
+            dst = target_dir / filename
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            count += 1
+
+    return count
+
+
+def same_stem_sidecars(vpx: Path) -> list[Path]:
+    stem = vpx.stem.casefold()
+    found: list[Path] = []
+    for candidate in vpx.parent.iterdir():
+        if not candidate.is_file() or candidate.is_symlink():
+            continue
+        if candidate == vpx:
+            continue
+        if candidate.stem.casefold() != stem:
+            continue
+        if candidate.suffix.casefold() in OPTIONAL_SIDECAR_SUFFIXES:
+            found.append(candidate)
+    return sorted(found, key=lambda path: path.name.casefold())
+
+
+def find_rom_auxiliary(rom: str, category: str) -> list[Path]:
+    root = LEGACY_PINMAME / category
+    if not root.is_dir():
+        return []
+    wanted = rom.casefold()
+    result: list[Path] = []
+    for candidate in root.iterdir():
+        if (
+            candidate.is_file()
+            and not candidate.is_symlink()
+            and candidate.stem.casefold() == wanted
+        ):
+            result.append(candidate)
+    return sorted(result, key=lambda path: path.name.casefold())
+
+
+def decode_vbs(path: Path) -> str:
+    payload = path.read_bytes()
+    if payload.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return payload.decode("utf-16", errors="replace")
+    for encoding in ("utf-8-sig", "cp1252", "latin1"):
+        try:
+            return payload.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return payload.decode("latin1", errors="replace")
+
+
+def music_reference_names(vbs_path: Path) -> set[str]:
+    text = decode_vbs(vbs_path)
+    references: set[str] = set()
+
+    patterns = [
+        re.compile(
+            r'(?i)\b(?:PlayMusic|AudioPlay|MusicPlay)\s*'
+            r'(?:\(|)\s*"([^"]+)"'
+        ),
+        re.compile(
+            r'(?i)"([^"]+\.(?:mp3|wav|ogg|flac|m4a))"'
+        ),
+    ]
+
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            raw = match.group(1).strip().replace("\\", "/")
+            if not raw:
+                continue
+            references.add(Path(raw).name.casefold())
+
+    return references
+
+
+def find_music_files(vbs_path: Path) -> list[Path]:
+    if not LEGACY_MUSIC.is_dir():
+        return []
+
+    references = music_reference_names(vbs_path)
+    if not references:
+        return []
+
+    by_name: dict[str, list[Path]] = {}
+    by_stem: dict[str, list[Path]] = {}
+
+    for current_root, _, filenames in os.walk(LEGACY_MUSIC):
+        current = Path(current_root)
+        for filename in filenames:
+            candidate = current / filename
+            if candidate.suffix.casefold() not in MUSIC_SUFFIXES:
+                continue
+            if candidate.is_symlink() or not candidate.is_file():
+                continue
+            by_name.setdefault(candidate.name.casefold(), []).append(candidate)
+            by_stem.setdefault(candidate.stem.casefold(), []).append(candidate)
+
+    result: list[Path] = []
+    seen: set[Path] = set()
+
+    for reference in references:
+        candidates = by_name.get(reference, [])
+        if not candidates:
+            candidates = by_stem.get(Path(reference).stem.casefold(), [])
+        for candidate in candidates:
+            if candidate not in seen:
+                seen.add(candidate)
+                result.append(candidate)
+
+    return sorted(result, key=lambda path: str(path).casefold())
+
+
+def find_exact_popper_media(record: dict[str, Any]) -> list[Path]:
+    if not LEGACY_POPMEDIA.is_dir():
+        return []
+
+    entry = selected_vps_entry(record)
+    names = {
+        str(record.get("popper_display") or ""),
+        str(entry.get("canonical") or ""),
+        Path(str(record.get("source_vpx") or "")).stem,
+    }
+
+    for row in record.get("popper_rows") or []:
+        if isinstance(row, dict):
+            names.add(str(row.get("GameDisplay") or ""))
+            names.add(str(row.get("GameName") or ""))
+
+    wanted = {normalize(name) for name in names if normalize(name)}
+    if not wanted:
+        return []
+
+    matches: list[Path] = []
+    for current_root, _, filenames in os.walk(LEGACY_POPMEDIA):
+        current = Path(current_root)
+        for filename in filenames:
+            candidate = current / filename
+            if candidate.suffix.casefold() not in MEDIA_SUFFIXES:
+                continue
+            if candidate.is_symlink() or not candidate.is_file():
+                continue
+            if normalize(candidate.stem) in wanted:
+                matches.append(candidate)
+
+    return sorted(matches, key=lambda path: str(path).casefold())
+
+
+def add_installed(
+    installed: dict[str, list[str]],
+    category: str,
+    root: Path,
+    path: Path,
+) -> None:
+    installed.setdefault(category, []).append(
+        path.relative_to(root).as_posix()
+    )
+
+
+def collect_file_entries(root: Path) -> tuple[list[dict[str, Any]], list[str]]:
+    files: list[dict[str, Any]] = []
+    empty_dirs: list[str] = []
+
+    for path in sorted(root.rglob("*"), key=lambda item: str(item).casefold()):
+        relative = path.relative_to(root).as_posix()
+
+        if path.is_symlink():
+            raise BuildError(f"Lien symbolique interdit dans staging: {path}")
+
+        if path.is_dir():
+            try:
+                if not any(path.iterdir()):
+                    empty_dirs.append(relative)
+            except OSError:
+                pass
+            continue
+
+        if path.is_file():
+            files.append(
+                {
+                    "path": relative,
+                    "size": path.stat().st_size,
+                    "sha256": sha256_file(path),
+                }
+            )
+
+    return files, empty_dirs
+
+
+def write_metadata(
+    root: Path,
+    record: dict[str, Any],
+    installed: dict[str, list[str]],
+    source_report: Path,
+) -> None:
+    entry = selected_vps_entry(record)
+    rom = record.get("rom") or {}
+    pup = record.get("pup") or {}
+
+    canonical = str(entry.get("canonical") or root.name)
+    manufacturer = str(entry.get("manufacturer") or "")
+    year = str(entry.get("year") or "")
+    rom_name = str(rom.get("selected") or "")
+    vpsid = str(entry.get("id") or "")
+
+    info = {
+        "Info": {
+            "Title": canonical,
+            "Manufacturer": manufacturer,
+            "Year": year,
+            "Rom": rom_name,
+            "VPSId": vpsid,
+            "IPDBId": "",
+            "SourceVPX": Path(str(record.get("source_vpx"))).name,
+            "PUPStatus": str(pup.get("status") or "SANS_PUP"),
+        }
+    }
+
+    info_path = root / f"{safe_filename(canonical)}.info"
+    info_path.write_text(
+        json.dumps(info, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    add_installed(installed, "root", root, info_path)
+
+    table_manifest = {
+        "format": "PinCabOs portable VPX table",
+        "format_version": 6,
+        "model": "single-folder-portable-table",
+        "title": canonical,
+        "manufacturer": manufacturer,
+        "year": year,
+        "rom": rom_name,
+        "vpsid": vpsid,
+        "ipdbid": "",
+        "table_dir": str(root),
+        "layout": {
+            "root": [
+                "*.vpx", "*.directb2s", "*.info", "*.ini",
+                "*.vbs", "*.scv", "*.pov", "*.res",
+            ],
+            "medias": "medias/",
+            "music": "music/",
+            "pinmame": {
+                "roms": "pinmame/roms/",
+                "nvram": "pinmame/nvram/",
+                "cfg": "pinmame/cfg/",
+                "ini": "pinmame/ini/",
+                "altcolor": "pinmame/altcolor/<rom>/",
+                "altsound": "pinmame/altsound/<rom>/",
+            },
+            "pupvideos": "pupvideos/<name>/",
+            "extras": "extras/",
+        },
+        "legacy_global_paths_used": False,
+        "installed": installed,
+        "source_audit": {
+            "report": str(source_report),
+            "decision": record.get("decision"),
+            "identity_status": (record.get("vpsdb") or {}).get("status"),
+            "rom_status": rom.get("status"),
+            "rom_relation": record.get("rom_relation"),
+            "pup_status": pup.get("status"),
+            "source_vpx": record.get("source_vpx"),
+            "vbs_sha256": record.get("vbs_sha256"),
+        },
+        "created_at": now_iso(),
+    }
+
+    table_manifest_path = root / "pincabos-table-manifest.json"
+    table_manifest_path.write_text(
+        json.dumps(table_manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    add_installed(installed, "root", root, table_manifest_path)
+
+    files, empty_dirs = collect_file_entries(root)
+
+    export_manifest = {
+        "format": "PinCabOS table export",
+        "format_version": 8,
+        "model": "clean-portable-table-folder",
+        "created_at": now_iso(),
+        "table_folder": root.name,
+        "table_root": str(root),
+        "title": canonical,
+        "manufacturer": manufacturer,
+        "year": year,
+        "rom": rom_name,
+        "vpsid": vpsid,
+        "vps_master_id": vpsid,
+        "pup_status": str(pup.get("status") or "SANS_PUP"),
+        "export_rule": (
+            "Portable table folder built from verified V3.5 identity data. "
+            "Legacy source files remain unchanged. Empty PuP folders are excluded."
+        ),
+        "files": files,
+        "empty_dirs": empty_dirs,
+    }
+
+    export_manifest_path = root / "pincabos-export-manifest.json"
+    export_manifest_path.write_text(
+        json.dumps(export_manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def build_staging(
+    record: dict[str, Any],
+    staging_parent: Path,
+    source_report: Path,
+) -> tuple[Path, dict[str, Any]]:
+    entry = selected_vps_entry(record)
+    canonical = safe_filename(str(entry.get("canonical") or ""))
+    if not canonical:
+        raise BuildError("Nom canonique vide.")
+
+    root = staging_parent / canonical
+    root.mkdir(parents=True, exist_ok=False)
+
+    installed: dict[str, list[str]] = {
+        "root": [],
+        "medias": [],
+        "music": [],
+        "pinmame_roms": [],
+        "pinmame_nvram": [],
+        "pinmame_cfg": [],
+        "pinmame_ini": [],
+        "pinmame_altcolor": [],
+        "pinmame_altsound": [],
+        "pupvideos": [],
+        "extras": [],
+    }
+    skipped: list[str] = []
+
+    source_vpx = Path(str(record.get("source_vpx") or ""))
+    destination_vpx = root / source_vpx.name
+    copy_regular_file(source_vpx, destination_vpx)
+    add_installed(installed, "root", root, destination_vpx)
+
+    sidecars = {
+        path.resolve()
+        for path in same_stem_sidecars(source_vpx)
+    }
+    for raw in record.get("sidecars") or []:
+        path = Path(str(raw))
+        if path.is_file() and path.stem.casefold() == source_vpx.stem.casefold():
+            sidecars.add(path.resolve())
+
+    for sidecar in sorted(sidecars, key=lambda path: path.name.casefold()):
+        destination = root / sidecar.name
+        copy_regular_file(sidecar, destination)
+        add_installed(installed, "root", root, destination)
+
+    vbs_source = Path(str(record.get("vbs_path") or ""))
+    vbs_destination = root / f"{source_vpx.stem}.vbs"
+    copy_regular_file(vbs_source, vbs_destination)
+    add_installed(installed, "root", root, vbs_destination)
+
+    rom = record.get("rom") or {}
+    rom_name = str(rom.get("selected") or "")
+    if rom_name:
+        rom_zip = Path(str(rom.get("zip") or ""))
+        destination = root / "pinmame" / "roms" / rom_zip.name
+        copy_regular_file(rom_zip, destination)
+        add_installed(installed, "pinmame_roms", root, destination)
+
+        for category in ("nvram", "cfg", "ini"):
+            for source in find_rom_auxiliary(rom_name, category):
+                destination = root / "pinmame" / category / source.name
+                copy_regular_file(source, destination)
+                add_installed(
+                    installed,
+                    f"pinmame_{category}",
+                    root,
+                    destination,
+                )
+
+    altcolor = Path(str(record.get("altcolor") or ""))
+    if altcolor.is_dir() and rom_name:
+        destination = root / "pinmame" / "altcolor" / rom_name
+        copy_tree_safe(altcolor, destination, skipped)
+        for path in destination.rglob("*"):
+            if path.is_file():
+                add_installed(installed, "pinmame_altcolor", root, path)
+
+    altsound = Path(str(record.get("altsound") or ""))
+    if altsound.is_dir() and rom_name:
+        destination = root / "pinmame" / "altsound" / rom_name
+        copy_tree_safe(altsound, destination, skipped)
+        for path in destination.rglob("*"):
+            if path.is_file():
+                add_installed(installed, "pinmame_altsound", root, path)
+
+    pup = record.get("pup") or {}
+    selected_pup = pup.get("selected") or {}
+    pup_source = Path(str(selected_pup.get("path") or ""))
+    if pup.get("prefix_allowed") and pup_source.is_dir():
+        destination = root / "pupvideos" / pup_source.name
+        copied = copy_tree_safe(pup_source, destination, skipped)
+        if copied <= 0:
+            raise BuildError(
+                f"PuP autorisé mais aucun fichier copié: {pup_source}"
+            )
+        for path in destination.rglob("*"):
+            if path.is_file():
+                add_installed(installed, "pupvideos", root, path)
+
+    for source in find_music_files(vbs_source):
+        try:
+            relative = source.relative_to(LEGACY_MUSIC)
+        except ValueError:
+            relative = Path(source.name)
+        destination = root / "music" / relative
+        copy_regular_file(source, destination)
+        add_installed(installed, "music", root, destination)
+
+    for source in find_exact_popper_media(record):
+        try:
+            relative = source.relative_to(LEGACY_POPMEDIA)
+        except ValueError:
+            relative = Path(source.name)
+        destination = root / "medias" / relative
+        copy_regular_file(source, destination)
+        add_installed(installed, "medias", root, destination)
+
+    write_metadata(root, record, installed, source_report)
+
+    summary = {
+        "root": str(root),
+        "installed_counts": {
+            key: len(value)
+            for key, value in installed.items()
+        },
+        "skipped": skipped,
+    }
+    return root, summary
+
+
+def create_archive(root: Path, archive_path: Path) -> None:
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(
+        archive_path,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+        allowZip64=True,
+    ) as archive:
+        for path in sorted(root.rglob("*"), key=lambda item: str(item).casefold()):
+            if path.is_symlink():
+                raise BuildError(f"Lien symbolique interdit: {path}")
+            relative = path.relative_to(root.parent).as_posix()
+            if path.is_dir():
+                try:
+                    if not any(path.iterdir()):
+                        archive.writestr(relative.rstrip("/") + "/", "")
+                except OSError:
+                    pass
+                continue
+            if path.is_file():
+                archive.write(path, relative)
+
+
+def read_json_from_zip(
+    archive: zipfile.ZipFile,
+    suffix: str,
+) -> dict[str, Any] | None:
+    candidates = [
+        name for name in archive.namelist()
+        if name.casefold().endswith(suffix.casefold())
+    ]
+    if not candidates:
+        return None
+    raw = archive.read(candidates[0])
+    return json.loads(raw.decode("utf-8-sig"))
+
+
+def validate_archive(archive_path: Path) -> dict[str, Any]:
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        bad = archive.testzip()
+        if bad:
+            raise BuildError(f"CRC ZIP invalide: {bad}")
+
+        names = [name for name in archive.namelist() if name]
+        roots = {name.split("/", 1)[0] for name in names}
+        if len(roots) != 1:
+            raise BuildError(
+                f"L'archive doit avoir un seul dossier racine: {sorted(roots)}"
+            )
+
+        for name in names:
+            pure = Path(name)
+            if pure.is_absolute() or ".." in pure.parts:
+                raise BuildError(f"Chemin ZIP dangereux: {name}")
+
+        manifest = read_json_from_zip(
+            archive,
+            "pincabos-export-manifest.json",
+        )
+        if not manifest:
+            raise BuildError("pincabos-export-manifest.json absent du ZIP.")
+
+        if manifest.get("format") != "PinCabOS table export":
+            raise BuildError(
+                f"Format manifest invalide: {manifest.get('format')}"
+            )
+        if int(manifest.get("format_version") or 0) != 8:
+            raise BuildError(
+                f"Version manifest invalide: {manifest.get('format_version')}"
+            )
+        if manifest.get("model") != "clean-portable-table-folder":
+            raise BuildError(
+                f"Modèle manifest invalide: {manifest.get('model')}"
+            )
+
+        root_name = next(iter(roots))
+        by_name = {info.filename: info for info in archive.infolist()}
+
+        for item in manifest.get("files") or []:
+            relative = str(item.get("path") or "")
+            zip_name = f"{root_name}/{relative}"
+            info = by_name.get(zip_name)
+            if info is None:
+                raise BuildError(f"Fichier manifest absent du ZIP: {relative}")
+            manifest_size = item.get("size")
+            if manifest_size is None:
+                raise BuildError(
+                    f"Taille absente du manifest: {relative}"
+                )
+
+            if info.file_size != int(manifest_size):
+                raise BuildError(f"Taille invalide dans ZIP: {relative}")
+
+            expected_sha = str(item.get("sha256") or "")
+            if expected_sha:
+                digest = hashlib.sha256(archive.read(zip_name)).hexdigest()
+                if digest != expected_sha:
+                    raise BuildError(f"SHA-256 invalide dans ZIP: {relative}")
+
+        vpx_files = [
+            name for name in names
+            if name.casefold().endswith(".vpx")
+        ]
+        if len(vpx_files) != 1:
+            raise BuildError(
+                f"Le pilote exige exactement un VPX: {len(vpx_files)}"
+            )
+
+        return {
+            "root": root_name,
+            "file_count": sum(
+                1 for info in archive.infolist()
+                if not info.is_dir()
+            ),
+            "uncompressed_bytes": sum(
+                info.file_size for info in archive.infolist()
+                if not info.is_dir()
+            ),
+            "manifest": manifest,
+            "vpx": vpx_files[0],
+        }
+
+
+def existing_vpsid_archives(destination: Path, vpsid: str) -> list[Path]:
+    token = f"vpsid {vpsid}".casefold()
+    results: list[Path] = []
+
+    for archive_path in destination.glob("*.PinCabOs"):
+        if token in archive_path.name.casefold():
+            results.append(archive_path)
+            continue
+
+        try:
+            with zipfile.ZipFile(archive_path, "r") as archive:
+                table_manifest = read_json_from_zip(
+                    archive,
+                    "pincabos-table-manifest.json",
+                ) or {}
+                export_manifest = read_json_from_zip(
+                    archive,
+                    "pincabos-export-manifest.json",
+                ) or {}
+                values = {
+                    str(table_manifest.get("vpsid") or ""),
+                    str(export_manifest.get("vpsid") or ""),
+                    str(export_manifest.get("vps_master_id") or ""),
+                }
+                if vpsid in values:
+                    results.append(archive_path)
+        except Exception:
+            # Existing malformed archives are not overwritten. Their filename
+            # can still trigger the normal exact-name conflict check.
+            continue
+
+    return sorted(set(results), key=lambda path: path.name.casefold())
+
+
+def atomic_publish(local_archive: Path, destination: Path) -> Path:
+    final = destination / local_archive.name
+    if final.exists():
+        raise BuildError(f"Archive déjà présente: {final}")
+
+    part = destination / f".{local_archive.name}.part-{os.getpid()}"
+    if part.exists():
+        part.unlink()
+
+    try:
+        shutil.copy2(local_archive, part)
+        if sha256_file(part) != sha256_file(local_archive):
+            raise BuildError("SHA-256 différent après copie vers le NAS.")
+        os.replace(part, final)
+        try:
+            final.chmod(0o664)
+        except OSError:
+            pass
+    except Exception:
+        try:
+            if part.exists():
+                part.unlink()
+        except OSError:
+            pass
+        raise
+
+    return final
+
+
+def human_size(value: int) -> str:
+    units = ["B", "KiB", "MiB", "GiB", "TiB"]
+    size = float(value)
+    for unit in units:
+        if size < 1024 or unit == units[-1]:
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{value} B"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Crée un package pilote .PinCabOs depuis le rapport V3.5."
+    )
+    parser.add_argument(
+        "--only",
+        default="24 (2009).vpx",
+        help="Nom exact du VPX dans le rapport V3.5.",
+    )
+    parser.add_argument(
+        "--report",
+        help="Dossier V3.5 ou mapping-complet-v3.json explicite.",
+    )
+    parser.add_argument(
+        "--destination",
+        default=str(DEFAULT_DESTINATION),
+        help="Dossier final des .PinCabOs.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Construit et valide localement, sans publier sur le NAS.",
+    )
+    parser.add_argument(
+        "--keep-work",
+        action="store_true",
+        help="Conserve le staging local après le traitement.",
+    )
+    args = parser.parse_args()
+
+    destination = Path(args.destination)
+    ensure_required_paths(destination)
+
+    report_path = find_latest_report(args.report)
+    record = load_record(report_path, args.only)
+    validate_record(record)
+
+    entry = selected_vps_entry(record)
+    vpsid = str(entry["id"])
+    package_name = safe_filename(
+        str(record["proposed_package_name"])
+    )
+    if not package_name.endswith(".PinCabOs"):
+        package_name += ".PinCabOs"
+
+    conflicts = existing_vpsid_archives(destination, vpsid)
+    if conflicts:
+        raise BuildError(
+            "Un package portant déjà ce VPSId existe. "
+            "Aucun écrasement:\n - "
+            + "\n - ".join(str(path) for path in conflicts)
+        )
+
+    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    session_dir = BUILD_ROOT / f"pilot-{stamp}"
+    session_dir.mkdir(parents=True, exist_ok=False)
+    work_parent = session_dir / "staging"
+    work_parent.mkdir(parents=True)
+
+    local_archive = session_dir / package_name
+    report_dir = EXPORT_LOG_ROOT / f"legacy-package-pilot-{stamp}"
+    report_dir.mkdir(parents=True, exist_ok=False)
+
+    print("=" * 63)
+    print(" PINCABOS — CRÉATION PILOTE .PinCabOs")
+    print("=" * 63)
+    print(f"Version             : {VERSION}")
+    print(f"Rapport V3.5        : {report_path}")
+    print(f"Table               : {args.only}")
+    print(f"Identité            : {entry.get('canonical')}")
+    print(f"VPSId/MasterID      : {vpsid}")
+    print(f"Archive proposée    : {package_name}")
+    print(f"Destination         : {destination}")
+    print(f"Mode dry-run        : {'OUI' if args.dry_run else 'NON'}")
+    print("Modification sources: NON")
+    print()
+
+    root, staging_summary = build_staging(
+        record,
+        work_parent,
+        report_path,
+    )
+
+    print("--- Staging portable construit ---")
+    for category, count in staging_summary["installed_counts"].items():
+        if count:
+            print(f"{category:22}: {count}")
+    if staging_summary["skipped"]:
+        print(f"Éléments ignorés sûrs: {len(staging_summary['skipped'])}")
+    print()
+
+    create_archive(root, local_archive)
+    validation = validate_archive(local_archive)
+    archive_sha = sha256_file(local_archive)
+
+    print("--- Validation archive ---")
+    print(f"Dossier racine      : {validation['root']}")
+    print(f"Fichiers            : {validation['file_count']}")
+    print(
+        f"Taille non compressée: "
+        f"{human_size(validation['uncompressed_bytes'])}"
+    )
+    print(f"Taille archive      : {human_size(local_archive.stat().st_size)}")
+    print(f"SHA-256             : {archive_sha}")
+    print("Manifest V8         : OK")
+    print("CRC ZIP             : OK")
+    print("Chemins sécuritaires: OK")
+    print()
+
+    final_path: Path | None = None
+    if not args.dry_run:
+        final_path = atomic_publish(local_archive, destination)
+        print("--- Publication NAS ---")
+        print(f"Archive finale      : {final_path}")
+        print(f"SHA-256 destination : {sha256_file(final_path)}")
+        print("Écrasement          : NON")
+        print()
+
+    result = {
+        "version": VERSION,
+        "created_at": now_iso(),
+        "source_report": str(report_path),
+        "source_vpx": record.get("source_vpx"),
+        "source_vbs": record.get("vbs_path"),
+        "identity": entry,
+        "rom": record.get("rom"),
+        "rom_relation": record.get("rom_relation"),
+        "pup": record.get("pup"),
+        "package_name": package_name,
+        "local_archive": str(local_archive),
+        "final_archive": str(final_path or ""),
+        "archive_sha256": archive_sha,
+        "archive_size": local_archive.stat().st_size,
+        "validation": validation,
+        "staging": staging_summary,
+        "dry_run": args.dry_run,
+    }
+
+    json_path = report_dir / "result.json"
+    json_path.write_text(
+        json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    text_path = report_dir / "result.txt"
+    text_path.write_text(
+        "\n".join(
+            [
+                "=" * 63,
+                " PINCABOS — RÉSULTAT PILOTE .PinCabOs",
+                "=" * 63,
+                f"Identité        : {entry.get('canonical')}",
+                f"VPSId/MasterID  : {vpsid}",
+                f"ROM             : {(record.get('rom') or {}).get('selected') or 'SANS ROM'}",
+                f"Relation ROM    : {record.get('rom_relation')}",
+                f"PuP             : {(record.get('pup') or {}).get('status')}",
+                f"Nom package     : {package_name}",
+                f"Archive finale  : {final_path or 'DRY-RUN'}",
+                f"Taille          : {human_size(local_archive.stat().st_size)}",
+                f"SHA-256         : {archive_sha}",
+                f"Fichiers        : {validation['file_count']}",
+                "Manifest V8     : OK",
+                "CRC ZIP         : OK",
+                "Sources modifiées: NON",
+                "=" * 63,
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    print("=" * 63)
+    print(" PILOTE TERMINÉ")
+    print("=" * 63)
+    print(f"Rapport TXT          : {text_path}")
+    print(f"Rapport JSON         : {json_path}")
+    print(f"Archive finale       : {final_path or 'DRY-RUN'}")
+    print("Sources NAS modifiées: NON")
+
+    if not args.keep_work and final_path is not None:
+        shutil.rmtree(session_dir, ignore_errors=True)
+
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except BuildError as error:
+        print()
+        print("=" * 63, file=sys.stderr)
+        print(" ERREUR PILOTE — AUCUNE ARCHIVE ÉCRASÉE", file=sys.stderr)
+        print("=" * 63, file=sys.stderr)
+        print(str(error), file=sys.stderr)
+        raise SystemExit(2)
+    except KeyboardInterrupt:
+        print("\nInterrompu. Aucun fichier final partiel ne doit rester.")
+        raise SystemExit(130)

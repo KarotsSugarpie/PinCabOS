@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch PinCabOS table imports
+
+[Path]
+PathChanged=/home/pinball/Tables
+PathModified=/home/pinball/Tables
+Unit=pincabos-table-tree.service
+
+[Install]
+WantedBy=multi-user.target

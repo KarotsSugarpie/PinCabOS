@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# PINCABOS_EXPLORER_TABLE_TEST_CENTER_V1
+# PINCABOS_TABLE_TEST_FIXED_LOG_CONTROL_V1
+set -Eeuo pipefail
+
+SERVICE="pincabos-table-test.service"
+VPINFE="pincabos-vpinfe.service"
+STATE_FILE="/var/lib/pincabos/table-test/state.json"
+
+mark_stop_requested() {
+  python3 - "$STATE_FILE" <<'PY'
+from pathlib import Path
+import json
+import os
+import sys
+import time
+
+path = Path(sys.argv[1])
+
+try:
+    state = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    state = {}
+
+if not isinstance(state, dict):
+    state = {}
+
+state["stop_requested"] = True
+state["updated_at"] = int(time.time())
+
+path.parent.mkdir(parents=True, exist_ok=True)
+temp = path.with_suffix(".tmp")
+temp.write_text(
+    json.dumps(state, ensure_ascii=False, indent=2),
+    encoding="utf-8",
+)
+os.replace(temp, path)
+PY
+}
+
+stop_vpx() {
+  pkill -TERM -u pinball \
+    -f '(^|/)VPinballX(_BGFX)?([[:space:]]|$)' \
+    2>/dev/null || true
+
+  for _ in {1..20}; do
+    if ! pgrep -u pinball \
+      -f '(^|/)VPinballX(_BGFX)?([[:space:]]|$)' \
+      >/dev/null 2>&1
+    then
+      return 0
+    fi
+
+    sleep .25
+  done
+
+  pkill -KILL -u pinball \
+    -f '(^|/)VPinballX(_BGFX)?([[:space:]]|$)' \
+    2>/dev/null || true
+}
+
+case "${1:-}" in
+  play)
+    if systemctl is-active --quiet "$SERVICE"; then
+      echo "Une table est déjà en test." >&2
+      exit 2
+    fi
+
+    systemctl stop "$VPINFE" || true
+    stop_vpx
+    systemctl reset-failed "$SERVICE" || true
+    systemctl start "$SERVICE"
+    ;;
+
+  stop)
+    mark_stop_requested
+    systemctl stop "$SERVICE" || true
+    stop_vpx
+    systemctl start --no-block "$VPINFE" || true
+    ;;
+
+  *)
+    echo "Usage: $0 play|stop" >&2
+    exit 64
+    ;;
+esac

@@ -1,0 +1,47 @@
+PINCABOS V8.1G - INSTALLER UPGRADES
+===================================
+
+Files:
+  01-pincabos-live-installer-regional-orientation.patch
+  02-install-cab-payload-to-target-uid1000-root-admin.patch
+
+Functions added:
+  - Dynamic locale selection from /usr/share/i18n/SUPPORTED
+  - Dynamic XKB layout/variant selection from base.lst
+  - Dynamic timezone selection from zone1970.tab
+  - Screen orientation menu: 0 / 90 CW / 90 CCW / 180
+  - fbcon rotation + Plymouth rotation + /etc/pincabos/orientation.conf
+  - Installer fix for live name resolution of pinball when UID/GID 1000 already exists
+  - Target invariant: pinball UID=1000 GID=1000
+  - pinball full root via passwordless sudo
+  - pinball unrestricted local Polkit authorization
+
+SECURITY NOTE
+-------------
+The account stays UID 1000. Do not change pinball to UID 0.
+Passwordless sudo + unrestricted Polkit means that any code executed as pinball
+can escalate to root. This is intentional for the dedicated PinCabOS appliance,
+but the WebApp and remote access must therefore be treated as root-equivalent.
+
+Apply the patches to the ISO source/staging tree that contains BOTH:
+  usr/local/sbin/pincabos-live-installer
+  pincabos-payload/pincabos-v8.1g-install-cab-payload-to-target.sh
+
+Example from that tree:
+  patch --dry-run -p1 < 01-pincabos-live-installer-regional-orientation.patch
+  patch --dry-run -p1 < 02-install-cab-payload-to-target-uid1000-root-admin.patch
+  patch -p1 < 01-pincabos-live-installer-regional-orientation.patch
+  patch -p1 < 02-install-cab-payload-to-target-uid1000-root-admin.patch
+  bash -n usr/local/sbin/pincabos-live-installer
+  bash -n pincabos-payload/pincabos-v8.1g-install-cab-payload-to-target.sh
+
+After installation, validate:
+  id pinball
+  sudo -n id -u
+  sudo -n whoami
+  sudo -l -U pinball
+
+Expected:
+  pinball uid=1000 gid=1000
+  sudo -n id -u => 0
+  sudo -n whoami => root

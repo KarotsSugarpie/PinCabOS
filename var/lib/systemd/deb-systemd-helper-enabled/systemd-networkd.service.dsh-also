@@ -1,0 +1,7 @@
+/etc/systemd/system/sockets.target.wants/systemd-networkd.socket
+/etc/systemd/system/sockets.target.wants/systemd-networkd-varlink.socket
+/etc/systemd/system/sockets.target.wants/systemd-networkd-resolve-hook.socket
+/etc/systemd/system/dbus-org.freedesktop.network1.service
+/etc/systemd/system/sysinit.target.wants/systemd-network-generator.service
+/etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service
+/etc/systemd/system/multi-user.target.wants/systemd-networkd.service

@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic verification of PinCabOS display-role consumers
+
+[Timer]
+OnBootSec=25s
+OnUnitActiveSec=1min
+Persistent=true
+Unit=pincabos-display-role-finalizer.service
+
+[Install]
+WantedBy=timers.target

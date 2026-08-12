@@ -1,0 +1,22 @@
+# ------------------------------------------------------------------
+#
+#    Copyright (C) 2021 Mikhail Morfikov
+#    Copyright (C) 2021-2025 Alexandre Pujol <alexandre@pujol.io>
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#
+# ------------------------------------------------------------------
+
+  abi <abi/5.0>,
+
+  include <abstractions/devices-usb-read>
+
+  /dev/bus/usb/@{int}/@{int} wk,
+
+  @{sys}/devices/**/usb@{int}/{,**} w,
+
+  include if exists <abstractions/devices-usb.d>
+
+# vim:ft=apparmor

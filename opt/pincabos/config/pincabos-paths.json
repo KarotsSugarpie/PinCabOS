@@ -1,0 +1,18 @@
+{
+  "created_by": "Karots Sugarpie",
+  "paths": {
+    "root": "/opt/pincabos",
+    "web": "/opt/pincabos/web",
+    "web_venv": "/opt/pincabos/web/.venv",
+    "vpx_dir": "/opt/pincabos/apps/vpinball",
+    "vpx_bin": "/opt/pincabos/bin/vpx.sh",
+    "vpx_ini": "/home/pinball/.vpinball/VPinballX.ini",
+    "tables": "/home/pinball/Tables",
+    "roms": "/opt/pincabos/apps/vpinball/PinMAME/roms",
+    "vpinfe_dir": "/opt/pincabos/apps/frontend/vpinfe/current",
+    "vpinfe_ini": "/opt/pincabos/config/vpinfe/vpinfe.ini",
+    "logs": "/opt/pincabos/logs",
+    "config": "/opt/pincabos/config"
+  },
+  "vpx_policy": "BGFX only; VPinballX[_]GL forbidden"
+}

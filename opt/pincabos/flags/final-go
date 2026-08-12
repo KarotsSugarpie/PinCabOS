@@ -1,0 +1,5 @@
+name=final-go
+status=GO
+label=RUN_03 returned GO; final summary and reboot requested
+exit_code=0
+timestamp=2026-06-20 02:05:23

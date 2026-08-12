@@ -1,0 +1,988 @@
+#!/usr/bin/env python3
+import csv
+import datetime
+import json
+import os
+import re
+import sqlite3
+import subprocess
+import sys
+import zipfile
+from collections import Counter
+from pathlib import Path
+
+stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+report_root = (
+    Path("/opt/pincabos/logs/audits")
+    if Path("/opt/pincabos").is_dir()
+    else Path.home() / "pincabos-audits"
+)
+
+out = report_root / f"baller-nas-{stamp}"
+out.mkdir(parents=True, exist_ok=True)
+
+relative_paths = {
+    "tables": "vPinball - Copie/VisualPinball/Tables",
+    "music": "vPinball - Copie/VisualPinball/Music",
+    "roms": "vPinball - Copie/VisualPinball/VPinMAME/roms",
+    "altcolor": "vPinball - Copie/VisualPinball/VPinMAME/altcolor",
+    "altsound": "vPinball - Copie/VisualPinball/VPinMAME/altsound",
+    "pupvideos": "vPinball - Copie/PinUPSystem/PUPVideos",
+    "popmedia": "vPinball - Copie/PinUPSystem/POPMedia/Visual Pinball X",
+    "destination": "Tables PinCabOS",
+}
+
+
+def log(message=""):
+    print(message, flush=True)
+
+    with (out / "audit-principal.txt").open(
+        "a",
+        encoding="utf-8",
+    ) as handle:
+        handle.write(message + "\n")
+
+
+def normalize(value):
+    return re.sub(
+        r"[^a-z0-9]+",
+        "",
+        str(value).casefold(),
+    )
+
+
+def human_size(value):
+    value = float(value)
+
+    for unit in ("o", "Kio", "Mio", "Gio", "Tio"):
+        if value < 1024:
+            return f"{value:.1f} {unit}"
+
+        value /= 1024
+
+    return f"{value:.1f} Pio"
+
+
+def root_score(path):
+    if not path.is_dir():
+        return -1
+
+    return sum(
+        (path / relative).is_dir()
+        for relative in relative_paths.values()
+    )
+
+
+def mounted_filesystems():
+    rows = []
+
+    try:
+        raw = subprocess.check_output(
+            [
+                "findmnt",
+                "-J",
+                "-o",
+                "TARGET,SOURCE,FSTYPE",
+            ],
+            text=True,
+        )
+
+        data = json.loads(raw)
+
+        def walk(items):
+            for item in items or []:
+                rows.append(
+                    (
+                        Path(item.get("target", "/")),
+                        item.get("source", ""),
+                        item.get("fstype", ""),
+                    )
+                )
+
+                walk(item.get("children"))
+
+        walk(data.get("filesystems"))
+
+    except Exception as error:
+        log(f"AVERTISSEMENT findmnt: {error}")
+
+    return rows
+
+
+def discover_nas_root():
+    candidates = {}
+
+    for target, source, fstype in mounted_filesystems():
+        source_lower = source.casefold()
+        target_lower = str(target).casefold()
+
+        if (
+            "jrl-datas" in source_lower
+            or "jrl-truenas" in source_lower
+            or "jrl-datas" in target_lower
+        ):
+            candidates[str(target)] = {
+                "target": str(target),
+                "source": source,
+                "fstype": fstype,
+                "score": root_score(target),
+            }
+
+    scan_roots = (
+        Path("/mnt"),
+        Path("/media"),
+        Path("/srv"),
+        Path("/run/user"),
+        Path("/home/pinball"),
+    )
+
+    for base in scan_roots:
+        if not base.exists():
+            continue
+
+        for current_root, directories, _files in os.walk(base):
+            current = Path(current_root)
+
+            try:
+                depth = len(current.relative_to(base).parts)
+            except ValueError:
+                depth = 99
+
+            if depth > 5:
+                directories[:] = []
+                continue
+
+            score = root_score(current)
+
+            if score > 0:
+                candidates.setdefault(
+                    str(current),
+                    {
+                        "target": str(current),
+                        "source": "scan local",
+                        "fstype": "inconnu",
+                        "score": score,
+                    },
+                )
+
+    ordered = sorted(
+        candidates.values(),
+        key=lambda item: (
+            -item["score"],
+            item["target"],
+        ),
+    )
+
+    (out / "montages-candidats.json").write_text(
+        json.dumps(
+            ordered,
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    if ordered and ordered[0]["score"] >= 4:
+        return Path(ordered[0]["target"])
+
+    return None
+
+
+def inventory(name, path):
+    result = {
+        "nom": name,
+        "chemin": str(path),
+        "present": path.is_dir(),
+        "fichiers": 0,
+        "dossiers": 0,
+        "octets": 0,
+        "extensions": {},
+    }
+
+    extensions = Counter()
+
+    if path.is_dir():
+        for current_root, directories, files in os.walk(path):
+            result["dossiers"] += len(directories)
+
+            for filename in files:
+                current = Path(current_root) / filename
+
+                try:
+                    result["fichiers"] += 1
+                    result["octets"] += current.stat().st_size
+
+                    extension = (
+                        current.suffix.casefold()
+                        or "[sans extension]"
+                    )
+
+                    extensions[extension] += 1
+
+                except OSError:
+                    pass
+
+    result["extensions"] = dict(
+        extensions.most_common()
+    )
+
+    return result
+
+
+def read_popper_databases(pinup_root):
+    result = {
+        "bases": [],
+        "enregistrements": [],
+    }
+
+    mapping = {}
+
+    if not pinup_root.is_dir():
+        return result, mapping
+
+    database_files = []
+
+    for pattern in (
+        "*.db",
+        "*.sqlite",
+        "*.sqlite3",
+    ):
+        database_files.extend(
+            pinup_root.rglob(pattern)
+        )
+
+    wanted_columns = {
+        "gamefilename",
+        "gamedisplay",
+        "gamename",
+        "rom",
+        "mediasearch",
+        "emuid",
+        "tablename",
+    }
+
+    for database in sorted(set(database_files)):
+        database_info = {
+            "chemin": str(database),
+            "tables": {},
+            "erreur": "",
+        }
+
+        try:
+            connection = sqlite3.connect(
+                f"file:{database.as_posix()}?mode=ro&immutable=1",
+                uri=True,
+            )
+
+            table_rows = connection.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type='table'
+                ORDER BY name
+                """
+            )
+
+            for (table_name,) in table_rows:
+                quoted_table = table_name.replace(
+                    '"',
+                    '""',
+                )
+
+                columns = [
+                    row[1]
+                    for row in connection.execute(
+                        f'PRAGMA table_info("{quoted_table}")'
+                    )
+                ]
+
+                database_info["tables"][table_name] = columns
+
+                useful_columns = [
+                    column
+                    for column in columns
+                    if column.casefold() in wanted_columns
+                ]
+
+                useful_lower = [
+                    column.casefold()
+                    for column in useful_columns
+                ]
+
+                if "gamefilename" not in useful_lower:
+                    continue
+
+                quoted_columns = ",".join(
+                    '"' + column.replace('"', '""') + '"'
+                    for column in useful_columns
+                )
+
+                try:
+                    query = (
+                        f'SELECT {quoted_columns} '
+                        f'FROM "{quoted_table}"'
+                    )
+
+                    for values in connection.execute(query):
+                        record = {
+                            useful_columns[index]: values[index]
+                            for index in range(len(useful_columns))
+                        }
+
+                        record["_base"] = str(database)
+                        record["_table"] = table_name
+
+                        result["enregistrements"].append(record)
+
+                        game_filename = next(
+                            (
+                                value
+                                for key, value in record.items()
+                                if key.casefold() == "gamefilename"
+                            ),
+                            None,
+                        )
+
+                        if game_filename:
+                            key = normalize(
+                                Path(str(game_filename)).stem
+                            )
+
+                            mapping.setdefault(
+                                key,
+                                [],
+                            ).append(record)
+
+                except Exception:
+                    pass
+
+            connection.close()
+
+        except Exception as error:
+            database_info["erreur"] = str(error)
+
+        result["bases"].append(database_info)
+
+    return result, mapping
+
+
+def database_field(record, requested_name):
+    for key, value in record.items():
+        if key.casefold() == requested_name:
+            return "" if value is None else str(value)
+
+    return ""
+
+
+def read_for_rom_detection(path):
+    try:
+        binary = path.read_bytes()[:12000000]
+
+        return (
+            binary.decode(
+                "utf-8",
+                "ignore",
+            )
+            + "\n"
+            + binary.decode(
+                "latin1",
+                "ignore",
+            )
+        )
+
+    except Exception:
+        return ""
+
+
+def detect_script_rom(vpx):
+    patterns = (
+        re.compile(
+            r"""(?i)\bcGameName\s*=\s*["']([^"']+)"""
+        ),
+        re.compile(
+            r"""(?i)\bGameName\s*=\s*["']([^"']+)"""
+        ),
+    )
+
+    candidates = (
+        vpx.with_suffix(".vbs"),
+        vpx,
+    )
+
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+
+        text = read_for_rom_detection(candidate)
+
+        for pattern in patterns:
+            match = pattern.search(text)
+
+            if match:
+                return (
+                    match.group(1).strip(),
+                    str(candidate),
+                )
+
+    return "", ""
+
+
+def find_matching_items(name, items):
+    if not name:
+        return []
+
+    exact = [
+        item
+        for item in items
+        if item.name.casefold() == name.casefold()
+        or item.stem.casefold() == name.casefold()
+    ]
+
+    if exact:
+        return exact
+
+    normalized_name = normalize(name)
+
+    return [
+        item
+        for item in items
+        if normalize(item.name) == normalized_name
+        or normalize(item.stem) == normalized_name
+    ]
+
+
+def find_sidecars(vpx):
+    allowed_extensions = {
+        ".vbs",
+        ".directb2s",
+        ".json",
+        ".pov",
+        ".ini",
+        ".nv",
+        ".res",
+        ".txt",
+    }
+
+    results = []
+
+    for candidate in vpx.parent.iterdir():
+        if not candidate.is_file():
+            continue
+
+        if candidate.suffix.casefold() not in allowed_extensions:
+            continue
+
+        if normalize(candidate.stem) == normalize(vpx.stem):
+            results.append(str(candidate))
+
+    return results
+
+
+def inspect_existing_archives(destination):
+    results = []
+
+    if not destination.is_dir():
+        return results
+
+    archive_files = [
+        path
+        for path in destination.rglob("*")
+        if path.is_file()
+        and path.suffix.casefold() == ".pincabos"
+    ]
+
+    for archive in sorted(archive_files)[:20]:
+        result = {
+            "chemin": str(archive),
+            "octets": archive.stat().st_size,
+            "zip_valide": False,
+            "racines": [],
+            "manifests": [],
+            "manifest": None,
+            "erreur": "",
+        }
+
+        try:
+            with zipfile.ZipFile(archive) as zip_file:
+                names = zip_file.namelist()
+
+                result["zip_valide"] = (
+                    zip_file.testzip() is None
+                )
+
+                result["racines"] = sorted(
+                    {
+                        name.split("/", 1)[0]
+                        for name in names
+                        if name
+                    }
+                )
+
+                result["manifests"] = [
+                    name
+                    for name in names
+                    if name.casefold().endswith(
+                        "pincabos-export-manifest.json"
+                    )
+                ]
+
+                if result["manifests"]:
+                    manifest_raw = zip_file.read(
+                        result["manifests"][0]
+                    )
+
+                    result["manifest"] = json.loads(
+                        manifest_raw.decode(
+                            "utf-8",
+                            "replace",
+                        )
+                    )
+
+        except Exception as error:
+            result["erreur"] = str(error)
+
+        results.append(result)
+
+    return results
+
+
+def inspect_pincabos_importer():
+    results = []
+
+    expression = re.compile(
+        r"""(?i)(
+            \.pincabos
+            |pincabos-export-manifest
+            |table[ ]export
+            |batch.import
+            |zipfile
+        )""",
+        re.VERBOSE,
+    )
+
+    web_root = Path("/opt/pincabos/web")
+
+    if not web_root.is_dir():
+        return results
+
+    for source_file in web_root.rglob("*.py"):
+        try:
+            lines = source_file.read_text(
+                "utf-8",
+                "ignore",
+            ).splitlines()
+
+            for line_number, line in enumerate(lines, 1):
+                if expression.search(line):
+                    results.append(
+                        {
+                            "fichier": str(source_file),
+                            "ligne": line_number,
+                            "texte": line.strip()[:500],
+                        }
+                    )
+
+        except OSError:
+            pass
+
+    return results
+
+
+log("===============================================================")
+log(" PINCABOS — AUDIT LECTURE SEULE BALLER INSTALLER SUR NAS")
+log("===============================================================")
+log(f"Rapport local : {out}")
+log(
+    "Aucune écriture, copie, suppression ou modification "
+    "ne sera effectuée sur le NAS."
+)
+log()
+
+nas_root = discover_nas_root()
+
+if nas_root is None:
+    log(
+        "ERREUR : le montage //JRL-TRUENAS/JRL-Datas "
+        "n’a pas été identifié automatiquement."
+    )
+    log(
+        f"Voir les candidats dans : "
+        f"{out}/montages-candidats.json"
+    )
+    sys.exit(2)
+
+log(f"Racine NAS détectée : {nas_root}")
+
+paths = {
+    name: nas_root / relative
+    for name, relative in relative_paths.items()
+}
+
+for name, path in paths.items():
+    status = "OK" if path.is_dir() else "MANQUANT"
+
+    log(
+        f"{status:8} "
+        f"{name:12} "
+        f"{path}"
+    )
+
+log()
+log("--- Inventaire complet ---")
+
+inventories = [
+    inventory(name, path)
+    for name, path in paths.items()
+]
+
+(out / "inventaire.json").write_text(
+    json.dumps(
+        inventories,
+        indent=2,
+        ensure_ascii=False,
+    ),
+    encoding="utf-8",
+)
+
+for item in inventories:
+    log(
+        f"{item['nom']:12} "
+        f"fichiers={item['fichiers']:7} "
+        f"dossiers={item['dossiers']:6} "
+        f"taille={human_size(item['octets'])}"
+    )
+
+log()
+log("--- Bases PinUP Popper en lecture seule ---")
+
+popper_data, popper_mapping = read_popper_databases(
+    nas_root / "vPinball - Copie/PinUPSystem"
+)
+
+(out / "bases-pinup.json").write_text(
+    json.dumps(
+        popper_data,
+        indent=2,
+        ensure_ascii=False,
+        default=str,
+    ),
+    encoding="utf-8",
+)
+
+log(
+    f"Bases détectées : "
+    f"{len(popper_data['bases'])}"
+)
+
+log(
+    f"Enregistrements utiles : "
+    f"{len(popper_data['enregistrements'])}"
+)
+
+rom_files = (
+    list(paths["roms"].glob("*.zip"))
+    if paths["roms"].is_dir()
+    else []
+)
+
+altcolor_directories = (
+    [
+        path
+        for path in paths["altcolor"].iterdir()
+        if path.is_dir()
+    ]
+    if paths["altcolor"].is_dir()
+    else []
+)
+
+altsound_directories = (
+    [
+        path
+        for path in paths["altsound"].iterdir()
+        if path.is_dir()
+    ]
+    if paths["altsound"].is_dir()
+    else []
+)
+
+pup_directories = (
+    [
+        path
+        for path in paths["pupvideos"].iterdir()
+        if path.is_dir()
+    ]
+    if paths["pupvideos"].is_dir()
+    else []
+)
+
+vpx_files = (
+    sorted(paths["tables"].rglob("*.vpx"))
+    if paths["tables"].is_dir()
+    else []
+)
+
+log()
+log(
+    f"--- Associations des "
+    f"{len(vpx_files)} tables VPX ---"
+)
+
+association_columns = [
+    "vpx",
+    "octets",
+    "sidecars",
+    "popper_game_display",
+    "popper_media_search",
+    "rom",
+    "source_rom",
+    "rom_zip",
+    "altcolor",
+    "altsound",
+    "pupvideo",
+]
+
+with (out / "associations-tables.tsv").open(
+    "w",
+    newline="",
+    encoding="utf-8",
+) as handle:
+    writer = csv.DictWriter(
+        handle,
+        fieldnames=association_columns,
+        delimiter="\t",
+    )
+
+    writer.writeheader()
+
+    for index, vpx in enumerate(vpx_files, 1):
+        popper_records = popper_mapping.get(
+            normalize(vpx.stem),
+            [],
+        )
+
+        popper_record = (
+            popper_records[0]
+            if popper_records
+            else {}
+        )
+
+        popper_rom = database_field(
+            popper_record,
+            "rom",
+        )
+
+        detected_rom, detected_source = detect_script_rom(vpx)
+
+        rom_name = popper_rom or detected_rom
+
+        media_search = database_field(
+            popper_record,
+            "mediasearch",
+        )
+
+        pup_matches = find_matching_items(
+            rom_name,
+            pup_directories,
+        )
+
+        if not pup_matches:
+            pup_matches = find_matching_items(
+                media_search,
+                pup_directories,
+            )
+
+        writer.writerow(
+            {
+                "vpx": str(vpx),
+                "octets": vpx.stat().st_size,
+                "sidecars": " | ".join(
+                    find_sidecars(vpx)
+                ),
+                "popper_game_display": database_field(
+                    popper_record,
+                    "gamedisplay",
+                ),
+                "popper_media_search": media_search,
+                "rom": rom_name,
+                "source_rom": (
+                    "Popper DB"
+                    if popper_rom
+                    else detected_source
+                ),
+                "rom_zip": " | ".join(
+                    map(
+                        str,
+                        find_matching_items(
+                            rom_name,
+                            rom_files,
+                        ),
+                    )
+                ),
+                "altcolor": " | ".join(
+                    map(
+                        str,
+                        find_matching_items(
+                            rom_name,
+                            altcolor_directories,
+                        ),
+                    )
+                ),
+                "altsound": " | ".join(
+                    map(
+                        str,
+                        find_matching_items(
+                            rom_name,
+                            altsound_directories,
+                        ),
+                    )
+                ),
+                "pupvideo": " | ".join(
+                    map(
+                        str,
+                        pup_matches,
+                    )
+                ),
+            }
+        )
+
+        if index % 100 == 0:
+            log(
+                f"  {index}/{len(vpx_files)} "
+                f"tables examinées"
+            )
+
+duplicate_names = {
+    key: count
+    for key, count in Counter(
+        normalize(path.stem)
+        for path in vpx_files
+    ).items()
+    if key and count > 1
+}
+
+(out / "doublons-tables.json").write_text(
+    json.dumps(
+        duplicate_names,
+        indent=2,
+        ensure_ascii=False,
+    ),
+    encoding="utf-8",
+)
+
+log()
+log("--- Importeur/exporteur PinCabOS réel ---")
+
+importer_hits = inspect_pincabos_importer()
+
+(out / "importeur-exporteur-pincabos.json").write_text(
+    json.dumps(
+        importer_hits,
+        indent=2,
+        ensure_ascii=False,
+    ),
+    encoding="utf-8",
+)
+
+with (out / "importeur-exporteur-pincabos.txt").open(
+    "w",
+    encoding="utf-8",
+) as handle:
+    for hit in importer_hits:
+        handle.write(
+            f"{hit['fichier']}:"
+            f"{hit['ligne']}: "
+            f"{hit['texte']}\n"
+        )
+
+log(
+    f"Lignes pertinentes trouvées : "
+    f"{len(importer_hits)}"
+)
+
+log()
+log("--- Archives .PinCabOS existantes ---")
+
+existing_archives = inspect_existing_archives(
+    paths["destination"]
+)
+
+(out / "archives-pincabos-existantes.json").write_text(
+    json.dumps(
+        existing_archives,
+        indent=2,
+        ensure_ascii=False,
+    ),
+    encoding="utf-8",
+)
+
+log(
+    f"Archives inspectées : "
+    f"{len(existing_archives)}"
+)
+
+summary = {
+    "report_dir": str(out),
+    "nas_root": str(nas_root),
+    "all_paths_present": all(
+        path.is_dir()
+        for path in paths.values()
+    ),
+    "vpx_tables": len(vpx_files),
+    "rom_zips": len(rom_files),
+    "altcolor_dirs": len(altcolor_directories),
+    "altsound_dirs": len(altsound_directories),
+    "pupvideo_dirs": len(pup_directories),
+    "duplicate_table_names": len(duplicate_names),
+    "popper_databases": len(popper_data["bases"]),
+    "popper_records": len(
+        popper_data["enregistrements"]
+    ),
+    "pincabos_archives_inspected": len(
+        existing_archives
+    ),
+    "importer_code_hits": len(importer_hits),
+}
+
+(out / "resume.json").write_text(
+    json.dumps(
+        summary,
+        indent=2,
+        ensure_ascii=False,
+    ),
+    encoding="utf-8",
+)
+
+(out / "resume.txt").write_text(
+    "\n".join(
+        f"{key}: {value}"
+        for key, value in summary.items()
+    )
+    + "\n",
+    encoding="utf-8",
+)
+
+log()
+log("===============================================================")
+log(" AUDIT TERMINÉ — AUCUNE CONVERSION EFFECTUÉE")
+log("===============================================================")
+log()
+
+log(
+    (out / "resume.txt").read_text(
+        encoding="utf-8"
+    )
+)
+
+log("Rapports principaux :")
+
+for filename in (
+    "resume.txt",
+    "inventaire.json",
+    "associations-tables.tsv",
+    "bases-pinup.json",
+    "archives-pincabos-existantes.json",
+    "importeur-exporteur-pincabos.txt",
+    "doublons-tables.json",
+):
+    log(f" - {out / filename}")

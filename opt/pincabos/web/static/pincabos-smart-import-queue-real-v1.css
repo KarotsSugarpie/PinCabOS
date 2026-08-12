@@ -1,0 +1,131 @@
+/* PINCABOS_SMART_IMPORT_REAL_QUEUE_V1 */
+
+#pcoSmartImportPackages {
+  display: none !important;
+}
+
+.pco-smart-import-queue {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 11px;
+  background: rgba(3,1,7,.45);
+}
+
+.pco-smart-import-queue-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pco-smart-import-queue-count {
+  margin-left: auto;
+  padding: 5px 10px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  color: #ded4e5;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.pco-smart-import-file-list {
+  display: grid;
+  gap: 7px;
+  max-height: 340px;
+  margin-top: 11px;
+  overflow-y: auto;
+}
+
+.pco-smart-import-queue-empty {
+  padding: 17px 12px;
+  border: 1px dashed rgba(255,255,255,.15);
+  border-radius: 9px;
+  color: #aca1b2;
+  text-align: center;
+}
+
+.pco-smart-import-file-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 9px;
+  background: rgba(255,255,255,.045);
+}
+
+.pco-smart-import-file-type {
+  padding: 5px 6px;
+  border-radius: 7px;
+  background: rgba(153,86,255,.18);
+  color: #dec7ff;
+  font-size: 10px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.pco-smart-import-file-info {
+  min-width: 0;
+}
+
+.pco-smart-import-file-info strong,
+.pco-smart-import-file-info small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pco-smart-import-file-info strong {
+  color: #fff;
+  font-size: 13px;
+}
+
+.pco-smart-import-file-info small {
+  margin-top: 2px;
+  color: #9f95a7;
+}
+
+.pco-smart-import-file-remove {
+  cursor: pointer;
+  padding: 6px 9px;
+  border: 1px solid rgba(255,110,120,.27);
+  border-radius: 8px;
+  background: rgba(130,22,34,.18);
+  color: #ffb0b7;
+  font-weight: 800;
+}
+
+#pcoSmartImportQueueMessage {
+  margin-top: 10px;
+}
+
+#pcoSmartImportQueueMessage[data-kind="success"] {
+  border-color: rgba(55,210,125,.28);
+  background: rgba(35,148,95,.12);
+  color: #a8ecc8;
+}
+
+#pcoSmartImportQueueMessage[data-kind="error"] {
+  border-color: rgba(255,100,110,.28);
+  background: rgba(180,42,56,.14);
+  color: #ffb7bd;
+}
+
+@media (max-width: 720px) {
+  .pco-smart-import-queue-count {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .pco-smart-import-file-row {
+    grid-template-columns: 52px minmax(0,1fr);
+  }
+
+  .pco-smart-import-file-remove {
+    grid-column: 1 / -1;
+  }
+}

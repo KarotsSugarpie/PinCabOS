@@ -1,0 +1,36 @@
+#!/bin/sh
+
+version="$1"
+bootdir=/boot
+
+[ -x /usr/bin/dracut ] || exit 0
+
+# passing the kernel version is required
+[ -z "${version}" ] && exit 0
+
+# exit if custom kernel does not need an initramfs
+[ "$INITRD" = 'No' ] && exit 0
+
+# absolute file name of kernel image may be passed as a second argument;
+# create the initrd in the same directory
+if [ -n "$2" ]; then
+	bootdir=$(dirname "$2")
+fi
+
+# avoid running multiple times
+if [ -n "$DEB_MAINT_PARAMS" ]; then
+        eval set -- "$DEB_MAINT_PARAMS"
+        if [ -z "$1" ] || [ "$1" != "configure" ]; then
+                exit 0
+        fi
+fi
+
+# check if modules.dep already exists. If not create it
+# maybe this problem could also be solved via Debian triggers
+if [ ! -f "$bootdir/../lib/modules/$version/modules.dep" ]; then
+    depmod -a -F "$bootdir/System.map-$version" "$version"
+fi
+
+# we're good - create initramfs
+echo "dracut: Generating $bootdir/initrd.img-${version}"
+dracut --force "$bootdir/initrd.img-${version}" "${version}" >&2

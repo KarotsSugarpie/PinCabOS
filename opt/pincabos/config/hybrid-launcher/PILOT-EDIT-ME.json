@@ -1,0 +1,20 @@
+{
+  "enabled": false,
+  "default": "original",
+  "timeout": 20,
+  "choices": {
+    "original": {
+      "table": "/home/pinball/Tables/EDIT-ME-ORIGINAL/EDIT-ME-ORIGINAL.vpx",
+      "env": {
+        "PINCABOS_GAME_CHOICE": "original"
+      }
+    },
+    "pup": {
+      "table": "/home/pinball/Tables/EDIT-ME-PUP/EDIT-ME-PUP.vpx",
+      "env": {
+        "PINCABOS_GAME_CHOICE": "pup",
+        "PINCABOS_PUP_ENABLED": "1"
+      }
+    }
+  }
+}

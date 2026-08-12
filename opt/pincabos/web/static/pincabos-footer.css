@@ -1,0 +1,102 @@
+/* PinCabOS-File created by Karots Sugarpie */
+/* PinCabOS support footer */
+.pincabos-support-footer {
+  margin: 18px auto 0 auto !important;
+  padding: 14px !important;
+  max-width: 980px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 122, 0, 0.35) !important;
+  background: rgba(12, 0, 22, 0.62) !important;
+  box-shadow: 0 0 18px rgba(255, 122, 0, 0.15) !important;
+  color: #fff !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+
+  text-align: left !important;
+}
+
+.pincabos-support-text {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.pincabos-support-text h2 {
+  color: #ffb000 !important;
+  margin: 0 0 6px 0 !important;
+  font-size: 16px !important;
+}
+
+.pincabos-support-text p {
+  margin: 0 0 10px 0 !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+}
+
+.pincabos-paypal-form {
+  display: inline-block !important;
+}
+
+.pincabos-support-qr {
+  flex: 0 0 170px !important;
+  width: 170px !important;
+  text-align: center !important;
+  margin-left: auto !important;
+}
+
+.pincabos-support-qr img {
+  display: block !important;
+  width: 160px !important;
+  max-width: 160px !important;
+  height: 160px !important;
+  max-height: 160px !important;
+  object-fit: contain !important;
+  background: #fff !important;
+  padding: 8px !important;
+  border-radius: 12px !important;
+  margin: 0 auto !important;
+}
+
+.pincabos-support-qr-label {
+  margin-top: 6px !important;
+  font-size: 11px !important;
+  color: #ffb000 !important;
+  opacity: 0.9 !important;
+}
+
+@media (max-width: 750px) {
+  .pincabos-support-footer {
+    flex-direction: column !important;
+    text-align: center !important;
+  }
+
+  .pincabos-support-qr {
+    margin-left: 0 !important;
+  }
+}
+
+
+/* ============================================================
+   PINCABOS_CONTENT_RAIL_V1
+   Ancien footer : meme rail que les cartes centrales.
+   ============================================================ */
+
+@media (min-width: 851px) {
+  html body .pincabos-support-footer {
+    width: 100% !important;
+    max-width: var(--pco-content-rail-width, 1850px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+}
+
+@media (max-width: 850px) {
+  html body .pincabos-support-footer {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}

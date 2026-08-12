@@ -1,0 +1,3 @@
+# PinCabOS — conserve le Dude's Cab actif pour les entrees flipper.
+# Cree automatiquement le 20260628-154202.
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="2e8a", ATTR{idProduct}=="106f", TEST=="power/control", ATTR{power/control}="on"

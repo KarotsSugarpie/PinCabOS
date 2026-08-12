@@ -1,0 +1,11 @@
+# PinCabOS audio baseline
+created_by=Karots Sugarpie
+created_at=2026-06-11 18:00:27
+
+[commands]
+/usr/bin/aplay
+/usr/bin/pactl
+/usr/bin/pw-cli
+
+[aplay]
+**** List of PLAYBACK Hardware Devices ****

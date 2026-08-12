@@ -1,0 +1,17 @@
+[Unit]
+Description=PinCabOS VPinFE Frontend
+Documentation=https://pincabos.cc/
+After=display-manager.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pinball
+ExecStart=/usr/bin/bash /opt/pincabos/tools/run-vpinfe-systemd.sh
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=25
+KillMode=control-group
+
+[Install]
+WantedBy=graphical.target

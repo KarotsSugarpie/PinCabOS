@@ -1,0 +1,10 @@
+kdump-tools 	 /etc/default/kdump-tools
+chrony 	 /etc/chrony/chrony.conf
+chrony 	 /etc/chrony/chrony.keys
+chrony 	 /etc/chrony/sources.d/ubuntu-ntp-pools.sources
+unattended-upgrades 	 /etc/apt/apt.conf.d/20auto-upgrades
+unattended-upgrades 	 /etc/apt/apt.conf.d/50unattended-upgrades
+grub-efi-amd64 	 /etc/default/grub
+openssh-server 	 /etc/ssh/sshd_config
+sysstat 	 /etc/default/sysstat
+samba-common 	 /etc/samba/smb.conf

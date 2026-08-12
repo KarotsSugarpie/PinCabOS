@@ -1,0 +1,703 @@
+/* PINCABOS_MENU_PRO_LAYOUT_V1 */
+/* Mise en page seulement. Aucune fonction ou route n'est modifiée. */
+
+html body .pincabos-nav {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+html body .pincabos-nav .nav-row {
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  border: 1px solid rgba(255, 144, 18, .28) !important;
+  border-radius: 16px !important;
+  background:
+    radial-gradient(circle at 95% 0%, rgba(128, 63, 220, .12), transparent 32%),
+    linear-gradient(100deg, rgba(18, 7, 32, .96), rgba(9, 3, 18, .96)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 8px 22px rgba(0,0,0,.20) !important;
+}
+
+html body .pincabos-nav .nav-pages {
+  min-height: 76px !important;
+  padding: 10px 13px !important;
+  gap: 9px !important;
+  flex-wrap: wrap !important;
+}
+
+html body .pincabos-nav .pincabos-nav-dashboard-logo {
+  display: inline-flex !important;
+  flex: 0 0 196px !important;
+  width: 196px !important;
+  height: 54px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 8px 0 0 !important;
+  padding: 5px 9px !important;
+  border-right: 1px solid rgba(255, 154, 31, .25) !important;
+}
+
+html body .pincabos-nav .pincabos-nav-dashboard-logo img {
+  display: block !important;
+  width: 178px !important;
+  max-width: 100% !important;
+  height: 48px !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+html body .pincabos-nav .nav-pages > a {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 40px !important;
+  padding: 0 14px !important;
+  border: 1px solid rgba(190, 125, 255, .48) !important;
+  border-radius: 11px !important;
+  background: linear-gradient(135deg, rgba(102, 43, 174, .88), rgba(68, 22, 119, .92)) !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12) !important;
+}
+
+html body .pincabos-nav .nav-pages > a:hover,
+html body .pincabos-nav .nav-pages > a.active {
+  border-color: rgba(255, 169, 43, .95) !important;
+  background: linear-gradient(135deg, #ff9d1d, #f56f0d) !important;
+  color: #1e0d03 !important;
+  box-shadow: 0 0 16px rgba(255, 134, 18, .22) !important;
+}
+
+html body .pincabos-nav .menu-ico {
+  margin-right: 7px !important;
+  font-size: 14px !important;
+}
+
+html body .pincabos-nav .pco-menu-tools {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  margin-left: auto !important;
+  padding-left: 12px !important;
+  border-left: 1px solid rgba(255, 154, 31, .23) !important;
+}
+
+html body .pincabos-nav .pco-menu-tool-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: 11px !important;
+}
+
+html body .pincabos-nav .nav-tools-clean {
+  min-height: 56px !important;
+  padding: 8px 12px !important;
+  gap: 13px !important;
+  flex-wrap: wrap !important;
+}
+
+html body .pincabos-nav .nav-vpinfe-vps-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+html body .pincabos-nav .nav-vpinfe-vps-group::before {
+  content: "ACCÈS RAPIDES" !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 31px !important;
+  padding-right: 10px !important;
+  color: #ffbd55 !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  letter-spacing: .10em !important;
+  white-space: nowrap !important;
+  border-right: 1px solid rgba(255, 154, 31, .24) !important;
+}
+
+html body .pincabos-nav .nav-tools-clean .nav-action,
+html body .pincabos-nav .nav-tools-clean .pco-topbar-tool-copy {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 0 14px !important;
+  border: 1px solid rgba(183, 116, 251, .48) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, rgba(91, 38, 153, .88), rgba(56, 19, 99, .92)) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+}
+
+html body .pincabos-nav .nav-tools-clean .pco-topbar-tool-copy {
+  border-color: rgba(255, 147, 21, .65) !important;
+  background: linear-gradient(135deg, #ff9d1d, #f36d0a) !important;
+  color: #251004 !important;
+}
+
+html body .pincabos-nav .nav-tools-clean .nav-action:hover,
+html body .pincabos-nav .nav-tools-clean .pco-topbar-tool-copy:hover {
+  filter: brightness(1.14) !important;
+  transform: translateY(-1px) !important;
+}
+
+html body .pincabos-nav .nav-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 36px !important;
+  margin-left: auto !important;
+  padding: 0 10px 0 14px !important;
+  color: #ffc05d !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+  border-left: 1px solid rgba(255, 154, 31, .23) !important;
+}
+
+html body .pincabos-nav .nav-tools-clean form {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+html body .pincabos-nav .screen-toggle-btn {
+  min-height: 36px !important;
+  min-width: 104px !important;
+  margin: 0 !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+@media (max-width: 1200px) {
+  html body .pincabos-nav .nav-pages {
+    min-height: auto !important;
+  }
+
+  html body .pincabos-nav .pco-menu-tools {
+    margin-left: 0 !important;
+  }
+
+  html body .pincabos-nav .nav-label {
+    margin-left: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  html body .pincabos-nav .nav-pages,
+  html body .pincabos-nav .nav-tools-clean {
+    align-items: stretch !important;
+  }
+
+  html body .pincabos-nav .pincabos-nav-dashboard-logo {
+    flex-basis: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid rgba(255, 154, 31, .22) !important;
+  }
+
+  html body .pincabos-nav .nav-pages > a {
+    flex: 1 1 calc(50% - 8px) !important;
+  }
+
+  html body .pincabos-nav .pco-menu-tools {
+    width: 100% !important;
+    padding: 10px 0 0 !important;
+    border-left: 0 !important;
+    border-top: 1px solid rgba(255, 154, 31, .22) !important;
+  }
+
+  html body .pincabos-nav .nav-vpinfe-vps-group {
+    width: 100% !important;
+  }
+
+  html body .pincabos-nav .nav-vpinfe-vps-group::before {
+    width: 100% !important;
+    padding: 0 0 7px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid rgba(255, 154, 31, .20) !important;
+  }
+
+  html body .pincabos-nav .nav-label {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 7px 0 0 !important;
+    border-left: 0 !important;
+    border-top: 1px solid rgba(255, 154, 31, .22) !important;
+  }
+
+  html body .pincabos-nav .screen-toggle-btn {
+    min-width: 0 !important;
+  }
+}
+
+/* PINCABOS_MENU_PRO_BUTTON_TEXT_FIX_V1 */
+/* Empêche les boutons du menu de couper leurs libellés. */
+html body .pincabos-nav .nav-pages > a,
+html body .pincabos-nav .nav-tools-clean .nav-action,
+html body .pincabos-nav .nav-tools-clean .pco-topbar-tool-copy,
+html body .pincabos-nav .screen-toggle-btn {
+  width: auto !important;
+  min-width: max-content !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+  flex: 0 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Navigation principale : un peu plus de place pour icône + texte. */
+html body .pincabos-nav .nav-pages > a {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+/* Sur petit écran, les boutons peuvent reprendre la largeur disponible. */
+@media (max-width: 760px) {
+  html body .pincabos-nav .nav-pages > a {
+    min-width: 0 !important;
+    white-space: normal !important;
+    text-align: center !important;
+  }
+}
+
+/* PINCABOS_MENU_LOGO_RAIL_V1_START */
+html body .pincabos-nav {
+  grid-template-columns: 252px minmax(0, 1fr) !important;
+  grid-template-areas:
+    "logo pages"
+    "logo tools" !important;
+  column-gap: 10px !important;
+  row-gap: 10px !important;
+  align-items: stretch !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail {
+  grid-area: logo !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  min-height: 142px !important;
+  padding: 14px !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(131, 65, 224, .10), transparent 58%),
+    linear-gradient(100deg, rgba(18, 7, 32, .96), rgba(9, 3, 18, .96)) !important;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, .18),
+    inset 0 1px 0 rgba(255, 255, 255, .03) !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail img {
+  display: block !important;
+  width: calc(100% - 20px) !important;
+  max-width: 200px !important;
+  max-height: 88px !important;
+  height: auto !important;
+  object-fit: contain !important;
+  border-radius: 18px !important;
+}
+
+html body .pincabos-nav .nav-pages {
+  grid-area: pages !important;
+}
+
+html body .pincabos-nav .nav-tools-clean {
+  grid-area: tools !important;
+}
+
+@media (max-width: 1100px) {
+  html body .pincabos-nav {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas:
+      "logo"
+      "pages"
+      "tools" !important;
+  }
+
+  html body .pincabos-nav .pco-menu-logo-rail {
+    min-height: 72px !important;
+    padding: 9px 14px !important;
+  }
+
+  html body .pincabos-nav .pco-menu-logo-rail img {
+    width: 170px !important;
+    max-width: 100% !important;
+    max-height: 44px !important;
+  }
+}
+/* PINCABOS_MENU_LOGO_RAIL_V1_END */
+/* PINCABOS_MENU_LOGO_MAX_GLOW_V1_START */
+html body .pincabos-nav .pco-menu-logo-rail {
+  overflow: hidden !important;
+  border: 0 !important;
+  box-shadow:
+    0 0 8px rgba(255, 122, 18, .18),
+    0 0 18px rgba(120, 56, 220, .10),
+    0 4px 14px rgba(0, 0, 0, .16) !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail img {
+  width: calc(100% - 20px) !important;
+  height: auto !important;
+  max-width: 200px !important;
+  max-height: 88px !important;
+  object-fit: contain !important;
+  border-radius: 18px !important;
+  filter:
+    drop-shadow(0 0 3px rgba(255, 184, 52, .35))
+    drop-shadow(0 0 8px rgba(250, 96, 0, .16)) !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail:hover {
+  box-shadow:
+    0 0 10px rgba(255, 136, 24, .24),
+    0 0 20px rgba(126, 61, 228, .14),
+    0 4px 16px rgba(0, 0, 0, .18) !important;
+}
+/* PINCABOS_MENU_LOGO_MAX_GLOW_V1_END */
+
+/* PINCABOS_MENU_LOGO_RESTORE_SMALL_V1 */
+/* Retour à la carte glow précédente, logo réduit seulement de quelques pixels. */
+html body .pincabos-nav .pco-menu-logo-rail {
+  padding: 4px !important;
+  overflow: visible !important;
+  border: 1px solid rgba(255, 151, 20, .86) !important;
+  border-radius: 16px !important;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 126, 0, .24), transparent 58%),
+    radial-gradient(circle at 48% 38%, rgba(139, 63, 230, .28), transparent 72%),
+    linear-gradient(130deg, rgba(28, 8, 45, .98), rgba(8, 2, 17, .98)) !important;
+  box-shadow:
+    0 0 10px rgba(255, 115, 0, .62),
+    0 0 28px rgba(255, 87, 0, .30),
+    0 0 44px rgba(125, 55, 225, .24),
+    inset 0 0 22px rgba(255, 132, 18, .16),
+    inset 0 1px 0 rgba(255, 255, 255, .12) !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail img {
+  width: calc(100% - 8px) !important;
+  height: calc(100% - 8px) !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  border-radius: 0 !important;
+  filter:
+    drop-shadow(0 0 5px rgba(255, 184, 52, .90))
+    drop-shadow(0 0 14px rgba(250, 96, 0, .55)) !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail:hover {
+  border-color: rgba(255, 190, 64, 1) !important;
+  box-shadow:
+    0 0 14px rgba(255, 146, 8, .88),
+    0 0 36px rgba(255, 83, 0, .42),
+    0 0 58px rgba(132, 55, 238, .34),
+    inset 0 0 28px rgba(255, 137, 20, .22) !important;
+}
+
+/* PINCABOS_MENU_COMPACT_PRO_V1_START */
+/* Hauteur contrôlée par les deux cartes menu, jamais par le logo. */
+html body .pincabos-nav {
+  grid-template-columns: 220px minmax(0, 1fr) !important;
+  grid-template-rows: 68px 58px !important;
+  grid-template-areas:
+    "logo pages"
+    "logo tools" !important;
+  column-gap: 8px !important;
+  row-gap: 8px !important;
+  align-items: stretch !important;
+}
+
+html body .pincabos-nav .nav-row {
+  min-height: 0 !important;
+  height: 100% !important;
+  border-radius: 14px !important;
+}
+
+html body .pincabos-nav .nav-pages {
+  grid-area: pages !important;
+  min-height: 68px !important;
+  padding: 8px 12px !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+html body .pincabos-nav .nav-tools-clean {
+  grid-area: tools !important;
+  min-height: 58px !important;
+  padding: 7px 12px !important;
+  gap: 10px !important;
+  flex-wrap: nowrap !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail {
+  grid-area: logo !important;
+  min-height: 0 !important;
+  height: 134px !important;
+  padding: 7px !important;
+  overflow: hidden !important;
+  border-radius: 15px !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail img {
+  display: block !important;
+  width: auto !important;
+  height: 116px !important;
+  max-width: 196px !important;
+  max-height: 116px !important;
+  object-fit: contain !important;
+}
+
+html body .pincabos-nav .nav-pages > a {
+  min-height: 36px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+}
+
+html body .pincabos-nav .pco-menu-tool-btn {
+  width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+}
+
+html body .pincabos-nav .nav-tools-clean .nav-action,
+html body .pincabos-nav .nav-tools-clean .pco-topbar-tool-copy,
+html body .pincabos-nav .screen-toggle-btn {
+  min-height: 34px !important;
+  padding: 0 13px !important;
+  font-size: 12px !important;
+}
+
+html body .pincabos-nav .nav-vpinfe-vps-group::before {
+  min-height: 28px !important;
+  padding-right: 9px !important;
+  font-size: 10px !important;
+}
+
+html body .pincabos-nav .nav-label {
+  min-height: 32px !important;
+  padding: 0 8px 0 12px !important;
+  font-size: 12px !important;
+}
+
+@media (max-width: 1200px) {
+  html body .pincabos-nav {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto !important;
+    grid-template-areas:
+      "logo"
+      "pages"
+      "tools" !important;
+  }
+
+  html body .pincabos-nav .pco-menu-logo-rail {
+    height: 68px !important;
+  }
+
+  html body .pincabos-nav .pco-menu-logo-rail img {
+    height: 54px !important;
+    max-height: 54px !important;
+  }
+
+  html body .pincabos-nav .nav-pages,
+  html body .pincabos-nav .nav-tools-clean {
+    height: auto !important;
+    flex-wrap: wrap !important;
+  }
+}
+/* PINCABOS_MENU_COMPACT_PRO_V1_END */
+
+/* PINCABOS_MENU_LOGO_FRAME_FIT_V1_START */
+/* Le cadre logo suit le logo, au lieu de laisser un grand vide. */
+html body .pincabos-nav {
+  grid-template-columns: 172px minmax(0, 1fr) !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail {
+  width: 172px !important;
+  min-width: 172px !important;
+  max-width: 172px !important;
+  height: 126px !important;
+  min-height: 126px !important;
+  max-height: 126px !important;
+  padding: 5px !important;
+  justify-self: start !important;
+  align-self: start !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail img {
+  width: auto !important;
+  height: 112px !important;
+  max-width: 160px !important;
+  max-height: 112px !important;
+  object-fit: contain !important;
+}
+
+@media (max-width: 1200px) {
+  html body .pincabos-nav .pco-menu-logo-rail {
+    width: 172px !important;
+    min-width: 172px !important;
+    max-width: 172px !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    max-height: 64px !important;
+    margin: 0 auto !important;
+  }
+
+  html body .pincabos-nav .pco-menu-logo-rail img {
+    height: 52px !important;
+    max-height: 52px !important;
+    max-width: 150px !important;
+  }
+}
+/* PINCABOS_MENU_LOGO_FRAME_FIT_V1_END */
+
+/* PINCABOS_MENU_LOGO_DIRECT_V1_START */
+/* Logo direct dans le menu : aucune carte visuelle autour. */
+html body .pincabos-nav {
+  grid-template-columns: 146px minmax(0, 1fr) !important;
+  grid-template-rows: 68px 58px !important;
+  grid-template-areas:
+    "logo pages"
+    "logo tools" !important;
+  column-gap: 10px !important;
+  row-gap: 8px !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail {
+  grid-area: logo !important;
+  width: 146px !important;
+  min-width: 146px !important;
+  max-width: 146px !important;
+  height: 134px !important;
+  min-height: 134px !important;
+  max-height: 134px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail::before,
+html body .pincabos-nav .pco-menu-logo-rail::after {
+  display: none !important;
+  content: none !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail img {
+  display: block !important;
+  width: auto !important;
+  height: 122px !important;
+  max-width: 142px !important;
+  max-height: 122px !important;
+  object-fit: contain !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+html body .pincabos-nav .pco-menu-logo-rail:hover,
+html body .pincabos-nav .pco-menu-logo-rail:hover img {
+  border: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+@media (max-width: 1200px) {
+  html body .pincabos-nav {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto !important;
+    grid-template-areas:
+      "logo"
+      "pages"
+      "tools" !important;
+  }
+
+  html body .pincabos-nav .pco-menu-logo-rail {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 62px !important;
+    min-height: 62px !important;
+    max-height: 62px !important;
+  }
+
+  html body .pincabos-nav .pco-menu-logo-rail img {
+    height: 54px !important;
+    max-width: 120px !important;
+    max-height: 54px !important;
+  }
+}
+/* PINCABOS_MENU_LOGO_DIRECT_V1_END */
+
+
+/* =============================================================
+   PINCABOS_QUICK_ACCESS_I18N_V1
+   Le texte est désormais réel et traduisible, non généré par CSS.
+   ============================================================= */
+
+html body .pincabos-nav .nav-vpinfe-vps-group::before {
+  content: none !important;
+  display: none !important;
+}
+
+html body .pincabos-nav .pco-quick-access-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 28px !important;
+  padding-right: 9px !important;
+  color: var(--pco-appearance-accent, #ffbd55) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .06em !important;
+  line-height: 1 !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  border-right: 1px solid var(--pco-appearance-card-border, rgba(255, 154, 31, .24)) !important;
+}
+
+@media (max-width: 760px) {
+  html body .pincabos-nav .pco-quick-access-label {
+    width: 100% !important;
+    min-height: auto !important;
+    padding: 0 0 7px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--pco-appearance-card-border, rgba(255, 154, 31, .20)) !important;
+  }
+}

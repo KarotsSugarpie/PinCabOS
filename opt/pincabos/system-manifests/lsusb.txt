@@ -1,0 +1,9 @@
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 001 Device 002: ID 8087:800a Intel Corp. Hub
+Bus 002 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 002 Device 002: ID fafa:00f0 GGG LED-Wiz
+Bus 002 Device 003: ID 413c:2514 Dell Computer Corp. Dell Universal Receiver
+Bus 002 Device 004: ID 2e8a:106f L'atelier d'Arnoz DudesCab
+Bus 003 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 004 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 004 Device 002: ID 8087:8002 Intel Corp. 8 channel internal hub

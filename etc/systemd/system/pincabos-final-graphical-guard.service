@@ -1,0 +1,17 @@
+[Unit]
+Description=PinCabOS Final LightDM Hard Graphical Guard
+Documentation=https://pincabos.cc/
+DefaultDependencies=no
+After=local-fs.target systemd-sysusers.service systemd-user-sessions.service dbus.service network-online.target
+Before=getty@tty1.service
+Wants=network-online.target
+ConditionPathExists=/opt/pincabos
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-final-graphical-guard.sh
+RemainAfterExit=yes
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target graphical.target

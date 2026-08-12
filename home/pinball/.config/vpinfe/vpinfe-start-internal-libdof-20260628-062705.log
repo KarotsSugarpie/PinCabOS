@@ -1,0 +1,196 @@
+2026-06-28 06:27:06 INFO [vpinfe.main] Logging to /home/pinball/.config/vpinfe/vpinfe.log
+2026-06-28 06:27:06 INFO [vpinfe.main] Using NiceGUI storage path: /home/pinball/.config/vpinfe/.nicegui
+2026-06-28 06:27:06 INFO [vpinfe.main] Version: dev-2013315
+2026-06-28 06:27:07 INFO [vpinfe.common.pinmame_score_parser_updater] roms.json is already up to date at /home/pinball/.config/vpinfe/roms.json
+2026-06-28 06:27:07 INFO [vpinfe.main] pinmame-score-parser roms.json status=up_to_date path=/home/pinball/.config/vpinfe/roms.json
+2026-06-28 06:27:07 INFO [vpinfe.cli] Using config file at: /home/pinball/.config/vpinfe/vpinfe.ini
+2026-06-28 06:27:08 INFO [vpinfe.common.themes] Revolution already up to date (1.2.9)
+2026-06-28 06:27:08 INFO [vpinfe.main] Startup media sync enabled. Checking VPinMediaDB for missing/updated media...
+2026-06-28 06:27:08 INFO [vpinfe.common.tableparser] Loading tables and image paths...
+2026-06-28 06:27:08 DEBUG [vpinfe.common.tableparser] Load completed in 0.002s: loaded=1 missing_info=0
+2026-06-28 06:27:08 INFO [vpinfe.common.tableparser] Loading tables and image paths...
+2026-06-28 06:27:08 DEBUG [vpinfe.common.tableparser] Load completed in 0.001s: loaded=1 missing_info=0
+2026-06-28 06:27:08 INFO [vpinfe.common.vpsdb] Initializing VPSdb
+2026-06-28 06:27:08 INFO [vpinfe.common.vpsdb_cache] VPSdb currently at latest revision.
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Pinscape device scan found 0 devices
+2026-06-28 06:27:08 INFO [vpinfe.common.vpsdb] Total VPSdb entries: 2552
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] Service started using dof_runner.py from /opt/pincabos/overlays/vpinfe-dof-ledwiz-hidraw-stable
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Global config filename is "/home/pinball/.local/share/VPinballX/10.8/directoutputconfig/GlobalConfig_B2SServer.xml"
+2026-06-28 06:27:08 INFO [vpinfe.common.vpsdb] Using 4k/table tables (video: 1k)
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] No global config file loaded
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Install folder lookup: executable: /home/pinball/vpinfe/vpinfe, install folder: /home/pinball/vpinfe (EXECUTABLE folder -> original flat install configuration)
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Could not find or load the global config file /home/pinball/.local/share/VPinballX/10.8/directoutputconfig/GlobalConfig_B2SServer.xml
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Loading Pinball parts
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Loading cabinet
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] No cabinet config file loaded. Will use AutoConfig.
+2026-06-28 06:27:08 INFO [vpinfe.common.tableparser] Loading tables and image paths...
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Pinscape device scan found 0 devices
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Cabinet auto configuration started
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Pinscape auto-configuration starting
+2026-06-28 06:27:08 DEBUG [vpinfe.common.tableparser] Load completed in 0.001s: loaded=1 missing_info=0
+2026-06-28 06:27:08 DEBUG [vpinfe.common.table_repository] ensure_tables_loaded reload=False count=1 elapsed=0.005s
+2026-06-28 06:27:08 INFO [vpinfe.main] Registered API for window 'bg'
+2026-06-28 06:27:08 DEBUG [vpinfe.common.table_repository] ensure_tables_loaded reload=False count=1 elapsed=0.001s
+2026-06-28 06:27:08 INFO [vpinfe.main] Registered API for window 'dmd'
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Pinscape device scan found 0 devices
+2026-06-28 06:27:08 DEBUG [vpinfe.common.table_repository] ensure_tables_loaded reload=False count=1 elapsed=0.001s
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] PinscapePico auto-configuration starting
+2026-06-28 06:27:08 INFO [vpinfe.main] Registered API for window 'table'
+2026-06-28 06:27:08 INFO [vpinfe.frontend.customhttpserver] Serving on http://127.0.0.1:8000/
+2026-06-28 06:27:08 INFO [vpinfe.manager.ui] Using NiceGUI storage path: /home/pinball/.config/vpinfe/.nicegui
+2026-06-28 06:27:08 INFO [vpinfe.manager.ui] Manager UI expected URLs: http://localhost:8001, http://127.0.1.1:8001, http://127.0.1.1:8001, http://127.0.1.1:8001
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] LED-Wiz isolated LIBUSB backend loaded; pacing 2 ms.
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Found LedWiz device: LED-Wiz (unit 1) PID:00F0 Path:2-3:1.0
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Detected and added LedWiz Nr. 1 with name LedWiz 01
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Added LedwizEquivalent Nr. 1 with name LedWiz 01 Equivalent for Ledwiz Nr. 1
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] DudesCab auto-configuration starting
+2026-06-28 06:27:08 INFO [vpinfe.frontend.ws_bridge] WebSocket bridge started on ws://127.0.0.1:8002/
+NiceGUI ready to go on http://localhost:8001, and http://192.168.254.237:8001
+2026-06-28 06:27:08 INFO [vpinfe.frontend.chromium_manager] Detected 3 monitors: [Monitor(x=0, y=0, width=3840, height=2160, width_mm=708, height_mm=398, name='HDMI-0', is_primary=True), Monitor(x=3840, y=0, width=1920, height=1080, width_mm=600, height_mm=340, name='DP-1', is_primary=False), Monitor(x=5760, y=0, width=1024, height=768, width_mm=304, height_mm=228, name='DP-2', is_primary=False)]
+2026-06-28 06:27:08 DEBUG [vpinfe.frontend.chromium_manager] Found override key: 'bgwindowoverride' in [Displays] section
+2026-06-28 06:27:08 DEBUG [vpinfe.frontend.chromium_manager] Retrieved value: '' (empty=True)
+2026-06-28 06:27:08 INFO [vpinfe.frontend.chromium_manager] Using Chromium executable for 'bg': /usr/bin/google-chrome
+2026-06-28 06:27:08 INFO [vpinfe.frontend.chromium_manager] Using local Chromium on Linux
+2026-06-28 06:27:08 INFO [vpinfe.frontend.chromium_manager] Launching 'bg' on monitor 1 (1920x1080 at 3840,0)
+2026-06-28 06:27:08 DEBUG [vpinfe.frontend.chromium_manager] Found override key: 'dmdwindowoverride' in [Displays] section
+2026-06-28 06:27:08 DEBUG [vpinfe.frontend.chromium_manager] Retrieved value: '' (empty=True)
+2026-06-28 06:27:08 INFO [vpinfe.frontend.chromium_manager] Using Chromium executable for 'dmd': /usr/bin/google-chrome
+2026-06-28 06:27:08 INFO [vpinfe.frontend.chromium_manager] Using local Chromium on Linux
+2026-06-28 06:27:08 INFO [vpinfe.frontend.chromium_manager] Launching 'dmd' on monitor 2 (1024x768 at 5760,0)
+2026-06-28 06:27:08 DEBUG [vpinfe.frontend.chromium_manager] Found override key: 'tablewindowoverride' in [Displays] section
+2026-06-28 06:27:08 DEBUG [vpinfe.frontend.chromium_manager] Retrieved value: '' (empty=True)
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Ultimate VPinball says : Beertime, DudesCab is Connected
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] DudesCab Controller Informations : Device [DudesCab,RID:3] Name [Ultimate VPinball], v2.0.4, unit #1, Max extensions 8
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof]     Pwm Informations : Max outputs per extensions 16, Extension Mask 0x0
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof]     Output configuration received, highest configured output is #0
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Ultimate VPinball says : Beertime, DudesCab is Connected
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] DudesCab Controller Informations : Device [DudesCab,RID:5] Name [Ultimate VPinball], v2.0.4, unit #1, Max extensions 8
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Detected and added DudesCab Controller DudesCab Controller 01 with 0 outputs
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Added LedwizEquivalent Nr. 90 with name DudesCab Controller 01 Equivalent 1 for DudesCab Controller with Unit 1
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] UMX Handshake : Hi! I'm an UMXController board[DudesCab(Ultimate VPinball)] firmware[2,0,4]
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Detected and added UMX Controller Nr. 1 with name UMX Controller 01
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] UMX Infos : Name UMXDudesCab[Ultimate VPinball], UMX Version 1.0.0, MaxDataLines 8, MaxNbLeds 6000
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] UMX Config : Enabled 1, LedChipset 2, LedWizEquivalent 30
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] TestOnReset 3(3s), TestOnConnect 3(4s), TestBrightness: 100
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] CompressionRatio 100%
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 5 ledstrips :
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 	[0] LeftPFStripe => W/H:1/58 (58 leds), FirstLed: 0, Dof:1, Brightness:50
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 		1 split : 58 leds on line 0
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 	[1] RightPFStripe => W/H:1/58 (58 leds), FirstLed: 58, Dof:4, Brightness:50
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 		1 split : 58 leds on line 1
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 	[2] FilippersButMX => W/H:1/1 (1 leds), FirstLed: 116, Dof:7, Brightness:100
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 		1 split : 1 leds on line 2
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 	[3] RightMagBut => W/H:1/1 (1 leds), FirstLed: 117, Dof:13, Brightness:100
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 		1 split : 1 leds on line 4
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 	[4] LeftMagBut => W/H:1/1 (1 leds), FirstLed: 118, Dof:10, Brightness:100
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 		1 split : 1 leds on line 3
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] 119 leds, 357 outputs configured
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] Added LedwizEquivalent Nr. 30 with name UMXDudesCab[Ultimate VPinball]#1 Equivalent for UMXController Nr. 1, 5
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] PacLed64 auto-configuration starting
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] PacDrive auto-configuration starting
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] PacUIO auto-configuration starting
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] FTDI auto-configuration starting
+2026-06-28 06:27:08 INFO [vpinfe.common.dof_service] [libdof] FTDI device scan found 0 devices
+2026-06-28 06:27:08 INFO [vpinfe.common.metadata_service] Found 2552 tables in VPSdb
+2026-06-28 06:27:08 INFO [vpinfe.common.metadata_service] Checking VPSdb for Attack from Mars (Bally 1995)
+2026-06-28 06:27:08 INFO [vpinfe.common.metadata_service] Parsing VPX file: /home/pinball/Tables/Attack from Mars (Bally 1995)/Attack from Mars (Midway 1995).vpx
+2026-06-28 06:27:08 INFO [vpinfe.frontend.ws_bridge] Window 'dmd' connected
+2026-06-28 06:27:08 INFO [vpinfe.frontend.ws_bridge] Window 'bg' connected
+2026-06-28 06:27:08 INFO [vpinfe.frontend.ws_bridge] Window 'dmd' connected
+2026-06-28 06:27:08 INFO [vpinfe.frontend.ws_bridge] Window 'bg' connected
+2026-06-28 06:27:08 INFO [vpinfe.common.metadata_service] Created Attack from Mars (Bally 1995).info
+2026-06-28 06:27:08 DEBUG [vpinfe.common.vpsdb_media] Skipping bg: user-provided media
+2026-06-28 06:27:08 DEBUG [vpinfe.common.vpsdb_media] Skipping dmd: user-provided media
+2026-06-28 06:27:08 DEBUG [vpinfe.common.vpsdb_media] Skipping wheel: user-provided media
+2026-06-28 06:27:08 DEBUG [vpinfe.common.vpsdb_media] Skipping cab: user-provided media
+2026-06-28 06:27:08 DEBUG [vpinfe.common.vpsdb_media] Skipping flyer: user-provided media
+2026-06-28 06:27:08 DEBUG [vpinfe.common.vpsdb_media] Skipping table: user-provided media
+2026-06-28 06:27:08 DEBUG [vpinfe.common.vpsdb_media] Skipping dmd_video: user-provided media
+2026-06-28 06:27:08 DEBUG [vpinfe.common.vpsdb_media] Skipping table_video: user-provided media
+2026-06-28 06:27:08 INFO [vpinfe.common.metadata_service] Downloaded media
+2026-06-28 06:27:09 INFO [vpinfe.main] Startup media sync complete. Scanned 1 table(s); 0 not found in VPSdb.
+2026-06-28 06:27:09 INFO [vpinfe.frontend.chromium_manager] Using Chromium executable for 'table': /usr/bin/google-chrome
+2026-06-28 06:27:09 INFO [vpinfe.frontend.chromium_manager] Using local Chromium on Linux
+2026-06-28 06:27:09 INFO [vpinfe.frontend.chromium_manager] Launching 'table' on monitor 0 (3840x2160 at 0,0)
+2026-06-28 06:27:09 INFO [vpinfe.frontend.chromium_manager] Launched 3 browser windows
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Cabinet auto configuration finished
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Cabinet loaded
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Loading table config
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] No TableFilename specified, will use empty tableconfig
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Will try to load configs from DirectOutput.ini or LedControl.ini file(s) for RomName pinupmenu
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Loading LedControl file /home/pinball/.local/share/VPinballX/10.8/directoutputconfig/directoutputconfig.ini
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Min DOF Version is 0.8 for file /home/pinball/.local/share/VPinballX/10.8/directoutputconfig/directoutputconfig.ini
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Resolving Table Variables
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Resolving Global Variables
+2026-06-28 06:27:09 INFO [vpinfe.frontend.ws_bridge] Window 'table' connected
+2026-06-28 06:27:09 DEBUG [vpinfe.common.dof_service] Sent frontend DOF event: E948
+2026-06-28 06:27:09 DEBUG [vpinfe.frontend.api] Frontend media update for Attack from Mars (Bally 1995) -> event=random:E900-E990 (dof_sent=True, dmd_queued=True, image=None)
+2026-06-28 06:27:09 DEBUG [vpinfe.frontend.realdmd_service] Async real DMD update for Attack from Mars (Bally 1995) -> sent=False image=None
+2026-06-28 06:27:09 INFO [vpinfe.frontend.ws_bridge] Window 'table' connected
+2026-06-28 06:27:09 DEBUG [vpinfe.common.dof_service] Sent frontend DOF event: E949
+2026-06-28 06:27:09 DEBUG [vpinfe.frontend.api] Frontend media update for Attack from Mars (Bally 1995) -> event=random:E900-E990 (dof_sent=True, dmd_queued=True, image=None)
+2026-06-28 06:27:09 DEBUG [vpinfe.frontend.realdmd_service] Async real DMD update for Attack from Mars (Bally 1995) -> sent=False image=None
+2026-06-28 06:27:09 INFO [vpinfe.frontend.api] Win: table - registered gamepad handler
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Loading LedControl file /home/pinball/.local/share/VPinballX/10.8/directoutputconfig/directoutputconfig30.ini
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Min DOF Version is 0.8 for file /home/pinball/.local/share/VPinballX/10.8/directoutputconfig/directoutputconfig30.ini
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Resolving Table Variables
+2026-06-28 06:27:09 INFO [vpinfe.common.dof_service] [libdof] Resolving Global Variables
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Loading LedControl file /home/pinball/.local/share/VPinballX/10.8/directoutputconfig/directoutputconfig90.ini
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Min DOF Version is 0.8 for file /home/pinball/.local/share/VPinballX/10.8/directoutputconfig/directoutputconfig90.ini
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Resolving Table Variables
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Resolving Global Variables
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] 3 directoutputconfig.ini or ledcontrol.ini files loaded.
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Config for RomName pinupmenu exists in LedControl data. Updating cabinet and config.
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Table config loading finished: romname=pinupmenu, tablename=pinupmenu
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Pinball parts loaded
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Starting processes
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing cabinet
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing output controllers
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing LedWiz Nr. 01
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] LedWiz LedWiz 01 connected successfully
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] LedWiz Nr. 01 initialized and updater thread initialized.
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] DudesCab DudesCab Controller 01 initialized and updater thread started.
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Updater thread started for DudesCab DudesCab Controller 01
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Updater thread connected to DudesCab DudesCab Controller 01
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] UMXController UMX Controller 01 initialized and updater thread started.
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Updater thread started for UMXController UMX Controller 01
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Output controllers initialized
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Updater thread connected to UMXController UMX Controller 01
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing 30 toys
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing LedWizEquivalent: LedWiz 01 Equivalent (LedWiz 1)
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] LedWizEquivalent 1: Resolved 32 of 32 outputs
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] LedWizEquivalent 1 initialized with 32 outputs
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing LedWizEquivalent: DudesCab Controller 01 Equivalent 1 (LedWiz 90)
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] LedWizEquivalent 90: Resolved 0 of 0 outputs
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] LedWizEquivalent 90 initialized with 0 outputs
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing LedWizEquivalent: UMXDudesCab[Ultimate VPinball]#1 Equivalent (LedWiz 30)
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] LedWizEquivalent 30: Resolved 0 of 5 outputs
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] LedWizEquivalent 30 initialized with 5 outputs
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing RGBAToy: LedWiz 01 Column 18
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing RGBAToy: LedWiz 01 Column 19
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing RGBAToy: LedWiz 01 Column 20
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing RGBAToy: LedWiz 01 Column 21
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Initializing RGBAToy: LedWiz 01 Column 22
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Cabinet initialized
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Loading shape definition file: /home/pinball/.local/share/VPinballX/10.8/directoutputconfig/DirectOutputShapes.xml
+2026-06-28 06:27:10 INFO [vpinfe.manager.tables] Scanning tables...
+2026-06-28 06:27:10 INFO [vpinfe.common.tableparser] Loading tables and image paths...
+2026-06-28 06:27:10 DEBUG [vpinfe.common.tableparser] Load completed in 0.001s: loaded=1 missing_info=0
+2026-06-28 06:27:10 DEBUG [vpinfe.common.table_repository] ensure_tables_loaded reload=True count=1 elapsed=0.002s
+2026-06-28 06:27:10 DEBUG [vpinfe.common.table_repository] ensure_tables_loaded reload=False count=1 elapsed=0.001s
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Framework initialized.
+2026-06-28 06:27:10 INFO [vpinfe.common.dof_service] [libdof] Have fun! :)
+2026-06-28 06:27:10 WARNING [nicegui] Event listeners changed after initial definition. Re-rendering affected elements.
+2026-06-28 06:27:10 INFO [vpinfe.manager.ui] Scheduling async header update check
+2026-06-28 06:27:10 INFO [vpinfe.manager.ui] Running initial header update check for current_version=dev-2013315
+2026-06-28 06:27:10 INFO [vpinfe.common.app_updater] Starting update check: current_version=dev-2013315 triplet=None supported=False support_reason=non_release_build
+2026-06-28 06:27:10 INFO [vpinfe.common.app_updater] Fetching JSON from https://api.github.com/repos/superhac/vpinfe/releases/latest
+2026-06-28 06:27:10 INFO [vpinfe.common.app_updater] Fetched JSON from https://api.github.com/repos/superhac/vpinfe/releases/latest with keys=['assets', 'assets_url', 'author', 'body', 'created_at', 'draft', 'html_url', 'id', 'immutable', 'name', 'node_id', 'prerelease', 'published_at', 'tag_name', 'tarball_url', 'target_commitish', 'updated_at', 'upload_url', 'url', 'zipball_url']
+2026-06-28 06:27:10 INFO [vpinfe.common.app_updater] Latest release payload tag_name=v2.3.9
+2026-06-28 06:27:10 INFO [vpinfe.common.app_updater] Parsed versions for update check: current=dev-2013315 parsed_current=None latest=v2.3.9 parsed_latest=(2, 3, 9)
+2026-06-28 06:27:10 WARNING [vpinfe.common.app_updater] Update check treating current build as non-release: current_version=dev-2013315
+2026-06-28 06:27:10 INFO [vpinfe.manager.ui] Initial header update check complete: current=dev-2013315 latest=v2.3.9 available=True error=non_release_build supported=False support_reason=non_release_build asset=None
+2026-06-28 06:27:10 INFO [vpinfe.manager.ui] Header update check UI render: current=dev-2013315 latest=v2.3.9 available=True error=non_release_build supported=False support_reason=non_release_build asset=None
+2026-06-28 06:27:24 INFO [vpinfe.frontend.api] Win: table - No gamepad detected after waiting. Will detect when connected.
+multiprocessing/resource_tracker.py:475: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown: {'/mp-9whosjmd', '/mp-9fm5yvid', '/mp-acvzr224', '/mp-wvee6rso', '/mp-y2mhtffl'}
+Terminated

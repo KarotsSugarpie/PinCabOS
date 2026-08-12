@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT="/home/pinball/NetworkDrives"
+CRED_ROOT="/home/pinball/.config/pincabos/smb"
+
+die() {
+  echo "PINCABOS SMB: $*" >&2
+  exit 2
+}
+
+if [[ "${1:-}" == "--check" && "$#" -eq 1 ]]; then
+  echo "GO: helper SMB accessible."
+  exit 0
+fi
+
+[[ "$#" -eq 3 ]] || die "usage invalide"
+
+SOURCE="$1"
+MOUNT_POINT="$2"
+CRED_FILE="$3"
+
+[[ "$SOURCE" == //*/* ]] || die "source SMB invalide"
+
+REST="${SOURCE#//}"
+SERVER="${REST%%/*}"
+SHARE="${REST#*/}"
+
+[[ -n "$SERVER" ]] || die "serveur SMB vide"
+[[ -n "$SHARE" ]] || die "partage SMB vide"
+[[ "$SHARE" != */* ]] || die "nom de partage SMB invalide"
+
+case "$SOURCE" in
+  *$'\n'*|*$'\r'*|*'..'*) die "source SMB refusee" ;;
+esac
+
+ROOT_REAL="$(realpath -m -- "$ROOT")"
+CRED_ROOT_REAL="$(realpath -m -- "$CRED_ROOT")"
+MP_REAL="$(realpath -m -- "$MOUNT_POINT")"
+CRED_REAL="$(realpath -m -- "$CRED_FILE")"
+
+case "$MP_REAL" in
+  "$ROOT_REAL"/*) ;;
+  *) die "point de montage hors NetworkDrives" ;;
+esac
+
+[[ "$(dirname "$MP_REAL")" == "$ROOT_REAL" ]] \
+  || die "seul un lecteur direct dans NetworkDrives est autorise"
+
+case "$CRED_REAL" in
+  "$CRED_ROOT_REAL"/*.cred) ;;
+  *) die "fichier credentials hors dossier autorise" ;;
+esac
+
+[[ -f "$CRED_REAL" ]] || die "fichier credentials absent"
+
+mkdir -p -- "$MP_REAL"
+chown pinball:pinball -- "$MP_REAL"
+
+if mountpoint -q -- "$MP_REAL"; then
+  echo "INFO: deja monte: $MP_REAL"
+  exit 0
+fi
+
+exec /usr/sbin/mount.cifs "$SOURCE" "$MP_REAL" \
+  -o "credentials=$CRED_REAL,uid=1000,gid=1000,dir_mode=0775,file_mode=0664,iocharset=utf8,noperm"

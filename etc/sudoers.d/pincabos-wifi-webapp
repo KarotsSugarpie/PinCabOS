@@ -1,0 +1,6 @@
+# PinCabOS WebApp WiFi tools
+# User: pinball
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/wifi-scan.sh
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/wifi-join.sh *
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/wifi-hotspot.sh *
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/wifi-hotspot-stop.sh

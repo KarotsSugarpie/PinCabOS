@@ -1,0 +1,622 @@
+#!/usr/bin/env python3
+# PinCabOS legacy library safe batch builder
+# Uses the installed, validated PILOT V1.1 package engine.
+# Never overwrites existing archives and never modifies legacy source files.
+
+from __future__ import annotations
+
+import argparse
+import collections
+import datetime as dt
+import hashlib
+import importlib.machinery
+import importlib.util
+import json
+import os
+import shutil
+import sys
+import traceback
+from pathlib import Path
+from typing import Any
+
+VERSION = "PINCABOS_LEGACY_SAFE_BATCH_V1_1"
+
+BUILDER_PATH = Path("/usr/local/sbin/pincabos-build-legacy-package")
+AUDIT_ROOT = Path("/opt/pincabos/logs/audits")
+BUILD_ROOT = Path("/opt/pincabos/build/legacy-package-batch")
+EXPORT_LOG_ROOT = Path("/opt/pincabos/logs/exports")
+DEFAULT_DESTINATION = Path(
+    "/home/pinball/NetworkDrives/192-168-254-253/Tables PinCabOS"
+)
+
+ALLOWED_DECISIONS = {"PRÊT_IDENTITÉ_VPSDB"}
+ALLOWED_IDENTITY = {"VPSDB_IDENTITÉ_CONFIRMÉE"}
+ALLOWED_ROM_STATUS = {
+    "ROM_PINMAME_CONFIRMÉE",
+    "SANS_ROM",
+    "SANS_ROM_IDENTIFIANT_B2S",
+}
+ALLOWED_PUP_STATUS = {
+    "SANS_PUP",
+    "PUP_VIDE",
+    "PUP_VBS_EXPLICITE_VALIDE",
+}
+
+
+class BatchError(RuntimeError):
+    pass
+
+
+def now_iso() -> str:
+    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def sha256_file(path: Path, chunk_size: int = 4 * 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while True:
+            block = handle.read(chunk_size)
+            if not block:
+                break
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def load_builder() -> Any:
+    if not BUILDER_PATH.is_file():
+        raise BatchError(f"Constructeur pilote absent: {BUILDER_PATH}")
+
+    loader = importlib.machinery.SourceFileLoader(
+        "pincabos_legacy_package_builder",
+        str(BUILDER_PATH),
+    )
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    if spec is None:
+        raise BatchError(f"Impossible de charger: {BUILDER_PATH}")
+
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+
+    version = str(getattr(module, "VERSION", ""))
+    if version != "PINCABOS_LEGACY_PACKAGE_BUILDER_PILOT_V1_1":
+        raise BatchError(
+            "Version constructeur incompatible. "
+            f"Attendu V1.1, obtenu: {version or 'INCONNU'}"
+        )
+
+    required = [
+        "BuildError",
+        "find_latest_report",
+        "selected_vps_entry",
+        "validate_record",
+        "build_staging",
+        "create_archive",
+        "validate_archive",
+        "existing_vpsid_archives",
+        "atomic_publish",
+        "safe_filename",
+        "human_size",
+    ]
+    missing = [name for name in required if not hasattr(module, name)]
+    if missing:
+        raise BatchError(
+            "Fonctions absentes du constructeur V1.1: " + ", ".join(missing)
+        )
+
+    return module
+
+
+def load_report(path: Path) -> list[dict[str, Any]]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as error:
+        raise BatchError(f"Lecture rapport impossible: {error}") from error
+
+    if not isinstance(data, list):
+        raise BatchError("mapping-complet-v3.json n'est pas une liste.")
+
+    return [record for record in data if isinstance(record, dict)]
+
+
+def record_identity(record: dict[str, Any]) -> tuple[str, str]:
+    selected = ((record.get("vpsdb") or {}).get("selected") or {})
+    entry = selected.get("entry") or {}
+    return str(entry.get("id") or ""), str(entry.get("canonical") or "")
+
+
+def preliminary_reason(record: dict[str, Any]) -> str:
+    decision = str(record.get("decision") or "")
+    if decision not in ALLOWED_DECISIONS:
+        return f"DÉCISION:{decision or 'ABSENTE'}"
+
+    vps_status = str((record.get("vpsdb") or {}).get("status") or "")
+    if vps_status not in ALLOWED_IDENTITY:
+        return f"IDENTITÉ:{vps_status or 'ABSENTE'}"
+
+    vpsid, canonical = record_identity(record)
+    if not vpsid or not canonical:
+        return "IDENTITÉ:MASTERID_OU_NOM_ABSENT"
+
+    package_name = str(record.get("proposed_package_name") or "")
+    if not package_name.endswith(".PinCabOs"):
+        return "PACKAGE:NOM_ABSENT"
+
+    rom = record.get("rom") or {}
+    rom_status = str(rom.get("status") or "")
+    if rom_status not in ALLOWED_ROM_STATUS:
+        return f"ROM:{rom_status or 'ABSENTE'}"
+
+    selected_rom = str(rom.get("selected") or "")
+    if selected_rom:
+        rom_zip = Path(str(rom.get("zip") or ""))
+        if not rom_zip.is_file():
+            return f"ROM:ZIP_ABSENT:{selected_rom}"
+
+    pup = record.get("pup") or {}
+    pup_status = str(pup.get("status") or "")
+    if pup_status not in ALLOWED_PUP_STATUS:
+        return f"PUP:{pup_status or 'ABSENT'}"
+
+    if pup_status == "PUP_VBS_EXPLICITE_VALIDE":
+        selected_pup = pup.get("selected") or {}
+        pup_path = Path(str(selected_pup.get("path") or ""))
+        if not pup.get("prefix_allowed") or not pup_path.is_dir():
+            return "PUP:EXPLICITE_INCOHÉRENT"
+
+    source_vpx = Path(str(record.get("source_vpx") or ""))
+    vbs_path = Path(str(record.get("vbs_path") or ""))
+    if not source_vpx.is_file():
+        return "SOURCE:VPX_ABSENT"
+    if not vbs_path.is_file() or vbs_path.stat().st_size <= 0:
+        return "SOURCE:VBS_ABSENT_OU_VIDE"
+
+    return ""
+
+
+def make_plan(
+    records: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    preliminary: list[dict[str, Any]] = []
+    blocked: list[dict[str, Any]] = []
+
+    for record in records:
+        reason = preliminary_reason(record)
+        if reason:
+            blocked.append({"record": record, "reason": reason})
+        else:
+            preliminary.append(record)
+
+    package_counts = collections.Counter(
+        str(record.get("proposed_package_name") or "").casefold()
+        for record in preliminary
+    )
+    vpsid_counts = collections.Counter(
+        record_identity(record)[0].casefold()
+        for record in preliminary
+    )
+
+    safe: list[dict[str, Any]] = []
+    for record in preliminary:
+        package_key = str(
+            record.get("proposed_package_name") or ""
+        ).casefold()
+        vpsid, _ = record_identity(record)
+
+        if package_counts[package_key] > 1:
+            blocked.append({
+                "record": record,
+                "reason": "COLLISION:NOM_PACKAGE",
+            })
+            continue
+
+        if vpsid_counts[vpsid.casefold()] > 1:
+            blocked.append({
+                "record": record,
+                "reason": "COLLISION:MASTERID_FILEID_REQUIS",
+            })
+            continue
+
+        safe.append(record)
+
+    safe.sort(
+        key=lambda record: (
+            str(record_identity(record)[1]).casefold(),
+            Path(str(record.get("source_vpx") or "")).name.casefold(),
+        )
+    )
+    blocked.sort(
+        key=lambda item: Path(
+            str(item["record"].get("source_vpx") or "")
+        ).name.casefold()
+    )
+
+    return safe, blocked
+
+
+def append_jsonl(path: Path, value: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(value, ensure_ascii=False) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
+    columns = [
+        "status",
+        "source_vpx",
+        "identity",
+        "vpsid",
+        "rom",
+        "rom_status",
+        "rom_relation",
+        "pup_status",
+        "package_name",
+        "archive_path",
+        "archive_size",
+        "archive_sha256",
+        "reason",
+    ]
+
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        handle.write("\t".join(columns) + "\n")
+        for row in rows:
+            values = []
+            for column in columns:
+                value = str(row.get(column, ""))
+                value = value.replace("\t", " ").replace("\r", " ").replace("\n", " ")
+                values.append(value)
+            handle.write("\t".join(values) + "\n")
+
+
+def record_result_base(record: dict[str, Any]) -> dict[str, Any]:
+    vpsid, identity = record_identity(record)
+    rom = record.get("rom") or {}
+    pup = record.get("pup") or {}
+    return {
+        "source_vpx": str(record.get("source_vpx") or ""),
+        "identity": identity,
+        "vpsid": vpsid,
+        "rom": str(rom.get("selected") or ""),
+        "rom_status": str(rom.get("status") or ""),
+        "rom_relation": str(record.get("rom_relation") or ""),
+        "pup_status": str(pup.get("status") or ""),
+        "package_name": str(record.get("proposed_package_name") or ""),
+        "archive_path": "",
+        "archive_size": "",
+        "archive_sha256": "",
+        "reason": "",
+    }
+
+
+def free_bytes(path: Path) -> int:
+    try:
+        return shutil.disk_usage(path).free
+    except OSError:
+        return 0
+
+
+def human_gib(value: int) -> str:
+    return f"{value / (1024 ** 3):.2f} GiB"
+
+
+def build_one(
+    builder: Any,
+    record: dict[str, Any],
+    report_path: Path,
+    destination: Path,
+    session_root: Path,
+    dry_run: bool,
+) -> dict[str, Any]:
+    result = record_result_base(record)
+    vpsid = result["vpsid"]
+
+    conflicts = builder.existing_vpsid_archives(destination, vpsid)
+    if conflicts:
+        result.update({
+            "status": "SAUTÉ_EXISTANT",
+            "reason": "VPSID_DÉJÀ_PRÉSENT",
+            "archive_path": " | ".join(str(path) for path in conflicts),
+        })
+        return result
+
+    package_name = builder.safe_filename(result["package_name"])
+    if not package_name.endswith(".PinCabOs"):
+        package_name += ".PinCabOs"
+    result["package_name"] = package_name
+
+    per_table = session_root / (
+        f"{record.get('index', 0):04d}-"
+        f"{hashlib.sha256(result['source_vpx'].encode()).hexdigest()[:12]}"
+    )
+    staging_parent = per_table / "staging"
+    staging_parent.mkdir(parents=True, exist_ok=False)
+    local_archive = per_table / package_name
+
+    try:
+        builder.validate_record(record)
+        root, staging_summary = builder.build_staging(
+            record,
+            staging_parent,
+            report_path,
+        )
+        builder.create_archive(root, local_archive)
+        validation = builder.validate_archive(local_archive)
+        archive_sha = sha256_file(local_archive)
+
+        final_path = None
+        if not dry_run:
+            final_path = builder.atomic_publish(local_archive, destination)
+
+        result.update({
+            "status": "VALIDÉ_DRY_RUN" if dry_run else "CRÉÉ",
+            "archive_path": str(final_path or local_archive),
+            "archive_size": local_archive.stat().st_size,
+            "archive_sha256": archive_sha,
+            "reason": "",
+            "validation_file_count": validation.get("file_count"),
+            "validation_uncompressed_bytes": validation.get("uncompressed_bytes"),
+            "staging_counts": staging_summary.get("installed_counts"),
+            "staging_skipped": staging_summary.get("skipped"),
+        })
+        return result
+    finally:
+        # Keep no giant local duplicate after successful atomic publication.
+        # On failure the caller records the error, then the work directory is
+        # also removed because the source material remains untouched.
+        shutil.rmtree(per_table, ignore_errors=True)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Construit en lot les .PinCabOs sûrs du rapport V3.5."
+    )
+    parser.add_argument(
+        "--report",
+        help="Dossier V3.5 ou mapping-complet-v3.json explicite.",
+    )
+    parser.add_argument(
+        "--destination",
+        default=str(DEFAULT_DESTINATION),
+        help="Dossier final des .PinCabOs.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=25,
+        help="Nombre maximal à créer; 0 signifie tous les candidats sûrs.",
+    )
+    parser.add_argument(
+        "--start-after",
+        default="",
+        help="Reprend après ce nom exact de VPX source.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Construit et valide sans publier sur le NAS.",
+    )
+    parser.add_argument(
+        "--min-free-gib",
+        type=float,
+        default=10.0,
+        help="Arrêt sûr si l'espace libre destination descend sous ce seuil.",
+    )
+    args = parser.parse_args()
+
+    builder = load_builder()
+    destination = Path(args.destination)
+    builder.ensure_required_paths(destination)
+
+    report_path = builder.find_latest_report(args.report)
+    records = load_report(report_path)
+    safe, blocked = make_plan(records)
+
+    if args.start_after:
+        wanted = args.start_after.casefold()
+        positions = [
+            index
+            for index, record in enumerate(safe)
+            if Path(str(record.get("source_vpx") or "")).name.casefold() == wanted
+        ]
+        if len(positions) != 1:
+            raise BatchError(
+                f"--start-after non unique ou absent: {args.start_after}"
+            )
+        safe = safe[positions[0] + 1:]
+
+    selected = safe if args.limit == 0 else safe[:max(0, args.limit)]
+
+    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    report_dir = EXPORT_LOG_ROOT / f"legacy-safe-batch-{stamp}"
+    session_root = BUILD_ROOT / f"batch-{stamp}"
+    report_dir.mkdir(parents=True, exist_ok=False)
+    session_root.mkdir(parents=True, exist_ok=False)
+
+    events_path = report_dir / "events.jsonl"
+    plan_path = report_dir / "plan.json"
+    results_path = report_dir / "resultats.tsv"
+    blocked_path = report_dir / "bloques-plan.tsv"
+    summary_path = report_dir / "resume.txt"
+
+    plan = {
+        "version": VERSION,
+        "created_at": now_iso(),
+        "builder": str(BUILDER_PATH),
+        "builder_sha256": sha256_file(BUILDER_PATH),
+        "source_report": str(report_path),
+        "destination": str(destination),
+        "dry_run": args.dry_run,
+        "limit": args.limit,
+        "start_after": args.start_after,
+        "records_total": len(records),
+        "safe_total": len(safe),
+        "selected_total": len(selected),
+        "blocked_total": len(blocked),
+        "eligibility": {
+            "decisions": sorted(ALLOWED_DECISIONS),
+            "identity": sorted(ALLOWED_IDENTITY),
+            "rom_status": sorted(ALLOWED_ROM_STATUS),
+            "pup_status": sorted(ALLOWED_PUP_STATUS),
+            "duplicate_masterid": "blocked",
+            "duplicate_package_name": "blocked",
+            "existing_destination_vpsid": "skip_no_overwrite",
+        },
+        "selected": [
+            record_result_base(record)
+            for record in selected
+        ],
+    }
+    plan_path.write_text(
+        json.dumps(plan, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    blocked_rows = []
+    for item in blocked:
+        row = record_result_base(item["record"])
+        row.update({"status": "BLOQUÉ_PLAN", "reason": item["reason"]})
+        blocked_rows.append(row)
+    write_tsv(blocked_path, blocked_rows)
+
+    print("=" * 67)
+    print(" PINCABOS — CONSTRUCTION BATCH SÛRE .PinCabOs")
+    print("=" * 67)
+    print(f"Version                 : {VERSION}")
+    print(f"Constructeur            : {builder.VERSION}")
+    print(f"Rapport V3.5            : {report_path}")
+    print(f"Tables inventoriées     : {len(records)}")
+    print(f"Candidats sûrs          : {len(safe)}")
+    print(f"Bloqués par le plan     : {len(blocked)}")
+    print(f"Sélection de ce passage : {len(selected)}")
+    print(f"Limite                  : {args.limit or 'TOUS'}")
+    print(f"Destination             : {destination}")
+    print(f"Mode dry-run            : {'OUI' if args.dry_run else 'NON'}")
+    print("Écrasement              : INTERDIT")
+    print("Modification sources    : NON")
+    print(f"Rapport                 : {report_dir}")
+    print()
+
+    results: list[dict[str, Any]] = []
+    min_free = int(args.min_free_gib * 1024 ** 3)
+
+    for position, record in enumerate(selected, 1):
+        source_name = Path(str(record.get("source_vpx") or "")).name
+        vpsid, identity = record_identity(record)
+
+        print(
+            f"[{position}/{len(selected)}] {identity} "
+            f"<- {source_name} [VPSId {vpsid}]"
+        )
+
+        current_free = free_bytes(destination)
+        if current_free and current_free < min_free:
+            row = record_result_base(record)
+            row.update({
+                "status": "ARRÊT_ESPACE",
+                "reason": (
+                    f"ESPACE_LIBRE_{human_gib(current_free)}_"
+                    f"SOUS_SEUIL_{args.min_free_gib:.2f}_GiB"
+                ),
+            })
+            results.append(row)
+            append_jsonl(events_path, row | {"at": now_iso()})
+            print(f"  ARRÊT: espace libre {human_gib(current_free)}")
+            break
+
+        try:
+            row = build_one(
+                builder,
+                record,
+                report_path,
+                destination,
+                session_root,
+                args.dry_run,
+            )
+            results.append(row)
+            append_jsonl(events_path, row | {"at": now_iso()})
+
+            if row["status"] == "CRÉÉ":
+                print(
+                    f"  CRÉÉ: {row['package_name']} "
+                    f"({builder.human_size(int(row['archive_size']))})"
+                )
+            elif row["status"] == "VALIDÉ_DRY_RUN":
+                print(
+                    f"  DRY-RUN OK: {row['package_name']} "
+                    f"({builder.human_size(int(row['archive_size']))})"
+                )
+            else:
+                print(f"  {row['status']}: {row['reason']}")
+
+        except Exception as error:
+            row = record_result_base(record)
+            row.update({
+                "status": "ERREUR_CONTINUÉE",
+                "reason": f"{type(error).__name__}: {error}",
+                "traceback": traceback.format_exc(),
+            })
+            results.append(row)
+            append_jsonl(events_path, row | {"at": now_iso()})
+            print(f"  ERREUR CONTINUÉE: {type(error).__name__}: {error}")
+
+        write_tsv(results_path, results)
+
+    write_tsv(results_path, results)
+    status_counts = collections.Counter(row["status"] for row in results)
+    total_size = sum(
+        int(row.get("archive_size") or 0)
+        for row in results
+        if row.get("status") in {"CRÉÉ", "VALIDÉ_DRY_RUN"}
+    )
+
+    summary_lines = [
+        "=" * 67,
+        " PINCABOS — RÉSUMÉ BATCH SÛRE .PinCabOs",
+        "=" * 67,
+        f"Version                 : {VERSION}",
+        f"Rapport V3.5            : {report_path}",
+        f"Destination             : {destination}",
+        f"Candidats sûrs totaux   : {len(safe)}",
+        f"Sélectionnés ce passage : {len(selected)}",
+        f"Résultats enregistrés   : {len(results)}",
+        f"Taille créée/validée    : {builder.human_size(total_size)}",
+        "",
+        "Statuts:",
+    ]
+    for status, count in sorted(status_counts.items()):
+        summary_lines.append(f"  {status}: {count}")
+    summary_lines.extend([
+        "",
+        f"Plan JSON               : {plan_path}",
+        f"Résultats TSV           : {results_path}",
+        f"Bloqués TSV             : {blocked_path}",
+        f"Événements JSONL        : {events_path}",
+        "Archives écrasées      : 0",
+        "Sources NAS modifiées  : NON",
+        "=" * 67,
+        "",
+    ])
+    summary_path.write_text("\n".join(summary_lines), encoding="utf-8")
+
+    print()
+    print(summary_path.read_text(encoding="utf-8"), end="")
+
+    shutil.rmtree(session_root, ignore_errors=True)
+
+    return 0 if not status_counts.get("ARRÊT_ESPACE") else 3
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except BatchError as error:
+        print()
+        print("=" * 67, file=sys.stderr)
+        print(" ERREUR BATCH — AUCUNE SOURCE MODIFIÉE", file=sys.stderr)
+        print("=" * 67, file=sys.stderr)
+        print(str(error), file=sys.stderr)
+        raise SystemExit(2)
+    except KeyboardInterrupt:
+        print("\nInterrompu proprement. Les packages déjà publiés restent valides.")
+        raise SystemExit(130)

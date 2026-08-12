@@ -1,0 +1,71 @@
+# vim: ft=apparmor
+#------------------------------------------------------------------
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    Author: Shishir Subedi (shishir.subedi@canonical.com)
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile tshark /usr/bin/tshark {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/user-tmp>
+
+  # Temporarily needed until fd delegation lands
+  # Also needed while delegation from unconfined is broken
+  include <abstractions/consoles>
+
+  capability dac_read_search,
+
+  signal send peer=tshark//dumpcap,
+
+  file Cx /usr/bin/dumpcap -> dumpcap,
+  mr @{exec_path},
+  file mrix /usr/lib/@{multiarch}/wireshark/extcap/{,*},
+  file r /usr/share/wireshark/{,**},
+  file r @{PROC}/@{pid}/fd/,
+
+  # for -i sdjournal
+  file r /{var,run}/log/journal/{,**},
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/tshark>
+
+  profile dumpcap {
+    include <abstractions/base>
+    include <abstractions/nameservice>
+    include <abstractions/private-files-strict>
+    include <abstractions/user-tmp>
+    include <abstractions/user-write>
+
+    capability net_admin,
+    capability net_raw,
+
+    network packet,
+    network raw,
+    network stream,
+
+    dbus (eavesdrop receive) bus=system,
+
+    signal receive peer=tshark,
+
+    file r /dev/,
+    file r @{PROC}/@{pid}/net/dev,
+    file r @{sys}/devices/{,**},
+    file rw @{sys}/devices/**/statistics/rx_*,
+
+    file r /**.pcap{,ng}{,.gz},
+    owner rw /**.pcap{,ng}{,.gz},
+
+    owner rw @{run}/dbus/system_bus_socket,
+    file mr /usr/bin/dumpcap,
+
+  }
+}

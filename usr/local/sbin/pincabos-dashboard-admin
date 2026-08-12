@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+PATH='/usr/sbin:/usr/bin:/sbin:/bin'
+fail(){ echo "ERREUR : $*" >&2; exit 1; }
+log(){ logger -t pincabos-dashboard-admin -- "$*" 2>/dev/null || true; }
+[ "$(id -u)" -eq 0 ] || fail 'root requis.'
+
+service_action(){
+  local service="${1:-}" action="${2:-}"
+  case "${service}:${action}" in
+    vpinfe:start|vpinfe:stop|vpinfe:restart) log "vpinfe ${action}"; exec systemctl "$action" pincabos-vpinfe.service ;;
+    vpinfe:freeze) log 'vpinfe freeze'; exec systemctl freeze pincabos-vpinfe.service ;;
+    vpinfe:thaw) log 'vpinfe thaw'; exec systemctl thaw pincabos-vpinfe.service ;;
+    webapp:restart) log 'webapp restart scheduled'; systemd-run --quiet --collect --unit="pincabos-dashboard-webapp-restart-$(date +%s)" /bin/sh -c 'sleep 2; exec systemctl restart pincabos-webapp.service'; echo 'WebApp restart scheduled.' ;;
+    chrony:start|chrony:restart) log "chrony ${action}"; exec systemctl "$action" chrony.service ;;
+    # PINCABOS_DASHBOARD_VPX_SERVICE_V1
+    vpx:stop) log 'vpx stop'; /usr/bin/pkill -TERM -u pinball -f '(^|/)VPinballX(_BGFX)?([[:space:]]|$)' || true; echo 'Arrêt VPX demandé.' ;;
+    vpx:restart) log 'vpx restart'; /usr/bin/pkill -TERM -u pinball -f '(^|/)VPinballX(_BGFX)?([[:space:]]|$)' || true; sleep 1; exec systemctl restart pincabos-vpinfe.service ;;
+    screens:apply)
+      log 'screen topology one-shot apply'
+      exec systemctl start pincabos-screen-topology.service
+      ;;
+    *) fail 'service/action non autorisé.' ;;
+  esac
+}
+
+screen_rows(){
+  runuser -u pinball -- env DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority XDG_RUNTIME_DIR=/run/user/1000 /usr/bin/xrandr --query 2>/dev/null | \
+    awk '/ connected/ && $0 !~ /disconnected/ {g=""; for(i=1;i<=NF;i++){if($i ~ /^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$/){g=$i;break}} if(g!=""){q=g;gsub(/[x+]/," ",q);split(q,a," ");print a[3] "\t" $1 "\t" g}}' | sort -n
+}
+
+capture(){
+  local slot="${1:-}" line xpos name geom size rest ypos scale dir img tmp now age
+  [[ "$slot" =~ ^[0-2]$ ]] || fail 'écran non autorisé.'
+  mapfile -t rows < <(screen_rows)
+  [ "${#rows[@]}" -gt "$slot" ] || fail 'écran demandé non détecté.'
+  line="${rows[$slot]}"; IFS=$'\t' read -r xpos name geom <<<"$line"
+  size="${geom%%+*}"; rest="${geom#*+}"; xpos="${rest%%+*}"; ypos="${rest#*+}"
+  case "$slot" in 0) scale=640;;1) scale=560;;2) scale=440;;esac
+  dir='/run/pincabos-dashboard-live'; img="$dir/screen${slot}.jpg"
+  install -d -o pinball -g pinball -m 0755 "$dir"
+  # Never read back a game frame: VPX running means the existing preview stays frozen.
+  if pgrep -u pinball -fa '(^|/)(VPinballX|vpinball)( |$)' >/dev/null 2>&1; then
+    [ -s "$img" ] && exit 0
+    exit 3
+  fi
+  now=$(date +%s)
+  if [ -s "$img" ]; then age=$((now - $(stat -c %Y "$img" 2>/dev/null || echo 0))); [ "$age" -lt 30 ] && exit 0; fi
+  exec 9>"$dir/.capture.lock"; flock -n 9 || { [ -s "$img" ] && exit 0; exit 4; }
+  if [ -s "$img" ]; then age=$((now - $(stat -c %Y "$img" 2>/dev/null || echo 0))); [ "$age" -lt 30 ] && exit 0; fi
+  tmp="$dir/.screen${slot}.$$.jpg"
+  log "safe X11 thumbnail capture slot=${slot} output=${name} geometry=${geom}"
+  timeout 12 runuser -u pinball -- env DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority XDG_RUNTIME_DIR=/run/user/1000 \
+    /usr/bin/ffmpeg -hide_banner -loglevel error -f x11grab -draw_mouse 0 -video_size "$size" -i ":0.0+${xpos},${ypos}" -frames:v 1 -vf "scale=${scale}:-2:flags=fast_bilinear" -q:v 12 -y "$tmp"
+  [ -s "$tmp" ] || fail 'capture X11 sans image.'
+  chown pinball:pinball "$tmp"; chmod 0644 "$tmp"; mv -f "$tmp" "$img"
+}
+
+# PINCABOS_TIMEZONE_WORLD_VALIDATION_V1
+timezone_action(){
+  local zone="${1:-}"
+
+  [ -n "$zone" ]     || fail 'timezone vide.'
+
+  [ "${#zone}" -le 128 ]     || fail 'timezone trop longue.'
+
+  case "$zone" in
+    *$'\n'*|*$'\r'*)
+      fail 'timezone invalide.'
+      ;;
+  esac
+
+  timedatectl list-timezones 2>/dev/null     | grep -Fx -- "$zone" >/dev/null     || fail 'timezone inconnue.'
+
+  log "timezone ${zone}"
+  exec timedatectl set-timezone "$zone"
+}
+set_time_action(){ local value="${1:-}"; [[ "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$ ]] || fail 'format heure invalide.'; date -d "$value" >/dev/null 2>&1 || fail 'date invalide.'; log "manual time ${value}"; systemctl stop chrony.service; timedatectl set-time "$value"; systemctl start chrony.service; chronyc -a makestep >/dev/null 2>&1 || true; }
+google_ntp(){ local conf='/etc/chrony/chrony.conf' backup='/opt/pincabos/backups/chrony-dashboard'; [ -f "$conf" ] || fail 'chrony.conf introuvable.'; mkdir -p "$backup"; cp -a "$conf" "$backup/chrony.conf.before-google-$(date +%Y%m%d-%H%M%S)"; sed -i '/# BEGIN PINCABOS GOOGLE NTP/,/# END PINCABOS GOOGLE NTP/d' "$conf"; cat >>"$conf" <<'EOF'
+# BEGIN PINCABOS GOOGLE NTP
+server time.google.com iburst prefer
+# END PINCABOS GOOGLE NTP
+EOF
+  log 'Google NTP configured'; systemctl restart chrony.service; sleep 2; chronyc -a 'burst 4/4' >/dev/null 2>&1 || true; chronyc -a makestep >/dev/null 2>&1 || true; }
+case "${1:-}" in
+  service) service_action "${2:-}" "${3:-}" ;;
+  capture) capture "${2:-}" ;;
+  time) case "${2:-}" in sync-google) google_ntp;;timezone) timezone_action "${3:-}";;set) set_time_action "${3:-}";;*) fail 'action heure non autorisée.';;esac ;;
+  *) fail 'commande non autorisée.' ;;
+esac

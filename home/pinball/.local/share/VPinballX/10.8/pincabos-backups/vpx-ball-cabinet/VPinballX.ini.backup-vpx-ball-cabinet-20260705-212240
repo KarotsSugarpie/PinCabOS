@@ -1,0 +1,3986 @@
+; #######################################################
+; #  Visual Pinball X settings file
+; #
+; # This file holds all Visual Pinball settings.
+; # If you want to reset all settings to their default,
+; # just delete this file and it will be recreated on the
+; # next application start.
+; #
+; # When a property is not defined (nothing after the
+; # equal '=' sign), VPX will use the default value for it.
+; # (can be used to reset single properties)
+; #
+; #######################################################
+
+
+[Version]
+; VPX Version: VPX version that saved this file [Default: '10815231']
+VPinball = 10815231
+Attack_from_Mars_LE__Bally_1995_ = 6.0.0
+Terminator_2_Chrome_Edition = 2.3
+Getaway__High_Speed_II = 1.01
+Aladdin = 1.00
+Medieval_Madness__Williams_1997_ = 1.1
+Beetlejuice_Beetlejuice = 1.0.0
+Star_Wars__Data_East_ = v1.2
+Transformers_Pro = 2.4
+Bass_On_Bass = 1
+Masters_of_the_Universe = 1.0a
+Star_Trek_LE__Stern_2013_ = 1.09
+BLIZZARD_OF_OZZ = 1.0
+Teenage_Mutant_Ninja_Turtles__Stern___Data_East_REMIX_ = 2.86
+JP_s_Friday_the_13th = 4.3.0
+AC_DC_Luci = 1.5
+
+
+
+[Editor]
+; Enable Log: Enable general logging to the vinball.log file [Default: 1]
+EnableLog = 
+
+; Disable File Validation: Disable file integrity validation (risky; but slightly faster loading) [Default: 0]
+DisableHash = 
+
+; Throw Balls Always On: Permanently enable 'throw ball' debugging mode [Default: 0]
+ThrowBallsAlwaysOn = 
+
+; Ball COntrol Always On: Permanently enable 'ball control' debugging mode [Default: 0]
+BallControlAlwaysOn = 
+
+; WindowLeft: Main window left [Default: -1]
+WindowLeft = 
+
+; WindowTop: Main window top [Default: -1]
+WindowTop = 
+
+; WindowRight: Main window right [Default: -1]
+WindowRight = 
+
+; WindowBottom: Main window bottom [Default: -1]
+WindowBottom = 
+
+; WindowMaximized: Main window maximized [Default: 0]
+WindowMaximized = 
+
+; ImageMngPosX: Image Manager window X position [Default: 0]
+ImageMngPosX = 
+
+; ImageMngPosY: Image Manager window Y position [Default: 0]
+ImageMngPosY = 
+
+; ImageMngWidth: Image Manager window width [Default: 1000]
+ImageMngWidth = 
+
+; ImageMngHeight: Image Manager window height [Default: 800]
+ImageMngHeight = 
+
+; CodeViewPosX: Script window X position [Default: 0]
+CodeViewPosX = 
+
+; CodeViewPosY: Script window Y position [Default: 0]
+CodeViewPosY = 
+
+; CodeViewPosWidth: Script window width [Default: 640]
+CodeViewPosWidth = 
+
+; CodeViewPosHeight: Script window height [Default: 490]
+CodeViewPosHeight = 
+
+; DebuggerPosX: Debugger window X position [Default: 0]
+DebuggerPosX = 
+
+; DebuggerPosY: Debugger window Y position [Default: 0]
+DebuggerPosY = 
+
+; DebuggerWidth: Debugger window width [Default: 1000]
+DebuggerWidth = 
+
+; DebuggerHeight: Debugger window height [Default: 800]
+DebuggerHeight = 
+
+; MaterialMngPosX: Material Manager window X position [Default: 0]
+MaterialMngPosX = 
+
+; MaterialMngPosY: Material Manager window Y position [Default: 0]
+MaterialMngPosY = 
+
+; MaterialMngWidth: Material Manager window width [Default: 1000]
+MaterialMngWidth = 
+
+; MaterialMngHeight: Material Manager window height [Default: 800]
+MaterialMngHeight = 
+
+; RenderProbePosX: Render Probe Manager window X position [Default: 0]
+RenderProbePosX = 
+
+; RenderProbePosY: Render Probe Manager window Y position [Default: 0]
+RenderProbePosY = 
+
+; RenderProbeWidth: Render Probe Manager window width [Default: 1000]
+RenderProbeWidth = 
+
+; RenderProbeHeight: Render Probe Manager window height [Default: 800]
+RenderProbeHeight = 
+
+; SearchSelectPosX: Search/Select window X position [Default: 0]
+SearchSelectPosX = 
+
+; SearchSelectPosY: Search/Select window Y position [Default: 0]
+SearchSelectPosY = 
+
+; SearchSelectWidth: Search/Select window width [Default: 640]
+SearchSelectWidth = 
+
+; SearchSelectHeight: Search/Select window height [Default: 400]
+SearchSelectHeight = 
+
+; SoundMngPosX: Sound Manager window X position [Default: 0]
+SoundMngPosX = 
+
+; SoundMngPosY: Sound Manager window Y position [Default: 0]
+SoundMngPosY = 
+
+; SoundMngWidth: Sound Manager window width [Default: 1000]
+SoundMngWidth = 
+
+; SoundMngHeight: Sound Manager window height [Default: 800]
+SoundMngHeight = 
+
+; WhereUsedPosX: Where-used window X position [Default: 0]
+WhereUsedPosX = 
+
+; WhereUsedPosY: Where-used window Y position [Default: 0]
+WhereUsedPosY = 
+
+; WhereUsedWidth: Where-used window width [Default: 1000]
+WhereUsedWidth = 
+
+; WhereUsedHeight: Where-used window height [Default: 800]
+WhereUsedHeight = 
+
+; CollectionMngPosX: Collection Manager window X position [Default: 0]
+CollectionMngPosX = 
+
+; CollectionMngPosY: Collection Manager window Y position [Default: 0]
+CollectionMngPosY = 
+
+; SelectTableOnStart: Open a file/table select dialog on editor startup [Default: 1]
+SelectTableOnStart = 
+
+; SelectTableOnPlayerClose: Open a file/table select dialog on player close [Default: 1]
+SelectTableOnPlayerClose = 
+
+; ShowDragPoints: Show Drag points in viewport/editor [Default: 0]
+ShowDragPoints = 
+
+; DrawLightCenters: Show Light centers in viewport/editor [Default: 0]
+DrawLightCenters = 
+
+; AutoSaveOn: Enable Autosave for table(s) [Default: 1]
+AutoSaveOn = 
+
+; AutoSaveTime: Time for the Autosave intervals [Default: 10]
+AutoSaveTime = 
+
+; GridSize: Grid size in viewport/editor [Default: 50]
+GridSize = 
+
+; GroupElementsInCollection: Group Elements in a collection in viewport/editor [Default: 1]
+GroupElementsInCollection = 
+
+; LogScriptOutput: Enable script logging output [Default: 1]
+LogScriptOutput = 
+
+; DefaultMaterialColor: Default material color in viewport/editor [Default: 0X00B469FF in 0X00000000 .. 0X00FFFFFF]
+DefaultMaterialColor = 
+
+; ElementSelectColor: Element selection color in viewport/editor [Default: 0X00FF0000 in 0X00000000 .. 0X00FFFFFF]
+ElementSelectColor = 
+
+; ElementSelectLockedColor: Locked Element selection color in viewport/editor [Default: 0X00A7726D in 0X00000000 .. 0X00FFFFFF]
+ElementSelectLockedColor = 
+
+; BackGroundColor: Background color in viewport/editor [Default: 0X008D8D8D in 0X00000000 .. 0X00FFFFFF]
+BackGroundColor = 
+
+; FillColor: Fill color in viewport/editor [Default: 0X00B1CFB3 in 0X00000000 .. 0X00FFFFFF]
+FillColor = 
+
+; Units: Unit used in viewport/editor [Default: 'Inches', 0='Inches', 1='Millimeters', 2='VP Units']
+Units = 
+
+; AlwaysViewScript: Always view Script window [Default: 0]
+AlwaysViewScript = 
+
+; ThrowBallMass: Mass of thrown ball in 'throw ball' debugging mode [Default: 1.0]
+ThrowBallMass = 
+
+; ThrowBallSize: Size of thrown ball in 'throw ball' debugging mode [Default: 50]
+ThrowBallSize = 
+
+; RenderSolid: Render solid in viewport/editor [Default: 1]
+RenderSolid = 
+
+
+
+[Player]
+; Backglass Volume: Main volume for music and sound played from the backglass speakers [Default: 100 in 0 .. 100]
+MusicVolume = 89
+
+; Playfield Volume: Main volume for mechanical sounds coming from the playfield [Default: 100 in 0 .. 100]
+SoundVolume = 100
+
+; Enable Backglass: Enable/Disable backglass game sound & music [Default: 1]
+PlayMusic = 1
+
+; Enable Playfield: Enable/Disable playfield mechanical sounds [Default: 1]
+PlaySound = 1
+
+; Backglass Sound Device: Select backglass sound device [Default: '']
+SoundDeviceBG = CMI8738/CMI8768 PCI Audio (CMI8738/C3DX PCI Audio Device) Analog Stereo
+
+; Playfield Sound Device: Select playfield sound device [Default: '']
+SoundDevice = Built-in Audio Analog Stereo
+
+; Playfield Output Mode: Select how playfield sound is output to a speaker configuration [Default: '2 Front channels', 0='2 Front channels', 1='2 Rear channels', 2='Up to 6 channels. Rear at lockbar', 3='Up to 6 channels. Front at lockbar', 4='6ch Side & Rear at lockbar. Legacy mixing', 5='6ch Side & Rear at lockbar. New mixing']
+Sound3D = 0
+
+; Display: Display used for the main Playfield window [Default: '']
+PlayfieldDisplay = N43 32"
+
+; Display Mode: Select between windowed or borderless fullscreen mode [Default: 'Windowed', 0='Windowed', 1='Borderless Fullscreen']
+PlayfieldFullScreen = 1
+
+; X Position: Horizontal position of the window on the selected display [Default: 0 in 0 .. 16384]
+PlayfieldWndX = 0
+
+; Y Position: Vertical position of the window on the selected display [Default: 0 in 0 .. 16384]
+PlayfieldWndY = 0
+
+; Width: Width of the window [Default: 16384 in 0 .. 16384]
+PlayfieldWidth = 3840
+
+; Height: Height of the window [Default: 16384 in 0 .. 16384]
+PlayfieldHeight = 2160
+
+; Width: Fullscreen display mode width [Default: 16384 in 0 .. 16384]
+PlayfieldFSWidth = 3840
+
+; Height: Fullscreen display mode height [Default: 16384 in 0 .. 16384]
+PlayfieldFSHeight = 2160
+
+; Refresh Rate: Fullscreen display mode refresh rate [Default: 0.0 in 0.0 .. 1000.0]
+PlayfieldRefreshRate = 60.0
+
+; Color Depth: Fullscreen display mode color depth [Default: 32 in 0 .. 64]
+PlayfieldColorDepth = 32
+
+; Synchronization:  [Default: 'Frame Pacing', 0='No Sync', 1='Vertical Sync', 2='Adaptive Sync', 3='Frame Pacing']:
+;   None: No synchronization.
+;   Vertical Sync: Synchronize on video sync, avoids video tearing at the price of high visual latency.
+;   Adaptive Sync: Synchronize on video sync, except for late frames (below target FPS), also features higher visual latency.
+;   Frame Pacing: pace the frame rendering to limit visual latency, comes with the risk of introducing more stutters if the computer is not powerful enough.
+SyncMode = 3
+
+; Limit Framerate:  [Default: -1.0 in -1.0 .. 1000.0]:
+;   -1 will limit FPS to the display refresh rate
+;   0 will not limit the display refresh rate
+;   Other values will limit the FPS to it (energy saving/less heat, framerate stability)
+MaxFramerate = 10000.0
+
+; Max. Prerendered Frames:  [Default: 1 in 1 .. 3]:
+;   Maximum number of 'frames in flight' (frames pushed to the GPU queue waiting for rendering).
+;   Higher values may lead to higher FPS, but at higher input latency.
+;   Recommended to be adjusted to the lowest value that allows a stable framerate.
+;   (Not supported in OpenGL version)
+MaxPrerenderedFrames = 1
+
+; Graphics Backend: Graphics API/backend used for rendering [Default: 'Default']
+GfxBackend = Direct3D11
+
+; Show FPS: Performance overlay display mode [Default: 'Disable', 0='Disable', 1='FPS', 2='Full']
+ShowFPS = 0
+
+; Additive Screen Space Reflection: Add global reflection to the entire scene [Default: 0]
+SSRefl = 0
+
+; Disable tonemapping on HDR display: Do not perform tonemapping when rendering on a high dynamic range (HDR) capable monitor/gfxboard/OS [Default: 1]
+HDRDisableToneMapper = 1
+
+; HDR Display Global Exposure: Global exposure scale multiplier for high dynamic range (HDR) capable monitors [Default: 1.0 in 0.0 .. 5.0]
+HDRGlobalExposure = 1.0
+
+; Disable Bloom: Disable postprocessed bloom filter [Default: 0]
+ForceBloomOff = 0
+
+; Disable Motion Blur:  [Default: 0]:
+;   Disable ball motion blur.
+;   This feature is BGFX only (and not supported in VR or headtracking)
+ForceMotionBlurOff = 1
+
+; Force Anisotropic Filtering: Force anisotropic filtering for better rendering quality/texture clarity at the cost of a bit of performance [Default: 1]
+ForceAnisotropicFiltering = 1
+
+; Compress Textures: Automatically compress textures at game startup (slow) for better performance [Default: 0]
+CompressTextures = 0
+
+; Alternative Depth Buffer: Use NVidia API to manage Depth Buffer on a DirectX 9 build. May solve some rendering issues [Default: 0]
+UseNVidiaAPI = 0
+
+; Software Vertex Processing: Activate this on a DirectX 9 build, if you have issues using an old Intel graphics chip [Default: 0]
+SoftwareVertexProcessing = 
+
+; Disable Ambient Occlusion:  [Default: 0]
+DisableAO = 0
+
+; Dynamic Ambient Occlusion:  [Default: 1]
+DynamicAO = 1
+
+; Reflection Quality:  [Default: 'Dynamic', 0='Disable Reflections', 1='Balls Only', 2='Static Only', 3='Static & Balls', 4='Static & Unsynced Dynamic', 5='Dynamic']:
+;   Limit the quality of reflections for better performance.
+;   'Dynamic' is recommended and will give the best results, but may harm performance.
+;   'Static Only' has no performance cost (except for VR rendering).
+;   Other options feature different trade-offs between quality and performance.
+PFReflection = 3
+
+; Maximum texture dimension: Images sized above this limit will be automatically scaled down on load [Default: 16384 in 512 .. 16384]
+MaxTexDimension = 16384
+
+; Detail Level: Level of detail for balls and ramps [Default: 10 in 1 .. 10]
+AlphaRampAccuracy = 10
+
+; View Mode: Select between desktop, cabinet or 'full single screen' viewing mode configurations (if a table has set them up correctly) [Default: 'Desktop / Full Single Screen', 0='Desktop / Full Single Screen', 1='Cabinet', 2='Full Single Screen']
+BGSet = 1
+
+; Cabinet Autofit Mode: Select between manual setup, automatic fitting without visual stretch or automatic fitting with table stretching [Default: 'Manual', 0='Manual', 1='Fit Table', 2='Fit Screen']
+CabinetAutofitMode = 2
+
+; Cabinet Autofit Pos: Relative lower flipper bat position when using automatic view fitting (0% for bottom of screen, 100% for top) [Default: 0.05 in 0.0 .. 0.2]
+CabinetAutofitPos = 
+
+; Full Scene Anti Aliasing:  [Default: 1.0 in 0.5 .. 2.0]:
+;   Enables brute-force Up/Downsampling (similar to DSR).
+;   This delivers very good quality but has a significant impact on performance.
+;   200% means twice the resolution to be handled while rendering
+AAFactor = 1.0
+
+; MSAA level:  [Default: 'Disabled', 0='Disabled', 1='4 Samples', 2='6 Samples', 3='8 Samples']:
+;   Set the amount of MSAA samples.
+;   MSAA can help reduce geometry aliasing at the cost of performance and GPU memory.
+;   This can improve image quality if not using supersampling
+MSAASamples = 0
+
+; Post processed antialiasing: Select between different antialiasing techniques that offer different quality vs performance balances [Default: 'Disabled', 0='Disabled', 1='Fast FXAA', 2='Standard FXAA', 3='Quality FXAA', 4='Fast NFAA', 5='Standard DLAA', 6='Quality SMAA', 7='Quality FAAA']
+FXAA = 1
+
+; Post processed sharpening: Select between different sharpening techniques that offer different quality vs performance balances [Default: 'Disabled', 0='Disabled', 1='CAS', 2='Bilateral CAS']
+Sharpen = 1
+
+; Unstretch Ball: Compensate ball stretching [Default: 0]
+BallAntiStretch = 1
+
+; Disable Ball Lighting: Disable lighting and reflection effects on balls, e.g. to help the visually handicapped [Default: 0]
+DisableLightingForBalls = 0
+
+; Ball Trail:  [Default: 0]:
+;   Legacy Ball Trails.
+;   Will/should be replaced by ForceMotionBlurOff with the next release
+BallTrail = 0
+
+; Ball Trail Strength: Strength of the legacy Ball Trail [Default: 0.5 in 0.0 .. 5.0]
+BallTrailStrength = 0.5
+
+; Overwrite ball image: Allow to define images that will be used instead of the table's provided one [Default: 0]
+OverwriteBallImage = 1
+
+; Ball image override: Image to use for the ball instead of the table's provide one [Default: '']
+; Modifié 2026-07-04 13:30:27 par PinCabOS fonction(VPX Ball / Cabinet)
+BallImage = /opt/pincabos/media/images/balls/PCOSBall-20260607-053945.png
+
+; Decal image override: Image to use for the ball's decal instead of the table's provide one [Default: '']
+; Modifié 2026-07-04 13:30:27 par PinCabOS fonction(VPX Ball / Cabinet)
+DecalImage = /opt/pincabos/media/images/balls/PCOSBallDec-20260607-054022.png
+
+; Touch Overlay: Display an overlay showing touch regions [Default: 0]
+TouchOverlay = 
+
+; Legacy Fly Over Mode: Enable moving camera when using the Tweak menu (legacy, replaced by LiveUI fly mode) [Default: 0]
+EnableCameraModeFlyAround = 
+
+; Detect Script Hang:  [Default: 0]
+DetectHang = 
+
+; Security Level:  [Default: 0 in 0 .. 4]
+SecurityLevel = 
+
+; NumberOfTimesToShowTouchMessage: Number of times to re-display the touch display message [Default: 10 in 0 .. 100]
+NumberOfTimesToShowTouchMessage = 
+
+; Mirror: Mirror the table (left <-> right) [Default: 0]
+Mirror = 
+
+; Cache Mode: Use cache to limit stutters and speedup loading [Default: 'Preload Textures', 0='Disabled', 1='Preload Textures']
+CacheMode = 
+
+; RumbleMode: Use rumble motor(s) in attached input devices [Default: 'Table with generic fallback', 0='Off', 1='Table only (N/A yet)', 2='Generic only (N/A yet)', 3='Table with generic fallback']
+RumbleMode = 
+
+; MinPhysLoopTime:  [Default: 0 in 0 .. 1000]
+MinPhysLoopTime = 
+
+; Physics Max Loops:  [Default: -1]:
+;   Maximum number of physics iteration above which physics engine just skip to stay playable.
+;   This is somewhat hacky, override table setup, and may cause gameplay issues. This should not be used anymore.
+PhysicsMaxLoops = 
+
+; Autostart:  [Default: 0]
+Autostart = 
+
+; AutostartRetry:  [Default: 0]
+AutostartRetry = 
+
+; AutostartEnable:  [Default: 0]
+asenable = 
+
+; Direct Exit Length: Length of a long ESC press that directly closes the app, (sadly) expressed in seconds * 60 [Default: 120 in 0 .. 1800]
+Exitconfirm = 
+
+; Plumb Simulation: Enable/Disable mechanical Tilt plumb simulation [Default: 1]
+SimulatedPlumb = 1
+
+; Plumb Damping: Adjust plumb damping (how fast the pumb gets back to rest) [Default: 1.0 in 0.0 .. 2.0]
+PlumbDamping = 0.5
+
+; Plumb Threshold: Define threshold angle at which a Tilt is triggered [Default: 2.0 in 0.5 .. 4.0]
+PlumbThresholdAngle = 2.0
+
+; Keyboard Nudge Mode: Select how nudge is simulated when triggered from the keyboard. [Default: 'VPX 10.9 (improved cabinet)', 0='VP9 (simple push/retract)', 1='VPX 10.8 (cabinet model)', 2='VPX 10.9 (improved cabinet)']
+KeyboardNudgeMode = 2
+
+; Keyboard Nudge Strength: Strength of the keyboard nudging mode [Default: 1.0 in 0.0 .. 2.0]
+KeyboardNudgeStrength = 1.0
+
+; Visual Nudge Strength: Changes the visual effect/screen shaking when nudging the table [Default: 1.0 in 0.0 .. 2.0]
+
+; One Second Retract: Enable retracting the plunger after a 1 second press when using the digital plunger emulation through keyboard or joystick button [Default: 0]
+PlungerRetract = 
+
+; Plunger normalize override: This value may be defined to override the table's plunger normalization [Default: 100 in 0 .. 100]
+PlungerNormalize = 
+
+; Preview mode: Select VR preview mode [Default: 'Left Eye', 0='Disabled', 1='Left Eye', 2='Right Eye', 3='Both Eyes']
+VRPreview = 
+
+; FlipperPhysicsMass0:  [Default: 1.0]
+FlipperPhysicsMass0 = 
+
+; FlipperPhysicsStrength0:  [Default: 2200.0]
+FlipperPhysicsStrength0 = 
+
+; FlipperPhysicsElasticity0:  [Default: 0.8]
+FlipperPhysicsElasticity0 = 
+
+; FlipperPhysicsScatter0:  [Default: 0.0]
+FlipperPhysicsScatter0 = 
+
+; FlipperPhysicsReturnStrength0:  [Default: 0.058]
+FlipperPhysicsReturnStrength0 = 
+
+; FlipperPhysicsElasticityFalloff0:  [Default: 0.43]
+FlipperPhysicsElasticityFalloff0 = 
+
+; FlipperPhysicsFriction0:  [Default: 0.6]
+FlipperPhysicsFriction0 = 
+
+; FlipperPhysicsCoilRampUp0:  [Default: 3.0]
+FlipperPhysicsCoilRampUp0 = 
+
+; FlipperPhysicsEOSTorque0:  [Default: 0.75]
+FlipperPhysicsEOSTorque0 = 
+
+; FlipperPhysicsEOSTorqueAngle0:  [Default: 6.0]
+FlipperPhysicsEOSTorqueAngle0 = 
+
+; TablePhysicsGravityConstant0:  [Default: 0.97]
+TablePhysicsGravityConstant0 = 
+
+; TablePhysicsContactFriction0:  [Default: 0.075]
+TablePhysicsContactFriction0 = 
+
+; TablePhysicsElasticity0:  [Default: 0.25]
+TablePhysicsElasticity0 = 
+
+; TablePhysicsElasticityFalloff0:  [Default: 0.0]
+TablePhysicsElasticityFalloff0 = 
+
+; TablePhysicsScatterAngle0:  [Default: 0.0]
+TablePhysicsScatterAngle0 = 
+
+; TablePhysicsContactScatterAngle0:  [Default: 0.5]
+TablePhysicsContactScatterAngle0 = 
+
+; TablePhysicsMinSlope0:  [Default: 6.0]
+TablePhysicsMinSlope0 = 
+
+; TablePhysicsMaxSlope0:  [Default: 6.0]
+TablePhysicsMaxSlope0 = 
+
+; PhysicsSetName0:  [Default: 'Set 1']
+PhysicsSetName0 = 
+
+; FlipperPhysicsMass1:  [Default: 1.0]
+FlipperPhysicsMass1 = 
+
+; FlipperPhysicsStrength1:  [Default: 2200.0]
+FlipperPhysicsStrength1 = 
+
+; FlipperPhysicsElasticity1:  [Default: 0.8]
+FlipperPhysicsElasticity1 = 
+
+; FlipperPhysicsScatter1:  [Default: 0.0]
+FlipperPhysicsScatter1 = 
+
+; FlipperPhysicsReturnStrength1:  [Default: 0.058]
+FlipperPhysicsReturnStrength1 = 
+
+; FlipperPhysicsElasticityFalloff1:  [Default: 0.43]
+FlipperPhysicsElasticityFalloff1 = 
+
+; FlipperPhysicsFriction1:  [Default: 0.6]
+FlipperPhysicsFriction1 = 
+
+; FlipperPhysicsCoilRampUp1:  [Default: 3.0]
+FlipperPhysicsCoilRampUp1 = 
+
+; FlipperPhysicsEOSTorque1:  [Default: 0.75]
+FlipperPhysicsEOSTorque1 = 
+
+; FlipperPhysicsEOSTorqueAngle1:  [Default: 6.0]
+FlipperPhysicsEOSTorqueAngle1 = 
+
+; TablePhysicsGravityConstant1:  [Default: 0.97]
+TablePhysicsGravityConstant1 = 
+
+; TablePhysicsContactFriction1:  [Default: 0.075]
+TablePhysicsContactFriction1 = 
+
+; TablePhysicsElasticity1:  [Default: 0.25]
+TablePhysicsElasticity1 = 
+
+; TablePhysicsElasticityFalloff1:  [Default: 0.0]
+TablePhysicsElasticityFalloff1 = 
+
+; TablePhysicsScatterAngle1:  [Default: 0.0]
+TablePhysicsScatterAngle1 = 
+
+; TablePhysicsContactScatterAngle1:  [Default: 0.5]
+TablePhysicsContactScatterAngle1 = 
+
+; TablePhysicsMinSlope1:  [Default: 6.0]
+TablePhysicsMinSlope1 = 
+
+; TablePhysicsMaxSlope1:  [Default: 6.0]
+TablePhysicsMaxSlope1 = 
+
+; PhysicsSetName1:  [Default: 'Set 2']
+PhysicsSetName1 = 
+
+; FlipperPhysicsMass2:  [Default: 1.0]
+FlipperPhysicsMass2 = 
+
+; FlipperPhysicsStrength2:  [Default: 2200.0]
+FlipperPhysicsStrength2 = 
+
+; FlipperPhysicsElasticity2:  [Default: 0.8]
+FlipperPhysicsElasticity2 = 
+
+; FlipperPhysicsScatter2:  [Default: 0.0]
+FlipperPhysicsScatter2 = 
+
+; FlipperPhysicsReturnStrength2:  [Default: 0.058]
+FlipperPhysicsReturnStrength2 = 
+
+; FlipperPhysicsElasticityFalloff2:  [Default: 0.43]
+FlipperPhysicsElasticityFalloff2 = 
+
+; FlipperPhysicsFriction2:  [Default: 0.6]
+FlipperPhysicsFriction2 = 
+
+; FlipperPhysicsCoilRampUp2:  [Default: 3.0]
+FlipperPhysicsCoilRampUp2 = 
+
+; FlipperPhysicsEOSTorque2:  [Default: 0.75]
+FlipperPhysicsEOSTorque2 = 
+
+; FlipperPhysicsEOSTorqueAngle2:  [Default: 6.0]
+FlipperPhysicsEOSTorqueAngle2 = 
+
+; TablePhysicsGravityConstant2:  [Default: 0.97]
+TablePhysicsGravityConstant2 = 
+
+; TablePhysicsContactFriction2:  [Default: 0.075]
+TablePhysicsContactFriction2 = 
+
+; TablePhysicsElasticity2:  [Default: 0.25]
+TablePhysicsElasticity2 = 
+
+; TablePhysicsElasticityFalloff2:  [Default: 0.0]
+TablePhysicsElasticityFalloff2 = 
+
+; TablePhysicsScatterAngle2:  [Default: 0.0]
+TablePhysicsScatterAngle2 = 
+
+; TablePhysicsContactScatterAngle2:  [Default: 0.5]
+TablePhysicsContactScatterAngle2 = 
+
+; TablePhysicsMinSlope2:  [Default: 6.0]
+TablePhysicsMinSlope2 = 
+
+; TablePhysicsMaxSlope2:  [Default: 6.0]
+TablePhysicsMaxSlope2 = 
+
+; PhysicsSetName2:  [Default: 'Set 3']
+PhysicsSetName2 = 
+
+; FlipperPhysicsMass3:  [Default: 1.0]
+FlipperPhysicsMass3 = 
+
+; FlipperPhysicsStrength3:  [Default: 2200.0]
+FlipperPhysicsStrength3 = 
+
+; FlipperPhysicsElasticity3:  [Default: 0.8]
+FlipperPhysicsElasticity3 = 
+
+; FlipperPhysicsScatter3:  [Default: 0.0]
+FlipperPhysicsScatter3 = 
+
+; FlipperPhysicsReturnStrength3:  [Default: 0.058]
+FlipperPhysicsReturnStrength3 = 
+
+; FlipperPhysicsElasticityFalloff3:  [Default: 0.43]
+FlipperPhysicsElasticityFalloff3 = 
+
+; FlipperPhysicsFriction3:  [Default: 0.6]
+FlipperPhysicsFriction3 = 
+
+; FlipperPhysicsCoilRampUp3:  [Default: 3.0]
+FlipperPhysicsCoilRampUp3 = 
+
+; FlipperPhysicsEOSTorque3:  [Default: 0.75]
+FlipperPhysicsEOSTorque3 = 
+
+; FlipperPhysicsEOSTorqueAngle3:  [Default: 6.0]
+FlipperPhysicsEOSTorqueAngle3 = 
+
+; TablePhysicsGravityConstant3:  [Default: 0.97]
+TablePhysicsGravityConstant3 = 
+
+; TablePhysicsContactFriction3:  [Default: 0.075]
+TablePhysicsContactFriction3 = 
+
+; TablePhysicsElasticity3:  [Default: 0.25]
+TablePhysicsElasticity3 = 
+
+; TablePhysicsElasticityFalloff3:  [Default: 0.0]
+TablePhysicsElasticityFalloff3 = 
+
+; TablePhysicsScatterAngle3:  [Default: 0.0]
+TablePhysicsScatterAngle3 = 
+
+; TablePhysicsContactScatterAngle3:  [Default: 0.5]
+TablePhysicsContactScatterAngle3 = 
+
+; TablePhysicsMinSlope3:  [Default: 6.0]
+TablePhysicsMinSlope3 = 
+
+; TablePhysicsMaxSlope3:  [Default: 6.0]
+TablePhysicsMaxSlope3 = 
+
+; PhysicsSetName3:  [Default: 'Set 4']
+PhysicsSetName3 = 
+
+; FlipperPhysicsMass4:  [Default: 1.0]
+FlipperPhysicsMass4 = 
+
+; FlipperPhysicsStrength4:  [Default: 2200.0]
+FlipperPhysicsStrength4 = 
+
+; FlipperPhysicsElasticity4:  [Default: 0.8]
+FlipperPhysicsElasticity4 = 
+
+; FlipperPhysicsScatter4:  [Default: 0.0]
+FlipperPhysicsScatter4 = 
+
+; FlipperPhysicsReturnStrength4:  [Default: 0.058]
+FlipperPhysicsReturnStrength4 = 
+
+; FlipperPhysicsElasticityFalloff4:  [Default: 0.43]
+FlipperPhysicsElasticityFalloff4 = 
+
+; FlipperPhysicsFriction4:  [Default: 0.6]
+FlipperPhysicsFriction4 = 
+
+; FlipperPhysicsCoilRampUp4:  [Default: 3.0]
+FlipperPhysicsCoilRampUp4 = 
+
+; FlipperPhysicsEOSTorque4:  [Default: 0.75]
+FlipperPhysicsEOSTorque4 = 
+
+; FlipperPhysicsEOSTorqueAngle4:  [Default: 6.0]
+FlipperPhysicsEOSTorqueAngle4 = 
+
+; TablePhysicsGravityConstant4:  [Default: 0.97]
+TablePhysicsGravityConstant4 = 
+
+; TablePhysicsContactFriction4:  [Default: 0.075]
+TablePhysicsContactFriction4 = 
+
+; TablePhysicsElasticity4:  [Default: 0.25]
+TablePhysicsElasticity4 = 
+
+; TablePhysicsElasticityFalloff4:  [Default: 0.0]
+TablePhysicsElasticityFalloff4 = 
+
+; TablePhysicsScatterAngle4:  [Default: 0.0]
+TablePhysicsScatterAngle4 = 
+
+; TablePhysicsContactScatterAngle4:  [Default: 0.5]
+TablePhysicsContactScatterAngle4 = 
+
+; TablePhysicsMinSlope4:  [Default: 6.0]
+TablePhysicsMinSlope4 = 
+
+; TablePhysicsMaxSlope4:  [Default: 6.0]
+TablePhysicsMaxSlope4 = 
+
+; PhysicsSetName4:  [Default: 'Set 5']
+PhysicsSetName4 = 
+
+; FlipperPhysicsMass5:  [Default: 1.0]
+FlipperPhysicsMass5 = 
+
+; FlipperPhysicsStrength5:  [Default: 2200.0]
+FlipperPhysicsStrength5 = 
+
+; FlipperPhysicsElasticity5:  [Default: 0.8]
+FlipperPhysicsElasticity5 = 
+
+; FlipperPhysicsScatter5:  [Default: 0.0]
+FlipperPhysicsScatter5 = 
+
+; FlipperPhysicsReturnStrength5:  [Default: 0.058]
+FlipperPhysicsReturnStrength5 = 
+
+; FlipperPhysicsElasticityFalloff5:  [Default: 0.43]
+FlipperPhysicsElasticityFalloff5 = 
+
+; FlipperPhysicsFriction5:  [Default: 0.6]
+FlipperPhysicsFriction5 = 
+
+; FlipperPhysicsCoilRampUp5:  [Default: 3.0]
+FlipperPhysicsCoilRampUp5 = 
+
+; FlipperPhysicsEOSTorque5:  [Default: 0.75]
+FlipperPhysicsEOSTorque5 = 
+
+; FlipperPhysicsEOSTorqueAngle5:  [Default: 6.0]
+FlipperPhysicsEOSTorqueAngle5 = 
+
+; TablePhysicsGravityConstant5:  [Default: 0.97]
+TablePhysicsGravityConstant5 = 
+
+; TablePhysicsContactFriction5:  [Default: 0.075]
+TablePhysicsContactFriction5 = 
+
+; TablePhysicsElasticity5:  [Default: 0.25]
+TablePhysicsElasticity5 = 
+
+; TablePhysicsElasticityFalloff5:  [Default: 0.0]
+TablePhysicsElasticityFalloff5 = 
+
+; TablePhysicsScatterAngle5:  [Default: 0.0]
+TablePhysicsScatterAngle5 = 
+
+; TablePhysicsContactScatterAngle5:  [Default: 0.5]
+TablePhysicsContactScatterAngle5 = 
+
+; TablePhysicsMinSlope5:  [Default: 6.0]
+TablePhysicsMinSlope5 = 
+
+; TablePhysicsMaxSlope5:  [Default: 6.0]
+TablePhysicsMaxSlope5 = 
+
+; PhysicsSetName5:  [Default: 'Set 6']
+PhysicsSetName5 = 
+
+; FlipperPhysicsMass6:  [Default: 1.0]
+FlipperPhysicsMass6 = 
+
+; FlipperPhysicsStrength6:  [Default: 2200.0]
+FlipperPhysicsStrength6 = 
+
+; FlipperPhysicsElasticity6:  [Default: 0.8]
+FlipperPhysicsElasticity6 = 
+
+; FlipperPhysicsScatter6:  [Default: 0.0]
+FlipperPhysicsScatter6 = 
+
+; FlipperPhysicsReturnStrength6:  [Default: 0.058]
+FlipperPhysicsReturnStrength6 = 
+
+; FlipperPhysicsElasticityFalloff6:  [Default: 0.43]
+FlipperPhysicsElasticityFalloff6 = 
+
+; FlipperPhysicsFriction6:  [Default: 0.6]
+FlipperPhysicsFriction6 = 
+
+; FlipperPhysicsCoilRampUp6:  [Default: 3.0]
+FlipperPhysicsCoilRampUp6 = 
+
+; FlipperPhysicsEOSTorque6:  [Default: 0.75]
+FlipperPhysicsEOSTorque6 = 
+
+; FlipperPhysicsEOSTorqueAngle6:  [Default: 6.0]
+FlipperPhysicsEOSTorqueAngle6 = 
+
+; TablePhysicsGravityConstant6:  [Default: 0.97]
+TablePhysicsGravityConstant6 = 
+
+; TablePhysicsContactFriction6:  [Default: 0.075]
+TablePhysicsContactFriction6 = 
+
+; TablePhysicsElasticity6:  [Default: 0.25]
+TablePhysicsElasticity6 = 
+
+; TablePhysicsElasticityFalloff6:  [Default: 0.0]
+TablePhysicsElasticityFalloff6 = 
+
+; TablePhysicsScatterAngle6:  [Default: 0.0]
+TablePhysicsScatterAngle6 = 
+
+; TablePhysicsContactScatterAngle6:  [Default: 0.5]
+TablePhysicsContactScatterAngle6 = 
+
+; TablePhysicsMinSlope6:  [Default: 6.0]
+TablePhysicsMinSlope6 = 
+
+; TablePhysicsMaxSlope6:  [Default: 6.0]
+TablePhysicsMaxSlope6 = 
+
+; PhysicsSetName6:  [Default: 'Set 7']
+PhysicsSetName6 = 
+
+; FlipperPhysicsMass7:  [Default: 1.0]
+FlipperPhysicsMass7 = 
+
+; FlipperPhysicsStrength7:  [Default: 2200.0]
+FlipperPhysicsStrength7 = 
+
+; FlipperPhysicsElasticity7:  [Default: 0.8]
+FlipperPhysicsElasticity7 = 
+
+; FlipperPhysicsScatter7:  [Default: 0.0]
+FlipperPhysicsScatter7 = 
+
+; FlipperPhysicsReturnStrength7:  [Default: 0.058]
+FlipperPhysicsReturnStrength7 = 
+
+; FlipperPhysicsElasticityFalloff7:  [Default: 0.43]
+FlipperPhysicsElasticityFalloff7 = 
+
+; FlipperPhysicsFriction7:  [Default: 0.6]
+FlipperPhysicsFriction7 = 
+
+; FlipperPhysicsCoilRampUp7:  [Default: 3.0]
+FlipperPhysicsCoilRampUp7 = 
+
+; FlipperPhysicsEOSTorque7:  [Default: 0.75]
+FlipperPhysicsEOSTorque7 = 
+
+; FlipperPhysicsEOSTorqueAngle7:  [Default: 6.0]
+FlipperPhysicsEOSTorqueAngle7 = 
+
+; TablePhysicsGravityConstant7:  [Default: 0.97]
+TablePhysicsGravityConstant7 = 
+
+; TablePhysicsContactFriction7:  [Default: 0.075]
+TablePhysicsContactFriction7 = 
+
+; TablePhysicsElasticity7:  [Default: 0.25]
+TablePhysicsElasticity7 = 
+
+; TablePhysicsElasticityFalloff7:  [Default: 0.0]
+TablePhysicsElasticityFalloff7 = 
+
+; TablePhysicsScatterAngle7:  [Default: 0.0]
+TablePhysicsScatterAngle7 = 
+
+; TablePhysicsContactScatterAngle7:  [Default: 0.5]
+TablePhysicsContactScatterAngle7 = 
+
+; TablePhysicsMinSlope7:  [Default: 6.0]
+TablePhysicsMinSlope7 = 
+
+; TablePhysicsMaxSlope7:  [Default: 6.0]
+TablePhysicsMaxSlope7 = 
+
+; PhysicsSetName7:  [Default: 'Set 8']
+PhysicsSetName7 = 
+
+; Enable Stereo Rendering: Allow to temporarily disable stereo rendering [Default: 1]
+Stereo3DEnabled = 0
+
+; Stereo rendering: Stereo rendering mode [Default: 'Disabled', 0='Disabled', 1='Top / Bottom', 2='Interlaced (e.g. LG TVs)', 3='Flipped Interlaced (e.g. LG TVs)', 4='Side by Side', 5='Anaglyph Red/Cyan', 6='Anaglyph Green/Magenta', 7='Anaglyph Blue/Amber', 8='Anaglyph Cyan/Red', 9='Anaglyph Magenta/Green', 10='Anaglyph Amber/Blue', 11='Anaglyph Custom 1', 12='Anaglyph Custom 2', 13='Anaglyph Custom 3', 14='Anaglyph Custom 4']
+Stereo3D = 0
+
+; Eye distance: Physical distance (mm) between eyes [Default: 63.0 in 5.0 .. 200.0]
+Stereo3DEyeSeparation = 
+
+; Stereo Brightness: Brightness adjustment applied to stereo rendering [Default: 1.0 in 0.0 .. 2.0]
+Stereo3DBrightness = 
+
+; Stereo Saturation: Saturation adjustment applied to stereo rendering [Default: 1.0 in 0.0 .. 2.0]
+Stereo3DSaturation = 
+
+; Anaglyph Defocus:  [Default: 0.0 in 0.0 .. 1.0]:
+;   Defocusing of the lesser eye (non dominant eye) applied to anaglyph stereo rendering.
+;   This may help to keep the depth perception with less ghosting/retinal rivalry.
+Stereo3DDefocus = 
+
+; Anaglyph Left Contrast: Left eye contrast adjustment applied to anaglyph stereo rendering [Default: 1.0 in 0.0 .. 2.0]
+Stereo3DLeftContrast = 
+
+; Anaglyph Right Contrast: Right eye contrast adjustment applied to anaglyph stereo rendering [Default: 1.0 in 0.0 .. 2.0]
+Stereo3DRightContrast = 
+
+; Anaglyph Filter: Anaglyph filter [Default: 'Luminance', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph1Filter = 
+
+; Anaglyph Filter: Anaglyph filter [Default: 'Luminance', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph2Filter = 
+
+; Anaglyph Filter: Anaglyph filter [Default: 'Luminance', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph3Filter = 
+
+; Anaglyph Filter: Anaglyph filter [Default: 'Luminance', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph4Filter = 
+
+; Anaglyph Filter: Anaglyph filter [Default: 'Luminance', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph5Filter = 
+
+; Anaglyph Filter: Anaglyph filter [Default: 'Luminance', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph6Filter = 
+
+; Anaglyph Filter: Anaglyph filter [Default: 'Luminance', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph7Filter = 
+
+; Anaglyph Filter: Anaglyph filter [Default: 'Luminance', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph8Filter = 
+
+; Anaglyph Filter: Anaglyph filter [Default: 'Luminance', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph9Filter = 
+
+; Anaglyph Filter: Anaglyph filter applied to anaglyph profile #10 [Default: 'None', 0='None', 1='Dubois', 2='Luminance', 3='Deghost']
+Anaglyph10Filter = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph1DynDesat = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph2DynDesat = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph3DynDesat = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph4DynDesat = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph5DynDesat = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph6DynDesat = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph7DynDesat = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph8DynDesat = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph9DynDesat = 
+
+; Anaglyph Dyn. Desat: Dynamic desaturation selectively desaturate (turn to greyscale) colors that would otherwise cause retinal rivalry (when something is seen by one eye but not by the other). [Default: 1.0 in 0.0 .. 1.0]
+Anaglyph10DynDesat = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph1Deghost = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph2Deghost = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph3Deghost = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph4Deghost = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph5Deghost = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph6Deghost = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph7Deghost = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph8Deghost = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph9Deghost = 
+
+; Anaglyph Deghosting: Adjust colors to avoid color clamping as color clamping always results in visible ghosting. The drawback is that it makes images brighter and less saturated. [Default: 0.0 in 0.0 .. 1.0]
+Anaglyph10Deghost = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph1sRGB = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph2sRGB = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph3sRGB = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph4sRGB = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph5sRGB = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph6sRGB = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph7sRGB = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph8sRGB = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph9sRGB = 
+
+; Calibrated sRGB Display: If enabled, bypass display gamma evaluation from calibration and uses standard sRGB gamma curve. [Default: 1]
+Anaglyph10sRGB = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.95 in 0.0 .. 1.0]
+Anaglyph1LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.19 in 0.0 .. 1.0]
+Anaglyph1LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.07 in 0.0 .. 1.0]
+Anaglyph1LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.06 in 0.0 .. 1.0]
+Anaglyph1RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.92 in 0.0 .. 1.0]
+Anaglyph1RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.28 in 0.0 .. 1.0]
+Anaglyph1RightBlue = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.06 in 0.0 .. 1.0]
+Anaglyph2LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.96 in 0.0 .. 1.0]
+Anaglyph2LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.09 in 0.0 .. 1.0]
+Anaglyph2LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.61 in 0.0 .. 1.0]
+Anaglyph2RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.16 in 0.0 .. 1.0]
+Anaglyph2RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.66 in 0.0 .. 1.0]
+Anaglyph2RightBlue = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.05 in 0.0 .. 1.0]
+Anaglyph3LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.16 in 0.0 .. 1.0]
+Anaglyph3LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.96 in 0.0 .. 1.0]
+Anaglyph3LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.61 in 0.0 .. 1.0]
+Anaglyph3RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.66 in 0.0 .. 1.0]
+Anaglyph3RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.09 in 0.0 .. 1.0]
+Anaglyph3RightBlue = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.06 in 0.0 .. 1.0]
+Anaglyph4LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.92 in 0.0 .. 1.0]
+Anaglyph4LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.28 in 0.0 .. 1.0]
+Anaglyph4LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.95 in 0.0 .. 1.0]
+Anaglyph4RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.19 in 0.0 .. 1.0]
+Anaglyph4RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.07 in 0.0 .. 1.0]
+Anaglyph4RightBlue = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.61 in 0.0 .. 1.0]
+Anaglyph5LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.16 in 0.0 .. 1.0]
+Anaglyph5LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.66 in 0.0 .. 1.0]
+Anaglyph5LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.06 in 0.0 .. 1.0]
+Anaglyph5RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.96 in 0.0 .. 1.0]
+Anaglyph5RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.09 in 0.0 .. 1.0]
+Anaglyph5RightBlue = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.61 in 0.0 .. 1.0]
+Anaglyph6LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.66 in 0.0 .. 1.0]
+Anaglyph6LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.09 in 0.0 .. 1.0]
+Anaglyph6LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.05 in 0.0 .. 1.0]
+Anaglyph6RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.16 in 0.0 .. 1.0]
+Anaglyph6RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.96 in 0.0 .. 1.0]
+Anaglyph6RightBlue = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.95 in 0.0 .. 1.0]
+Anaglyph7LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.19 in 0.0 .. 1.0]
+Anaglyph7LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.07 in 0.0 .. 1.0]
+Anaglyph7LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.06 in 0.0 .. 1.0]
+Anaglyph7RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.92 in 0.0 .. 1.0]
+Anaglyph7RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.28 in 0.0 .. 1.0]
+Anaglyph7RightBlue = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.95 in 0.0 .. 1.0]
+Anaglyph8LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.19 in 0.0 .. 1.0]
+Anaglyph8LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.07 in 0.0 .. 1.0]
+Anaglyph8LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.06 in 0.0 .. 1.0]
+Anaglyph8RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.92 in 0.0 .. 1.0]
+Anaglyph8RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.28 in 0.0 .. 1.0]
+Anaglyph8RightBlue = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.95 in 0.0 .. 1.0]
+Anaglyph9LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.19 in 0.0 .. 1.0]
+Anaglyph9LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.07 in 0.0 .. 1.0]
+Anaglyph9LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.06 in 0.0 .. 1.0]
+Anaglyph9RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.92 in 0.0 .. 1.0]
+Anaglyph9RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.28 in 0.0 .. 1.0]
+Anaglyph9RightBlue = 
+
+; Anaglyph Left Red: Anaglyph Left Eye Red Component [Default: 0.95 in 0.0 .. 1.0]
+Anaglyph10LeftRed = 
+
+; Anaglyph Left Green: Anaglyph Left Eye Green Component [Default: 0.19 in 0.0 .. 1.0]
+Anaglyph10LeftGreen = 
+
+; Anaglyph Left Blue: Anaglyph Left Eye Blue Component [Default: 0.07 in 0.0 .. 1.0]
+Anaglyph10LeftBlue = 
+
+; Anaglyph Right Red: Anaglyph Right Eye Red Component [Default: 0.06 in 0.0 .. 1.0]
+Anaglyph10RightRed = 
+
+; Anaglyph Right Green: Anaglyph Right Eye Green Component [Default: 0.92 in 0.0 .. 1.0]
+Anaglyph10RightGreen = 
+
+; Anaglyph Right Blue: Anaglyph Right Eye Blue Component [Default: 0.28 in 0.0 .. 1.0]
+Anaglyph10RightBlue = 
+
+; Screen Width: Physical width (cm) of the display area of the playfield (main) screen (width > height) [Default: 95.889999 in 5.0 .. 200.0]
+ScreenWidth = 
+
+; Screen Height: Physical height (cm) of the display area of the playfield (main) screen (width > height) [Default: 53.939999 in 5.0 .. 200.0]
+ScreenHeight = 
+
+; Screen Inclination: Inclination (degree) of the playfield (main) screen, 0 is horizontal [Default: 0.0 in -30.0 .. 30.0]
+ScreenInclination = 
+
+; Lockbar Width: Lockbar width in centimeters (measured on the cabinet) [Default: 70.0 in 10.0 .. 150.0]
+LockbarWidth = 
+
+; Lockbar Height: Lockbar height in centimeters (measured on the cabinet, from ground to top of lockbar) [Default: 85.0 in 0.0 .. 250.0]
+LockbarHeight = 
+
+; Player X: Player X position in real world, expressed from the bottom center of the playfield, in centimeters [Default: 0.0 in -30.0 .. 30.0]
+ScreenPlayerX = 
+
+; Player Y: Player Y position in real world, expressed from the bottom center of the playfield, in centimeters [Default: -10.0 in -70.0 .. 30.0]
+ScreenPlayerY = 
+
+; Player Z: Player Z position in real world, expressed from the bottom center of the playfield, in centimeters [Default: 70.0 in 30.0 .. 100.0]
+ScreenPlayerZ = 
+
+; Override Table Light Level: Replace default table light level by a fixed/custom one [Default: 0]
+OverrideTableEmissionScale = 
+
+; Day/Night: Select a custom ambient lighting level, ranging from daylight to night time [Default: 1.0 in 0.0 .. 1.0]
+EmissionScale = 
+
+; Use Automatic Light Level: Automatically compute/match scene lighting based on geographic coordinates/localized sun position [Default: 0]
+DynamicDayNight = 
+
+; Latitude: Local geographic latitude used to derive the sun position for automatically computed/matching scene lighting [Default: 52.52 in -90.0 .. 90.0]
+Latitude = 
+
+; Longitude: Local geographic longitude used to derive the sun position for automatically computed/matching scene lighting [Default: 13.37 in -180.0 .. 180.0]
+Longitude = 
+
+; Modifié 2026-07-02 01:14:57 par PinCabOS fonction(Inputs Commander Nudge)
+
+; Modifié 2026-07-02 02:16:16 par PinCabOS fonction(VPX Analog Plunger/Nudge)
+PBWEnabled = 1
+NudgeStrength = 1.0
+LRAxis = 1
+UDAxis = 2
+LRAxisFlip = 0
+UDAxisFlip = 0
+PBWAccelGainX = 1.00
+PBWAccelGainY = 1.00
+PlungerAxis = 3
+ReversePlungerAxis = 0
+[Backglass]
+; Output Mode: Select between disabled, floating, or embedded in another window mode [Default: 'Disabled', 0='Disabled', 1='Floating', 2='Embedded in playfield']
+BackglassOutput = 1
+
+; Display: Display used for the main Backglass window [Default: '']
+BackglassDisplay = HP 27vc 27"
+
+; Display Mode: Select between windowed or borderless fullscreen mode [Default: 'Windowed', 0='Windowed', 1='Borderless Fullscreen']
+BackglassFullScreen = 0
+
+; X Position: Horizontal position of the window on the selected display [Default: 0 in 0 .. 16384]
+BackglassWndX = 3840
+
+; Y Position: Vertical position of the window on the selected display [Default: 0 in 0 .. 16384]
+BackglassWndY = 0
+
+; Width: Width of the window [Default: 16384 in 0 .. 16384]
+BackglassWidth = 1920
+
+; Height: Height of the window [Default: 16384 in 0 .. 16384]
+BackglassHeight = 1080
+
+; Width: Fullscreen display mode width [Default: 16384 in 0 .. 16384]
+BackglassFSWidth = 1920
+
+; Height: Fullscreen display mode height [Default: 16384 in 0 .. 16384]
+BackglassFSHeight = 1080
+
+; Fullscreen Refresh Rate: Fullscreen display mode refresh rate [Default: 0.0 in 0.0 .. 1000.0]
+BackglassRefreshRate = 60.0
+
+; Color Depth: Fullscreen display mode color depth [Default: 32 in 0 .. 64]
+BackglassColorDepth = 32
+Priority.PUP = 
+Priority.B2SLegacy = 
+
+
+
+[ScoreView]
+; Output Mode: Select between disabled, floating, or embedded in another window mode [Default: 'Disabled', 0='Disabled', 1='Floating', 2='Embedded in playfield']
+ScoreViewOutput = 1
+
+; Display: Display used for the main ScoreView window [Default: '']
+ScoreViewDisplay = 
+
+; Display Mode: Select between windowed or borderless fullscreen mode [Default: 'Windowed', 0='Windowed', 1='Borderless Fullscreen']
+ScoreViewFullScreen = 0
+
+; X Position: Horizontal position of the window on the selected display [Default: 0 in 0 .. 16384]
+ScoreViewWndX = 0
+
+; Y Position: Vertical position of the window on the selected display [Default: 0 in 0 .. 16384]
+ScoreViewWndY = 0
+
+; Width: Width of the window [Default: 16384 in 0 .. 16384]
+ScoreViewWidth = 1920
+
+; Height: Height of the window [Default: 16384 in 0 .. 16384]
+ScoreViewHeight = 1200
+
+; Width: Fullscreen display mode width [Default: 16384 in 0 .. 16384]
+ScoreViewFSWidth = 1920
+
+; Height: Fullscreen display mode height [Default: 16384 in 0 .. 16384]
+ScoreViewFSHeight = 1200
+
+; Fullscreen Refresh Rate: Fullscreen display mode refresh rate [Default: 0.0 in 0.0 .. 1000.0]
+ScoreViewRefreshRate = 75.0
+
+; Color Depth: Fullscreen display mode color depth [Default: 32 in 0 .. 64]
+ScoreViewColorDepth = 32
+Priority.ScoreView = 2
+Priority.PUP = 3
+Priority.B2SLegacyDMD = 0
+
+
+
+Priority.B2S = 0
+[Topper]
+; Output Mode: Select between disabled, floating, or embedded in another window mode [Default: 'Disabled', 0='Disabled', 1='Floating', 2='Embedded in playfield']
+TopperOutput = 
+
+; Display: Display used for the Topper window [Default: '']
+TopperDisplay = 
+
+; Display Mode: Select between windowed or borderless fullscreen mode [Default: 'Windowed', 0='Windowed', 1='Borderless Fullscreen']
+TopperFullScreen = 
+
+; X Position: Horizontal position of the Topper window on the selected display [Default: 0 in 0 .. 16384]
+TopperWndX = 
+
+; Y Position: Vertical position of the Topper window on the selected display [Default: 0 in 0 .. 16384]
+TopperWndY = 
+
+; Width: Width of the Topper window [Default: 16384 in 0 .. 16384]
+TopperWidth = 
+
+; Height: Height of the Topper window [Default: 16384 in 0 .. 16384]
+TopperHeight = 
+
+; Width: Fullscreen display mode width for the Topper window [Default: 16384 in 0 .. 16384]
+TopperFSWidth = 
+
+; Height: Fullscreen display mode height for the Topper window [Default: 16384 in 0 .. 16384]
+TopperFSHeight = 
+
+; Fullscreen Refresh Rate: Fullscreen display mode refresh rate [Default: 0.0 in 0.0 .. 1000.0]
+TopperRefreshRate = 
+
+; Color Depth: Fullscreen display mode color depth [Default: 32 in 0 .. 64]
+TopperColorDepth = 
+Priority.PUP = 
+
+
+
+[PlayerVR]
+; Display: Display used for the VR Preview window [Default: '']
+PreviewDisplay = 
+
+; Display Mode: Select between windowed or borderless fullscreen mode [Default: 'Windowed', 0='Windowed', 1='Borderless Fullscreen']
+PreviewFullScreen = 
+
+; X Position: Horizontal position of the window on the selected display [Default: 0 in 0 .. 16384]
+PreviewWndX = 
+
+; Y Position: Vertical position of the window on the selected display [Default: 0 in 0 .. 16384]
+PreviewWndY = 
+
+; Width: Width of the window [Default: 16384 in 0 .. 16384]
+PreviewWidth = 
+
+; Height: Height of the window [Default: 16384 in 0 .. 16384]
+PreviewHeight = 
+
+; Width: Fullscreen display mode width [Default: 16384 in 0 .. 16384]
+PreviewFSWidth = 
+
+; Height: Fullscreen display mode height [Default: 16384 in 0 .. 16384]
+PreviewFSHeight = 
+
+; Fullscreen Refresh Rate: Fullscreen display mode refresh rate [Default: 0.0 in 0.0 .. 1000.0]
+PreviewRefreshRate = 
+
+; Color Depth: Fullscreen display mode color depth [Default: 32 in 0 .. 64]
+PreviewColorDepth = 
+
+; Enable VR: Ask to turn on VR [Default: 'Disabled', 0='Enabled', 1='Autodetect', 2='Disabled']
+AskToTurnOn = 
+
+; View orientation: VR view orientation [Default: 0.0 in -180.0 .. 180.0]
+Orientation = 
+
+; View Offset X: VR view X offset [Default: 0.0 in -100.0 .. 100.0]
+TableX = 
+
+; View Offset Y: VR view Y offset [Default: 0.0 in -100.0 .. 100.0]
+TableY = 
+
+; View Offset Z: VR view Z offset [Default: 0.0 in -100.0 .. 100.0]
+TableZ = 
+
+; Color Keyed Passthrough: Replace VR background by full black to allow color keyed passthrough (for example using Virtual Desktop, setting passthrough to sharp full black) [Default: 0]
+UsePassthroughColor = 
+
+; Shrink preview: Shrink VR preview [Default: 0]
+ShrinkPreview = 
+
+; Add Backglass: Add a default backglass display to the scene [Default: 0]
+AddBackglass = 
+
+; Cabinet Y Offset: Y offset to apply when using controller view centering [Default: 0.0 in -150.0 .. 50.0]
+ControllerCabYOffset = 
+
+; Lockbar size ratio: Lockbar size ratio to apply when using controller view centering [Default: 1.0 in 0.5 .. 2.0]
+ControllerLockbarScale = 
+
+; ResFactor:  [Default: 0.0]
+ResFactor = 
+
+
+
+[Input]
+; Devices: List of known devices [Default: '']
+Devices = Key;SDLJoy_0300a1eb8a2e00006f10000011010000_1
+
+; Nudge Sensor Count: Number of hardware nudge sensors defined [Default: 0 in 0 .. 100]
+NudgeSensorCount = 1
+
+; Plunger Sensor Count: Number of hardware plunger sensor defined [Default: 0 in 0 .. 100]
+PlungerSensorCount = 1
+Device.Key.Type = 1
+Device.Key.NoAutoLayout = 
+Device.Mouse.Type = 
+Device.Mouse.NoAutoLayout = 
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Type = 2
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.NoAutoLayout = 1
+Device.Key.Name = Keyboards
+Device.Mouse.Name = 
+Mapping.LeftFlipper = Key;225 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;514;o;-0.300000
+Mapping.RightFlipper = Key;229 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;517;o;-0.300000
+Mapping.LeftStagedFlipper = Key;225 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;514;o;0.300000
+Mapping.RightStagedFlipper = Key;229 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;517;o;0.300000
+Mapping.LeftMagna = Key;224 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;6
+Mapping.RightMagna = Key;228 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;7
+Mapping.UIUp = Key;224 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;258
+Mapping.UIDown = Key;228 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;259
+Mapping.UILeft = Key;225 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;256
+Mapping.UIRight = Key;229 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;257
+Mapping.LaunchBall = Key;40 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;0
+Mapping.LeftNudge = Key;29
+Mapping.RightNudge = Key;56
+Mapping.CenterNudge = Key;44
+Mapping.Tilt = Key;23
+Mapping.Credit1 = Key;34 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;4
+Mapping.Credit2 = Key;33
+Mapping.Credit3 = Key;32
+Mapping.Credit4 = Key;35
+Mapping.Start = Key;30 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;1
+Mapping.ExtraBall = Key;5
+Mapping.Lockbar = Key;226
+Mapping.Pause = Key;19
+Mapping.PerfOverlay = Key;68
+Mapping.ExitGame = Key;41
+Mapping.InGameUI = Key;69 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;10
+Mapping.VolumeDown = Key;45
+Mapping.VolumeUp = Key;46
+Mapping.ShowRules = 
+Mapping.SlamTilt = Key;74
+Mapping.CoinDoor = Key;77
+Mapping.Reset = Key;60
+Mapping.Service1 = Key;36 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;256
+Mapping.Service2 = Key;37 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;259
+Mapping.Service3 = Key;38 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;258
+Mapping.Service4 = Key;39 | SDLJoy_0300a1eb8a2e00006f10000011010000_1;257
+Mapping.Service5 = Key;35
+Mapping.Service6 = Key;75
+Mapping.Service7 = Key;45
+Mapping.Service8 = 
+Mapping.VRCenter = Key;93
+Mapping.VRUp = Key;96
+Mapping.VRDown = Key;90
+Mapping.VRFront = 
+Mapping.VRBack = 
+Mapping.GenTournament = Key;226 & Key;30
+Mapping.DebugBalls = Key;18
+Mapping.Debugger = Key;7
+Mapping.ToggleStereo = Key;67
+Mapping.Custom1 = 
+Mapping.Custom2 = 
+Mapping.Custom3 = 
+Mapping.Custom4 = 
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Name = L'atelier d'Arnoz DudesCab #1
+Mapping.Plunger0.Linear = 1
+Mapping.Plunger0.PosFilter = 0
+Mapping.Plunger0.Position = SDLJoy_0300a1eb8a2e00006f10000011010000_1;516;P;0.000000;1.000000;1.000000
+Mapping.Plunger0.Velocity = 
+Mapping.Nudge0.Type = 0
+Mapping.Nudge0.Strength = 1.0
+Mapping.Nudge0.CabWeight = 
+Mapping.Nudge0.X = SDLJoy_0300a1eb8a2e00006f10000011010000_1;512;P;0.000000;1.000000;1.000000
+Mapping.Nudge0.Y = SDLJoy_0300a1eb8a2e00006f10000011010000_1;513;P;0.000000;1.000000;1.000000
+Mapping.Nudge0.AccX = 
+Mapping.Nudge0.AccY = 
+Mapping.Nudge0.VelX = 
+Mapping.Nudge0.VelY = 
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element0 = 512;A;Left Stick X
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element1 = 513;A;Left Stick Y
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element2 = 514;A;Left Trigger
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element3 = 515;A;Right Stick X
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element4 = 516;A;Right Stick Y
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element5 = 517;A;Right Trigger
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element6 = 0;B;A
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element7 = 1;B;B
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element8 = 3;B;X
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element9 = 4;B;Y
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element10 = 10;B;Back
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element11 = 12;B;Guide
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element12 = 11;B;Start
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element13 = 13;B;Left Stick
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element14 = 14;B;Right Stick
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element15 = 6;B;Left Shoulder
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element16 = 7;B;Right Shoulder
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element17 = 258;B;DPad Up
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element18 = 259;B;DPad Down
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element19 = 256;B;DPad Left
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element20 = 257;B;DPad Right
+Device.SDLJoy_0300a1eb8a2e00006f10000011010000_1.Element21 = 
+
+
+
+[DefaultCamera]
+; View mode: Select between 'Legacy' (old rendering mode with visually incorrect stretchs), 'Camera' (classic camera, for desktop) and 'Window' (custom projection designed for cabinet users) rendering mode [Default: 'Camera', 0='Legacy', 1='Camera', 2='Window']
+DesktopMode = 
+
+; Look at: Relative point of playfield where the camera is looking at [Default: 25.0 in 0.0 .. 100.0]
+DesktopLookAt = 
+
+; Field Of View (overall scale): Global view scale (same as XYZ scale) [Default: 50.0 in 25.0 .. 90.0]
+DesktopFov = 
+
+; Table X Scale: Stretch the scene along the playfield width axis [Default: 1.0 in 0.5 .. 1.5]
+DesktopScaleX = 
+
+; Table Y Scale: Stretch the scene along the playfield height axis [Default: 1.0 in 0.5 .. 1.5]
+DesktopScaleY = 
+
+; Table Z Scale: Stretch the scene along the vertical axis (perpendicular to playfield) [Default: 1.0 in 0.5 .. 1.5]
+DesktopScaleZ = 
+
+; Camera X: View point width offset, in centimeters [Default: 0.0 in -30.0 .. 30.0]
+DesktopCamX = 
+
+; Camera Y: View point height offset, in centimeters [Default: 20.0 in -30.0 .. 100.0]
+DesktopCamY = 
+
+; Camera Z: View point vertical offset, in centimeters [Default: 70.0 in 10.0 .. 100.0]
+DesktopCamZ = 
+
+; Vertical Offset: Vertical offset of the virtual table behind the screen 'window' in centimeters [Default: 14.0 in -20.0 .. 50.0]
+DesktopViewVOfs = 
+
+; View mode: Select between 'Legacy' (old rendering mode with visually incorrect stretchs), 'Camera' (classic camera, for desktop) and 'Window' (custom projection designed for cabinet users) rendering mode [Default: 'Camera', 0='Legacy', 1='Camera', 2='Window']
+FSSMode = 
+
+; Look at: Relative point of playfield where the camera is looking at [Default: 50.0 in 0.0 .. 100.0]
+FSSLookAt = 
+
+; Field Of View (overall scale): Global view scale (same as XYZ scale) [Default: 77.0 in 25.0 .. 90.0]
+FSSFov = 
+
+; Table X Scale: Stretch the scene along the playfield width axis [Default: 1.0 in 0.5 .. 1.5]
+FSSScaleX = 
+
+; Table Y Scale: Stretch the scene along the playfield height axis [Default: 1.0 in 0.5 .. 1.5]
+FSSScaleY = 
+
+; Table Z Scale: Stretch the scene along the vertical axis (perpendicular to playfield) [Default: 1.0 in 0.5 .. 1.5]
+FSSScaleZ = 
+
+; Camera X: View point width offset, in centimeters [Default: 0.0 in -30.0 .. 30.0]
+FSSCamX = 
+
+; Camera Y: View point height offset, in centimeters [Default: 20.0 in -30.0 .. 100.0]
+FSSCamY = 
+
+; Camera Z: View point vertical offset, in centimeters [Default: 70.0 in 10.0 .. 100.0]
+FSSCamZ = 
+
+; Vertical Offset: Vertical offset of the virtual table behind the screen 'window' in centimeters [Default: 22.0 in -20.0 .. 50.0]
+FSSViewVOfs = 
+
+
+
+[TableOverride]
+; View mode: Select between 'Legacy' (old rendering mode with visually incorrect stretchs), 'Camera' (classic camera, for desktop) and 'Window' (custom projection designed for cabinet users) rendering mode [Default: 'Camera', 0='Legacy', 1='Camera', 2='Window']
+ViewDTMode = 
+
+; Look at: Relative point of playfield where the camera is looking at [Default: 25.0 in 0.0 .. 100.0]
+ViewDTLookAt = 
+
+; Field Of View (overall scale): Global view scale (same as XYZ scale) [Default: 50.0 in 25.0 .. 90.0]
+ViewDTFOV = 
+
+; Layback: Fake visual stretch of the table to give more depth [Default: 0.0 in -90.0 .. 90.0]
+ViewDTLayback = 
+
+; Table X Scale: Stretch the scene along the playfield width axis [Default: 1.0 in 0.5 .. 1.5]
+ViewDTScaleX = 
+
+; Table Y Scale: Stretch the scene along the playfield height axis [Default: 1.0 in 0.5 .. 1.5]
+ViewDTScaleY = 
+
+; Table Z Scale: Stretch the scene along the vertical axis (perpendicular to playfield) [Default: 1.0 in 0.5 .. 1.5]
+ViewDTScaleZ = 
+
+; Camera X: View point width offset [Default: 0.0 in -555.812866 .. 555.812866]
+ViewDTPlayerX = 
+
+; Camera Y: View point height offset [Default: 370.541931 in -1852.709595 .. 1852.709595]
+ViewDTPlayerY = 
+
+; Camera Z: View point vertical offset [Default: 1296.896729 in -1852.709595 .. 1852.709595]
+ViewDTPlayerZ = 
+
+; Horizontal Offset: Horizontal offset of the virtual table behind the screen 'window' [Default: 0.0 in -30.0 .. 30.0]
+ViewDTHOfs = 
+
+; Vertical Offset: Vertical offset of the virtual table behind the screen 'window' [Default: 0.0 in -20.0 .. 50.0]
+ViewDTVOfs = 
+
+; Window Top Z Ofs.: Distance between the 'window' (i.e. the screen) at the top of the playfield [Default: 0.0 in 0.0 .. 926.354797]
+ViewDTWindowTop = 
+
+; Window Bottom Z Ofs.: Distance between the 'window' (i.e. the screen) at the bottom of the playfield [Default: 0.0 in 0.0 .. 926.354797]
+ViewDTWindowBot = 
+
+; Viewport Rotation:  [Default: 0.0 in 0.0 .. 360.0 by 90.0 steps]
+ViewDTRotation = 
+
+; View mode: Select between 'Legacy' (old rendering mode with visually incorrect stretchs), 'Camera' (classic camera, for desktop) and 'Window' (custom projection designed for cabinet users) rendering mode [Default: 'Camera', 0='Legacy', 1='Camera', 2='Window']
+ViewFSSMode = 
+
+; Look at: Relative point of playfield where the camera is looking at [Default: 0.0 in 0.0 .. 100.0]
+ViewFSSLookAt = 
+
+; Field Of View (overall scale): Global view scale (same as XYZ scale) [Default: 25.0 in 25.0 .. 90.0]
+ViewFSSFOV = 
+
+; Layback: Fake visual stretch of the table to give more depth [Default: 0.0 in -90.0 .. 90.0]
+ViewFSSLayback = 
+
+; Table X Scale: Stretch the scene along the playfield width axis [Default: 1.0 in 0.5 .. 1.5]
+ViewFSSScaleX = 
+
+; Table Y Scale: Stretch the scene along the playfield height axis [Default: 1.0 in 0.5 .. 1.5]
+ViewFSSScaleY = 
+
+; Table Z Scale: Stretch the scene along the vertical axis (perpendicular to playfield) [Default: 1.0 in 0.5 .. 1.5]
+ViewFSSScaleZ = 
+
+; Camera X: View point width offset [Default: 0.0 in -555.812866 .. 555.812866]
+ViewFSSPlayerX = 
+
+; Camera Y: View point height offset [Default: 0.0 in -1852.709595 .. 1852.709595]
+ViewFSSPlayerY = 
+
+; Camera Z: View point vertical offsets [Default: 1296.896729 in -1852.709595 .. 1852.709595]
+ViewFSSPlayerZ = 
+
+; Horizontal Offset: Horizontal offset of the virtual table behind the screen 'window' [Default: 0.0 in -30.0 .. 30.0]
+ViewFSSHOfs = 
+
+; Vertical Offset: Vertical offset of the virtual table behind the screen 'window' [Default: 0.0 in -20.0 .. 50.0]
+ViewFSSVOfs = 
+
+; Window Top Z Ofs.: Distance between the 'window' (i.e. the screen) at the top of the playfield [Default: 0.0 in 0.0 .. 926.354797]
+ViewFSSWindowTop = 
+
+; Window Bottom Z Ofs.: Distance between the 'window' (i.e. the screen) at the bottom of the playfield [Default: 0.0 in 0.0 .. 926.354797]
+ViewFSSWindowBot = 
+
+; Viewport Rotation:  [Default: 0.0 in 0.0 .. 360.0 by 90.0 steps]
+ViewFSSRotation = 
+
+; View mode: Select between 'Legacy' (old rendering mode with visually incorrect stretchs), 'Camera' (classic camera, for desktop) and 'Window' (custom projection designed for cabinet users) rendering mode [Default: 'Window', 0='Legacy', 1='Camera', 2='Window']
+ViewCabMode = 
+
+; Look at: Relative point of playfield where the camera is looking at [Default: 0.0 in 0.0 .. 100.0]
+ViewCabLookAt = 
+
+; Field Of View (overall scale): Global view scale (same as XYZ scale) [Default: 25.0 in 25.0 .. 90.0]
+ViewCabFOV = 
+
+; Layback: Fake visual stretch of the table to give more depth [Default: 0.0 in 0.0 .. 90.0]
+ViewCabLayback = 
+
+; Table X Scale: Stretch the scene along the playfield width axis [Default: 1.0 in 0.5 .. 1.5]
+ViewCabScaleX = 
+
+; Table Y Scale: Stretch the scene along the playfield height axis [Default: 1.0 in 0.5 .. 1.5]
+ViewCabScaleY = 
+
+; Table Z Scale: Stretch the scene along the vertical axis (perpendicular to playfield) [Default: 1.0 in 0.5 .. 1.5]
+ViewCabScaleZ = 
+
+; Camera X: View point width offset [Default: 0.0 in -555.812866 .. 555.812866]
+ViewCabPlayerX = 
+
+; Camera Y: View point height offset [Default: 0.0 in -1852.709595 .. 1852.709595]
+ViewCabPlayerY = 
+
+; Camera Z: View point vertical offset [Default: 1296.896729 in -1852.709595 .. 1852.709595]
+ViewCabPlayerZ = 
+
+; Horizontal Offset: Horizontal offset of the virtual table behind the screen 'window' [Default: 0.0 in -30.0 .. 30.0]
+ViewCabHOfs = 
+
+; Vertical Offset: Vertical offset of the virtual table behind the screen 'window' [Default: 0.0 in -20.0 .. 50.0]
+ViewCabVOfs = 
+
+; Window Top Z Ofs.: Distance between the 'window' (i.e. the screen) at the top of the playfield [Default: 0.0 in 0.0 .. 926.354797]
+ViewCabWindowTop = 
+
+; Window Bottom Z Ofs.: Distance between the 'window' (i.e. the screen) at the bottom of the playfield [Default: 0.0 in 0.0 .. 926.354797]
+ViewCabWindowBot = 
+
+; Viewport Rotation:  [Default: 0.0 in 0.0 .. 360.0 by 90.0 steps]
+ViewCabRotation = 
+
+; Difficulty: Overall difficulty (affects slope, flipper size, ball trajectories scattering,...) [Default: 1.0 in 0.0 .. 1.0]
+Difficulty = 
+
+; Camera Exposure: Overall brightness scale for the rendered scene/table [Default: 1.0 in 0.0 .. 2.0]
+Exposure = 
+
+; Tonemapper: Colors too bright to be displayed by low dynamic range monitors need to be mapped into a normalized range. Different mappers come at different tradeoffs, depending on each tables setup/lighting. [Default: 'Reinhard', 0='Reinhard', 1='AgX', 2='Filmic', 3='Neutral', 4='AgX Punchy']
+ToneMapper = 
+
+
+
+[DMD]
+; Legacy Renderer: Use legacy DMD renderer [Default: 1]
+Profile1Legacy = 
+
+; Dot Tint: Color of lit dots [Default: 0X002D52FF in 0X00000000 .. 0X00FFFFFF]
+Profile1DotTint = 
+
+; Unlit Dot Tint: Color of unlit dots [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile1UnlitDotColor = 
+
+; Dot Brightness: Dot brightness level [Default: 25.0 in 0.001 .. 100.0]
+Profile1DotBrightness = 
+
+; Dot Size: Dot size [Default: 0.75 in 0.001 .. 1.0]
+Profile1DotSize = 
+
+; Dot Sharpness: Sharpness of the dots (from round to squares) [Default: 0.9 in 0.0 .. 1.0]
+Profile1DotSharpness = 
+
+; DMD Diffuse Glow: Glow of dots on the back of the DMD (between dots, against glass) [Default: 0.1 in 0.0 .. 10.0]
+Profile1DiffuseGlow = 
+
+; Legacy Renderer: Use legacy DMD renderer [Default: 0]
+Profile2Legacy = 
+
+; Dot Tint: Color of lit dots [Default: 0X002D52FF in 0X00000000 .. 0X00FFFFFF]
+Profile2DotTint = 
+
+; Unlit Dot Tint: Color of unlit dots [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile2UnlitDotColor = 
+
+; Dot Brightness: Dot brightness level [Default: 25.0 in 0.001 .. 100.0]
+Profile2DotBrightness = 
+
+; Dot Size: Dot size [Default: 0.6 in 0.001 .. 1.0]
+Profile2DotSize = 
+
+; Dot Sharpness: Sharpness of the dots (from round to squares) [Default: 0.9 in 0.0 .. 1.0]
+Profile2DotSharpness = 
+
+; DMD Diffuse Glow: Glow of dots on the back of the DMD (between dots, against glass) [Default: 0.1 in 0.0 .. 10.0]
+Profile2DiffuseGlow = 
+
+; Legacy Renderer: Use legacy DMD renderer [Default: 0]
+Profile3Legacy = 
+
+; Dot Tint: Color of lit dots [Default: 0X001523FF in 0X00000000 .. 0X00FFFFFF]
+Profile3DotTint = 
+
+; Unlit Dot Tint: Color of unlit dots [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile3UnlitDotColor = 
+
+; Dot Brightness: Dot brightness level [Default: 25.0 in 0.001 .. 100.0]
+Profile3DotBrightness = 
+
+; Dot Size: Dot size [Default: 0.75 in 0.001 .. 1.0]
+Profile3DotSize = 
+
+; Dot Sharpness: Sharpness of the dots (from round to squares) [Default: 0.9 in 0.0 .. 1.0]
+Profile3DotSharpness = 
+
+; DMD Diffuse Glow: Glow of dots on the back of the DMD (between dots, against glass) [Default: 0.1 in 0.0 .. 10.0]
+Profile3DiffuseGlow = 
+
+; Legacy Renderer: Use legacy DMD renderer [Default: 0]
+Profile4Legacy = 
+
+; Dot Tint: Color of lit dots [Default: 0X0023FF15 in 0X00000000 .. 0X00FFFFFF]
+Profile4DotTint = 
+
+; Unlit Dot Tint: Color of unlit dots [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile4UnlitDotColor = 
+
+; Dot Brightness: Dot brightness level [Default: 25.0 in 0.001 .. 100.0]
+Profile4DotBrightness = 
+
+; Dot Size: Dot size [Default: 0.75 in 0.001 .. 1.0]
+Profile4DotSize = 
+
+; Dot Sharpness: Sharpness of the dots (from round to squares) [Default: 0.9 in 0.0 .. 1.0]
+Profile4DotSharpness = 
+
+; DMD Diffuse Glow: Glow of dots on the back of the DMD (between dots, against glass) [Default: 0.1 in 0.0 .. 10.0]
+Profile4DiffuseGlow = 
+
+; Legacy Renderer: Use legacy DMD renderer [Default: 0]
+Profile5Legacy = 
+
+; Dot Tint: Color of lit dots [Default: 0X0023FFFF in 0X00000000 .. 0X00FFFFFF]
+Profile5DotTint = 
+
+; Unlit Dot Tint: Color of unlit dots [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile5UnlitDotColor = 
+
+; Dot Brightness: Dot brightness level [Default: 25.0 in 0.001 .. 100.0]
+Profile5DotBrightness = 
+
+; Dot Size: Dot size [Default: 0.75 in 0.001 .. 1.0]
+Profile5DotSize = 
+
+; Dot Sharpness: Sharpness of the dots (from round to squares) [Default: 0.9 in 0.0 .. 1.0]
+Profile5DotSharpness = 
+
+; DMD Diffuse Glow: Glow of dots on the back of the DMD (between dots, against glass) [Default: 0.1 in 0.0 .. 10.0]
+Profile5DiffuseGlow = 
+
+; Legacy Renderer: Use legacy DMD renderer [Default: 0]
+Profile6Legacy = 
+
+; Dot Tint: Color of lit dots [Default: 0X00FFFFFF in 0X00000000 .. 0X00FFFFFF]
+Profile6DotTint = 
+
+; Unlit Dot Tint: Color of unlit dots [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile6UnlitDotColor = 
+
+; Dot Brightness: Dot brightness level [Default: 25.0 in 0.001 .. 100.0]
+Profile6DotBrightness = 
+
+; Dot Size: Dot size [Default: 0.6 in 0.001 .. 1.0]
+Profile6DotSize = 
+
+; Dot Sharpness: Sharpness of the dots (from round to squares) [Default: 0.9 in 0.0 .. 1.0]
+Profile6DotSharpness = 
+
+; DMD Diffuse Glow: Glow of dots on the back of the DMD (between dots, against glass) [Default: 0.1 in 0.0 .. 10.0]
+Profile6DiffuseGlow = 
+
+; Legacy Renderer: Use legacy DMD renderer [Default: 0]
+Profile7Legacy = 
+
+; Dot Tint: Color of lit dots [Default: 0X00FFFFFF in 0X00000000 .. 0X00FFFFFF]
+Profile7DotTint = 
+
+; Unlit Dot Tint: Color of unlit dots [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile7UnlitDotColor = 
+
+; Dot Brightness: Dot brightness level [Default: 25.0 in 0.001 .. 100.0]
+Profile7DotBrightness = 
+
+; Dot Size: Dot size [Default: 0.75 in 0.001 .. 1.0]
+Profile7DotSize = 
+
+; Dot Sharpness: Sharpness of the dots (from round to squares) [Default: 0.9 in 0.0 .. 1.0]
+Profile7DotSharpness = 
+
+; DMD Diffuse Glow: Glow of dots on the back of the DMD (between dots, against glass) [Default: 0.1 in 0.0 .. 10.0]
+Profile7DiffuseGlow = 
+
+
+
+[Alpha]
+; Color: Color of lit segments [Default: 0X001E96FF in 0X00000000 .. 0X00FFFFFF]
+Profile1Color = 
+
+; Unlit Color: Color of unlit segments [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile1Unlit = 
+
+; Brightness: Brightness level [Default: 5.0 in 0.001 .. 100.0]
+Profile1Brightness = 
+
+; Diffuse Glow: Glow of segments on the back of the display (between segments, against glass) [Default: 1.0 in 0.0 .. 10.0]
+Profile1DiffuseGlow = 
+
+; Color: Color of lit segments [Default: 0X00FFEF3F in 0X00000000 .. 0X00FFFFFF]
+Profile2Color = 
+
+; Unlit Color: Color of unlit segments [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile2Unlit = 
+
+; Brightness: Brightness level [Default: 5.0 in 0.001 .. 100.0]
+Profile2Brightness = 
+
+; Diffuse Glow: Glow of segments on the back of the display (between segments, against glass) [Default: 1.0 in 0.0 .. 10.0]
+Profile2DiffuseGlow = 
+
+; Color: Color of lit segments [Default: 0X00ECFF48 in 0X00000000 .. 0X00FFFFFF]
+Profile3Color = 
+
+; Unlit Color: Color of unlit segments [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile3Unlit = 
+
+; Brightness: Brightness level [Default: 5.0 in 0.001 .. 100.0]
+Profile3Brightness = 
+
+; Diffuse Glow: Glow of segments on the back of the display (between segments, against glass) [Default: 1.0 in 0.0 .. 10.0]
+Profile3DiffuseGlow = 
+
+; Color: Color of lit segments [Default: 0X001523FF in 0X00000000 .. 0X00FFFFFF]
+Profile4Color = 
+
+; Unlit Color: Color of unlit segments [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile4Unlit = 
+
+; Brightness: Brightness level [Default: 5.0 in 0.001 .. 100.0]
+Profile4Brightness = 
+
+; Diffuse Glow: Glow of segments on the back of the display (between segments, against glass) [Default: 1.0 in 0.0 .. 10.0]
+Profile4DiffuseGlow = 
+
+; Color: Color of lit segments [Default: 0X0023FF15 in 0X00000000 .. 0X00FFFFFF]
+Profile5Color = 
+
+; Unlit Color: Color of unlit segments [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile5Unlit = 
+
+; Brightness: Brightness level [Default: 5.0 in 0.001 .. 100.0]
+Profile5Brightness = 
+
+; Diffuse Glow: Glow of segments on the back of the display (between segments, against glass) [Default: 1.0 in 0.0 .. 10.0]
+Profile5DiffuseGlow = 
+
+; Color: Color of lit segments [Default: 0X0023FFFF in 0X00000000 .. 0X00FFFFFF]
+Profile6Color = 
+
+; Unlit Color: Color of unlit segments [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile6Unlit = 
+
+; Brightness: Brightness level [Default: 5.0 in 0.001 .. 100.0]
+Profile6Brightness = 
+
+; Diffuse Glow: Glow of segments on the back of the display (between segments, against glass) [Default: 1.0 in 0.0 .. 10.0]
+Profile6DiffuseGlow = 
+
+; Color: Color of lit segments [Default: 0X00FFFFFF in 0X00000000 .. 0X00FFFFFF]
+Profile7Color = 
+
+; Unlit Color: Color of unlit segments [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile7Unlit = 
+
+; Brightness: Brightness level [Default: 5.0 in 0.001 .. 100.0]
+Profile7Brightness = 
+
+; Diffuse Glow: Glow of segments on the back of the display (between segments, against glass) [Default: 1.0 in 0.0 .. 10.0]
+Profile7DiffuseGlow = 
+
+; Color: Color of lit segments [Default: 0X00FFFFFF in 0X00000000 .. 0X00FFFFFF]
+Profile8Color = 
+
+; Unlit Color: Color of unlit segments [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+Profile8Unlit = 
+
+; Brightness: Brightness level [Default: 5.0 in 0.001 .. 100.0]
+Profile8Brightness = 
+
+; Diffuse Glow: Glow of segments on the back of the display (between segments, against glass) [Default: 1.0 in 0.0 .. 10.0]
+Profile8DiffuseGlow = 
+
+
+
+[RecentDir]
+; Import directory:  [Default: '']
+ImportDir = 
+
+; Table directory:  [Default: '']
+LoadDir = 
+
+; Font directory:  [Default: '']
+FontDir = 
+
+; Physics directory:  [Default: '']
+PhysicsDir = 
+
+; Image directory:  [Default: '']
+ImageDir = 
+
+; Material directory:  [Default: '']
+MaterialDir = 
+
+; Sound directory:  [Default: '']
+SoundDir = 
+
+; POV directory:  [Default: '']
+POVDir = 
+
+;  [Default: '']
+TableFileName0 = 
+
+;  [Default: '']
+TableFileName1 = 
+
+;  [Default: '']
+TableFileName2 = 
+
+;  [Default: '']
+TableFileName3 = 
+
+;  [Default: '']
+TableFileName4 = 
+
+;  [Default: '']
+TableFileName5 = 
+
+;  [Default: '']
+TableFileName6 = 
+
+;  [Default: '']
+TableFileName7 = 
+
+
+
+[Controller]
+; DOF Contactors: Hints the table script on how to handle contactor events, between sounds and direct output framework [Default: 'Both', 0='Sound FX', 1='DOF', 2='Both']
+DOFContactors = 2
+
+; DOF Knocker: Hints the table script on how to handle knocker events, between sounds and direct output framework [Default: 'Both', 0='Sound FX', 1='DOF', 2='Both']
+DOFKnocker = 
+
+; DOF Chimes: Hints the table script on how to handle chime events, between sounds and direct output framework [Default: 'Both', 0='Sound FX', 1='DOF', 2='Both']
+DOFChimes = 
+
+; DOF Bell: Hints the table script on how to handle bell events, between sounds and direct output framework [Default: 'Both', 0='Sound FX', 1='DOF', 2='Both']
+DOFBell = 
+
+; DOF Gear: Hints the table script on how to handle gear events, between sounds and direct output framework [Default: 'Both', 0='Sound FX', 1='DOF', 2='Both']
+DOFGear = 2
+
+; DOF Shaker: Hints the table script on how to handle shaker events, between sounds and direct output framework [Default: 'Both', 0='Sound FX', 1='DOF', 2='Both']
+DOFShaker = 1
+
+; DOF Flippers: Hints the table script on how to handle flipper events, between sounds and direct output framework [Default: 'Both', 0='Sound FX', 1='DOF', 2='Both']
+DOFFlippers = 1
+
+; DOF Targets: Hints the table script on how to handle target events, between sounds and direct output framework [Default: 'Both', 0='Sound FX', 1='DOF', 2='Both']
+DOFTargets = 
+
+; DOF Drop Targets: Hints the table script on how to handle drop target events, between sounds and direct output framework [Default: 'Both', 0='Sound FX', 1='DOF', 2='Both']
+DOFDropTargets = 
+
+; Disable B2S: Legacy 'Disable B2S' hints script to avoid using B2S controller. Only works with tables using 'controller.vbs' and not using plugins for backglass rendering [Default: 0]
+ForceDisableB2S = 
+
+
+
+[DefaultProps\Ball]
+; Ball Mass:  [Default: 1.0 in 0.1 .. 2.0]
+Mass = 
+
+; Ball Radius:  [Default: 25.0 in 0.1 .. 50.0]
+Radius = 
+
+; Force Reflection:  [Default: 0]
+ForceReflection = 
+
+; Decal Mode:  [Default: 0]
+; Modifié 2026-07-04 13:30:27 par PinCabOS fonction(VPX Ball / Cabinet)
+DecalMode = 1
+
+; Ball Image:  [Default: '']
+; Modifié 2026-07-04 13:30:27 par PinCabOS fonction(VPX Ball / Cabinet)
+Image = /opt/pincabos/media/images/balls/PCOSShinyBall1-20260607-053919.png
+
+; Decal Image:  [Default: '']
+; Modifié 2026-07-04 13:30:27 par PinCabOS fonction(VPX Ball / Cabinet)
+DecalImage = /opt/pincabos/media/images/balls/PCOSBallDec-20260607-054022.png
+
+; Bulb Reflection Intensity Scale:  [Default: 1.0 in 0.0 .. 10.0]
+BulbIntensityScale = 
+
+; Playfield Reflection Strength:  [Default: 1.0 in 0.0 .. 10.0]
+PFReflStrength = 
+
+; Color:  [Default: 0X00FFFFFF in 0X00000000 .. 0X00FFFFFF]
+Color = 
+
+; Use Sphere Mapping: Use sphere mapped 3D texturing [Default: 1]
+; Modifié 2026-07-04 13:30:27 par PinCabOS fonction(VPX Ball / Cabinet)
+SphereMap = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Bumper]
+; Radius:  [Default: 45.0]
+Radius = 
+
+; HeightScale:  [Default: 90.0]
+HeightScale = 
+
+; RingSpeed:  [Default: 0.5]
+RingSpeed = 
+
+; Orientation:  [Default: 0.0]
+Orientation = 
+
+; Threshold:  [Default: 1.0]
+Threshold = 
+
+; Surface:  [Default: '']
+Surface = 
+
+; CapVisible:  [Default: 1]
+CapVisible = 
+
+; BaseVisible:  [Default: 1]
+BaseVisible = 
+
+; RingVisible:  [Default: 1]
+RingVisible = 
+
+; SkirtVisible:  [Default: 1]
+SkirtVisible = 
+
+; HasHitEvent:  [Default: 1]
+HasHitEvent = 
+
+; Collidable:  [Default: 1]
+Collidable = 
+
+; Force:  [Default: 15.0]
+Force = 
+
+; Scatter:  [Default: 0.0]
+Scatter = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Decal]
+; Width:  [Default: 100.0]
+Width = 
+
+; Height:  [Default: 100.0]
+Height = 
+
+; Rotation:  [Default: 0.0]
+Rotation = 
+
+; Image:  [Default: '']
+Image = 
+
+; Surface:  [Default: '']
+Surface = 
+
+; DecalType:  [Default: 'DecalImage', 0='DecalText', 1='DecalImage']
+DecalType = 
+
+; Text:  [Default: '']
+Text = 
+
+; Sizing:  [Default: 'ManualSize', 0='AutoSize', 1='AutoWidth', 2='ManualSize']
+Sizing = 
+
+; Color:  [Default: 0]
+Color = 
+
+; VerticalText:  [Default: 0]
+VerticalText = 
+
+; FontSize:  [Default: 14.25]
+FontSize = 
+
+; FontName:  [Default: 'Arial Black']
+FontName = 
+
+; FontWeight:  [Default: 400 in 0 .. 900]
+FontWeight = 
+
+; FontCharSet:  [Default: 0]
+FontCharSet = 
+
+; FontItalic:  [Default: 0]
+FontItalic = 
+
+; FontUnderline:  [Default: 0]
+FontUnderline = 
+
+; FontStrikeThrough:  [Default: 0]
+FontStrikeThrough = 
+
+
+
+[DefaultProps\DispReel]
+; Image:  [Default: '']
+Image = 
+
+; Sound:  [Default: '']
+Sound = 
+
+; UseImageGrid:  [Default: 0]
+UseImageGrid = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; ImagesPerRow:  [Default: 1]
+ImagesPerRow = 
+
+; Transparent:  [Default: 0]
+Transparent = 
+
+; ReelCount:  [Default: 5]
+ReelCount = 
+
+; Width:  [Default: 30.0]
+Width = 
+
+; Height:  [Default: 40.0]
+Height = 
+
+; ReelSpacing:  [Default: 4.0]
+ReelSpacing = 
+
+; MotorSteps:  [Default: 2]
+MotorSteps = 
+
+; DigitRange:  [Default: 9]
+DigitRange = 
+
+; UpdateInterval:  [Default: 50]
+UpdateInterval = 
+
+; BackColor:  [Default: 0X00404040 in 0X00000000 .. 0X00FFFFFF]
+BackColor = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Flasher]
+; Height:  [Default: 50.0]
+Height = 
+
+; RotX:  [Default: 0.0]
+RotX = 
+
+; RotY:  [Default: 0.0]
+RotY = 
+
+; RotZ:  [Default: 0.0]
+RotZ = 
+
+; Color:  [Default: 0X0032C832 in 0X00000000 .. 0X00FFFFFF]
+Color = 
+
+; ImageA:  [Default: '']
+ImageA = 
+
+; ImageB:  [Default: '']
+ImageB = 
+
+; Opacity:  [Default: 100]
+Opacity = 
+
+; ModulateVsAdd:  [Default: 0.9]
+ModulateVsAdd = 
+
+; FilterAmount:  [Default: 100]
+FilterAmount = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; AddBlend:  [Default: 0]
+AddBlend = 
+
+; RenderMode:  [Default: 'FLASHER', 0='FLASHER', 1='DMD', 2='DISPLAY', 3='ALPHASEG']
+RenderMode = 
+
+; DisplayTexture:  [Default: 0]
+DisplayTexture = 
+
+; ImageMode:  [Default: 'ImageModeWrap', 0='ImageModeWorld', 1='ImageModeWrap']
+ImageMode = 
+
+; Filter:  [Default: 'Filter_Overlay', 0='Filter_None', 1='Filter_Additive', 2='Filter_Overlay', 3='Filter_Multiply', 4='Filter_Screen']
+Filter = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Flipper]
+; StartAngle:  [Default: 121.0]
+StartAngle = 
+
+; EndAngle:  [Default: 70.0]
+EndAngle = 
+
+; BaseRadius:  [Default: 21.5]
+BaseRadius = 
+
+; EndRadius:  [Default: 13.0]
+EndRadius = 
+
+; Length:  [Default: 130.0]
+Length = 
+
+; MaxDifLength:  [Default: 0.0]
+MaxDifLength = 
+
+; Color:  [Default: 16777215]
+Color = 
+
+; RubberColor:  [Default: 3289728]
+RubberColor = 
+
+; Surface:  [Default: '']
+Surface = 
+
+; Height:  [Default: 50.0]
+Height = 
+
+; RubberThickness:  [Default: 7.0]
+RubberThickness = 
+
+; RubberHeight:  [Default: 19.0]
+RubberHeight = 
+
+; RubberWidth:  [Default: 24.0]
+RubberWidth = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; Enabled:  [Default: 1]
+Enabled = 
+
+; Scatter:  [Default: 0.0]
+Scatter = 
+
+; Strength:  [Default: 2200.0]
+Strength = 
+
+; EOSTorque:  [Default: 0.75]
+EOSTorque = 
+
+; EOSTorqueAngle:  [Default: 6.0]
+EOSTorqueAngle = 
+
+; ReturnStrength:  [Default: 0.058]
+ReturnStrength = 
+
+; Mass:  [Default: 1.0]
+Mass = 
+
+; Elasticity:  [Default: 0.8]
+Elasticity = 
+
+; ElasticityFalloff:  [Default: 0.43]
+ElasticityFalloff = 
+
+; Friction:  [Default: 0.6]
+Friction = 
+
+; RampUp:  [Default: 3.0]
+RampUp = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Gate]
+; Length:  [Default: 100.0]
+Length = 
+
+; Height:  [Default: 50.0]
+Height = 
+
+; Rotation:  [Default: 0.0]
+Rotation = 
+
+; ShowBracket:  [Default: 1]
+ShowBracket = 
+
+; GateType:  [Default: 'GateWireW', 1='GateWireW', 2='GateWireRectangle', 3='GatePlate', 4='GateLongPlate']
+GateType = 
+
+; Collidable:  [Default: 1]
+Collidable = 
+
+; AngleMin:  [Default: 0.0]
+AngleMin = 
+
+; AngleMax:  [Default: 1.570796]
+AngleMax = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; Surface:  [Default: '']
+Surface = 
+
+; TwoWay:  [Default: 1]
+TwoWay = 
+
+; Elasticity:  [Default: 0.3]
+Elasticity = 
+
+; Friction:  [Default: 0.02]
+Friction = 
+
+; AntiFriction:  [Default: 0.985]
+AntiFriction = 
+
+; Scatter:  [Default: 0.0]
+Scatter = 
+
+; GravityFactor:  [Default: 0.25]
+GravityFactor = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\HitTarget]
+; LegacyMode:  [Default: 0]
+LegacyMode = 
+
+; HitEvent:  [Default: 1]
+HitEvent = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; IsDropped:  [Default: 0]
+IsDropped = 
+
+; Position_Z:  [Default: 0.0]
+Position_Z = 
+
+; ScaleX:  [Default: 32.0]
+ScaleX = 
+
+; ScaleY:  [Default: 32.0]
+ScaleY = 
+
+; ScaleZ:  [Default: 32.0]
+ScaleZ = 
+
+; Orientation:  [Default: 0.0]
+Orientation = 
+
+; Image:  [Default: '']
+Image = 
+
+; TargetType:  [Default: 'DropTargetSimple', 1='DropTargetBeveled', 2='DropTargetSimple', 3='HitTargetRound', 4='HitTargetRectangle', 5='HitFatTargetRectangle', 6='HitFatTargetSquare', 7='DropTargetFlatSimple', 8='HitFatTargetSlim', 9='HitTargetSlim']
+TargetType = 
+
+; HitThreshold:  [Default: 2.0]
+HitThreshold = 
+
+; DropSpeed:  [Default: 0.2]
+DropSpeed = 
+
+; Collidable:  [Default: 1]
+Collidable = 
+
+; DisableLighting:  [Default: 0.0]
+DisableLighting = 
+
+; DisableLightingBelow:  [Default: 1.0]
+DisableLightingBelow = 
+
+; RaiseDelay:  [Default: 100]
+RaiseDelay = 
+
+; Elasticity:  [Default: 0.35]
+Elasticity = 
+
+; ElasticityFalloff:  [Default: 0.5]
+ElasticityFalloff = 
+
+; Friction:  [Default: 0.2]
+Friction = 
+
+; Scatter:  [Default: 5.0]
+Scatter = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Kicker]
+; Radius:  [Default: 25.0]
+Radius = 
+
+; Enabled:  [Default: 1]
+Enabled = 
+
+; HitAccuracy:  [Default: 0.5]
+HitAccuracy = 
+
+; HitHeight:  [Default: 35.0]
+HitHeight = 
+
+; Orientation:  [Default: 0.0]
+Orientation = 
+
+; Surface:  [Default: '']
+Surface = 
+
+; KickerType:  [Default: 'KickerHole', 0='KickerInvisible', 1='KickerHole', 2='KickerCup', 3='KickerHoleSimple', 4='KickerWilliams', 5='KickerGottlieb', 6='KickerCup2']
+KickerType = 
+
+; FallThrough:  [Default: 0]
+FallThrough = 
+
+; Legacy:  [Default: 1]
+Legacy = 
+
+; Scatter:  [Default: 0.0]
+Scatter = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Light]
+; Falloff:  [Default: 50.0]
+Falloff = 
+
+; FalloffPower:  [Default: 2.0]
+FalloffPower = 
+
+; LightState:  [Default: 0.0]
+LightState = 
+
+; Color:  [Default: 0X0057A9FF in 0X00000000 .. 0X00FFFFFF]
+Color = 
+
+; ColorFull:  [Default: 0X0057A9FF in 0X00000000 .. 0X00FFFFFF]
+ColorFull = 
+
+; OffImage:  [Default: '']
+OffImage = 
+
+; BlinkPattern:  [Default: '10']
+BlinkPattern = 
+
+; BlinkInterval:  [Default: 125]
+BlinkInterval = 
+
+; Intensity:  [Default: 10.0]
+Intensity = 
+
+; TransmissionScale:  [Default: 0.0]
+TransmissionScale = 
+
+; Surface:  [Default: '']
+Surface = 
+
+; FadeSpeedUp:  [Default: 0.05]
+FadeSpeedUp = 
+
+; FadeSpeedDown:  [Default: 0.02]
+FadeSpeedDown = 
+
+; Bulb:  [Default: 0]
+Bulb = 
+
+; ImageMode:  [Default: 0]
+ImageMode = 
+
+; ShowBulbMesh:  [Default: 0]
+ShowBulbMesh = 
+
+; StaticBulbMesh:  [Default: 1]
+StaticBulbMesh = 
+
+; ShowReflectionOnBall:  [Default: 1]
+ShowReflectionOnBall = 
+
+; ScaleBulbMesh:  [Default: 20.0]
+ScaleBulbMesh = 
+
+; BulbModulateVsAdd:  [Default: 0.9]
+BulbModulateVsAdd = 
+
+; BulbHaloHeight:  [Default: 28.0]
+BulbHaloHeight = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\LightSeq]
+; UpdateInterval:  [Default: 25]
+UpdateInterval = 
+
+; Collection:  [Default: '']
+Collection = 
+
+; CenterX:  [Default: 500.0]
+CenterX = 
+
+; CenterY:  [Default: 1000.0]
+CenterY = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\PartGroup]
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Plunger]
+; Height:  [Default: 20.0]
+Height = 
+
+; Width:  [Default: 25.0]
+Width = 
+
+; ZAdjust:  [Default: 0.0]
+ZAdjust = 
+
+; Stroke:  [Default: 80.0]
+Stroke = 
+
+; PullSpeed:  [Default: 5.0]
+PullSpeed = 
+
+; PlungerType:  [Default: 'PlungerTypeModern', 1='PlungerTypeModern', 2='PlungerTypeFlat', 3='PlungerTypeCustom']
+PlungerType = 
+
+; Color:  [Default: 0X004C4C4C in 0X00000000 .. 0X00FFFFFF]
+Color = 
+
+; Image:  [Default: '']
+Image = 
+
+; AnimFrames:  [Default: 1]
+AnimFrames = 
+
+; Surface:  [Default: '']
+Surface = 
+
+; MechPlunger:  [Default: 0]
+MechPlunger = 
+
+; AutoPlunger:  [Default: 0]
+AutoPlunger = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; CustomTipShape:  [Default: '0 .34; 2 .6; 3 .64; 5 .7; 7 .84; 8 .88; 9 .9; 11 .92; 14 .92; 39 .84']
+CustomTipShape = 
+
+; CustomRodDiam:  [Default: 0.6]
+CustomRodDiam = 
+
+; CustomRingGap:  [Default: 2.0]
+CustomRingGap = 
+
+; CustomRingDiam:  [Default: 0.94]
+CustomRingDiam = 
+
+; CustomRingWidth:  [Default: 3.0]
+CustomRingWidth = 
+
+; CustomSpringDiam:  [Default: 0.77]
+CustomSpringDiam = 
+
+; CustomSpringGauge:  [Default: 1.38]
+CustomSpringGauge = 
+
+; CustomSpringLoops:  [Default: 8.0]
+CustomSpringLoops = 
+
+; CustomSpringEndLoops:  [Default: 2.5]
+CustomSpringEndLoops = 
+
+; ReleaseSpeed:  [Default: 80.0]
+ReleaseSpeed = 
+
+; MechStrength:  [Default: 85.0]
+MechStrength = 
+
+; ParkPosition:  [Default: 0.166667]
+ParkPosition = 
+
+; ScatterVelocity:  [Default: 0.0]
+ScatterVelocity = 
+
+; MomentumXfer:  [Default: 1.0]
+MomentumXfer = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Primitive]
+; Sides:  [Default: 4 in 0 .. 100]
+Sides = 
+
+; SideColor:  [Default: 0X00969696 in 0X00000000 .. 0X00FFFFFF]
+SideColor = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; StaticRendering:  [Default: 1]
+StaticRendering = 
+
+; DrawTexturesInside:  [Default: 0]
+DrawTexturesInside = 
+
+; Position_Z:  [Default: 0.0]
+Position_Z = 
+
+; Size_X:  [Default: 100.0]
+Size_X = 
+
+; Size_Y:  [Default: 100.0]
+Size_Y = 
+
+; Size_Z:  [Default: 100.0]
+Size_Z = 
+
+; RotAndTra0:  [Default: 0.0]
+RotAndTra0 = 
+
+; RotAndTra1:  [Default: 0.0]
+RotAndTra1 = 
+
+; RotAndTra2:  [Default: 0.0]
+RotAndTra2 = 
+
+; RotAndTra3:  [Default: 0.0]
+RotAndTra3 = 
+
+; RotAndTra4:  [Default: 0.0]
+RotAndTra4 = 
+
+; RotAndTra5:  [Default: 0.0]
+RotAndTra5 = 
+
+; RotAndTra6:  [Default: 0.0]
+RotAndTra6 = 
+
+; RotAndTra7:  [Default: 0.0]
+RotAndTra7 = 
+
+; RotAndTra8:  [Default: 0.0]
+RotAndTra8 = 
+
+; Image:  [Default: '']
+Image = 
+
+; NormalMap:  [Default: '']
+NormalMap = 
+
+; HitEvent:  [Default: 0]
+HitEvent = 
+
+; HitThreshold:  [Default: 2.0]
+HitThreshold = 
+
+; Opacity:  [Default: 100.0]
+Opacity = 
+
+; AddBlend:  [Default: 0]
+AddBlend = 
+
+; DepthMask:  [Default: 1]
+DepthMask = 
+
+; Color:  [Default: 0X00FFFFFF in 0X00000000 .. 0X00FFFFFF]
+Color = 
+
+; EdgeFactorUI:  [Default: 0.25]
+EdgeFactorUI = 
+
+; CollisionReductionFactor:  [Default: 0.0]
+CollisionReductionFactor = 
+
+; Collidable:  [Default: 1]
+Collidable = 
+
+; IsToy:  [Default: 0]
+IsToy = 
+
+; DisableLighting:  [Default: 0.0]
+DisableLighting = 
+
+; DisableLightingBelow:  [Default: 1.0]
+DisableLightingBelow = 
+
+; BackfacesEnabled:  [Default: 0]
+BackfacesEnabled = 
+
+; DisplayTexture:  [Default: 0]
+DisplayTexture = 
+
+; ObjectSpaceNormalMap:  [Default: 0]
+ObjectSpaceNormalMap = 
+
+; Elasticity:  [Default: 0.3]
+Elasticity = 
+
+; ElasticityFalloff:  [Default: 0.5]
+ElasticityFalloff = 
+
+; Friction:  [Default: 0.3]
+Friction = 
+
+; Scatter:  [Default: 0.0]
+Scatter = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Ramp]
+; Length:  [Default: 400.0]
+Length = 
+
+; HeightBottom:  [Default: 0.0]
+HeightBottom = 
+
+; HeightTop:  [Default: 50.0]
+HeightTop = 
+
+; WidthBottom:  [Default: 75.0]
+WidthBottom = 
+
+; WidthTop:  [Default: 60.0]
+WidthTop = 
+
+; RampType:  [Default: 'RampTypeFlat', 0='RampTypeFlat', 1='RampType4Wire', 2='RampType2Wire', 3='RampType3WireLeft', 4='RampType3WireRight', 5='RampType1Wire']
+RampType = 
+
+; Image:  [Default: '']
+Image = 
+
+; ImageMode:  [Default: 'ImageModeWorld', 0='ImageModeWorld', 1='ImageModeWrap']
+ImageMode = 
+
+; ImageWalls:  [Default: 1]
+ImageWalls = 
+
+; LeftWallHeight:  [Default: 62.0]
+LeftWallHeight = 
+
+; RightWallHeight:  [Default: 62.0]
+RightWallHeight = 
+
+; LeftWallHeightVisible:  [Default: 30.0]
+LeftWallHeightVisible = 
+
+; RightWallHeightVisible:  [Default: 30.0]
+RightWallHeightVisible = 
+
+; HitEvent:  [Default: 0]
+HitEvent = 
+
+; HitThreshold:  [Default: 2.0]
+HitThreshold = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; Collidable:  [Default: 1]
+Collidable = 
+
+; WireDiameter:  [Default: 8.0]
+WireDiameter = 
+
+; WireDistanceX:  [Default: 38.0]
+WireDistanceX = 
+
+; WireDistanceY:  [Default: 88.0]
+WireDistanceY = 
+
+; Elasticity:  [Default: 0.3]
+Elasticity = 
+
+; Friction:  [Default: 0.3]
+Friction = 
+
+; Scatter:  [Default: 0.0]
+Scatter = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Rubber]
+; HitHeight:  [Default: 25.0]
+HitHeight = 
+
+; Height:  [Default: 25.0]
+Height = 
+
+; Thickness:  [Default: 8]
+Thickness = 
+
+; Image:  [Default: '']
+Image = 
+
+; HitEvent:  [Default: 0]
+HitEvent = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; Collidable:  [Default: 1]
+Collidable = 
+
+; EnableStaticRendering:  [Default: 1]
+EnableStaticRendering = 
+
+; EnableShowInEditor:  [Default: 0]
+EnableShowInEditor = 
+
+; RotX:  [Default: 0.0]
+RotX = 
+
+; RotY:  [Default: 0.0]
+RotY = 
+
+; RotZ:  [Default: 0.0]
+RotZ = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Elasticity:  [Default: 0.8]
+Elasticity = 
+
+; ElasticityFalloff:  [Default: 0.3]
+ElasticityFalloff = 
+
+; Friction:  [Default: 0.6]
+Friction = 
+
+; Scatter:  [Default: 5.0]
+Scatter = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Spinner]
+; Length:  [Default: 80.0]
+Length = 
+
+; Rotation:  [Default: 0.0]
+Rotation = 
+
+; ShowBracket:  [Default: 1]
+ShowBracket = 
+
+; Height:  [Default: 60.0]
+Height = 
+
+; AngleMax:  [Default: 0.0]
+AngleMax = 
+
+; AngleMin:  [Default: 0.3]
+AngleMin = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; Image:  [Default: '']
+Image = 
+
+; Surface:  [Default: '']
+Surface = 
+
+; Elasticity:  [Default: 0.3]
+Elasticity = 
+
+; AntiFriction:  [Default: 0.9879]
+AntiFriction = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Wall]
+; Width:  [Default: 50.0]
+Width = 
+
+; Length:  [Default: 50.0]
+Length = 
+
+; Elasticity:  [Default: 0.3]
+Elasticity = 
+
+; ElasticityFallOff:  [Default: 0.0]
+ElasticityFallOff = 
+
+; Friction:  [Default: 0.3]
+Friction = 
+
+; Scatter:  [Default: 0.0]
+Scatter = 
+
+; HitEvent:  [Default: 0]
+HitEvent = 
+
+; HitThreshold:  [Default: 2.0]
+HitThreshold = 
+
+; SlingshotThreshold:  [Default: 0.0]
+SlingshotThreshold = 
+
+; TopImage:  [Default: '']
+TopImage = 
+
+; SideImage:  [Default: '']
+SideImage = 
+
+; Droppable:  [Default: 0]
+Droppable = 
+
+; Flipbook:  [Default: 0]
+Flipbook = 
+
+; IsBottomSolid:  [Default: 0]
+IsBottomSolid = 
+
+; HeightBottom:  [Default: 0.0]
+HeightBottom = 
+
+; HeightTop:  [Default: 50.0]
+HeightTop = 
+
+; DisplayTexture:  [Default: 1]
+DisplayTexture = 
+
+; SlingshotForce:  [Default: 80.0]
+SlingshotForce = 
+
+; SlingshotAnimation:  [Default: 1]
+SlingshotAnimation = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; SideVisible:  [Default: 1]
+SideVisible = 
+
+; Collidable:  [Default: 1]
+Collidable = 
+
+; DisableLighting:  [Default: 0.0]
+DisableLighting = 
+
+; DisableLightingBelow:  [Default: 1.0]
+DisableLightingBelow = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Target]
+; Width:  [Default: 50.0]
+Width = 
+
+; Length:  [Default: 50.0]
+Length = 
+
+; Elasticity:  [Default: 0.3]
+Elasticity = 
+
+; ElasticityFallOff:  [Default: 0.0]
+ElasticityFallOff = 
+
+; Friction:  [Default: 0.3]
+Friction = 
+
+; Scatter:  [Default: 0.0]
+Scatter = 
+
+; HitEvent:  [Default: 0]
+HitEvent = 
+
+; HitThreshold:  [Default: 2.0]
+HitThreshold = 
+
+; SlingshotThreshold:  [Default: 0.0]
+SlingshotThreshold = 
+
+; TopImage:  [Default: '']
+TopImage = 
+
+; SideImage:  [Default: '']
+SideImage = 
+
+; Droppable:  [Default: 0]
+Droppable = 
+
+; Flipbook:  [Default: 0]
+Flipbook = 
+
+; IsBottomSolid:  [Default: 0]
+IsBottomSolid = 
+
+; HeightBottom:  [Default: 0.0]
+HeightBottom = 
+
+; HeightTop:  [Default: 50.0]
+HeightTop = 
+
+; DisplayTexture:  [Default: 1]
+DisplayTexture = 
+
+; SlingshotForce:  [Default: 80.0]
+SlingshotForce = 
+
+; SlingshotAnimation:  [Default: 1]
+SlingshotAnimation = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; SideVisible:  [Default: 1]
+SideVisible = 
+
+; Collidable:  [Default: 1]
+Collidable = 
+
+; DisableLighting:  [Default: 0.0]
+DisableLighting = 
+
+; DisableLightingBelow:  [Default: 1.0]
+DisableLightingBelow = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Textbox]
+; Width:  [Default: 100.0]
+Width = 
+
+; Height:  [Default: 50.0]
+Height = 
+
+; BackColor:  [Default: 0]
+BackColor = 
+
+; FontColor:  [Default: 16777215]
+FontColor = 
+
+; IntensityScale:  [Default: 1.0]
+IntensityScale = 
+
+; TextAlignment:  [Default: 'TextAlignRight', 0='TextAlignLeft', 1='TextAlignCenter', 2='TextAlignRight']
+TextAlignment = 
+
+; Transparent:  [Default: 0]
+Transparent = 
+
+; DMD:  [Default: 0]
+DMD = 
+
+; Text:  [Default: '']
+Text = 
+
+; FontSize:  [Default: 14.25]
+FontSize = 
+
+; FontName:  [Default: 'Arial Black']
+FontName = 
+
+; FontWeight:  [Default: 400 in 0 .. 900]
+FontWeight = 
+
+; FontCharSet:  [Default: 0]
+FontCharSet = 
+
+; FontItalic:  [Default: 0]
+FontItalic = 
+
+; FontUnderline:  [Default: 0]
+FontUnderline = 
+
+; FontStrikeThrough:  [Default: 0]
+FontStrikeThrough = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Timer]
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[DefaultProps\Trigger]
+; Radius:  [Default: 25.0]
+Radius = 
+
+; Rotation:  [Default: 0.0]
+Rotation = 
+
+; WireThickness:  [Default: 0.0]
+WireThickness = 
+
+; ScaleX:  [Default: 1.0]
+ScaleX = 
+
+; ScaleY:  [Default: 1.0]
+ScaleY = 
+
+; Enabled:  [Default: 1]
+Enabled = 
+
+; Visible:  [Default: 1]
+Visible = 
+
+; HitHeight:  [Default: 50.0]
+HitHeight = 
+
+; Shape:  [Default: 'Wire A', 0='None', 1='Wire A', 2='Star', 3='Wire B', 4='Button', 5='Wire C', 6='Wire D', 7='Inder']
+Shape = 
+
+; Surface:  [Default: '']
+Surface = 
+
+; AnimSpeed:  [Default: 1.0]
+AnimSpeed = 
+
+; Reflection Enabled:  [Default: 1]
+ReflectionEnabled = 
+
+; Timer Enabled:  [Default: 0]
+TimerEnabled = 
+
+; Timer Interval:  [Default: 100 in -2 .. 10000]
+TimerInterval = 
+
+
+
+[Plugin.AltSound]
+; Enable: Enable legacy AltSound plugin [Default: 1]
+Enable = 
+Folder = 
+
+
+
+[Plugin.B2SLegacy]
+; Enable: Enable legacy B2S plugin [Default: 1]
+Enable = 1
+
+
+
+B2SHideGrill = 1
+B2SHideB2SDMD = 1
+
+B2SHideB2SBackglass = 0
+B2SHideDMD = 0
+B2SDualMode = 0
+BackglassDMDOverlay = 0
+BackglassDMDAutoPos = 0
+BackglassDMDX = 
+BackglassDMDY = 
+BackglassDMDW = 
+BackglassDMDH = 
+ScoreViewDMDOverlay = 0
+ScoreViewDMDAutoPos = 0
+ScoreviewDMDX = 
+ScoreviewDMDY = 
+ScoreViewDMDW = 
+ScoreViewDMDH = 
+B2SBackglassWidth = 1920
+B2SBackglassHeight = 1080
+B2SDMDWidth = 1920
+B2SDMDHeight = 1200
+B2SDMDFlipY = 0
+B2SWindows = 1
+B2SBackglassX = 3840
+B2SBackglassY = 0
+B2SDMDX = 5760
+B2SDMDY = 0
+B2SBackglassRotation = 0
+B2SDMDRotation = 0
+ScoreviewDMDWidth = 
+ScoreviewDMDHeight = 
+ScoreViewDMDX = 
+ScoreViewDMDY = 
+[Plugin.DMDUtil]
+; Enable: Enable DMDUtil plugin [Default: 0]
+Enable = 
+
+
+
+[Plugin.FlexDMD]
+; Enable: Enable FlexDMD plugin [Default: 1]
+Enable = 
+
+
+
+[Plugin.PinMAME]
+; Enable: Enable PinMAME plugin [Default: 1]
+Enable = 1
+Sound = 
+Cheat = 
+PinMAMEPath = 
+
+
+
+[Plugin.PUP]
+; Enable: Enable PinUp player plugin [Default: 1]
+Enable = 
+BGPadLeft = 
+BGPadRight = 
+BGPadTop = 
+BGPadBottom = 
+SVPadLeft = 
+SVPadRight = 
+SVPadTop = 
+SVPadBottom = 
+TopperPadLeft = 
+TopperPadRight = 
+TopperPadTop = 
+TopperPadBottom = 
+MainVol = 
+PUPFolder = 
+
+
+
+[Plugin.ScoreView]
+; Enable: Enable ScoreView player plugin [Default: 1]
+Enable = 1
+LayoutFolder = 
+
+
+
+[Plugin.Serum]
+; Enable: Enable Serum plugin [Default: 1]
+Enable = 
+SerumPath = 
+
+
+
+[Plugin.WMP]
+; Enable: Enable WMP plugin [Default: 1]
+Enable = 
+
+
+
+[Plugin.VNI]
+; Enable: Enable VNI plugin [Default: 1]
+Enable = 
+VniPath = 
+
+
+
+[Standalone]
+; Override rendering mode:  [Default: 'Default', -1='Default', 0='2D', 1='Stereo 3D', 2='VR']
+RenderingModeOverride = 
+
+; Haptics:  [Default: 0]
+Haptics = 
+
+; Reset Log on Play:  [Default: 0]
+ResetLogOnPlay = 
+
+
+
+PinMAMEWindow = 1
+PinMAMEWindowX = 6152
+PinMAMEWindowY = 573
+PinMAMEWindowWidth = 512
+PinMAMEWindowHeight = 128
+FlexDMDWindow = 1
+FlexDMDWindowX = 6152
+FlexDMDWindowY = 573
+FlexDMDWindowWidth = 512
+FlexDMDWindowHeight = 128
+[CVEdit]
+; BackGroundColor:  [Default: 0X00FFFFFF in 0X00000000 .. 0X00FFFFFF]
+BackGroundColor = 
+
+; BackGroundSelectionColor:  [Default: 0X00C0C0C0 in 0X00000000 .. 0X00FFFFFF]
+BackGroundSelectionColor = 
+
+; DisplayAutoComplete:  [Default: 1]
+DisplayAutoComplete = 
+
+; DisplayAutoCompleteAfter:  [Default: 1]
+DisplayAutoCompleteAfter = 
+
+; DwellDisplay:  [Default: 1]
+DwellDisplay = 
+
+; DwellHelp:  [Default: 1]
+DwellHelp = 
+
+; DwellDisplayTime:  [Default: 700]
+DwellDisplayTime = 
+
+; EverythingElse:  [Default: 1]
+EverythingElse = 
+
+; EverythingElse_color:  [Default: 0X00000000 in 0X00000000 .. 0X00FFFFFF]
+EverythingElse_color = 
+
+; EverythingElse_FontPointSize:  [Default: 10]
+EverythingElse_FontPointSize = 
+
+; EverythingElse_Font:  [Default: '']
+EverythingElse_Font = 
+
+; EverythingElse_FontWeight:  [Default: 400 in 0 .. 1000]
+EverythingElse_FontWeight = 
+
+; EverythingElse_FontItalic:  [Default: 0]
+EverythingElse_FontItalic = 
+
+; EverythingElse_FontUnderline:  [Default: 0]
+EverythingElse_FontUnderline = 
+
+; EverythingElse:  [Default: 0]
+EverythingElse_FontStrike = 
+
+; Default:  [Default: 1]
+Default = 
+
+; Default_color:  [Default: 0X00000000 in 0X00000000 .. 0X00FFFFFF]
+Default_color = 
+
+; Default_FontPointSize:  [Default: 10]
+Default_FontPointSize = 
+
+; Default_Font:  [Default: '']
+Default_Font = 
+
+; Default_FontWeight:  [Default: 400 in 0 .. 1000]
+Default_FontWeight = 
+
+; Default_FontItalic:  [Default: 0]
+Default_FontItalic = 
+
+; Default_FontUnderline:  [Default: 0]
+Default_FontUnderline = 
+
+; Default:  [Default: 0]
+Default_FontStrike = 
+
+; ShowVBS:  [Default: 1]
+ShowVBS = 
+
+; ShowVBS_color:  [Default: 0X00000000 in 0X00000000 .. 0X00FFFFFF]
+ShowVBS_color = 
+
+; ShowVBS_FontPointSize:  [Default: 10]
+ShowVBS_FontPointSize = 
+
+; ShowVBS_Font:  [Default: '']
+ShowVBS_Font = 
+
+; ShowVBS_FontWeight:  [Default: 400 in 0 .. 1000]
+ShowVBS_FontWeight = 
+
+; ShowVBS_FontItalic:  [Default: 0]
+ShowVBS_FontItalic = 
+
+; ShowVBS_FontUnderline:  [Default: 0]
+ShowVBS_FontUnderline = 
+
+; ShowVBS:  [Default: 0]
+ShowVBS_FontStrike = 
+
+; ShowComponents:  [Default: 1]
+ShowComponents = 
+
+; ShowComponents_color:  [Default: 0X00000000 in 0X00000000 .. 0X00FFFFFF]
+ShowComponents_color = 
+
+; ShowComponents_FontPointSize:  [Default: 10]
+ShowComponents_FontPointSize = 
+
+; ShowComponents_Font:  [Default: '']
+ShowComponents_Font = 
+
+; ShowComponents_FontWeight:  [Default: 400 in 0 .. 1000]
+ShowComponents_FontWeight = 
+
+; ShowComponents_FontItalic:  [Default: 0]
+ShowComponents_FontItalic = 
+
+; ShowComponents_FontUnderline:  [Default: 0]
+ShowComponents_FontUnderline = 
+
+; ShowComponents:  [Default: 0]
+ShowComponents_FontStrike = 
+
+; ShowSubs:  [Default: 1]
+ShowSubs = 
+
+; ShowSubs_color:  [Default: 0X00780078 in 0X00000000 .. 0X00FFFFFF]
+ShowSubs_color = 
+
+; ShowSubs_FontPointSize:  [Default: 10]
+ShowSubs_FontPointSize = 
+
+; ShowSubs_Font:  [Default: '']
+ShowSubs_Font = 
+
+; ShowSubs_FontWeight:  [Default: 400 in 0 .. 1000]
+ShowSubs_FontWeight = 
+
+; ShowSubs_FontItalic:  [Default: 0]
+ShowSubs_FontItalic = 
+
+; ShowSubs_FontUnderline:  [Default: 0]
+ShowSubs_FontUnderline = 
+
+; ShowSubs:  [Default: 0]
+ShowSubs_FontStrike = 
+
+; ShowRemarks:  [Default: 1]
+ShowRemarks = 
+
+; ShowRemarks_color:  [Default: 0X00007800 in 0X00000000 .. 0X00FFFFFF]
+ShowRemarks_color = 
+
+; ShowRemarks_FontPointSize:  [Default: 10]
+ShowRemarks_FontPointSize = 
+
+; ShowRemarks_Font:  [Default: '']
+ShowRemarks_Font = 
+
+; ShowRemarks_FontWeight:  [Default: 400 in 0 .. 1000]
+ShowRemarks_FontWeight = 
+
+; ShowRemarks_FontItalic:  [Default: 0]
+ShowRemarks_FontItalic = 
+
+; ShowRemarks_FontUnderline:  [Default: 0]
+ShowRemarks_FontUnderline = 
+
+; ShowRemarks:  [Default: 0]
+ShowRemarks_FontStrike = 
+
+; ShowLiterals:  [Default: 1]
+ShowLiterals = 
+
+; ShowLiterals_color:  [Default: 0X00A07800 in 0X00000000 .. 0X00FFFFFF]
+ShowLiterals_color = 
+
+; ShowLiterals_FontPointSize:  [Default: 10]
+ShowLiterals_FontPointSize = 
+
+; ShowLiterals_Font:  [Default: '']
+ShowLiterals_Font = 
+
+; ShowLiterals_FontWeight:  [Default: 400 in 0 .. 1000]
+ShowLiterals_FontWeight = 
+
+; ShowLiterals_FontItalic:  [Default: 0]
+ShowLiterals_FontItalic = 
+
+; ShowLiterals_FontUnderline:  [Default: 0]
+ShowLiterals_FontUnderline = 
+
+; ShowLiterals:  [Default: 0]
+ShowLiterals_FontStrike = 
+
+; ShowVPcore:  [Default: 1]
+ShowVPcore = 
+
+; ShowVPcore_color:  [Default: 0X003C32C8 in 0X00000000 .. 0X00FFFFFF]
+ShowVPcore_color = 
+
+; ShowVPcore_FontPointSize:  [Default: 10]
+ShowVPcore_FontPointSize = 
+
+; ShowVPcore_Font:  [Default: '']
+ShowVPcore_Font = 
+
+; ShowVPcore_FontWeight:  [Default: 400 in 0 .. 1000]
+ShowVPcore_FontWeight = 
+
+; ShowVPcore_FontItalic:  [Default: 0]
+ShowVPcore_FontItalic = 
+
+; ShowVPcore_FontUnderline:  [Default: 0]
+ShowVPcore_FontUnderline = 
+
+; ShowVPcore:  [Default: 0]
+ShowVPcore_FontStrike = 
+
+
+[Plugin.DOF]
+Enable = 1
+
+[Plugin.vpx]
+Enable = 
+
+[Plugin.UpscaleDMD]
+Enable = 
+UpscaleMode = 
+
+[Plugin.HelloWorld]
+Enable = 1
+
+[Plugin.RemoteControl]
+Enable = 
+
+[Plugin.AlphaDMD]
+Enable = 
+
+[Plugin.B2S]
+Enable = 0
+
+; Active le DMD propre au fichier B2S sur le FullDMD
+B2SHideB2SDMD = 0
+[Plugin.HelloScript]
+Enable = 
+
+[TableOption]
+Select_LUT = 
+Desktop_DMD = 
+Cabinet_Rails = 
+Side_Blades = 
+ChangeColorBall = 
+FlipGlow_Active = 
+Mode_Easy = 
+VR_Room = 
+Cheat_StoryLevel = 
+Rails_Visible = 
+Outlane_Difficulty = 
+Color_Saturation = 
+Refractions = 
+Flasher_Lamps_Brightness = 
+Insert_Lamps_Brightness = 
+Mech_Volume = 
+Ball_Roll_Volume = 
+Ramp_Roll_Volume = 
+DMD_Type = 
+FlexDMD_Quality = 
+Balls_per_Game = 
+Free_Play = 
+Anaglyph_3D_Headtracking_Fix = 
+Dynamic_Ballshadow = 
+Reflections = 
+Light_Reflections = 
+Insert_Reflections = 
+Backglass_Reflections = 
+Refraction_Probe_Setting = 
+Apron = 
+Apron_Decal = 
+Instruction_Cards = 
+Flipperbats = 
+GI = 
+Custom_Jets = 
+Custom_Spotlights = 
+Legends_Cabinet = 
+Rails_Cabinet_Mode = 
+Scratched_Glass = 
+VR_Room__VR_FSS_ = 
+Speaker_DMD_Panel__VR_FSS_ = 
+Speaker_DMD_Details__VR_FSS_ = 
+Tournament_Topper__VR_FSS_ = 
+VR_Minimal_Room_Logo___Poster__VR_FSS_ = 
+Playfield_Reflections = 
+Balls_Per_Game = 
+Remove_Trust_Post = 
+Slow_PC = 
+Flaming_Balls = 
+Rules_on_Playfield = 
+Rules_on_Backglass = 
+Left_Outlane_Difficulty = 
+Right_Outlane_Difficulty = 
+LUT_Image = 
+Song_Volume = 
+
+[PinCabOs.FullDMD]
+enabled = 1
+screen_id = 2
+x = 8
+y = 124
+width = 1016
+height = 619
+geometry = 1016x619+8+124
+updated_at = 2026-06-30T21:18:08.196080+00:00
+
+[PinCabOs.Screens]
+fulldmd_id = 2
+fulldmd_x = 8
+fulldmd_y = 124
+fulldmd_width = 1016
+fulldmd_height = 619
+fulldmd_geometry = 1016x619+8+124
+
+dmd_id = 2
+dmd_x = 6152
+dmd_y = 573
+dmd_width = 512
+dmd_height = 128
+dmd_geometry = 512x128+6152+573
+[PinCabOs.DMD]
+enabled = 1
+screen_id = 2
+x = 6152
+y = 573
+width = 512
+height = 128
+geometry = 512x128+6152+573
+updated_at = 2026-06-30T21:18:08.196080+00:00
+
+[Displays]
+fulldmdscreenid = 2
+fulldmdx = 8
+fulldmdy = 124
+fulldmdwidth = 1016
+fulldmdheight = 619
+dmdscreenid = 2
+dmdx = 6152
+dmdy = 573
+dmdwidth = 512
+dmdheight = 128
+dmdwindowoverride = 8,124,1016,619
+
+tablescreenid = 0
+bgscreenid = 1
+cabmode = true
+tableorientation = landscape
+tablerotation = 0
+[Keyboard]
+; Modifié 2026-07-02 01:14:57 par PinCabOS fonction(Inputs Commander Keyboard)
+LeftFlipperKey = 42
+RightFlipperKey = 54
+StagedLeftFlipperKey = 
+StagedRightFlipperKey = 
+LeftMagnaSave = 29
+RightMagnaSave = 97
+LeftMagnaSave2 = 
+RightMagnaSave2 = 
+StartGameKey = 2
+StartGameKey2 = 
+AddCreditKey = 6
+AddCreditKey2 = 
+PlungerKey = 28
+LockbarKey = 
+ExitGameKey = 1
+PauseKey = 
+LeftTiltKey = 44
+RightTiltKey = 53
+CenterTiltKey = 57
+MechanicalTilt = 20
+VolumeUpKey = 
+VolumeDownKey = 
+CoinDoorKey = 
+ServiceCancelKey = 
+ServiceDownKey = 
+ServiceUpKey = 
+ServiceEnterKey = 
+BuyInKey = 
+FrameCountKey = 
+DebuggerKey = 
+Enable3DKey = 
+JoyCustom1Key = 22
+JoyCustom2Key = 23
+JoyCustom3Key = 24
+JoyCustom4Key = 25
+
+; Modifié 2026-07-04 13:30:27 par PinCabOS fonction(VPX Ball / Cabinet)
+[PinCabOs.BallCabinet]
+managed_by = PinCabOS VPX Ball / Cabinet
+; Modifié 2026-07-04 13:30:27 par PinCabOS fonction(VPX Ball / Cabinet)
+updated_at = 2026-07-04T13:30:27

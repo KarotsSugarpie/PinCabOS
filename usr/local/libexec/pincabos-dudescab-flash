@@ -1,0 +1,480 @@
+#!/usr/bin/env python3
+"""Root-only, argument-validating DudesCab UF2 flash helper for PinCabOS."""
+
+from __future__ import annotations
+
+import fcntl
+import json
+import os
+import pwd
+import re
+import shutil
+import signal
+import struct
+import subprocess
+import sys
+import termios
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+FIRMWARE_ROOT = Path("/opt/pincabos/config/dudescab/firmwares").resolve()
+RUN_ROOT = Path("/run/pincabos-dudescab").resolve()
+JOBS_ROOT = RUN_ROOT / "jobs"
+LOCK_FILE = RUN_ROOT / "flash.lock"
+SERVICE = "pincabos-vpinfe.service"
+UF2_NAME = "dude_firmware.uf2"
+
+MAGIC0 = 0x0A324655
+MAGIC1 = 0x9E5D5157
+MAGIC_END = 0x0AB16F30
+
+job_id = ""
+job_dir: Path | None = None
+state_path: Path | None = None
+log_path: Path | None = None
+vpinfe_was_active = False
+mounted_by_us: Path | None = None
+PINBALL_UID = pwd.getpwnam("pinball").pw_uid
+PINBALL_GID = pwd.getpwnam("pinball").pw_gid
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def log(message: str) -> None:
+    line = f"[{now()}] {message}"
+    print(line, flush=True)
+    if log_path is not None:
+        with log_path.open("a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+
+def write_state(status: str, stage: str, progress: int, detail: str, **extra: Any) -> None:
+    if state_path is None:
+        return
+    previous: dict[str, Any] = {}
+    try:
+        previous = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    previous.update(
+        {
+            "job_id": job_id,
+            "status": status,
+            "stage": stage,
+            "progress": int(progress),
+            "detail": detail,
+            "updated_at": now(),
+            **extra,
+        }
+    )
+    temporary = state_path.with_name("state.json.tmp")
+    temporary.write_text(json.dumps(previous, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.chmod(temporary, 0o660)
+    os.replace(temporary, state_path)
+
+
+def run(command: list[str], timeout: int = 30, check: bool = False) -> subprocess.CompletedProcess[str]:
+    log("$ " + " ".join(command))
+    result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
+    output = (result.stdout + "\n" + result.stderr).strip()
+    if output:
+        for line in output.splitlines():
+            log("  " + line)
+    if check and result.returncode != 0:
+        raise RuntimeError(f"Commande échouée ({result.returncode}): {' '.join(command)}")
+    return result
+
+
+def validate_args() -> Path:
+    if os.geteuid() != 0:
+        raise RuntimeError("Ce helper doit être exécuté par root.")
+    if len(sys.argv) != 3:
+        raise RuntimeError("Usage: pincabos-dudescab-flash JOB_ID FIRMWARE.uf2")
+    candidate_job = sys.argv[1]
+    if not re.fullmatch(r"[a-f0-9]{32}", candidate_job):
+        raise RuntimeError("JOB_ID invalide.")
+    firmware = Path(sys.argv[2]).resolve(strict=True)
+    try:
+        firmware.relative_to(FIRMWARE_ROOT)
+    except ValueError as exc:
+        raise RuntimeError("Firmware hors du dossier autorisé.") from exc
+    if not firmware.is_file() or firmware.suffix.lower() != ".uf2":
+        raise RuntimeError("Firmware UF2 invalide.")
+    return firmware
+
+
+def validate_uf2(path: Path) -> None:
+    size = path.stat().st_size
+    if size <= 0 or size > 64 * 1024 * 1024 or size % 512:
+        raise RuntimeError("Taille UF2 invalide.")
+    blocks = size // 512
+    with path.open("rb") as handle:
+        for index in sorted({0, blocks // 2, blocks - 1}):
+            handle.seek(index * 512)
+            block = handle.read(512)
+            if len(block) != 512:
+                raise RuntimeError(f"Bloc UF2 {index} incomplet.")
+            if (
+                int.from_bytes(block[0:4], "little") != MAGIC0
+                or int.from_bytes(block[4:8], "little") != MAGIC1
+                or int.from_bytes(block[508:512], "little") != MAGIC_END
+            ):
+                raise RuntimeError(f"Signature UF2 invalide au bloc {index}.")
+
+
+def disk_preflight() -> None:
+    for path, minimum_mb in (("/", 200), ("/run", 20)):
+        usage = shutil.disk_usage(path)
+        stat = os.statvfs(path)
+        free_mb = usage.free / 1024 / 1024
+        if free_mb < minimum_mb:
+            raise RuntimeError(f"Espace libre insuffisant sur {path}: {free_mb:.1f} Mio.")
+        if stat.f_favail < 100:
+            raise RuntimeError(f"Inodes libres insuffisants sur {path}: {stat.f_favail}.")
+
+
+def vpx_processes() -> list[str]:
+    result = subprocess.run(["/usr/bin/pgrep", "-af", r"VPinballX|/opt/pincabos/bin/vpx\.sh"], capture_output=True, text=True)
+    rows = []
+    for line in result.stdout.splitlines():
+        if not line.strip() or "pincabos-dudescab-flash" in line:
+            continue
+        rows.append(line.strip())
+    return rows
+
+
+def usb_connected() -> bool:
+    for node in Path("/sys/bus/usb/devices").glob("*"):
+        try:
+            if (node / "idVendor").read_text().strip().lower() == "2e8a" and (node / "idProduct").read_text().strip().lower() == "106f":
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def hid_count() -> int:
+    count = 0
+    for node in Path("/sys/class/hidraw").glob("hidraw*"):
+        try:
+            text = (node / "device/uevent").read_text(errors="ignore").upper()
+        except Exception:
+            text = ""
+        if "00002E8A:0000106F" in text or "2E8A:106F" in text:
+            count += 1
+    return count
+
+
+def tty_is_dudescab(path: Path) -> bool:
+    try:
+        name = path.resolve().name
+    except Exception:
+        name = path.name
+    node = Path("/sys/class/tty") / name / "device"
+    try:
+        node = node.resolve()
+    except Exception:
+        return False
+    for ancestor in [node, *node.parents]:
+        if ancestor == Path("/"):
+            break
+        try:
+            vendor = (ancestor / "idVendor").read_text().strip().lower()
+            product = (ancestor / "idProduct").read_text().strip().lower()
+        except Exception:
+            continue
+        if vendor == "2e8a" and product == "106f":
+            return True
+    return False
+
+
+def serial_candidates() -> list[Path]:
+    values: list[Path] = []
+    direct = Path("/dev/dudescab")
+    if direct.exists() or direct.is_symlink():
+        values.append(direct)
+    by_id = Path("/dev/serial/by-id")
+    if by_id.exists():
+        for path in sorted(by_id.iterdir()):
+            lower = path.name.lower()
+            if "dudescab" in lower or "atelier" in lower or "arnoz" in lower:
+                values.append(path)
+    values.extend(
+        path for path in sorted(Path("/dev").glob("ttyACM*"))
+        if tty_is_dudescab(path)
+    )
+    seen = set()
+    result = []
+    for value in values:
+        try:
+            key = str(value.resolve())
+        except Exception:
+            key = str(value)
+        if key not in seen:
+            seen.add(key)
+            result.append(value)
+    return result
+
+
+def touch_1200(path: Path) -> None:
+    log(f"Passage bootloader à 1200 bauds via {path}")
+    fd = os.open(path, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+    try:
+        attrs = termios.tcgetattr(fd)
+        attrs[4] = termios.B1200
+        attrs[5] = termios.B1200
+        attrs[2] |= termios.CLOCAL | termios.CREAD
+        termios.tcsetattr(fd, termios.TCSANOW, attrs)
+        try:
+            tiocm_dtr = getattr(termios, "TIOCM_DTR", 0x002)
+            tiocmbis = getattr(termios, "TIOCMBIS", 0x5416)
+            tiocmbic = getattr(termios, "TIOCMBIC", 0x5417)
+            mask = struct.pack("I", tiocm_dtr)
+            fcntl.ioctl(fd, tiocmbis, mask)
+            time.sleep(0.15)
+            fcntl.ioctl(fd, tiocmbic, mask)
+        except Exception as exc:
+            log(f"Note DTR: {exc}")
+        time.sleep(0.25)
+    finally:
+        os.close(fd)
+
+
+def lsblk() -> list[dict[str, Any]]:
+    result = subprocess.run(
+        ["/usr/bin/lsblk", "-J", "-b", "-o", "NAME,PATH,TYPE,FSTYPE,LABEL,MOUNTPOINTS,TRAN,MODEL,VENDOR,SERIAL"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    if result.returncode != 0:
+        return []
+    try:
+        raw = json.loads(result.stdout)
+    except Exception:
+        return []
+    rows: list[dict[str, Any]] = []
+    def walk(items):
+        for item in items or []:
+            rows.append(item)
+            walk(item.get("children"))
+    walk(raw.get("blockdevices"))
+    return rows
+
+
+def select_boot_block() -> tuple[Path | None, Path | None]:
+    for item in lsblk():
+        path = Path(str(item.get("path") or ""))
+        if not str(path).startswith("/dev/"):
+            continue
+        label = str(item.get("label") or "").upper()
+        model = str(item.get("model") or "").upper()
+        vendor = str(item.get("vendor") or "").upper()
+        fstype = str(item.get("fstype") or "").lower()
+        transport = str(item.get("tran") or "").lower()
+        mountpoints = [x for x in (item.get("mountpoints") or []) if x]
+        likely = label in {"RPI-RP2", "RP2350", "DUDESCAB", "DUDESBOOT"} or "RP2" in model or "RP2040" in model or "RPI-RP2" in model
+        if not likely:
+            continue
+        if transport and transport != "usb":
+            continue
+        if fstype and fstype not in {"vfat", "fat", "fat32"}:
+            continue
+        if mountpoints:
+            mountpoint = Path(mountpoints[0])
+            marker = mountpoint / "INFO_UF2.TXT"
+            if marker.exists() or likely:
+                return path, mountpoint
+        return path, None
+    return None, None
+
+
+def wait_boot_volume(timeout: int = 30) -> tuple[Path | None, Path]:
+    global mounted_by_us
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        block, mountpoint = select_boot_block()
+        if mountpoint and mountpoint.exists():
+            log(f"Volume UF2 monté détecté: {mountpoint}")
+            return block, mountpoint
+        if block and block.exists():
+            mountpoint = RUN_ROOT / f"mount-{job_id}"
+            mountpoint.mkdir(parents=True, exist_ok=True)
+            result = run(["/usr/bin/mount", "-o", "rw,sync", str(block), str(mountpoint)], timeout=15)
+            if result.returncode == 0:
+                mounted_by_us = mountpoint
+                log(f"Volume UF2 monté par PinCabOS: {block} -> {mountpoint}")
+                return block, mountpoint
+        time.sleep(0.5)
+    raise RuntimeError("Le volume bootloader UF2 n'est pas apparu dans le délai.")
+
+
+def copy_firmware(firmware: Path, mountpoint: Path) -> None:
+    target = mountpoint / UF2_NAME
+    log(f"Copie du firmware vers {target}")
+    with firmware.open("rb") as source, target.open("wb") as destination:
+        shutil.copyfileobj(source, destination, 1024 * 1024)
+        destination.flush()
+        os.fsync(destination.fileno())
+    try:
+        directory_fd = os.open(mountpoint, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    except Exception as exc:
+        log(f"Note fsync dossier: {exc}")
+    run(["/usr/bin/sync"], timeout=20, check=True)
+
+
+def wait_reconnect(timeout: int = 50) -> tuple[int, Path]:
+    deadline = time.monotonic() + timeout
+    last = ""
+    while time.monotonic() < deadline:
+        usb = usb_connected()
+        hid = hid_count()
+        serial = next((p for p in serial_candidates() if p.exists()), None)
+        current = f"usb={usb} hid={hid} serial={serial or '-'}"
+        if current != last:
+            log("Reconnexion: " + current)
+            last = current
+        if usb and hid >= 1 and serial is not None:
+            return hid, serial
+        time.sleep(0.75)
+    raise RuntimeError("Le DudesCab ne s'est pas reconnecté en USB/HID/série dans le délai.")
+
+
+def restore_service() -> None:
+    global vpinfe_was_active
+    if vpinfe_was_active:
+        try:
+            run(["/usr/bin/systemctl", "start", SERVICE], timeout=30, check=False)
+        except Exception as exc:
+            log(f"Restauration VPinFE échouée: {exc}")
+        vpinfe_was_active = False
+
+
+def cleanup_mount() -> None:
+    global mounted_by_us
+    if mounted_by_us is not None:
+        try:
+            if subprocess.run(["/usr/bin/mountpoint", "-q", str(mounted_by_us)]).returncode == 0:
+                run(["/usr/bin/umount", str(mounted_by_us)], timeout=15, check=False)
+            mounted_by_us.rmdir()
+        except Exception as exc:
+            log(f"Nettoyage montage: {exc}")
+        mounted_by_us = None
+
+
+def main() -> int:
+    global job_id, job_dir, state_path, log_path, vpinfe_was_active
+    firmware = validate_args()
+    job_id = sys.argv[1]
+    job_dir = (JOBS_ROOT / job_id).resolve()
+    try:
+        job_dir.relative_to(JOBS_ROOT.resolve())
+    except ValueError as exc:
+        raise RuntimeError("Dossier de tâche refusé.") from exc
+    if not job_dir.is_dir():
+        raise RuntimeError("Dossier de tâche absent.")
+    state_path = job_dir / "state.json"
+    log_path = job_dir / "flash.log"
+    os.chown(job_dir, PINBALL_UID, PINBALL_GID)
+    os.chmod(job_dir, 0o770)
+    log_path.touch(exist_ok=True)
+    os.chown(log_path, PINBALL_UID, PINBALL_GID)
+    os.chmod(log_path, 0o660)
+
+    LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lock_handle = LOCK_FILE.open("w")
+    try:
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as exc:
+        raise RuntimeError("Un autre flash DudesCab est déjà en cours.") from exc
+
+    try:
+        write_state("running", "preflight", 5, "Validation du firmware et du système.")
+        log(f"Firmware: {firmware}")
+        validate_uf2(firmware)
+        disk_preflight()
+        running = vpx_processes()
+        if running:
+            raise RuntimeError("VPX est en jeu: " + " | ".join(running))
+        if not usb_connected():
+            raise RuntimeError("DudesCab 2e8a:106f non détecté.")
+
+        vpinfe_was_active = subprocess.run(["/usr/bin/systemctl", "is-active", "--quiet", SERVICE]).returncode == 0
+        if vpinfe_was_active:
+            write_state("running", "stop-dof", 12, "Arrêt temporaire de VPinFE/DOF.")
+            run(["/usr/bin/systemctl", "stop", SERVICE], timeout=30, check=True)
+
+        serial = next((p for p in serial_candidates() if p.exists()), None)
+        if serial is None:
+            raise RuntimeError("Aucun port série DudesCab trouvé.")
+
+        write_state("running", "bootloader", 22, "Passage du DudesCab en mode bootloader UF2.")
+        touch_1200(serial)
+        time.sleep(0.8)
+
+        write_state("running", "wait-uf2", 35, "Attente du volume bootloader UF2.")
+        _, mountpoint = wait_boot_volume(35)
+
+        write_state("running", "copy", 55, f"Copie de {UF2_NAME}.")
+        copy_firmware(firmware, mountpoint)
+
+        write_state("running", "reboot", 72, "Firmware copié; attente du redémarrage de la carte.")
+        time.sleep(1.0)
+        cleanup_mount()
+
+        write_state("running", "reconnect", 82, "Attente de la reconnexion USB/HID/série.")
+        hid, serial_after = wait_reconnect(55)
+
+        write_state("running", "restore", 94, "Restauration de VPinFE/DOF.")
+        restore_service()
+        write_state(
+            "go",
+            "complete",
+            100,
+            "Firmware copié et reconnexion DudesCab validée. La lecture de version HID sera ajoutée après validation du protocole exact.",
+            hid_count=hid,
+            serial=str(serial_after),
+            completed_at=now(),
+        )
+        log("GO: copie UF2 et reconnexion matérielle validées.")
+        return 0
+    except Exception as exc:
+        log(f"NOGO: {type(exc).__name__}: {exc}")
+        write_state("nogo", "failed", 100, f"{type(exc).__name__}: {exc}", completed_at=now())
+        return 1
+    finally:
+        cleanup_mount()
+        restore_service()
+        try:
+            if state_path and state_path.exists():
+                os.chown(state_path, PINBALL_UID, PINBALL_GID)
+                os.chmod(state_path, 0o660)
+        except Exception:
+            pass
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+        lock_handle.close()
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except Exception as exc:
+        try:
+            if state_path is not None:
+                write_state("nogo", "failed", 100, f"{type(exc).__name__}: {exc}", completed_at=now())
+            log(f"NOGO fatal: {type(exc).__name__}: {exc}")
+        except Exception:
+            pass
+        print(f"NOGO: {type(exc).__name__}: {exc}", file=sys.stderr)
+        raise SystemExit(1)

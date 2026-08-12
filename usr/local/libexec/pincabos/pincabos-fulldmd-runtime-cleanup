@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import os
+import shutil
+import time
+from pathlib import Path
+
+
+ROOT = Path("/var/tmp/pincabos-fulldmd-background")
+MAXIMUM_BYTES = 512 * 1024 * 1024
+TARGET_BYTES = 256 * 1024 * 1024
+STALE_SECONDS = 60 * 60
+
+
+def path_size(path: Path) -> int:
+    if path.is_symlink():
+        return 0
+
+    if path.is_file():
+        try:
+            return path.stat().st_size
+        except OSError:
+            return 0
+
+    total = 0
+
+    try:
+        for directory, _, filenames in os.walk(
+            path,
+            followlinks=False,
+        ):
+            directory_path = Path(directory)
+
+            for filename in filenames:
+                file_path = directory_path / filename
+
+                try:
+                    if not file_path.is_symlink():
+                        total += file_path.stat().st_size
+                except OSError:
+                    continue
+    except OSError:
+        pass
+
+    return total
+
+
+def active_profile_directories() -> set[Path]:
+    active: set[Path] = set()
+    resolved_root = ROOT.resolve(strict=False)
+
+    proc = Path("/proc")
+
+    for process_directory in proc.iterdir():
+        if not process_directory.name.isdigit():
+            continue
+
+        cmdline = process_directory / "cmdline"
+
+        try:
+            arguments = [
+                item.decode("utf-8", errors="ignore")
+                for item in cmdline.read_bytes().split(b"\0")
+                if item
+            ]
+        except (OSError, PermissionError):
+            continue
+
+        for index, argument in enumerate(arguments):
+            profile_text: str | None = None
+
+            if argument.startswith("--user-data-dir="):
+                profile_text = argument.split("=", 1)[1]
+
+            elif argument == "--user-data-dir" and index + 1 < len(arguments):
+                profile_text = arguments[index + 1]
+
+            if not profile_text:
+                continue
+
+            profile = Path(profile_text).resolve(strict=False)
+
+            try:
+                relative = profile.relative_to(resolved_root)
+            except ValueError:
+                continue
+
+            if relative.parts:
+                active.add(ROOT / relative.parts[0])
+
+    return active
+
+
+def remove_entry(path: Path) -> None:
+    try:
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink(missing_ok=True)
+
+        print(f"SUPPRIMÉ : {path}")
+
+    except OSError as error:
+        print(f"AVERTISSEMENT : impossible de supprimer {path}: {error}")
+
+
+ROOT.mkdir(parents=True, exist_ok=True)
+
+try:
+    os.chown(ROOT, 1000, 1000)
+    os.chmod(ROOT, 0o750)
+except OSError:
+    pass
+
+active = active_profile_directories()
+now = time.time()
+
+entries = []
+
+for entry in ROOT.iterdir():
+    try:
+        modified = entry.stat().st_mtime
+    except OSError:
+        modified = now
+
+    entries.append(
+        {
+            "path": entry,
+            "modified": modified,
+            "size": path_size(entry),
+            "active": entry in active,
+        }
+    )
+
+total_before = sum(item["size"] for item in entries)
+
+# Nettoyage normal : profils inactifs depuis plus d’une heure.
+for item in entries:
+    if item["active"]:
+        continue
+
+    if now - item["modified"] >= STALE_SECONDS:
+        remove_entry(item["path"])
+
+# Nouvelle mesure après le nettoyage normal.
+entries = []
+
+for entry in ROOT.iterdir():
+    try:
+        modified = entry.stat().st_mtime
+    except OSError:
+        modified = now
+
+    entries.append(
+        {
+            "path": entry,
+            "modified": modified,
+            "size": path_size(entry),
+            "active": entry in active,
+        }
+    )
+
+current_total = sum(item["size"] for item in entries)
+
+# Protection dure : si le runtime dépasse 512 Mo, les profils inactifs
+# les plus anciens sont supprimés jusqu’à revenir sous 256 Mo.
+if current_total > MAXIMUM_BYTES:
+    inactive = sorted(
+        (
+            item
+            for item in entries
+            if not item["active"]
+        ),
+        key=lambda item: item["modified"],
+    )
+
+    for item in inactive:
+        remove_entry(item["path"])
+        current_total -= item["size"]
+
+        if current_total <= TARGET_BYTES:
+            break
+
+final_total = sum(
+    path_size(entry)
+    for entry in ROOT.iterdir()
+)
+
+print(
+    "Runtime FullDMD : "
+    f"avant={total_before} octets, "
+    f"après={final_total} octets, "
+    f"profils actifs={len(active)}"
+)

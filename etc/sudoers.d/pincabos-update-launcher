@@ -1,0 +1,4 @@
+# PinCabOs-File created by Karots Sugarpie
+# PinCabOS update launcher hors cgroup WebApp
+pinball ALL=(root) NOPASSWD: /opt/pincabos/scripts/pincabos-update-launch.sh webapp *
+pinball ALL=(root) NOPASSWD: /opt/pincabos/scripts/pincabos-update-launch.sh system *

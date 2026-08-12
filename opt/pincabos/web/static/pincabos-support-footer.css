@@ -1,0 +1,222 @@
+/* PinCabOS-File created by Karots Sugarpie */
+/* PinCabOS support footer - clean full width */
+
+.pincabos-support-footer-safe {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+
+  margin: 18px 0 0 0 !important;
+  padding: 14px !important;
+
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 122, 0, 0.35) !important;
+  background: rgba(12, 0, 22, 0.62) !important;
+  box-shadow: 0 0 18px rgba(255, 122, 0, 0.15) !important;
+  color: #fff !important;
+
+  display: grid !important;
+  grid-template-columns: minmax(260px, .9fr) minmax(300px, 1fr) minmax(340px, 1.2fr) 120px !important;
+  align-items: center !important;
+  justify-content: stretch !important;
+  justify-items: start !important;
+  gap: 18px !important;
+
+  text-align: left !important;
+}
+
+.pincabos-release-notes-safe,
+.pincabos-support-text-safe,
+.pincabos-support-qr-safe {
+  text-align: left !important;
+  justify-self: start !important;
+  min-width: 0 !important;
+}
+
+.pincabos-release-notes-safe h2,
+.pincabos-support-text-safe h2 {
+  color: #ffb000 !important;
+  margin: 0 0 6px 0 !important;
+  font-size: 16px !important;
+}
+
+.pincabos-release-notes-safe p,
+.pincabos-support-text-safe p {
+  margin: 3px 0 !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+}
+
+.pincabos-paypal-form-safe {
+  display: inline-block !important;
+  margin-top: 6px !important;
+}
+
+.pincabos-paypal-form-safe form {
+  display: inline-grid !important;
+  justify-items: center !important;
+  align-content: start !important;
+  gap: 0.5rem !important;
+}
+
+.pp-SE79XX45T2NBG-safe {
+  text-align: center !important;
+  border: none !important;
+  border-radius: 0.25rem !important;
+  min-width: 11.625rem !important;
+  padding: 0 2rem !important;
+  height: 2.625rem !important;
+  font-weight: bold !important;
+  background-color: #FFD140 !important;
+  color: #000 !important;
+  font-family: "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 1rem !important;
+  line-height: 1.25rem !important;
+  cursor: pointer !important;
+}
+
+.pincabos-paypal-cards-safe {
+  max-width: 180px !important;
+  height: auto !important;
+}
+
+.pincabos-paypal-powered-safe {
+  font-size: 0.75rem !important;
+  color: #fff !important;
+}
+
+.pincabos-paypal-powered-safe img {
+  height: 0.875rem !important;
+  vertical-align: middle !important;
+}
+
+.pincabos-support-qr-safe {
+  width: 120px !important;
+  min-width: 120px !important;
+  max-width: 120px !important;
+  justify-self: end !important;
+  text-align: left !important;
+}
+
+.pincabos-support-qr-safe img {
+  display: block !important;
+  width: 100px !important;
+  max-width: 100px !important;
+  height: 100px !important;
+  max-height: 100px !important;
+  object-fit: contain !important;
+  background: #fff !important;
+  padding: 6px !important;
+  border-radius: 12px !important;
+  margin: 0 !important;
+}
+
+.pincabos-support-qr-label-safe {
+  margin-top: 6px !important;
+  font-size: 10px !important;
+  color: #ffb000 !important;
+  opacity: 0.9 !important;
+  max-width: 110px !important;
+  text-align: left !important;
+}
+
+@media (max-width: 850px) {
+  .pincabos-support-footer-safe {
+    grid-template-columns: 1fr !important;
+    text-align: left !important;
+    justify-items: start !important;
+  }
+
+  .pincabos-support-qr-safe {
+    justify-self: start !important;
+  }
+}
+
+
+.pincabos-footer-banner-safe {
+  justify-self: center !important;
+  text-align: center !important;
+  min-width: 0 !important;
+}
+
+.pincabos-footer-banner-safe img {
+  max-width: none !important;
+  width: auto !important;
+  height: 150px !important;
+  object-fit: contain !important;
+  border-radius: 14px !important;
+  box-shadow: 0 0 18px rgba(255,122,0,.22) !important;
+}
+
+
+.pincabos-release-grid-safe {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 2px 14px !important;
+}
+
+.pincabos-release-grid-safe p {
+  margin: 2px 0 !important;
+  white-space: nowrap !important;
+}
+
+
+/* Footer ordre demandé : logo complètement à gauche, notes juste après */
+.pincabos-footer-banner-safe {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  justify-self: start !important;
+  text-align: left !important;
+}
+
+.pincabos-release-notes-safe {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  justify-self: start !important;
+}
+
+.pincabos-support-text-safe {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+}
+
+.pincabos-support-qr-safe {
+  grid-column: 4 !important;
+  grid-row: 1 !important;
+}
+
+
+/* ============================================================
+   PINCABOS_CONTENT_RAIL_V1
+   Footer principal : meme rail que les cartes centrales.
+   ============================================================ */
+
+@media (min-width: 851px) {
+  html body .pincabos-support-footer-safe {
+    width: 100% !important;
+    max-width: var(--pco-content-rail-width, 1850px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+
+    grid-template-columns:
+      minmax(220px, 0.9fr)
+      minmax(160px, 0.75fr)
+      minmax(240px, 1fr)
+      112px !important;
+  }
+
+  html body .pincabos-footer-banner-safe img {
+    width: min(225px, 100%) !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+
+@media (max-width: 850px) {
+  html body .pincabos-support-footer-safe {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}

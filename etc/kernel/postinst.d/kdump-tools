@@ -1,0 +1,126 @@
+#!/bin/sh
+set -eu
+
+version="${1-}"
+kdumpdir="/var/lib/kdump"
+
+[ -x /usr/sbin/mkinitramfs ] || exit 0
+
+# passing the kernel version is required
+if [ -z "${version}" ]; then
+	echo >&2 "W: kdump-tools: ${DPKG_MAINTSCRIPT_PACKAGE:-kdump-tools package} did not pass a version number"
+	exit 2
+fi
+
+if ! linux-version list | grep "${version}" > /dev/null ; then
+	exit 0
+fi
+
+# exit if kernel does not need an initramfs
+if [ "${INITRD-}" = 'No' ]; then
+	exit 0
+fi
+
+# initramfs generation may fail, or include an inappropriate set of kernel
+# modules in a chroot. Leave it to the target system to handle on reboot
+if [ -x "$(command -v ischroot)" ] && ischroot; then
+	echo "W: kdump-tools: Executing in a chroot, skipping initramfs generation." >&2
+	exit 0;
+fi
+
+# avoid running multiple times
+if [ -n "${DEB_MAINT_PARAMS-}" ]; then
+	eval set -- "$DEB_MAINT_PARAMS"
+	if [ -z "$1" ] || [ "$1" != "configure" ]; then
+		exit 0
+	fi
+fi
+
+if test ! -e /etc/initramfs-tools/initramfs.conf; then
+	echo "W: kdump-tools: /etc/initramfs-tools/initramfs.conf is missing." >&2
+	exit 2
+fi
+. /etc/initramfs-tools/initramfs.conf
+for conf_file in /etc/initramfs-tools/conf.d/*; do
+	if test -f "$conf_file" && basename "$conf_file" | grep '^[[:alnum:]][[:alnum:]\._-]*$' | grep -qv '\.dpkg-.*$'; then
+		. "$conf_file"
+	fi
+done
+
+if test "${MODULES-most}" = most; then
+	# Switch from "most" to "dep" to reduce the size of the initramfs.
+	# "netboot" and "list" are expected to be already small enough.
+	KDUMP_MODULES=dep
+fi
+
+# We need a modified copy of initramfs-tools directory
+# with MODULES=dep in initramfs.conf
+if [ ! -d "$kdumpdir" ];then
+	mkdir -p "$kdumpdir"
+fi
+# Force re-creation of $kdumpdir/initramfs-tools
+# in case the source has changed since last time
+# we ran
+if [ -d "$kdumpdir/initramfs-tools" ];then
+	rm -Rf $kdumpdir/initramfs-tools
+fi
+cp -pr /etc/initramfs-tools "$kdumpdir"
+
+initramfsdir="$kdumpdir/initramfs-tools"
+
+if test -n "${KDUMP_MODULES-}" -a "${KDUMP_MODULES-}" != "${MODULES}"; then
+	mkdir -p "$initramfsdir/conf.d"
+	echo "MODULES=${KDUMP_MODULES}" > "$initramfsdir/conf.d/zzz-kdump"
+fi
+
+# Add scsi_dh_* modules if in use otherwise
+# kexec reboot on multipath will fail
+# (LP: #1635597)
+for I in $(lsmod | grep scsi_dh | cut -d" " -f1);do
+	echo "${I}" >> $initramfsdir/modules
+done
+
+# Mark our custom initramfs.conf to indicate that kdump-tools
+# hooks/scripts should run/get included in our minimal initrd.
+#
+# Unfortunately, this is not true for Debian. OPTION=VAR is a
+# control provided only by Ubuntu initramfs-tools, so this is
+# innocuous /harmless on Debian - kept here for better code
+# sync between Debian and Ubuntu. We needed special checks on
+# hook/script in Debian to prevent them on regular initrd.
+echo "KDUMP=y" >> $initramfsdir/initramfs.conf
+
+# Cleaning up existing initramfs with same version
+# as mkinitramfs do not have a force option
+if [ -e "$kdumpdir/initrd.img-${version}" ];then
+	rm -f "$kdumpdir/initrd.img-${version}"
+fi
+
+# we're good - create initramfs.
+echo "kdump-tools: Generating $kdumpdir/initrd.img-${version}"
+
+INITRD_TMPDIR="$(mktemp -d)"
+INITRD_FNAME="initrd.img-${version}"
+INITRD_CMDLINE=" -k -d ${initramfsdir} -o ${kdumpdir}/${INITRD_FNAME}.new ${version}"
+
+# NB: we *want* to split on spaces in INITRD_CMDLINE, so disable this check here
+# shellcheck disable=SC2086
+if TMPDIR=${INITRD_TMPDIR} mkinitramfs ${INITRD_CMDLINE} 1>/dev/null; then
+	mv "${kdumpdir}/${INITRD_FNAME}.new" "${kdumpdir}/${INITRD_FNAME}"
+
+	# Retain the initrd decompressed size in order potential users (like
+	# kdump memory estimator) are able to use that in calculations.
+	INITRD_DECOMPRESSED=$(find "${INITRD_TMPDIR}" -maxdepth 1 ! -path "${INITRD_TMPDIR}" -type d)
+
+	if [ -d "${INITRD_DECOMPRESSED}" ]; then
+		du -sm "${INITRD_DECOMPRESSED}" | awk '{print $1}' > "${kdumpdir}/size_${INITRD_FNAME}"
+		sync "${kdumpdir}/size_${INITRD_FNAME}"
+	fi
+	rm -rf "${INITRD_TMPDIR}"
+else
+	mkinitramfs_return="$?"
+	rm -f "$kdumpdir/initrd.img-${version}.new"
+	echo "update-initramfs: failed for $kdumpdir/initrd.img-${version} with $mkinitramfs_return." >&2
+	rm -rf "${INITRD_TMPDIR}"
+	exit $mkinitramfs_return
+fi

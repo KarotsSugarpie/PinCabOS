@@ -1,0 +1,37 @@
+/* PinCabOS — PinCab Explorer action buttons mauves
+   Scope volontairement limité à .pcx-page.
+   Le bouton Supprimer reste rouge. */
+
+.pcx-page .pcx-btn,
+.pcx-page a.pcx-btn,
+.pcx-page button.pcx-btn,
+.pcx-page .pcx-actions .button,
+.pcx-page .pcx-actions a.button,
+.pcx-page .pcx-actions button.button {
+  background: linear-gradient(180deg, #7a35b8, #552084) !important;
+  color: #ffffff !important;
+  border: 1px solid #b26cff !important;
+  box-shadow: 0 0 14px rgba(128, 55, 190, .38) !important;
+}
+
+.pcx-page .pcx-btn:hover,
+.pcx-page a.pcx-btn:hover,
+.pcx-page button.pcx-btn:hover,
+.pcx-page .pcx-actions .button:hover,
+.pcx-page .pcx-actions a.button:hover,
+.pcx-page .pcx-actions button.button:hover {
+  background: linear-gradient(180deg, #8f45d4, #64269a) !important;
+  border-color: #d29bff !important;
+  box-shadow: 0 0 18px rgba(178, 108, 255, .55) !important;
+}
+
+/* Danger reste rouge */
+.pcx-page .pcx-delete-danger,
+.pcx-page button.pcx-delete-danger,
+.pcx-page a.pcx-delete-danger,
+.pcx-page .button.pcx-delete-danger {
+  background: linear-gradient(180deg, #b31728, #780b17) !important;
+  color: #ffffff !important;
+  border-color: #ff5266 !important;
+  box-shadow: 0 0 14px rgba(255, 50, 70, .40) !important;
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=PinCabOS Console ttyd
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ttyd -p 8090 -W /bin/bash
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

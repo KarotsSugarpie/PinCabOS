@@ -1,0 +1,45 @@
+# -*- mode: apparmor; -*-
+# ------------------------------------------------------------------
+#
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#
+# ------------------------------------------------------------------
+# vim: ft=apparmor
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile nslookup /usr/bin/nslookup {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/terminfo>
+
+  # Temporarily needed until fd delegation lands
+  # Also needed while delegation from unconfined is broken
+  include <abstractions/consoles>
+
+  # Requested on < plucky by libuv (bind9 dependency), no functional impact from denial
+  deny capability sys_admin,
+
+  # Needed for network queries
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+
+  # Read access is requested to the following locations during bare `nslookup`
+  /usr/bin/nslookup mr,
+  /proc/version_signature r,
+  /sys/kernel/mm/transparent_hugepage/enabled r,
+
+  # `nslookup` performs reads to its own thread often, needed for expected functionality
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/nslookup>
+}

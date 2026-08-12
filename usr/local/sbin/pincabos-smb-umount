@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT="/home/pinball/NetworkDrives"
+
+die() {
+  echo "PINCABOS SMB UMOUNT: $*" >&2
+  exit 2
+}
+
+if [[ "${1:-}" == "--check" && "$#" -eq 1 ]]; then
+  echo "GO: helper demontage SMB accessible."
+  exit 0
+fi
+
+[[ "$#" -eq 1 ]] || die "usage invalide"
+
+ROOT_REAL="$(realpath -m -- "$ROOT")"
+TARGET_REAL="$(realpath -m -- "$1")"
+
+case "$TARGET_REAL" in
+  "$ROOT_REAL"/*) ;;
+  *) die "lecteur hors NetworkDrives refuse" ;;
+esac
+
+[[ "$(dirname "$TARGET_REAL")" == "$ROOT_REAL" ]] \
+  || die "seul un lecteur direct est autorise"
+
+if ! mountpoint -q -- "$TARGET_REAL"; then
+  echo "INFO: lecteur deja demonte: $TARGET_REAL"
+
+  if rmdir -- "$TARGET_REAL" 2>/dev/null; then
+    echo "GO: dossier vide retire: $TARGET_REAL"
+  else
+    echo "INFO: dossier conserve car il contient des fichiers locaux."
+  fi
+
+  exit 0
+fi
+
+if /usr/bin/umount -- "$TARGET_REAL"; then
+  echo "GO: lecteur SMB demonte: $TARGET_REAL"
+
+  if rmdir -- "$TARGET_REAL" 2>/dev/null; then
+    echo "GO: dossier vide retire: $TARGET_REAL"
+  else
+    echo "INFO: dossier conserve car il contient des fichiers locaux."
+  fi
+
+  exit 0
+else
+  RC=$?
+  echo "ERREUR: impossible de demonter: $TARGET_REAL" >&2
+  echo "Un fichier est probablement encore ouvert dans ce lecteur." >&2
+
+  command -v fuser >/dev/null 2>&1 && \
+    fuser -vm "$TARGET_REAL" 2>&1 || true
+
+  exit "$RC"
+fi

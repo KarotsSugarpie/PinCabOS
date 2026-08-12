@@ -1,0 +1,296 @@
+/* PinCabOS-File created by Karots Sugarpie */
+/* PinCabOS FullDMD direct CSS fix */
+
+/* Titre de section */
+.fulldmd-section-label {
+  display: block !important;
+  margin: 10px 0 6px 0 !important;
+  color: #ffb000 !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+}
+
+/* Layout principal : champs à gauche, boutons à droite */
+.fulldmd-config-layout {
+  display: inline-grid !important;
+  grid-template-columns: auto 205px !important;
+  gap: 12px !important;
+  align-items: start !important;
+  justify-content: start !important;
+  width: auto !important;
+  max-width: max-content !important;
+  margin: 8px 0 12px 0 !important;
+}
+
+/* Cadre des champs : doit arrêter juste après Hauteur */
+.fulldmd-fields-row {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: end !important;
+  justify-content: flex-start !important;
+  gap: 7px !important;
+
+  width: auto !important;
+  max-width: max-content !important;
+  min-width: 0 !important;
+
+  padding: 7px !important;
+  margin: 0 !important;
+
+  border-radius: 12px !important;
+  background: rgba(10, 0, 20, 0.35) !important;
+  border: 1px solid rgba(255, 122, 0, 0.25) !important;
+  box-sizing: border-box !important;
+}
+
+.fulldmd-field {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  flex: 0 0 auto !important;
+  gap: 3px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.fulldmd-field label {
+  display: block !important;
+  font-size: 11px !important;
+  color: #ffb000 !important;
+  margin: 0 !important;
+  line-height: 1.1 !important;
+}
+
+.fulldmd-field input,
+.fulldmd-field select {
+  width: 76px !important;
+  max-width: 76px !important;
+  min-width: 76px !important;
+  height: 28px !important;
+  max-height: 28px !important;
+
+  padding: 3px 6px !important;
+  margin: 0 !important;
+
+  font-size: 12px !important;
+  box-sizing: border-box !important;
+  border-radius: 7px !important;
+}
+
+.fulldmd-field:first-child input,
+.fulldmd-field:first-child select {
+  width: 120px !important;
+  max-width: 120px !important;
+  min-width: 120px !important;
+}
+
+/* Colonne boutons */
+.fulldmd-actions-column {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 7px !important;
+
+  width: 205px !important;
+  max-width: 205px !important;
+  min-width: 205px !important;
+
+  padding: 10px !important;
+  margin: 0 !important;
+
+  border-radius: 14px !important;
+  border: 1px solid rgba(255, 122, 0, 0.35) !important;
+  background: rgba(10, 0, 20, 0.50) !important;
+  box-sizing: border-box !important;
+}
+
+.fulldmd-actions-column form {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.fulldmd-actions-column .button,
+.fulldmd-actions-column button,
+.fulldmd-actions-column a.button,
+.fulldmd-action-btn {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+
+  padding: 0 8px !important;
+  margin: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  box-sizing: border-box !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  border-radius: 9px !important;
+
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  text-decoration: none !important;
+}
+
+/* Force spécifique pour le lien Rafraîchir */
+.fulldmd-actions-column a.fulldmd-action-btn {
+  display: flex !important;
+  width: 100% !important;
+  height: 34px !important;
+}
+
+/* JSON / écrans détectés fit dans le cadre */
+.card pre {
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  max-height: 240px !important;
+  overflow: auto !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  padding: 8px !important;
+  border-radius: 10px !important;
+}
+
+/* Mobile */
+@media (max-width: 900px) {
+  .fulldmd-config-layout {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    max-width: 100% !important;
+  }
+
+  .fulldmd-fields-row {
+    flex-wrap: wrap !important;
+    max-width: 100% !important;
+  }
+
+  .fulldmd-actions-column {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+/* FullDMD: boutons en haut à droite du secteur */
+.fulldmd-config-layout {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: grid !important;
+  grid-template-columns: max-content 205px !important;
+  justify-content: space-between !important;
+  align-items: start !important;
+  gap: 12px !important;
+}
+
+.fulldmd-fields-row {
+  justify-self: start !important;
+  align-self: start !important;
+}
+
+.fulldmd-actions-column {
+  justify-self: end !important;
+  align-self: start !important;
+  margin-top: 0 !important;
+}
+
+/* FullDMD final: boutons en haut à droite + retrait label fantôme */
+
+/* La carte calibration devient le secteur de référence */
+.card:has(.fulldmd-config-layout) {
+  position: relative !important;
+  padding-right: 245px !important;
+  min-height: 185px !important;
+}
+
+/* Enlever le ghost label/titre "Écran FullDMD / DMD Screen ID" */
+.fulldmd-section-label {
+  display: none !important;
+}
+
+/* Les champs restent à gauche et prennent seulement leur largeur utile */
+.fulldmd-config-layout {
+  display: block !important;
+  width: auto !important;
+  max-width: max-content !important;
+  margin: 8px 0 12px 0 !important;
+}
+
+.fulldmd-fields-row {
+  width: auto !important;
+  max-width: max-content !important;
+  justify-self: start !important;
+}
+
+/* Colonne de boutons placée en haut à droite de la carte */
+.fulldmd-actions-column {
+  position: absolute !important;
+  top: 14px !important;
+  right: 14px !important;
+
+  width: 205px !important;
+  max-width: 205px !important;
+  min-width: 205px !important;
+
+  margin: 0 !important;
+  z-index: 5 !important;
+}
+
+/* Boutons uniformes */
+.fulldmd-actions-column form,
+.fulldmd-actions-column a,
+.fulldmd-actions-column a.button,
+.fulldmd-actions-column button {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.fulldmd-actions-column .button,
+.fulldmd-actions-column button,
+.fulldmd-actions-column a.button,
+.fulldmd-action-btn {
+  width: 100% !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  box-sizing: border-box !important;
+}
+
+/* Mobile : on remet les boutons dans le flux normal */
+@media (max-width: 900px) {
+  .card:has(.fulldmd-config-layout) {
+    padding-right: 14px !important;
+  }
+
+  .fulldmd-actions-column {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-top: 10px !important;
+  }
+
+  .fulldmd-config-layout {
+    max-width: 100% !important;
+  }
+
+  .fulldmd-fields-row {
+    max-width: 100% !important;
+  }
+}

@@ -1,0 +1,215 @@
+#!/usr/bin/env python3
+"""PinCabOS keyboard helper: strict, root-owned and argument-validated."""
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+DEFAULT_KEYBOARD = Path('/etc/default/keyboard')
+XORG_FILE = Path('/etc/X11/xorg.conf.d/00-pincabos-keyboard.conf')
+RULES = Path('/usr/share/X11/xkb/rules/base.lst')
+
+
+def fail(message: str, code: int = 2) -> None:
+    print(json.dumps({'ok': False, 'error': message}, ensure_ascii=False))
+    raise SystemExit(code)
+
+
+def read_keyboard() -> dict[str, str]:
+    values = {'XKBMODEL': 'pc105', 'XKBLAYOUT': 'ca', 'XKBVARIANT': '', 'XKBOPTIONS': '', 'BACKSPACE': 'guess'}
+    if DEFAULT_KEYBOARD.exists():
+        for raw in DEFAULT_KEYBOARD.read_text(encoding='utf-8', errors='replace').splitlines():
+            m = re.match(r'^\s*(XKBMODEL|XKBLAYOUT|XKBVARIANT|XKBOPTIONS|BACKSPACE)\s*=\s*"?(.*?)"?\s*$', raw)
+            if m:
+                values[m.group(1)] = m.group(2).strip().strip('"')
+    return values
+
+
+def rules_block(name: str) -> list[str]:
+    active = False
+    rows: list[str] = []
+    for raw in RULES.read_text(encoding='utf-8', errors='replace').splitlines():
+        line = raw.rstrip()
+        if line.startswith('!'):
+            active = line.strip() == f'! {name}'
+            continue
+        if active and line.strip() and not line.lstrip().startswith('//'):
+            rows.append(line)
+    return rows
+
+
+def layouts() -> list[dict[str, str]]:
+    result: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for line in rules_block('layout'):
+        m = re.match(r'^\s*(\S+)\s+(.+?)\s*$', line)
+        if not m:
+            continue
+        code, label = m.group(1), m.group(2)
+        if code not in seen:
+            seen.add(code)
+            result.append({'code': code, 'label': label})
+    return result
+
+
+def variants(layout: str) -> list[dict[str, str]]:
+    result: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for line in rules_block('variant'):
+        m = re.match(r'^\s*(\S+)\s+([^:]+):\s*(.+?)\s*$', line)
+        if not m:
+            continue
+        code, targets, label = m.group(1), m.group(2), m.group(3)
+        target_codes = {part.strip() for part in targets.split(',')}
+        if layout in target_codes and code not in seen:
+            seen.add(code)
+            result.append({'code': code, 'label': label})
+    return result
+
+
+def require_layout(layout: str) -> None:
+    if not re.fullmatch(r'[a-z0-9_-]{1,32}', layout or ''):
+        fail('Disposition invalide.')
+    if layout not in {row['code'] for row in layouts()}:
+        fail('Disposition XKB non reconnue.')
+
+
+def require_variant(layout: str, variant: str) -> None:
+    if not variant:
+        return
+    if not re.fullmatch(r'[a-z0-9_-]{1,64}', variant):
+        fail('Variante invalide.')
+    if variant not in {row['code'] for row in variants(layout)}:
+        fail('Variante XKB non reconnue pour cette disposition.')
+
+
+def write_text_atomic(path: Path, content: str, mode: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=path.name + '.', dir=str(path.parent))
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary, mode)
+        os.chown(temporary, 0, 0)
+        os.replace(temporary, path)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+def x11_query() -> dict[str, str]:
+    env = {'HOME': '/home/pinball', 'USER': 'pinball', 'DISPLAY': ':0', 'XAUTHORITY': '/home/pinball/.Xauthority', 'PATH': '/usr/bin:/bin'}
+    try:
+        proc = subprocess.run(['/usr/sbin/runuser', '-u', 'pinball', '--', 'env', *[f'{k}={v}' for k, v in env.items()], '/usr/bin/setxkbmap', '-query'], text=True, capture_output=True, timeout=8, check=False)
+        if proc.returncode != 0:
+            return {'available': False, 'detail': (proc.stderr or proc.stdout).strip()[:240]}
+        result = {'available': True}
+        for line in proc.stdout.splitlines():
+            if ':' in line:
+                key, value = line.split(':', 1)
+                result[key.strip()] = value.strip()
+        return result
+    except Exception as error:
+        return {'available': False, 'detail': str(error)[:240]}
+
+
+def status() -> dict[str, object]:
+    cfg = read_keyboard()
+    return {
+        'ok': True,
+        'configured': {'layout': cfg['XKBLAYOUT'], 'variant': cfg['XKBVARIANT'], 'model': cfg['XKBMODEL']},
+        'live': x11_query(),
+    }
+
+
+def apply_live(layout: str, variant: str) -> tuple[bool, str]:
+    command = ['/usr/sbin/runuser', '-u', 'pinball', '--', 'env', 'HOME=/home/pinball', 'USER=pinball', 'DISPLAY=:0', 'XAUTHORITY=/home/pinball/.Xauthority', 'PATH=/usr/bin:/bin', '/usr/bin/setxkbmap', '-layout', layout]
+    if variant:
+        command.extend(['-variant', variant])
+    try:
+        proc = subprocess.run(command, text=True, capture_output=True, timeout=10, check=False)
+        if proc.returncode == 0:
+            return True, 'Disposition appliquée à la session graphique actuelle.'
+        return False, (proc.stderr or proc.stdout or 'Session graphique indisponible.').strip()[:300]
+    except Exception as error:
+        return False, str(error)[:300]
+
+
+def apply(layout: str, variant: str) -> dict[str, object]:
+    require_layout(layout)
+    require_variant(layout, variant)
+    old = DEFAULT_KEYBOARD.read_text(encoding='utf-8', errors='replace') if DEFAULT_KEYBOARD.exists() else ''
+    backup = Path('/opt/pincabos/backups') / f'keyboard-default-{__import__("datetime").datetime.now().strftime("%Y%m%d-%H%M%S")}.bak'
+    backup.parent.mkdir(parents=True, exist_ok=True)
+    backup.write_text(old, encoding='utf-8')
+
+    keyboard = (
+        '# Managed by PinCabOS Keyboard widget.\n'
+        'XKBMODEL="pc105"\n'
+        f'XKBLAYOUT="{layout}"\n'
+        f'XKBVARIANT="{variant}"\n'
+        'XKBOPTIONS=""\n'
+        'BACKSPACE="guess"\n'
+    )
+    xorg = (
+        '# Managed by PinCabOS Keyboard widget.\n'
+        'Section "InputClass"\n'
+        '    Identifier "pincabos-keyboard-layout"\n'
+        '    MatchIsKeyboard "on"\n'
+        '    Option "XkbModel" "pc105"\n'
+        f'    Option "XkbLayout" "{layout}"\n'
+        f'    Option "XkbVariant" "{variant}"\n'
+        '    Option "XkbOptions" ""\n'
+        'EndSection\n'
+    )
+    write_text_atomic(DEFAULT_KEYBOARD, keyboard, 0o644)
+    write_text_atomic(XORG_FILE, xorg, 0o644)
+    warnings: list[str] = []
+    setupcon = shutil.which('setupcon')
+    if setupcon:
+        proc = subprocess.run([setupcon, '-k'], text=True, capture_output=True, timeout=15, check=False)
+        if proc.returncode != 0:
+            warnings.append((proc.stderr or proc.stdout or 'setupcon non appliqué.').strip()[:240])
+    live_ok, live_detail = apply_live(layout, variant)
+    if not live_ok:
+        warnings.append('La configuration est permanente; reconnecte la session graphique ou redémarre pour l’appliquer à X11. ' + live_detail)
+    result = status()
+    result.update({'backup': str(backup), 'live_applied': live_ok, 'message': live_detail, 'warnings': warnings})
+    return result
+
+
+def main() -> None:
+    if os.geteuid() != 0:
+        fail('Cet outil doit être exécuté via sudo.', 1)
+    action = sys.argv[1] if len(sys.argv) > 1 else ''
+    if action == 'status' and len(sys.argv) == 2:
+        print(json.dumps(status(), ensure_ascii=False))
+        return
+    if action == 'layouts' and len(sys.argv) == 2:
+        print(json.dumps({'ok': True, 'layouts': layouts()}, ensure_ascii=False))
+        return
+    if action == 'variants' and len(sys.argv) == 3:
+        layout = sys.argv[2]
+        require_layout(layout)
+        print(json.dumps({'ok': True, 'layout': layout, 'variants': variants(layout)}, ensure_ascii=False))
+        return
+    if action == 'set' and len(sys.argv) in (3, 4):
+        layout = sys.argv[2]
+        variant = '' if len(sys.argv) == 3 or sys.argv[3] == '-' else sys.argv[3]
+        print(json.dumps(apply(layout, variant), ensure_ascii=False))
+        return
+    fail('Usage non autorisé.')
+
+
+if __name__ == '__main__':
+    main()

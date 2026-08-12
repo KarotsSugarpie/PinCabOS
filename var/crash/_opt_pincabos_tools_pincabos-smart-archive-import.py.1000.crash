@@ -1,0 +1,273 @@
+ProblemType: Crash
+Date: Fri Jul 17 13:29:06 2026
+ExecutablePath: /opt/pincabos/tools/pincabos-smart-archive-import.py
+ExecutableTimestamp: 1783291093
+InterpreterPath: /usr/bin/python3.14
+OpenFds:
+ 0:/dev/null
+ pos:	0
+ flags:	0100000
+ mnt_id:	30
+ ino:	5
+ 
+ 1:pipe:[134755640]
+ pos:	0
+ flags:	01
+ mnt_id:	18
+ ino:	134755640
+ 
+ 2:pipe:[134755641]
+ pos:	0
+ flags:	01
+ mnt_id:	18
+ ino:	134755641
+ 
+ 3:/proc/2381878
+ pos:	0
+ flags:	012200000
+ mnt_id:	29
+ ino:	134748098
+ 
+ 4:/proc/2381878/fd
+ pos:	0
+ flags:	02700000
+ mnt_id:	29
+ ino:	134754011
+ 
+ 5:/proc/2381878/fdinfo
+ pos:	0
+ flags:	02700000
+ mnt_id:	29
+ ino:	134754012
+ProcCmdline: python3 /opt/pincabos/tools/pincabos-smart-archive-import.py /home/pinball/Downloads/batch-20260717-132853-43282c57 --title Mars\ Attacks!\ Pinball\ (Original\ 2022) --manufacturer Original --year 2022 --vpsid DUFqTbanaI --rom afm_113b --ipdbid
+ProcCwd: /opt/pincabos/web
+ProcEnviron:
+ LANG=C.UTF-8
+ PATH=(custom, no user)
+ SHELL=/bin/bash
+ProcMaps:
+ 00400000-00422000 r--p 00000000 103:02 54398964                          /usr/bin/python3.14
+ 00422000-007a8000 r-xp 00022000 103:02 54398964                          /usr/bin/python3.14
+ 007a8000-00a86000 r--p 003a8000 103:02 54398964                          /usr/bin/python3.14
+ 00a86000-00a87000 r--p 00686000 103:02 54398964                          /usr/bin/python3.14
+ 00a87000-00b22000 rw-p 00687000 103:02 54398964                          /usr/bin/python3.14
+ 00b22000-00b94000 rw-p 00000000 00:00 0 
+ 36ed1000-37483000 rw-p 00000000 00:00 0                                  [heap]
+ 773026c00000-773026e00000 rw-p 00000000 00:00 0 
+ 773026e00000-773026e39000 r--p 00000000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 773026e39000-773026fe5000 r-xp 00039000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 773026fe5000-773027038000 r--p 001e5000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 773027038000-773027040000 r--p 00237000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 773027040000-773027041000 rw-p 0023f000 103:02 54425804                  /usr/lib/x86_64-linux-gnu/libapt-pkg.so.7.0.0
+ 773027041000-773027042000 rw-p 00000000 00:00 0 
+ 7730270ec000-773027105000 r--p 00000000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 773027105000-7730271bc000 r-xp 00019000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 7730271bc000-7730271f6000 r--p 000d0000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 7730271f6000-7730271fe000 r--p 0010a000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 7730271fe000-7730271ff000 rw-p 00112000 103:02 54426214                  /usr/lib/x86_64-linux-gnu/libsystemd.so.0.42.0
+ 7730271ff000-773027200000 rw-p 00000000 00:00 0 
+ 773027200000-7730272a3000 r--p 00000000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 7730272a3000-7730273fe000 r-xp 000a3000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 7730273fe000-77302748a000 r--p 001fe000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 77302748a000-773027499000 r--p 0028a000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 773027499000-77302749c000 rw-p 00299000 103:02 54426210                  /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.35
+ 77302749c000-7730274a0000 rw-p 00000000 00:00 0 
+ 773027526000-77302752e000 r--p 00000000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 77302752e000-773027555000 r-xp 00008000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 773027555000-773027567000 r--p 0002f000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 773027567000-77302756c000 r--p 00041000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 77302756c000-77302756d000 rw-p 00046000 103:02 54426230                  /usr/lib/x86_64-linux-gnu/libudev.so.1.7.12
+ 77302756d000-773027570000 r--p 00000000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 773027570000-773027592000 r-xp 00003000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 773027592000-773027594000 r--p 00025000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 773027594000-773027595000 r--p 00027000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 773027595000-773027596000 rw-p 00028000 103:02 54426051                  /usr/lib/x86_64-linux-gnu/liblz4.so.1.10.0
+ 773027596000-77302759a000 r--p 00000000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 77302759a000-7730275be000 r-xp 00004000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 7730275be000-7730275c2000 r--p 00028000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 7730275c2000-7730275c3000 r--p 0002c000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 7730275c3000-7730275c4000 rw-p 0002d000 103:02 54425952                  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+ 7730275c4000-7730275d9000 r--p 00000000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 7730275d9000-7730275fa000 r-xp 00015000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 7730275fa000-773027611000 r--p 00036000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 773027611000-773027613000 r--p 0004c000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 773027613000-77302761c000 rw-p 0004e000 103:02 54417827                  /usr/lib/python3/dist-packages/apt_pkg.cpython-314-x86_64-linux-gnu.so
+ 77302761c000-77302771c000 rw-p 00000000 00:00 0 
+ 77302771c000-77302773e000 r--p 00000000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 77302773e000-7730277ef000 r-xp 00022000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 7730277ef000-77302781c000 r--p 000d3000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 77302781c000-773027826000 r--p 00100000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 773027826000-77302782a000 rw-p 0010a000 103:02 54426207                  /usr/lib/x86_64-linux-gnu/libssl.so.3
+ 77302782a000-77302783e000 r--p 00000000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 77302783e000-77302784b000 r-xp 00014000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 77302784b000-77302785a000 r--p 00021000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 77302785a000-77302785b000 r--p 0002f000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 77302785b000-773027865000 rw-p 00030000 103:02 54399684                  /usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so
+ 773027865000-773027acb000 rw-p 00000000 00:00 0 
+ 773027acb000-773027acf000 r--p 00000000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 773027acf000-773027af3000 r-xp 00004000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 773027af3000-773027afe000 r--p 00028000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 773027afe000-773027aff000 r--p 00033000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 773027aff000-773027b00000 rw-p 00034000 103:02 54426052                  /usr/lib/x86_64-linux-gnu/liblzma.so.5.8.3
+ 773027b00000-773027c00000 rw-p 00000000 00:00 0 
+ 773027c00000-773027ce4000 r--p 00000000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 773027ce4000-773028078000 r-xp 000e4000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 773028078000-773028197000 r--p 00478000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 773028197000-773028214000 r--p 00597000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 773028214000-773028217000 rw-p 00614000 103:02 54425866                  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+ 773028217000-77302821a000 rw-p 00000000 00:00 0 
+ 77302823d000-77302833d000 rw-p 00000000 00:00 0 
+ 77302833d000-773028341000 r--p 00000000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 773028341000-7730283f1000 r-xp 00004000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 7730283f1000-7730283fe000 r--p 000b4000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 7730283fe000-7730283ff000 r--p 000c1000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 7730283ff000-773028400000 rw-p 000c2000 103:02 54426319                  /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.7
+ 773028400000-773028800000 rw-p 00000000 00:00 0 
+ 773028800000-773028828000 r--p 00000000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 773028828000-7730289c0000 r-xp 00028000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 7730289c0000-773028a0e000 r--p 001c0000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 773028a0e000-773028a12000 r--p 0020d000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 773028a12000-773028a14000 rw-p 00211000 103:02 54425844                  /usr/lib/x86_64-linux-gnu/libc.so.6
+ 773028a14000-773028a21000 rw-p 00000000 00:00 0 
+ 773028a25000-773028a28000 r--p 00000000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 773028a28000-773028a2e000 r-xp 00003000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 773028a2e000-773028a32000 r--p 00009000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 773028a32000-773028a33000 r--p 0000d000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 773028a33000-773028a34000 rw-p 0000e000 103:02 54398697                  /usr/lib/python3.14/lib-dynload/_zstd.cpython-314-x86_64-linux-gnu.so
+ 773028a34000-773028a36000 r--p 00000000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 773028a36000-773028a45000 r-xp 00002000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 773028a45000-773028a47000 r--p 00011000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 773028a47000-773028a48000 r--p 00012000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 773028a48000-773028a49000 rw-p 00013000 103:02 54425841                  /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4
+ 773028a4c000-773028a4f000 r--p 00000000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 773028a4f000-773028a53000 r-xp 00003000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 773028a53000-773028a56000 r--p 00007000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 773028a56000-773028a57000 r--p 00009000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 773028a57000-773028a58000 rw-p 0000a000 103:02 54398678                  /usr/lib/python3.14/lib-dynload/_lzma.cpython-314-x86_64-linux-gnu.so
+ 773028a58000-773028a5a000 r--p 00000000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 773028a5a000-773028a5d000 r-xp 00002000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 773028a5d000-773028a5f000 r--p 00005000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 773028a5f000-773028a60000 r--p 00006000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 773028a60000-773028a61000 rw-p 00007000 103:02 54398660                  /usr/lib/python3.14/lib-dynload/_bz2.cpython-314-x86_64-linux-gnu.so
+ 773028a61000-773028a65000 r--p 00000000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 773028a65000-773028a6b000 r-xp 00004000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 773028a6b000-773028a6f000 r--p 0000a000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 773028a6f000-773028a70000 r--p 0000d000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 773028a70000-773028a72000 rw-p 0000e000 103:02 54399682                  /usr/lib/python3.14/lib-dynload/_hashlib.cpython-314-x86_64-linux-gnu.so
+ 773028a83000-773028a85000 r--p 00000000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 773028a85000-773028a92000 r-xp 00002000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 773028a92000-773028a94000 r--p 0000f000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 773028a94000-773028a95000 r--p 00010000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 773028a95000-773028a96000 rw-p 00011000 103:02 54426312                  /usr/lib/x86_64-linux-gnu/libxxhash.so.0.8.3
+ 773028aa5000-773028b07000 rw-p 00000000 00:00 0 
+ 773028b07000-773028b62000 r--p 00000000 103:02 54408064                  /usr/lib/locale/C.utf8/LC_CTYPE
+ 773028b62000-773028b64000 rw-p 00000000 00:00 0 
+ 773028b64000-773028b68000 r--p 00000000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 773028b68000-773028b86000 r-xp 00004000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 773028b86000-773028b8e000 r--p 00022000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 773028b8e000-773028b90000 r--p 0002a000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 773028b90000-773028b91000 rw-p 0002c000 103:02 54425911                  /usr/lib/x86_64-linux-gnu/libexpat.so.1.11.2
+ 773028b91000-773028b94000 r--p 00000000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 773028b94000-773028ba7000 r-xp 00003000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 773028ba7000-773028bad000 r--p 00016000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 773028bad000-773028bae000 r--p 0001c000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 773028bae000-773028baf000 rw-p 0001d000 103:02 54426315                  /usr/lib/x86_64-linux-gnu/libz.so.1.3.1
+ 773028baf000-773028bc1000 r--p 00000000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 773028bc1000-773028c61000 r-xp 00012000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 773028c61000-773028cd3000 r--p 000b2000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 773028cd3000-773028cd4000 r--p 00123000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 773028cd4000-773028cd5000 rw-p 00124000 103:02 54426057                  /usr/lib/x86_64-linux-gnu/libm.so.6
+ 773028cd7000-773028cdc000 rw-p 00000000 00:00 0 
+ 773028cdc000-773028cdd000 rw-p 00000000 00:00 0 
+ 773028cdd000-773028ce4000 r--s 00000000 103:02 54427006                  /usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache
+ 773028ce4000-773028ce6000 rw-p 00000000 00:00 0 
+ 773028ce6000-773028cea000 r--p 00000000 00:00 0                          [vvar]
+ 773028cea000-773028cec000 r--p 00000000 00:00 0                          [vvar_vclock]
+ 773028cec000-773028cee000 r-xp 00000000 00:00 0                          [vdso]
+ 773028cee000-773028cef000 r--p 00000000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 773028cef000-773028d1e000 r-xp 00001000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 773028d1e000-773028d29000 r--p 00030000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 773028d29000-773028d2b000 r--p 0003b000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 773028d2b000-773028d2c000 rw-p 0003d000 103:02 54425607                  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+ 773028d2c000-773028d2d000 rw-p 00000000 00:00 0 
+ 7ffd59525000-7ffd59546000 rw-p 00000000 00:00 0                          [stack]
+ ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]
+ProcStatus:
+ Name:	python3
+ Umask:	0022
+ State:	R (running)
+ Tgid:	2381878
+ Ngid:	0
+ Pid:	2381878
+ PPid:	2347335
+ TracerPid:	0
+ Uid:	1000	1000	1000	1000
+ Gid:	1000	1000	1000	1000
+ FDSize:	64
+ Groups:	4 20 24 27 29 30 44 46 100 101 987 991 995 1000 
+ NStgid:	2381878
+ NSpid:	2381878
+ NSpgid:	2347335
+ NSsid:	2347335
+ Kthread:	0
+ VmPeak:	   46176 kB
+ VmSize:	   46176 kB
+ VmLck:	       0 kB
+ VmPin:	       0 kB
+ VmHWM:	   34904 kB
+ VmRSS:	   34904 kB
+ RssAnon:	   18064 kB
+ RssFile:	   16840 kB
+ RssShmem:	       0 kB
+ VmData:	   19300 kB
+ VmStk:	     132 kB
+ VmExe:	    3608 kB
+ VmLib:	   12524 kB
+ VmPTE:	     128 kB
+ VmSwap:	       0 kB
+ HugetlbPages:	       0 kB
+ CoreDumping:	0
+ THP_enabled:	1
+ untag_mask:	0xffffffffffffffff
+ Threads:	1
+ SigQ:	1/61047
+ SigPnd:	0000000000000000
+ ShdPnd:	0000000000000000
+ SigBlk:	0000000000000000
+ SigIgn:	0000000001001000
+ SigCgt:	0000000000000002
+ CapInh:	0000000000000400
+ CapPrm:	0000000000000400
+ CapEff:	0000000000000400
+ CapBnd:	000001ffffffffff
+ CapAmb:	0000000000000400
+ NoNewPrivs:	0
+ Seccomp:	0
+ Seccomp_filters:	0
+ Speculation_Store_Bypass:	thread vulnerable
+ SpeculationIndirectBranch:	conditional enabled
+ Cpus_allowed:	ff,ffffffff
+ Cpus_allowed_list:	0-39
+ Mems_allowed:	00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000003
+ Mems_allowed_list:	0-1
+ voluntary_ctxt_switches:	17
+ nonvoluntary_ctxt_switches:	1
+ x86_Thread_features:	
+ x86_Thread_features_locked:
+PythonArgs: ['/opt/pincabos/tools/pincabos-smart-archive-import.py', '/home/pinball/Downloads/batch-20260717-132853-43282c57', '--title', 'Mars Attacks! Pinball (Original 2022)', '--manufacturer', 'Original', '--year', '2022', '--vpsid', 'DUFqTbanaI', '--rom', 'afm_113b', '--ipdbid', '']
+Traceback:
+ Traceback (most recent call last):
+   File "/opt/pincabos/tools/pincabos-smart-archive-import.py", line 1613, in <module>
+     raise SystemExit(main())
+                      ~~~~^^
+   File "/opt/pincabos/tools/pincabos-smart-archive-import.py", line 1515, in main
+     extract_all_inputs(batch_dir, extract_root)
+     ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+   File "/opt/pincabos/tools/pincabos-smart-archive-import.py", line 292, in extract_all_inputs
+     extract_archive(item, dest)
+     ~~~~~~~~~~~~~~~^^^^^^^^^^^^
+   File "/opt/pincabos/tools/pincabos-smart-archive-import.py", line 225, in extract_archive
+     raise RuntimeError(f"ARCHIVE PASSWORD REFUSÉE: {src}")
+ RuntimeError: ARCHIVE PASSWORD REFUSÉE: /home/pinball/Downloads/batch-20260717-132853-43282c57/Mars_Attacks_2022.rar
+UserGroups: adm audio cdrom dialout dip input lxd pincabusb plugdev render sudo users video
+_HooksRun: no

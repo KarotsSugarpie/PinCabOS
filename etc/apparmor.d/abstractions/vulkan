@@ -1,0 +1,22 @@
+# vim:ft=apparmor
+# Vulkan access requirements
+
+  abi <abi/5.0>,
+
+  # Mesa provides the default Vulkan implementation
+  include <abstractions/mesa>
+  # NVIDIA is another implementation we want to allow by default
+  include <abstractions/nvidia>
+
+  # System files
+  /etc/vulkan/icd.d/{,*.json} r,
+  /etc/vulkan/{explicit,implicit}_layer.d/{,*.json} r,
+  /usr/share/vulkan/icd.d/{,*.json} r,
+  /usr/share/vulkan/{explicit,implicit}_layer.d/{,*.json} r,
+
+  # User files
+  owner @{HOME}/.local/share/vulkan/implicit_layer.d/{,*.json} r,
+
+
+  # Include additions to the abstraction
+  include if exists <abstractions/vulkan.d>

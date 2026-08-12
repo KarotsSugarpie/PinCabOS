@@ -1,0 +1,5 @@
+name=install-refresh-after-run01-done
+status=GO
+label=Complete manifest refresh after RUN_01 completed once
+exit_code=0
+timestamp=2026-06-20 02:04:17

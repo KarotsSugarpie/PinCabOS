@@ -1,0 +1,15 @@
+[Unit]
+Description=PinCabOS Explorer Table Test
+After=graphical.target network.target
+Conflicts=pincabos-vpinfe.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/pincabos/pincabos-table-test-runner.py run
+ExecStopPost=/usr/local/libexec/pincabos/pincabos-table-test-runner.py finalize
+KillMode=control-group
+TimeoutStopSec=12
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

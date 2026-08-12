@@ -1,0 +1,1 @@
+/opt/pincabos/tools/close-webapp-screen.sh

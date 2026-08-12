@@ -1,0 +1,3 @@
+# /etc/default/ttyd
+# PinCabOS official console backend.
+TTYD_OPTIONS="-W -i lo -p 8090 -O login"

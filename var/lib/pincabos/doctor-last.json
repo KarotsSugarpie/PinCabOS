@@ -1,0 +1,217 @@
+{
+  "generated_at": "2026-08-12T11:44:45.552493-04:00",
+  "mode": "check",
+  "log": "/var/log/pincabos/doctor-20260812-114426.log",
+  "results": [
+    {
+      "check": "OS",
+      "status": "GO",
+      "detail": "Ubuntu 26.04 LTS — kernel 7.0.0-28-generic"
+    },
+    {
+      "check": "Utilisateur",
+      "status": "GO",
+      "detail": "pinball présent"
+    },
+    {
+      "check": "Groupes matériels",
+      "status": "GO",
+      "detail": "video/render/audio/input/dialout disponibles"
+    },
+    {
+      "check": "Dossier pincabos",
+      "status": "GO",
+      "detail": "/opt/pincabos"
+    },
+    {
+      "check": "Dossier pincabos",
+      "status": "GO",
+      "detail": "/var/log/pincabos"
+    },
+    {
+      "check": "Dossier pincabos",
+      "status": "GO",
+      "detail": "/var/lib/pincabos"
+    },
+    {
+      "check": "Dossier Tables",
+      "status": "GO",
+      "detail": "/home/pinball/Tables"
+    },
+    {
+      "check": "Espace disque",
+      "status": "GO",
+      "detail": "665G libres"
+    },
+    {
+      "check": "Systemd failed",
+      "status": "GO",
+      "detail": "aucune unité échouée"
+    },
+    {
+      "check": "Route réseau",
+      "status": "GO",
+      "detail": "default via 192.168.254.1 dev enp6s0 proto static "
+    },
+    {
+      "check": "NetworkManager",
+      "status": "GO",
+      "detail": "actif"
+    },
+    {
+      "check": "Résolution locale",
+      "status": "GO",
+      "detail": "fonctionnelle"
+    },
+    {
+      "check": "Adresse IP",
+      "status": "GO",
+      "detail": "192.168.254.237"
+    },
+    {
+      "check": "GPU détecté",
+      "status": "GO",
+      "detail": "02:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3060 Ti Lite Hash Rate] [10de:2489] (rev a1)"
+    },
+    {
+      "check": "Pilote NVIDIA",
+      "status": "GO",
+      "detail": "NVIDIA GeForce RTX 3060 Ti, 595.84"
+    },
+    {
+      "check": "Accès DRM",
+      "status": "GO",
+      "detail": "render node présent"
+    },
+    {
+      "check": "Vulkan",
+      "status": "GO",
+      "detail": "deviceName         = NVIDIA GeForce RTX 3060 Ti"
+    },
+    {
+      "check": "Topologie service",
+      "status": "GO",
+      "detail": "actif"
+    },
+    {
+      "check": "screens.json",
+      "status": "GO",
+      "detail": "playfield=HDMI-0 backglass=DP-1 fulldmd=DP-2"
+    },
+    {
+      "check": "Écrans X11",
+      "status": "GO",
+      "detail": "3 écran(s) connecté(s)"
+    },
+    {
+      "check": "ALSA",
+      "status": "GO",
+      "detail": "9 périphérique(s) PCM"
+    },
+    {
+      "check": "Pulse/PipeWire",
+      "status": "GO",
+      "detail": "3 sortie(s)"
+    },
+    {
+      "check": "WebApp source",
+      "status": "GO",
+      "detail": "/opt/pincabos/web/app.py"
+    },
+    {
+      "check": "Python WebApp",
+      "status": "GO",
+      "detail": "/opt/pincabos/web/.venv/bin/python + Flask"
+    },
+    {
+      "check": "WebApp service",
+      "status": "GO",
+      "detail": "actif"
+    },
+    {
+      "check": "WebApp HTTP",
+      "status": "GO",
+      "detail": "http://127.0.0.1 répond"
+    },
+    {
+      "check": "VPinFE runtime",
+      "status": "GO",
+      "detail": "exécutable + _internal présents"
+    },
+    {
+      "check": "VPinFE launcher",
+      "status": "GO",
+      "detail": "/opt/pincabos/tools/run-vpinfe-systemd.sh"
+    },
+    {
+      "check": "VPinFE drop-in",
+      "status": "GO",
+      "detail": "aucun ancien 55"
+    },
+    {
+      "check": "VPinFE service",
+      "status": "GO",
+      "detail": "actif"
+    },
+    {
+      "check": "VPinFE port",
+      "status": "GO",
+      "detail": "8001 en écoute"
+    },
+    {
+      "check": "VPX launcher",
+      "status": "GO",
+      "detail": "/opt/pincabos/scripts/VPXlauncher.sh"
+    },
+    {
+      "check": "VPX exécutable",
+      "status": "GO",
+      "detail": "/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX"
+    },
+    {
+      "check": "VPX bibliothèques",
+      "status": "GO",
+      "detail": "aucune bibliothèque manquante"
+    },
+    {
+      "check": "VPX INI",
+      "status": "GO",
+      "detail": "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+    },
+    {
+      "check": "PinMAME",
+      "status": "GO",
+      "detail": "/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/pinmame/libpinmame.so.3.7.0"
+    },
+    {
+      "check": "Services zombies",
+      "status": "GO",
+      "detail": "aucune ancienne unité indépendante active"
+    },
+    {
+      "check": "Artefacts racine",
+      "status": "GO",
+      "detail": "aucun payload généré à la racine"
+    },
+    {
+      "check": "Systemd reload",
+      "status": "GO",
+      "detail": "daemon-reload + reset-failed"
+    },
+    {
+      "check": "Import de tables",
+      "status": "GO",
+      "detail": "/home/pinball/Tables est inscriptible par pinball"
+    },
+    {
+      "check": "Cycles systemd",
+      "status": "GO",
+      "detail": "aucun cycle détecté ce boot"
+    },
+    {
+      "check": "Services essentiels",
+      "status": "GO",
+      "detail": "WebApp, topologie et VPinFE actifs"
+    }
+  ]
+}

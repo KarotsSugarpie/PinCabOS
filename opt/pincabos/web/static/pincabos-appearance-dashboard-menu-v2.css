@@ -1,0 +1,245 @@
+/*
+ * PINCABOS_APPEARANCE_GLOBAL_BRIDGE_V1
+ * Couche finale appliquée après les CSS propres aux modules.
+ * Les valeurs viennent toujours de pincabos-appearance-vars.css.
+ */
+
+:root {
+  /* Compatibilité DOF Commander / DOF Pro */
+  --pco-orange: var(--pco-appearance-accent, #ffb000) !important;
+  --pco-orange2: var(--pco-appearance-accent2, #ff7a00) !important;
+  --pco-purple: var(--pco-appearance-purple, #5f2a91) !important;
+  --pco-bg-card: var(--pco-appearance-card-bg, rgba(29, 11, 46, .76)) !important;
+  --pco-border: var(--pco-appearance-card-border, #ff7a00) !important;
+
+  /* Compatibilité Smart Import / Export */
+  --pco-st-orange: var(--pco-appearance-accent2, #ff7a00) !important;
+  --pco-st-orange-soft: color-mix(in srgb, var(--pco-appearance-accent2, #ff7a00) 16%, transparent) !important;
+  --pco-st-violet: var(--pco-appearance-purple, #5f2a91) !important;
+  --pco-st-violet-soft: color-mix(in srgb, var(--pco-appearance-purple, #5f2a91) 16%, transparent) !important;
+  --pco-st-line: var(--pco-appearance-card-border, #ff7a00) !important;
+  --pco-st-text: var(--pco-appearance-page-text, #ffffff) !important;
+  --pco-st-muted: var(--pco-appearance-muted-text, #d8b8ff) !important;
+  --pco-st-panel: var(--pco-appearance-card-bg, rgba(29, 11, 46, .76)) !important;
+  --pco-st-panel-2: var(--pco-appearance-nav-panel-bg, rgba(12, 0, 22, .58)) !important;
+}
+
+html body {
+  color: var(--pco-appearance-page-text, #ffffff) !important;
+  background-color: var(--pco-appearance-input-bg, #050007) !important;
+}
+
+/* Dashboard / catalogue des widgets */
+html body .pco-catalog-item,
+html body .pco-category,
+html body .pco-live-card,
+html body .pco-live-widget,
+html body .pco-dashboard-widget {
+  background: var(--pco-appearance-card-bg, rgba(29, 11, 46, .76)) !important;
+  color: var(--pco-appearance-page-text, #ffffff) !important;
+  border-color: var(--pco-appearance-card-border, #ff7a00) !important;
+  border-radius: var(--pco-appearance-card-radius, 18px) !important;
+  box-shadow: var(--pco-appearance-card-shadow, 0 0 25px rgba(255, 122, 0, .25)) !important;
+}
+
+/* VPX Ball / Cabinet */
+html body .vpxbc-shell,
+html body .vpxbc-hero,
+html body .vpxbc-picker,
+html body .vpxbc-preview,
+html body .vpxbc-thumb,
+html body .vpxbc-empty {
+  background: var(--pco-appearance-card-bg, rgba(29, 11, 46, .76)) !important;
+  color: var(--pco-appearance-page-text, #ffffff) !important;
+  border-color: var(--pco-appearance-card-border, #ff7a00) !important;
+}
+
+html body .vpxbc-shell h1,
+html body .vpxbc-shell h2,
+html body .vpxbc-shell h3,
+html body .vpxbc-picker h1,
+html body .vpxbc-picker h2,
+html body .vpxbc-picker h3,
+html body .vpxbc-preview summary {
+  color: var(--pco-appearance-accent, #ffb000) !important;
+}
+
+/* Champs, sélecteurs et boutons créés dynamiquement */
+html body .vpxbc-shell input,
+html body .vpxbc-shell select,
+html body .vpxbc-picker input,
+html body .vpxbc-picker select,
+html body .pco-catalog-item input,
+html body .pco-catalog-item select {
+  background: var(--pco-appearance-input-bg, #050007) !important;
+  color: var(--pco-appearance-input-text, #eeeeee) !important;
+  border-color: var(--pco-appearance-input-border, #ff7a00) !important;
+}
+
+html body .vpxbc-shell button,
+html body .vpxbc-picker button,
+html body .pco-catalog-add {
+  background: var(--pco-appearance-button-bg, #ff7a00) !important;
+  color: var(--pco-appearance-button-text, #160020) !important;
+  border-color: var(--pco-appearance-card-border, #ff7a00) !important;
+  border-radius: var(--pco-appearance-button-radius, 10px) !important;
+}
+
+/* Pages techniques avec panneaux ou cartes locaux */
+html body .pco-st-shell,
+html body .pco-st-panel,
+html body .pco-st-card,
+html body .pco-st-summary,
+html body .pco-st-result,
+html body .pco-st-warning,
+html body .dof-pro-card,
+html body .dof-pro-panel,
+html body .dof-card {
+  background: var(--pco-appearance-card-bg, rgba(29, 11, 46, .76)) !important;
+  color: var(--pco-appearance-page-text, #ffffff) !important;
+  border-color: var(--pco-appearance-card-border, #ff7a00) !important;
+  box-shadow: var(--pco-appearance-card-shadow, 0 0 25px rgba(255, 122, 0, .25)) !important;
+}
+
+/*
+ * PINCABOS_APPEARANCE_DASHBOARD_MENU_V2
+ * Cible les tuiles réellement visibles du Dashboard et les boutons
+ * réels du menu, sans toucher à la mise en page ni aux interactions.
+ */
+
+/* ============================================================
+   DASHBOARD — vraies tuiles : article.pco-card
+   ============================================================ */
+
+html body #pco-lobby {
+  color: var(--pco-appearance-page-text, #ffffff) !important;
+}
+
+html body #pco-lobby .pco-card {
+  background: var(--pco-appearance-card-bg, rgba(29, 11, 46, .76)) !important;
+  color: var(--pco-appearance-page-text, #ffffff) !important;
+  border-color: var(--pco-appearance-card-border, #ff7a00) !important;
+  border-radius: var(--pco-appearance-card-radius, 18px) !important;
+  box-shadow: var(--pco-appearance-card-shadow, 0 0 25px rgba(255, 122, 0, .25)) !important;
+}
+
+html body #pco-lobby .pco-card:hover {
+  border-color: var(--pco-appearance-accent, #ffb000) !important;
+  box-shadow: var(--pco-appearance-card-shadow, 0 0 25px rgba(255, 122, 0, .25)) !important;
+}
+
+html body #pco-lobby .pco-card-head {
+  background: var(--pco-appearance-nav-panel-bg, rgba(12, 0, 22, .58)) !important;
+  color: var(--pco-appearance-page-text, #ffffff) !important;
+  border-bottom-color: var(--pco-appearance-nav-panel-border, rgba(255, 122, 0, .25)) !important;
+}
+
+html body #pco-lobby .pco-card-body {
+  background: transparent !important;
+  color: var(--pco-appearance-page-text, #ffffff) !important;
+}
+
+html body #pco-lobby .pco-card h1,
+html body #pco-lobby .pco-card h2,
+html body #pco-lobby .pco-card h3,
+html body #pco-lobby .pco-card-head strong,
+html body #pco-lobby .pco-live-state strong {
+  color: var(--pco-appearance-accent, #ffb000) !important;
+}
+
+html body #pco-lobby .pco-card small,
+html body #pco-lobby .pco-card .muted,
+html body #pco-lobby .pco-live-state {
+  color: var(--pco-appearance-muted-text, #d8b8ff) !important;
+}
+
+html body #pco-lobby .pco-modal-panel,
+html body #pco-lobby .pco-modal {
+  background: var(--pco-appearance-card-bg, rgba(29, 11, 46, .76)) !important;
+  color: var(--pco-appearance-page-text, #ffffff) !important;
+  border-color: var(--pco-appearance-card-border, #ff7a00) !important;
+}
+
+/* Boutons normaux du Dashboard */
+html body #pco-lobby .pco-lobby-actions button:not(.pco-good):not(.pco-warn),
+html body #pco-lobby .pco-action:not(.good):not(.warn):not(.danger),
+html body #pco-lobby .pco-catalog-add,
+html body #pco-lobby .pco-modal-close {
+  background: var(--pco-appearance-button-bg, #ff7a00) !important;
+  color: var(--pco-appearance-button-text, #160020) !important;
+  border-color: var(--pco-appearance-card-border, #ff7a00) !important;
+  border-radius: var(--pco-appearance-button-radius, 10px) !important;
+}
+
+/* Boutons d'état : gardent leur sens, mais suivent les couleurs Apparence */
+html body #pco-lobby .pco-good,
+html body #pco-lobby .pco-action.good {
+  background: var(--pco-appearance-ok, #00ff99) !important;
+  color: var(--pco-appearance-button-text, #160020) !important;
+}
+
+html body #pco-lobby .pco-warn,
+html body #pco-lobby .pco-action.warn {
+  background: var(--pco-appearance-warn, #ffb000) !important;
+  color: var(--pco-appearance-button-text, #160020) !important;
+}
+
+html body #pco-lobby .pco-action.danger {
+  background: var(--pco-appearance-bad, #ff5555) !important;
+  color: var(--pco-appearance-button-text, #160020) !important;
+}
+
+/* ============================================================
+   MENU — boutons et liens réellement affichés
+   ============================================================ */
+
+html body .pincabos-nav {
+  background: var(--pco-appearance-nav-panel-bg, rgba(12, 0, 22, .58)) !important;
+  border-color: var(--pco-appearance-nav-panel-border, rgba(255, 122, 0, .25)) !important;
+}
+
+html body .pincabos-nav .nav-label {
+  color: var(--pco-appearance-accent, #ffb000) !important;
+}
+
+html body .pincabos-nav .nav-pages > a,
+html body .pincabos-nav .nav-tools-clean .nav-action,
+html body .pincabos-nav .nav-tools-clean .pco-topbar-tool-copy,
+html body .pincabos-nav .pco-menu-tool-btn,
+html body .pincabos-nav .screen-toggle-btn {
+  background: var(--pco-appearance-secondary-bg, #5f2a91) !important;
+  color: var(--pco-appearance-secondary-text, #ffffff) !important;
+  border-color: var(--pco-appearance-nav-panel-border, rgba(255, 122, 0, .25)) !important;
+  border-radius: var(--pco-appearance-button-radius, 10px) !important;
+}
+
+html body .pincabos-nav .nav-pages > a:hover,
+html body .pincabos-nav .nav-pages > a.active,
+html body .pincabos-nav .nav-tools-clean .nav-action:hover,
+html body .pincabos-nav .nav-tools-clean .pco-topbar-tool-copy:hover,
+html body .pincabos-nav .pco-menu-tool-btn:hover,
+html body .pincabos-nav .pco-menu-pin-btn.pco-pinned {
+  background: var(--pco-appearance-nav-active-bg, #ff7a00) !important;
+  color: var(--pco-appearance-nav-active-text, #160020) !important;
+  border-color: var(--pco-appearance-accent, #ffb000) !important;
+}
+
+/* État de chaque écran : conserve la logique Glow actif/inactif */
+html body .pincabos-nav .screen-toggle-btn.screen-toggle-on {
+  background: var(--pco-appearance-nav-active-bg, #ff7a00) !important;
+  color: var(--pco-appearance-nav-active-text, #160020) !important;
+  border-color: var(--pco-appearance-accent, #ffb000) !important;
+  box-shadow: 0 0 16px var(--pco-appearance-accent, #ffb000) !important;
+}
+
+html body .pincabos-nav .screen-toggle-btn.screen-toggle-off {
+  background: var(--pco-appearance-secondary-bg, #5f2a91) !important;
+  color: var(--pco-appearance-secondary-text, #ffffff) !important;
+  border-color: var(--pco-appearance-nav-panel-border, rgba(255, 122, 0, .25)) !important;
+  box-shadow: none !important;
+}
+
+html body .pincabos-nav .nav-vpinfe-vps-group::before {
+  background: var(--pco-appearance-nav-panel-bg, rgba(12, 0, 22, .58)) !important;
+  border-color: var(--pco-appearance-nav-panel-border, rgba(255, 122, 0, .25)) !important;
+}

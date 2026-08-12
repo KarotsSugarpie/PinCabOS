@@ -1,0 +1,3 @@
+# PinCabOS DudesCabConfig firmware helper.
+# The helper rejects non-UF2 files, paths outside the firmware store and invalid job IDs.
+pinball ALL=(root) NOPASSWD: /usr/local/libexec/pincabos-dudescab-flash *

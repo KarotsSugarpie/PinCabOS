@@ -1,0 +1,35 @@
+# vim:ft=apparmor
+# ------------------------------------------------------------------
+#
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#
+# ------------------------------------------------------------------
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile ospf6d /usr/lib/frr/ospf6d flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/frr>
+  include <abstractions/frr-snmp>
+
+  capability net_raw,
+  capability sys_admin,
+
+  @{exec_path} mr,
+
+  @{run}/netns/* r,
+
+  @{run}/frr/ospf6d-gr.json w,
+
+  /var/lib/frr/ r,
+  /var/lib/frr/ospf6d.json{,.sav} rw,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/ospf6d>
+}

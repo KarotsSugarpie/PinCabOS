@@ -1,0 +1,74 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    Author: Federico Quattrin <federico.quattrin@canonical.com>
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+#
+
+abi <abi/5.0>,
+include <tunables/global>
+
+profile lsusb /usr/bin/lsusb {
+  include <abstractions/base>
+
+  /usr/bin/lsusb mr,
+
+  network netlink raw,
+
+  # Needed for additional information gathered under sudo
+  capability net_admin,
+
+  /etc/udev/hwdb.bin r,
+
+  /dev/bus/usb/@{d}@{d}@{d}/@{d}@{d}@{d} rw,
+
+  /dev/ r,
+  /dev/bus/usb/ r,
+  @{run}/udev/data/*usb:* r,
+  @{run}/udev/data/c*:* r,
+
+  @{sys}/bus/ r,
+  @{sys}/bus/usb/devices/ r,
+  @{sys}/class/ r,
+
+  @{sys}/devices/**/usb[0-9]**/uevent r,
+  @{sys}/devices/**/usb[0-9]**/busnum r,
+  @{sys}/devices/**/usb[0-9]**/descriptors r,
+  @{sys}/devices/**/usb[0-9]**/devnum r,
+  @{sys}/devices/**/usb[0-9]**/speed r,
+  @{sys}/devices/**/usb[0-9]**/manufacturer r,
+  @{sys}/devices/**/usb[0-9]**/product r,
+  @{sys}/devices/**/usb[0-9]**/serial r,
+  # needed for --tree
+  @{sys}/devices/**/usb[0-9]**/bAlternateSetting r,
+  @{sys}/devices/**/usb[0-9]**/bInterfaceClass r,
+  @{sys}/devices/**/usb[0-9]**/bInterfaceNumber r,
+  @{sys}/devices/**/usb[0-9]**/bInterfaceProtocol r,
+  @{sys}/devices/**/usb[0-9]**/bInterfaceSubClass r,
+  @{sys}/devices/**/usb[0-9]**/bNumEndpoints r,
+  @{sys}/devices/**/usb[0-9]**/bConfigurationValue r,
+  @{sys}/devices/**/usb[0-9]**/bDeviceClass r,
+  @{sys}/devices/**/usb[0-9]**/bDeviceProtocol r,
+  @{sys}/devices/**/usb[0-9]**/bDeviceSubClass r,
+  @{sys}/devices/**/usb[0-9]**/bMaxPacketSize0 r,
+  @{sys}/devices/**/usb[0-9]**/bNumConfigurations r,
+  @{sys}/devices/**/usb[0-9]**/bNumInterfaces r,
+  @{sys}/devices/**/usb[0-9]**/bcdDevice r,
+  @{sys}/devices/**/usb[0-9]**/bmAttributes r,
+  @{sys}/devices/**/usb[0-9]**/configuration r,
+  @{sys}/devices/**/usb[0-9]**/idProduct r,
+  @{sys}/devices/**/usb[0-9]**/idVendor r,
+  @{sys}/devices/**/usb[0-9]**/maxchild r,
+  @{sys}/devices/**/usb[0-9]**/rx_lanes r,
+  @{sys}/devices/**/usb[0-9]**/tx_lanes r,
+  # Needed for --tree -v
+  @{sys}/devices/**/usb[0-9]**/bMaxPower r,
+  @{sys}/devices/**/usb[0-9]**/version r,
+
+  include if exists <local/lsusb>
+}

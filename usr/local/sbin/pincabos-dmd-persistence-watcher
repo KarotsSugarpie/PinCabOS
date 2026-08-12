@@ -1,0 +1,482 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import os
+import pwd
+import time
+from pathlib import Path
+
+TABLES_ROOT = Path(
+    "/home/pinball/Tables"
+).resolve()
+
+RUNTIME_DIR = Path(
+    "/run/pincabos-b2s-dmd-tuner"
+)
+
+COMMAND_FILE = (
+    RUNTIME_DIR / "command.env"
+)
+
+STATE_FILE = (
+    RUNTIME_DIR / "state.env"
+)
+
+PROFILE_NAME = (
+    "PinCabOS-DMD-manual.env"
+)
+
+LOG_FILE = Path(
+    "/opt/pincabos/logs/"
+    "dmd-persistence-runtime.log"
+)
+
+
+def log(message: str) -> None:
+    line = (
+        f"{time.strftime('%Y-%m-%d %H:%M:%S')} "
+        f"{message}"
+    )
+
+    print(
+        line,
+        flush=True,
+    )
+
+    try:
+        LOG_FILE.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        with LOG_FILE.open(
+            "a",
+            encoding="utf-8",
+        ) as handle:
+            handle.write(line + "\n")
+
+    except OSError:
+        pass
+
+
+def pinball_identity() -> tuple[int, int]:
+    try:
+        account = pwd.getpwnam("pinball")
+        return account.pw_uid, account.pw_gid
+    except KeyError:
+        return 1000, 1000
+
+
+def read_env(
+    path: Path,
+) -> dict[str, str]:
+    values: dict[str, str] = {}
+
+    try:
+        lines = path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        ).splitlines()
+    except OSError:
+        return values
+
+    for line in lines:
+        if (
+            "=" not in line
+            or line.lstrip().startswith("#")
+        ):
+            continue
+
+        key, value = line.split(
+            "=",
+            1,
+        )
+
+        values[key.strip()] = value.strip()
+
+    return values
+
+
+def number(
+    values: dict[str, str],
+    key: str,
+    fallback: int,
+    minimum: int,
+    maximum: int,
+) -> int:
+    try:
+        value = int(
+            values.get(
+                key,
+                fallback,
+            )
+        )
+    except (TypeError, ValueError):
+        value = fallback
+
+    return max(
+        minimum,
+        min(maximum, value),
+    )
+
+
+def active_table() -> tuple[int, Path] | None:
+    rows: list[tuple[int, Path]] = []
+
+    try:
+        processes = list(
+            Path("/proc").iterdir()
+        )
+    except OSError:
+        return None
+
+    for process in processes:
+        if not process.name.isdigit():
+            continue
+
+        try:
+            executable = Path(
+                os.readlink(
+                    process / "exe"
+                )
+            ).name
+
+            if "VPinballX" not in executable:
+                continue
+
+            arguments = [
+                item.decode(
+                    "utf-8",
+                    errors="replace",
+                )
+                for item in (
+                    process / "cmdline"
+                ).read_bytes().split(b"\0")
+                if item
+            ]
+
+        except OSError:
+            continue
+
+        table_argument = next(
+            (
+                item
+                for item in arguments
+                if item.casefold().endswith(
+                    ".vpx"
+                )
+            ),
+            None,
+        )
+
+        if not table_argument:
+            continue
+
+        table = Path(
+            table_argument
+        ).expanduser().resolve()
+
+        try:
+            table.relative_to(TABLES_ROOT)
+        except ValueError:
+            continue
+
+        if table.is_file():
+            rows.append(
+                (
+                    int(process.name),
+                    table,
+                )
+            )
+
+    if not rows:
+        return None
+
+    return max(
+        rows,
+        key=lambda row: row[0],
+    )
+
+
+def profile_values(
+    table: Path,
+) -> tuple[Path, int, dict[str, int]] | None:
+    profile = (
+        table.parent
+        / "fulldmd"
+        / PROFILE_NAME
+    )
+
+    try:
+        stamp = profile.stat().st_mtime_ns
+    except OSError:
+        return None
+
+    raw = read_env(profile)
+
+    manual = number(
+        raw,
+        "PINCABOS_DMD_MANUAL",
+        0,
+        0,
+        1,
+    )
+
+    if manual != 1:
+        return None
+
+    values = {
+        "auto": number(
+            raw,
+            "PINCABOS_DMD_AUTO",
+            0,
+            0,
+            1,
+        ),
+        "x": number(
+            raw,
+            "PINCABOS_DMD_X",
+            0,
+            0,
+            65535,
+        ),
+        "y": number(
+            raw,
+            "PINCABOS_DMD_Y",
+            0,
+            0,
+            65535,
+        ),
+        "w": number(
+            raw,
+            "PINCABOS_DMD_W",
+            640,
+            1,
+            65535,
+        ),
+        "h": number(
+            raw,
+            "PINCABOS_DMD_H",
+            160,
+            1,
+            65535,
+        ),
+    }
+
+    return profile, stamp, values
+
+
+def write_command(
+    pid: int,
+    values: dict[str, int],
+) -> None:
+    uid, gid = pinball_identity()
+
+    RUNTIME_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    os.chown(
+        RUNTIME_DIR,
+        uid,
+        gid,
+    )
+
+    os.chmod(
+        RUNTIME_DIR,
+        0o770,
+    )
+
+    temporary = COMMAND_FILE.with_name(
+        f"{COMMAND_FILE.name}.tmp.{os.getpid()}"
+    )
+
+    payload = (
+        f"PID={pid}\n"
+        "ENABLED=1\n"
+        f"AUTO={values['auto']}\n"
+        f"X={values['x']}\n"
+        f"Y={values['y']}\n"
+        f"W={values['w']}\n"
+        f"H={values['h']}\n"
+    )
+
+    temporary.write_text(
+        payload,
+        encoding="utf-8",
+    )
+
+    os.chown(
+        temporary,
+        uid,
+        gid,
+    )
+
+    os.chmod(
+        temporary,
+        0o660,
+    )
+
+    os.replace(
+        temporary,
+        COMMAND_FILE,
+    )
+
+
+def confirmed(
+    pid: int,
+    values: dict[str, int],
+) -> bool:
+    state = read_env(STATE_FILE)
+
+    try:
+        state_pid = int(
+            state.get("PID", "-1")
+        )
+    except ValueError:
+        return False
+
+    if state_pid != pid:
+        return False
+
+    expected = {
+        "AUTO": values["auto"],
+        "X": values["x"],
+        "Y": values["y"],
+        "W": values["w"],
+        "H": values["h"],
+    }
+
+    for key, wanted in expected.items():
+        try:
+            actual = int(
+                state.get(
+                    key,
+                    "-1",
+                )
+            )
+        except ValueError:
+            return False
+
+        if actual != wanted:
+            return False
+
+    return True
+
+
+def main() -> None:
+    log(
+        "Watcher de persistance DMD démarré."
+    )
+
+    current_key: tuple[
+        int,
+        str,
+        int,
+    ] | None = None
+
+    completed = False
+    first_seen = 0.0
+    last_write = 0.0
+
+    while True:
+        active = active_table()
+
+        if not active:
+            current_key = None
+            completed = False
+            time.sleep(0.35)
+            continue
+
+        pid, table = active
+        profile = profile_values(table)
+
+        if profile is None:
+            key = (
+                pid,
+                str(table),
+                -1,
+            )
+
+            if key != current_key:
+                log(
+                    "Aucun profil DMD manuel pour "
+                    f"PID={pid} table={table.name}"
+                )
+
+                current_key = key
+                completed = True
+
+            time.sleep(0.35)
+            continue
+
+        profile_path, stamp, values = profile
+
+        key = (
+            pid,
+            str(table),
+            stamp,
+        )
+
+        if key != current_key:
+            current_key = key
+            completed = False
+            first_seen = time.monotonic()
+            last_write = 0.0
+
+            log(
+                f"Profil détecté PID={pid} "
+                f"table={table.name} "
+                f"X={values['x']} "
+                f"Y={values['y']} "
+                f"W={values['w']} "
+                f"H={values['h']} "
+                f"profil={profile_path}"
+            )
+
+        if not completed:
+            now = time.monotonic()
+            elapsed = now - first_seen
+
+            interval = (
+                0.45
+                if elapsed < 20
+                else 3.0
+            )
+
+            if now - last_write >= interval:
+                try:
+                    write_command(
+                        pid,
+                        values,
+                    )
+
+                    last_write = now
+
+                except OSError as error:
+                    log(
+                        "Écriture de commande impossible : "
+                        f"{error}"
+                    )
+
+            if confirmed(
+                pid,
+                values,
+            ):
+                completed = True
+
+                log(
+                    "Position DMD restaurée et confirmée "
+                    f"PID={pid} table={table.name} "
+                    f"X={values['x']} "
+                    f"Y={values['y']} "
+                    f"W={values['w']} "
+                    f"H={values['h']}"
+                )
+
+        time.sleep(0.20)
+
+
+if __name__ == "__main__":
+    main()

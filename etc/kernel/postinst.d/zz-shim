@@ -1,0 +1,11 @@
+#!/bin/sh
+
+efi_archs="x64 aa64"
+
+# Try to update shim alternative if pointing to previous shim
+for efi_arch in ${efi_archs}; do
+	test -e /usr/lib/shim/shim${efi_arch}.efi.signed.latest || continue
+	if update-alternatives --query shim${efi_arch}.efi.signed | grep "Best: /usr/lib/shim/shim${efi_arch}.efi.signed.previous" -q; then
+		dpkg-trigger shim-kernel-check
+	fi
+done

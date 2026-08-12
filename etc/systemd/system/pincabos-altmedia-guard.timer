@@ -1,0 +1,12 @@
+[Unit]
+Description=Run PinCabOS contaminated altmedia guard
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=20s
+Persistent=true
+Unit=pincabos-altmedia-guard.service
+
+[Install]
+WantedBy=timers.target

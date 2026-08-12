@@ -1,0 +1,70 @@
+/* PinCabOS Appearance Variables
+ * Generated from: PinCabOS Classic
+ * Source: /opt/pincabos/config/webapp-appearance/presets/PinCabOS Classic.json
+ * Created by Karots Sugarpie
+ * Safe layer: visual variables only, no layout change.
+ */
+
+:root {
+  --pco-appearance-accent: #ffb000;
+  --pco-appearance-accent2: #ff7a00;
+  --pco-appearance-purple: #5f2a91;
+  --pco-appearance-page-text: #ffffff;
+  --pco-appearance-muted-text: #d8b8ff;
+  --pco-appearance-card-bg: rgba(29, 11, 46, 0.76);
+  --pco-appearance-card-border: #ff7a00;
+  --pco-appearance-card-radius: 18px;
+  --pco-appearance-card-shadow: 0 0 25px rgba(255, 122, 0, 0.25);
+  --pco-appearance-button-bg: #ff7a00;
+  --pco-appearance-button-text: #160020;
+  --pco-appearance-button-radius: 10px;
+  --pco-appearance-secondary-bg: #5f2a91;
+  --pco-appearance-secondary-text: #ffffff;
+  --pco-appearance-nav-active-bg: #ff7a00;
+  --pco-appearance-nav-active-text: #160020;
+  --pco-appearance-nav-panel-bg: rgba(12, 0, 22, 0.58);
+  --pco-appearance-nav-panel-border: rgba(255, 122, 0, 0.25);
+  --pco-appearance-input-bg: #050007;
+  --pco-appearance-input-border: #ff7a00;
+  --pco-appearance-input-text: #eeeeee;
+  --pco-appearance-table-bg: #050007;
+  --pco-appearance-ok: #00ff99;
+  --pco-appearance-warn: #ffb000;
+  --pco-appearance-bad: #ff5555;
+}
+
+.card {
+  background: var(--pco-appearance-card-bg) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  border-radius: var(--pco-appearance-card-radius) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+.card h2, h1, .nav-label { color: var(--pco-appearance-accent) !important; }
+.nav a, .button {
+  background: var(--pco-appearance-button-bg) !important;
+  color: var(--pco-appearance-button-text) !important;
+  border-radius: var(--pco-appearance-button-radius) !important;
+}
+.secondary {
+  background: var(--pco-appearance-secondary-bg) !important;
+  color: var(--pco-appearance-secondary-text) !important;
+  border-color: var(--pco-appearance-accent2) !important;
+}
+.nav a.active, .pincabos-nav a.active {
+  background: var(--pco-appearance-nav-active-bg) !important;
+  color: var(--pco-appearance-nav-active-text) !important;
+  border-color: var(--pco-appearance-accent) !important;
+}
+.nav-pages {
+  background: var(--pco-appearance-nav-panel-bg) !important;
+  border-color: var(--pco-appearance-nav-panel-border) !important;
+}
+input, select, textarea {
+  background: var(--pco-appearance-input-bg) !important;
+  color: var(--pco-appearance-input-text) !important;
+  border-color: var(--pco-appearance-input-border) !important;
+}
+table, pre { background: var(--pco-appearance-table-bg) !important; }
+.ok { color: var(--pco-appearance-ok) !important; }
+.warn { color: var(--pco-appearance-warn) !important; }
+.bad { color: var(--pco-appearance-bad) !important; }

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+BASE="/opt/pincabos/scripts/VPXlauncher.sh"
+
+export DISPLAY="${DISPLAY:-:0}"
+export XAUTHORITY="${XAUTHORITY:-/home/pinball/.Xauthority}"
+
+GPU_MODE_BEFORE=""
+
+if command -v nvidia-settings >/dev/null 2>&1; then
+  GPU_MODE_BEFORE="$(
+    nvidia-settings -q '[gpu:0]/GPUPowerMizerMode' -t 2>/dev/null || true
+  )"
+
+  if [[ "$GPU_MODE_BEFORE" =~ ^[012]$ ]]; then
+    nvidia-settings -a '[gpu:0]/GPUPowerMizerMode=1' >/dev/null 2>&1 || true
+  fi
+fi
+
+set +e
+"$BASE" "$@"
+RC=$?
+set -e
+
+if [[ "$GPU_MODE_BEFORE" =~ ^[012]$ ]]; then
+  nvidia-settings -a "[gpu:0]/GPUPowerMizerMode=${GPU_MODE_BEFORE}" \
+    >/dev/null 2>&1 || true
+fi
+
+exit "$RC"

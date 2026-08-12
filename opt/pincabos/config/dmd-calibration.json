@@ -1,0 +1,36 @@
+{
+  "screen_id": "2",
+  "x": 6152,
+  "y": 573,
+  "width": 512,
+  "height": 128,
+  "geometry": "512x128+6152+573",
+  "real": {
+    "x": 6152,
+    "y": 573,
+    "width": 512,
+    "height": 128,
+    "geometry": "512x128+6152+573"
+  },
+  "local": {
+    "x": 6152,
+    "y": 573,
+    "width": 512,
+    "height": 128,
+    "geometry": "512x128+6152+573"
+  },
+  "window": {
+    "x": 0,
+    "y": 0,
+    "width": 0,
+    "height": 0,
+    "geometry": "0x0+0+0"
+  },
+  "note": "PinCabOS global DMD position calibration. x/y top-level are real desktop coordinates.",
+  "_pincabos_meta": {
+    "modified_by": "PinCabOS",
+    "function": "DMD Calibration",
+    "updated_at": "2026-06-30T21:18:08",
+    "formula": "real_x = window_x + local_x; real_y = window_y + local_y"
+  }
+}

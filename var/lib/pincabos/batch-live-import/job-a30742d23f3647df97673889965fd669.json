@@ -1,0 +1,1103 @@
+{
+  "completed_tables": 10143,
+  "conflict_mode": "skip",
+  "created_at": "2026-07-14T01:40:34Z",
+  "current_item": "",
+  "error": "",
+  "events": [
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : a (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 8 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 2 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 7 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 2 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 1 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 2 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : a (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : e (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 6 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : a (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : d (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : b (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 7 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 8 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : d (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : a (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : b (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 8 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : e (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 8 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 6 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 2 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 7 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 2 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : d (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 7 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 0 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : e (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : b (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 6 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 7 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : b (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : e (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 2 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 7 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 1 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 6 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : a (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 0 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 0 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : e (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 8 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : a (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : e (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : e (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : d (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : b (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 1 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : http-v2 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : pip (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : update-manager-core (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : db918fb00baaf964 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 770a329732d92a7148442055f43a71e3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : GLCache (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : nvidia (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 6b (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 6d (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9b (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 0c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : b6 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 57 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : d1 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 37 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : a6 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : fb (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 6a (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 8c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 67 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : ef (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3a (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : db (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 0b (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 3c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 0e (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5a (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 13 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 60 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : dd (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 85 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : a2 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : d3 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 4c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : d0 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 28 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : e8 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : fd (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 24 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 43 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 52 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 55 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 2c (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : b5 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : dc (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 9d (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : b0 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 97 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : df (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : ec (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 21 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : cf (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : bd (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 5d (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 1f (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 31 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : 99 (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : mesa_shader_cache (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : .cache (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : .ssh (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : attila (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : altsound (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : pinmame (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : Audio (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : Loading (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : BackGlass (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : Wheel (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : PlayField (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : medias (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Table importée : Attila the Hun (Game Plan 1984) (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:09Z",
+      "level": "info",
+      "message": "Archive 42/43 en cours : Austin Powers (Stern 2001) - VPSId lg07-fz5.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:42:11Z",
+      "level": "info",
+      "message": "Archive 43/43 en cours : Aztec (Williams 1976) - VPSId UrLUrItP.PinCabOs"
+    },
+    {
+      "at": "2026-07-14T01:42:12Z",
+      "level": "info",
+      "message": "Table importée : Audio (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:12Z",
+      "level": "info",
+      "message": "Table importée : Loading (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:12Z",
+      "level": "info",
+      "message": "Table importée : BackGlass (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:12Z",
+      "level": "info",
+      "message": "Table importée : Wheel (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:12Z",
+      "level": "info",
+      "message": "Table importée : PlayField (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:12Z",
+      "level": "info",
+      "message": "Table importée : medias (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:13Z",
+      "level": "info",
+      "message": "Table importée : Aztec (Williams 1976) (43/43)."
+    },
+    {
+      "at": "2026-07-14T01:42:13Z",
+      "level": "info",
+      "message": "Import terminé : 43/43 archive(s) traitée(s)."
+    }
+  ],
+  "finished_at": "2026-07-14T01:42:13Z",
+  "id": "a30742d23f3647df97673889965fd669",
+  "imported_tables": 10143,
+  "processed_archives": 43,
+  "progress": {
+    "completed": 43,
+    "current_item": "",
+    "imported_tables": 10143,
+    "label": "Terminé",
+    "mode": "archives",
+    "percent": 100,
+    "total": 43
+  },
+  "result_excerpt": "PinCabOS - Batch Import terminé Langue : Français English Español Italiano Deutsch Nederlands 📊 Tableau de bord 🎛️ Inputs 🧰 Outils PinCabOS ℹ️ À propos 📌 X Accès rapides Ouvrir VPinFE Ouvrir VPS PinCab Explorer PinCab Console Afficher PinCabOS WebApp sur : PlayField BackGlass Batch Import terminé Mode de conflit: skip Journal : /opt/pincabos/logs/batch-import-20260713-214048.log Élément Résultat Détail Abra Ca Dabra (Gottlieb 1975) Ignoré Table déjà installée. Accept (Original 2019) Ignoré Table déjà installée. Ace of Speed (Original 2019) Ignoré Table déjà installée. Ace Ventura - Pet Detective (Original 2019) Ignoré Table déjà installée. Aces High (Bally 1965) Succès Importé dans /home/pinball/Tables/Aces High (Bally 1965) Adventure Time - Rainy Day Daydream (Original 2022) Ignoré Table déjà installée. Adventures of Rocky and Bullwinkle and Friends (Data East 1993) Ignoré Table déjà installée. Aerosmith (Original 2019) Ignoré Table déjà installée. Agents 777 (Game Plan 1984) Succès Importé dans /home/pinball/Tables/Agents 777 (Game Plan 1984) Air Aces (Bally 1975) Succès Importé dans /home/pinball/Tables/Air Aces (Bally 1975) Airborne (Capcom 1996) Ignoré Table déjà installée. Airborne Avenger (Atari 1977) Succès Importé dans /home/pinball/Tables/Airborne Avenger (Atari 1977) Airport (Gottlieb 1969) Succès Importé dans /home/pinball/Tables/Airport (Gottlieb 1969) Airwolf (Original 2020) Succès Importé dans /home/pinball/Tables/Airwolf (Original 2020) Akira (Original 2021) Succès Importé dans /home/pinball/Tables/Akira (Original 2021) Aladdin&#x27;s Castle (Bally 1976) Succès Importé dans /home/pinball/Tables/Aladdin&#x27;s Castle (Bally 1976) Alaska (Interflip 1978) Succès Importé dans /home/pinball/Tables/Alaska (Interflip 1978) Alfred Hitchcock&#x27;s Psycho (Original 2019) Succès Importé dans /home/pinball/Tables/Alfred Hitchcock&#x27;s Psycho (Original 2019) Algar (Williams 1980) Ignoré Table déjà installée. Ali (Stern 1980) Succès Importé dans /home/pinball/Tables/Ali (Stern 1980) Alien Poker (Williams 1980) Succès Importé dans /home/pinball/Tables/Alien Poker (Williams 1980) Alien Star (Gottlieb 1984) Succès Importé dans /home/pinball/Tables/Alien Star (Gottlieb 1984) Aliens from Outer Space (Original 2021) Succès Importé dans /home/pinball/Tables/Aliens from Outer Space (Original 2021) Alive (Brunswick 1978) Succès Importé dans /home/pinball/Tables/Alive (Brunswick 1978) Alley Cats (Williams 1985) Succès Importé dans /home/pinball/Tables/Alley Cats (Williams 1985) Amazon Hunt (Gottlieb 1983) Succès Importé dans /home/pinball/Tables/Amazon Hunt (Gottlieb 1983) America&#x27;s Most Haunted (Spooky Pinball 2014) Succès Importé dans /home/pinball/Tables/America&#x27;s Most Haunted (Spooky Pinball 2014) Andromeda (Game Plan 1985) Succès Importé dans /home/pinball/Tables/Andromeda (Game Plan 1985) Apache! (Taito do Brasil 1978) Succès Importé dans /home/pinball/Tables/Apache! (Taito do Brasil 1978) Apollo 13 (Sega 1995) Ignoré Table déjà installée. Aqualand (Juegos Populares 1986) Succès Importé dans /home/pinball/Tables/Aqualand (Juegos Populares 1986) Aquarius (Gottlieb 1970) Succès Importé dans /home/pinball/Tables/Aquarius (Gottlieb 1970) Aristocrat (Williams 1979) Succès Importé dans /home/pinball/Tables/Aristocrat (Williams 1979) Aspen (Brunswick 1979) Succès Importé dans /home/pinball/Tables/Aspen (Brunswick 1979) Astro (Gottlieb 1971) Succès Importé dans /home/pinball/Tables/Astro (Gottlieb 1971) Astronaut (Chicago Coin 1969) Succès Importé dans /home/pinball/Tables/Astronaut (Chicago Coin 1969) Atari 2600 (Original 2022) Succès Importé dans /home/pinball/Tables/Atari 2600 (Original 2022) Atlantis (Bally 1989) Succès Importé dans /home/pinball/Tables/Atlantis (Bally 1989) Atlantis (Gottlieb 1975) Succès Importé dans /home/pinball/Tables/Atlantis (Gottlieb 1975) Atleta (Inder 1991) Succès Importé dans /home/pinball/Tables/Atleta (Inder 1991) Attila the Hun (Game Plan 1984) Succès Importé dans /home/pinball/Tables/Atti",
+  "started_archives": 43,
+  "started_at": "2026-07-14T01:40:34Z",
+  "state": "completed",
+  "total_archives": 43,
+  "updated_at": "2026-07-14T01:42:13Z",
+  "upload_dir": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669",
+  "uploads": [
+    {
+      "name": "Abra Ca Dabra (Gottlieb 1975) - VPSId OmWHC8EW.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0001--Abra Ca Dabra (Gottlieb 1975) - VPSId OmWHC8EW.PinCabOs"
+    },
+    {
+      "name": "Accept (Original 2019) - VPSId 5tq-eB6P.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0002--Accept (Original 2019) - VPSId 5tq-eB6P.PinCabOs"
+    },
+    {
+      "name": "Ace of Speed (Original 2019) - VPSId oeE2OvEi.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0003--Ace of Speed (Original 2019) - VPSId oeE2OvEi.PinCabOs"
+    },
+    {
+      "name": "Ace Ventura - Pet Detective (Original 2019) - VPSId DoQilHBe.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0004--Ace Ventura - Pet Detective (Original 2019) - VPSId DoQilHBe.PinCabOs"
+    },
+    {
+      "name": "Aces High (Bally 1965) - VPSId cCkpZwfG.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0005--Aces High (Bally 1965) - VPSId cCkpZwfG.PinCabOs"
+    },
+    {
+      "name": "Adventure Time - Rainy Day Daydream (Original 2022) - VPSId 7ElJqxPq.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0006--Adventure Time - Rainy Day Daydream (Original 2022) - VPSId 7ElJqxPq.PinCabOs"
+    },
+    {
+      "name": "Adventures of Rocky and Bullwinkle and Friends (Data East 1993) - VPSId DXehLyun.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0007--Adventures of Rocky and Bullwinkle and Friends (Data East 1993) - VPSId DXehLyun.PinCabOs"
+    },
+    {
+      "name": "Aerosmith (Original 2019) - VPSId f9ZIrctrd4.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0008--Aerosmith (Original 2019) - VPSId f9ZIrctrd4.PinCabOs"
+    },
+    {
+      "name": "Agents 777 (Game Plan 1984) - VPSId c36A48pe.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0009--Agents 777 (Game Plan 1984) - VPSId c36A48pe.PinCabOs"
+    },
+    {
+      "name": "Air Aces (Bally 1975) - VPSId ngXHaZwR.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0010--Air Aces (Bally 1975) - VPSId ngXHaZwR.PinCabOs"
+    },
+    {
+      "name": "Airborne (Capcom 1996) - VPSId gNyJvD-k.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0011--Airborne (Capcom 1996) - VPSId gNyJvD-k.PinCabOs"
+    },
+    {
+      "name": "Airborne Avenger (Atari 1977) - VPSId SEtRrHK_.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0012--Airborne Avenger (Atari 1977) - VPSId SEtRrHK_.PinCabOs"
+    },
+    {
+      "name": "Airport (Gottlieb 1969) - VPSId W3WukBcz.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0013--Airport (Gottlieb 1969) - VPSId W3WukBcz.PinCabOs"
+    },
+    {
+      "name": "Airwolf (Original 2020) - VPSId WPTZiSd0.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0014--Airwolf (Original 2020) - VPSId WPTZiSd0.PinCabOs"
+    },
+    {
+      "name": "Akira (Original 2021) - VPSId YjXHExug.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0015--Akira (Original 2021) - VPSId YjXHExug.PinCabOs"
+    },
+    {
+      "name": "Aladdin_s Castle (Bally 1976) - VPSId M-QUMdFt.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0016--Aladdin_s Castle (Bally 1976) - VPSId M-QUMdFt.PinCabOs"
+    },
+    {
+      "name": "Alaska (Interflip 1978) - VPSId fJJ_7OYJqy.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0017--Alaska (Interflip 1978) - VPSId fJJ_7OYJqy.PinCabOs"
+    },
+    {
+      "name": "Alfred Hitchcock_s Psycho (Original 2019) - VPSId nGt78HB-.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0018--Alfred Hitchcock_s Psycho (Original 2019) - VPSId nGt78HB-.PinCabOs"
+    },
+    {
+      "name": "Algar (Williams 1980) - VPSId UrEARMMt.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0019--Algar (Williams 1980) - VPSId UrEARMMt.PinCabOs"
+    },
+    {
+      "name": "Ali (Stern 1980) - VPSId z9BMLCAY.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0020--Ali (Stern 1980) - VPSId z9BMLCAY.PinCabOs"
+    },
+    {
+      "name": "Alien Poker (Williams 1980) - VPSId ZuXV_QDM.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0021--Alien Poker (Williams 1980) - VPSId ZuXV_QDM.PinCabOs"
+    },
+    {
+      "name": "Alien Star (Gottlieb 1984) - VPSId 0RdFWzVI.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0022--Alien Star (Gottlieb 1984) - VPSId 0RdFWzVI.PinCabOs"
+    },
+    {
+      "name": "Aliens from Outer Space (Original 2021) - VPSId RyFa3iRcGp.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0023--Aliens from Outer Space (Original 2021) - VPSId RyFa3iRcGp.PinCabOs"
+    },
+    {
+      "name": "Alive (Brunswick 1978) - VPSId N7u4auMl.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0024--Alive (Brunswick 1978) - VPSId N7u4auMl.PinCabOs"
+    },
+    {
+      "name": "Alley Cats (Williams 1985) - VPSId pOQqr7_D.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0025--Alley Cats (Williams 1985) - VPSId pOQqr7_D.PinCabOs"
+    },
+    {
+      "name": "Amazon Hunt (Gottlieb 1983) - VPSId akXwGqgk.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0026--Amazon Hunt (Gottlieb 1983) - VPSId akXwGqgk.PinCabOs"
+    },
+    {
+      "name": "America_s Most Haunted (Spooky Pinball 2014) - VPSId lVlGWK9A.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0027--America_s Most Haunted (Spooky Pinball 2014) - VPSId lVlGWK9A.PinCabOs"
+    },
+    {
+      "name": "Andromeda (Game Plan 1985) - VPSId uiEUziXx.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0028--Andromeda (Game Plan 1985) - VPSId uiEUziXx.PinCabOs"
+    },
+    {
+      "name": "Apache_ (Taito do Brasil 1978) - VPSId 7ptpBtAd.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0029--Apache_ (Taito do Brasil 1978) - VPSId 7ptpBtAd.PinCabOs"
+    },
+    {
+      "name": "Apollo 13 (Sega 1995) - VPSId dhgyex0l.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0030--Apollo 13 (Sega 1995) - VPSId dhgyex0l.PinCabOs"
+    },
+    {
+      "name": "Aqualand (Juegos Populares 1986) - VPSId Gs1n4eIo.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0031--Aqualand (Juegos Populares 1986) - VPSId Gs1n4eIo.PinCabOs"
+    },
+    {
+      "name": "Aquarius (Gottlieb 1970) - VPSId Pwnbp9St.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0032--Aquarius (Gottlieb 1970) - VPSId Pwnbp9St.PinCabOs"
+    },
+    {
+      "name": "Aristocrat (Williams 1979) - VPSId ThNcIDor.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0033--Aristocrat (Williams 1979) - VPSId ThNcIDor.PinCabOs"
+    },
+    {
+      "name": "Aspen (Brunswick 1979) - VPSId R6RD69ks.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0034--Aspen (Brunswick 1979) - VPSId R6RD69ks.PinCabOs"
+    },
+    {
+      "name": "Astro (Gottlieb 1971) - VPSId DDF2xYoa.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0035--Astro (Gottlieb 1971) - VPSId DDF2xYoa.PinCabOs"
+    },
+    {
+      "name": "Astronaut (Chicago Coin 1969) - VPSId 86GS80ltqf.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0036--Astronaut (Chicago Coin 1969) - VPSId 86GS80ltqf.PinCabOs"
+    },
+    {
+      "name": "Atari 2600 (Original 2022) - VPSId 9D9IPE4kDC.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0037--Atari 2600 (Original 2022) - VPSId 9D9IPE4kDC.PinCabOs"
+    },
+    {
+      "name": "Atlantis (Bally 1989) - VPSId nVa6weV6.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0038--Atlantis (Bally 1989) - VPSId nVa6weV6.PinCabOs"
+    },
+    {
+      "name": "Atlantis (Gottlieb 1975) - VPSId 16d-A4m6.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0039--Atlantis (Gottlieb 1975) - VPSId 16d-A4m6.PinCabOs"
+    },
+    {
+      "name": "Atleta (Inder 1991) - VPSId kJdQAB4H.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0040--Atleta (Inder 1991) - VPSId kJdQAB4H.PinCabOs"
+    },
+    {
+      "name": "Attila the Hun (Game Plan 1984) - VPSId kuQiQhLd.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0041--Attila the Hun (Game Plan 1984) - VPSId kuQiQhLd.PinCabOs"
+    },
+    {
+      "name": "Austin Powers (Stern 2001) - VPSId lg07-fz5.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0042--Austin Powers (Stern 2001) - VPSId lg07-fz5.PinCabOs"
+    },
+    {
+      "name": "Aztec (Williams 1976) - VPSId UrLUrItP.PinCabOs",
+      "path": "/var/lib/pincabos/batch-live-import/uploads/a30742d23f3647df97673889965fd669/0043--Aztec (Williams 1976) - VPSId UrLUrItP.PinCabOs"
+    }
+  ]
+}

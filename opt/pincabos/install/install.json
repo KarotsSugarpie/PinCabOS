@@ -1,0 +1,587 @@
+{
+  "name": "PinCabOS public install manifest",
+  "created_by": "Karots Sugarpie",
+  "updated": "2026-06-19T02:15:58Z",
+  "root": "/var/www/html/install",
+  "directories": [
+    "modules",
+    "modules/network",
+    "modules/system",
+    "modules/system/assets",
+    "modules/system/assets/plymouth",
+    "packages",
+    "pkg",
+    "tools"
+  ],
+  "files": [
+    {
+      "path": "01-install-system.sh",
+      "size": 7683,
+      "sha256": "e2c2b478f0e1823734840c05ffb4f08976df3a25fbe052c52bf237a334aa5dfa",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "02-install-engine.sh",
+      "size": 33950,
+      "sha256": "7c9a531a3f766a96b616ea6c978deb44d2d791f3feb520ec6e2212306e8d1684",
+      "modified": "2026-06-19T02:15:58Z",
+      "webpkg_apps_allowed": true,
+      "webpkg_machine_state_forbidden": true
+    },
+    {
+      "path": "03-install-check.sh",
+      "size": 38212,
+      "sha256": "e0f854ec23068c769b875c23c65ef315213c3c473289d2112c90e0a6b0e3ddfb",
+      "modified": "2026-06-19T00:59:48Z",
+      "run03_final_completion_patch": true,
+      "console_8090_no_longer_blocks_final": true,
+      "legacy_pincabos_web_no_longer_blocks_final": true,
+      "no_live_lightdm_restart": true,
+      "no_live_vpinfe_restart": true,
+      "console_not_blocking_final": true
+    },
+    {
+      "path": "PCOSInstallWP.png",
+      "size": 1933588,
+      "sha256": "d73f4a23e86ec43044548405deef38f173e8371163d89b67d5f6eabe5a622388",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "go-pincabos.sh",
+      "size": 78995,
+      "sha256": "d77fe486d763fa1a1cbe30c7f461cc7b19cf212fd87ac7c85f89988dd454cb0c",
+      "modified": "2026-06-19T02:15:58Z",
+      "run02_network_ready_gate_after_dhcp4": true,
+      "recognize_end_run_01_after_iso_reboot": true,
+      "curl6_dhcp4_safety": true,
+      "deviso_single_reboot": true,
+      "skip_run01_when_deviso_flag_present": true,
+      "no_intermediate_reboot_after_run01": true,
+      "webpkg_apps_allowed": true,
+      "webpkg_machine_state_forbidden": true
+    },
+    {
+      "path": "help-pincabos.sh",
+      "size": 18664,
+      "sha256": "db72e44cd59d8be31d93d4de70cd3ab4cf20b6ecf10c111f614adbfd62fadc6f",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "install.json",
+      "size": 18873,
+      "sha256": "1d97667dc2fe69c30c69a8e48bad73c36a7c98c5c9fdba969394aa1ea029d71e",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/README-MODULES.txt",
+      "size": 690,
+      "sha256": "c8ca2554720bd41f6ca3418be79dc8c1faef979b8a9fb24e899fd1a6f1fa274d",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/modules.json",
+      "size": 3114,
+      "sha256": "78fd8e47bc0a86d09239290bd9781290eb61a216310a9098aea23d25189bd325",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/network/mod-dhcp4.sh",
+      "size": 13559,
+      "sha256": "dbcb2d0d0b7b3ad6c113fb46ed47799f4f4d3eb54702e498fbbe704dc8b26f74",
+      "modified": "2026-06-14T18:32:18Z",
+      "packages": [
+        "network-manager",
+        "wpasupplicant"
+      ]
+    },
+    {
+      "path": "modules/network/mod-ssid.sh",
+      "size": 18340,
+      "sha256": "40cf163a3b327077754952d29b27b5a39fe518e1fa218386c218da42dc77dc20",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/assets/plymouth/SHA256SUMS",
+      "size": 187,
+      "sha256": "8d65fe1c54bd6a0a81373ce30dfc24da7da16ce223686bbea562f0aab38d7229",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/assets/plymouth/pkg-plymouth-install.sha256",
+      "size": 95,
+      "sha256": "a633259f921476c0f903b0046a55785757da475b17fd0648e1c696849fbc4bb8",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/assets/plymouth/pkg-plymouth-install.tar.zst",
+      "size": 6127254,
+      "sha256": "436d10ba2c2fdbbcf1501f709499cbe760daa757548864cfca619b5a9e8f633d",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/assets/plymouth/pkg-plymouth-install.tar.zst.sha256",
+      "size": 95,
+      "sha256": "a633259f921476c0f903b0046a55785757da475b17fd0648e1c696849fbc4bb8",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/assets/plymouth/pkg-plymouth-load.sha256",
+      "size": 92,
+      "sha256": "e61d4c3ff31a39f117aee64ac6aa9ff0eb17059924deba37e974bdb854276977",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/assets/plymouth/pkg-plymouth-load.tar.zst",
+      "size": 1154722,
+      "sha256": "1300da92eb47c7443c5eca859fbdfc2f5caff7399e401432601f40ab62b178c2",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/assets/plymouth/pkg-plymouth-load.tar.zst.sha256",
+      "size": 92,
+      "sha256": "e61d4c3ff31a39f117aee64ac6aa9ff0eb17059924deba37e974bdb854276977",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/mod-plymouth-install.sh",
+      "size": 7068,
+      "sha256": "7e6391df19afc319a84629b2f899d0061bc2488bc178429882df984aeaac03f5",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/mod-plymouth-load.sh",
+      "size": 7042,
+      "sha256": "fc217e8db5b157b86113da55c0f8a269d40b00657f1e944f4104872902d688d0",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "modules/system/mod-splash.sh",
+      "size": 14519,
+      "sha256": "73bcb0b1c0ab8353fdfcc3328f3534c4847c3b1f225cc5ee41c6ca5a6d9a1cf0",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-apt-base.sh",
+      "size": 1539,
+      "sha256": "8caabee9ccb93be1066efd64e76ed0c9ed5adb3ed70a24f40581a319b18e6a41",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-chrome.sh",
+      "size": 1575,
+      "sha256": "eb8dd776b4f9f4aa965ba0f3247494a96012013bcf1dc31c60d2c288b1a2173b",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-lib.sh",
+      "size": 6531,
+      "sha256": "ed4062fe6bf3e4f07a58681dd9445c5ce89e3b9635bff525597d6a59ede4b0d6",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-libdof-runtime.sh",
+      "size": 1380,
+      "sha256": "b195cafd2104bb796c7fe37240a736d83bb3f09319240513eeaf207e332c339b",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-lightdm.sh",
+      "size": 889,
+      "sha256": "9b552f42874c654b3bd25abb7a843a6bc3a92b4aca975208420046791954a5a2",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-monitoring.sh",
+      "size": 2202,
+      "sha256": "a8d0f0d9955265e7a70b3ac6f7d93d249a2b38fa25e245c04876cebae67455d1",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-nginx.sh",
+      "size": 1027,
+      "sha256": "a5d41ccd5d7fc0ec0e1c9220c8c837e42ba82cc759f5081e07d52f6c2d406f02",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-openbox.sh",
+      "size": 862,
+      "sha256": "a8aed56719141f2bc84b3791a600f2615519a31c518928a2e6bdf1bfa30b4cf1",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-plymouth.sh",
+      "size": 1996,
+      "sha256": "f936798cc8faf5087a7e1e955f94ff51918a03ac8bf762c9758e408ee0566cfa",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-python.sh",
+      "size": 1369,
+      "sha256": "867bfd57b4d56992b94142815d5ab88e049a948fde796d408e3bf25ddf05aebb",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-system-validation.sh",
+      "size": 2885,
+      "sha256": "c4f7c6e79161533f205a57f499ad764c1b60ac2a63a8f964e5030ae3f97c2c67",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-vpinfe-app.sh",
+      "size": 6242,
+      "sha256": "5c1e3c9fb59600c03ba07aabb4f01433d323f227d4e57cfbf8c65e741ade8645",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-vpinfe-runtime.sh",
+      "size": 1253,
+      "sha256": "91d18bccd62ba816d250cd6b065d9be2301db161d68418c8f24832f317f9b078",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-vpx-bgfx-app.sh",
+      "size": 6647,
+      "sha256": "10c56d8cf0b393b1ed3230ee9270bb425d66f8435dc9dc6db8a42e05e88ee88f",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-vpx-bgfx-runtime.sh",
+      "size": 1499,
+      "sha256": "eaa96271d89d42c2523c75b92c6477b9bfb8dbd5085ded8729324010ac40fd8c",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "packages/pkg-x11.sh",
+      "size": 1023,
+      "sha256": "bea75644e5655a2028489e1178eb7c3692ea2d872f5c64072156f056812f9a26",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "pkg/checksums.sha256",
+      "size": 177,
+      "sha256": "13bf381ee59cf40e593459f7803a449a516721a13eed7455baae8bfb4f67cbb1",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "pkg/latest.json",
+      "size": 515723,
+      "sha256": "01b9f19dd355c1d76c8c17fc864cf04ca44724d34b47ffbfa229805c602637b5",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "pkg/manifest.txt",
+      "size": 326284,
+      "sha256": "c2fa8bef4ff0a34755d8e99d922c3e7f55dce517d910ff5c643d9f0963d4d654",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "pkg/pkg-pincabos-web.manifest.json",
+      "size": 486661,
+      "sha256": "bb043f51ee6e64687dc7382f366746a4f9e22461fdc17713169ca967e15e3d95",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "pkg/pkg-pincabos-web.sha256",
+      "size": 87,
+      "sha256": "851a141448a5288b2becbb5347d0420358a8c6b6b13a9dcbdd7be52d6bbfe7a0",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "pkg/pkg-pincabos-web.zst",
+      "size": 39004896,
+      "sha256": "af83d86e1b560a88e8fbb95846a644d564595ac4f8f1032b267cac9015959a3d",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "pkg/pkg-pincabos-webapp.zst",
+      "size": 10101168,
+      "sha256": "cbd9c85404b4274a161436e9ae33dcefe10692fc3221cb10ef6f2fbdd5f72307",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/auto-detect-screens.sh",
+      "size": 8701,
+      "sha256": "cf5317f97a645ec555d738ab78d30599f177ee7e399fafc4049bc5470ccdd579",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/change-root-password.sh",
+      "size": 379,
+      "sha256": "589995407b314fa1b37ea01b8634fe33a3d2b48d3b8f9970c39ae0244e1cc8f7",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/close-dmd-calibrator.sh",
+      "size": 567,
+      "sha256": "7a29b8fe9190aad6d7e42f08d897410cc8ee3b145b00c6404a5d2f947f22ee99",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/close-fulldmd-calibrator.sh",
+      "size": 595,
+      "sha256": "9b50944547c16971bf8b251478056d10b4909c0ec18b4d70c09db3af01f73d3e",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/close-webapp-screen.sh",
+      "size": 548,
+      "sha256": "ebdc2eb62be47d63dd1c1b748b432a08e55aa6209106bff53a0d1bc893323dc8",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/detect-gpu.sh",
+      "size": 1922,
+      "sha256": "ff9c011d54a46a4c6e62a890efbf4d63e96b23bbdcffe3c10de043df7ca04965",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/dof-commander-test-output.sh",
+      "size": 5314,
+      "sha256": "c4103aea338469346079498b7debd22827670de2215cd1570f5ffa65efa2e3c7",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/firstrun-network-detect.sh",
+      "size": 3373,
+      "sha256": "02afcf1102b6de381fa8f80a848bd5f67dfee29b378f0ee63ca91ea465785ab7",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/go.sh",
+      "size": 6575,
+      "sha256": "34d75dece38c0a39dbc38e5dd8e349785f0662a698fe2ee2f67f1542a764d73a",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/install-dof-component.sh",
+      "size": 8996,
+      "sha256": "035e28c7edf2c4d8ad8086776995c0209446ec8c76bb9cdcc29717eb7459b055",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/install-pincabos-sudoers.sh",
+      "size": 2660,
+      "sha256": "1a746f72c416c76d843084edf67da935bf9ee7d0ab70ca9a5b6707784d366737",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/launch-dmd-calibrator.sh",
+      "size": 4802,
+      "sha256": "e52151bb6c4d5982dc4ef4cf47ea5af0bdae235b401e7b299cc8b33afffb73a6",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/launch-fulldmd-calibrator.sh",
+      "size": 4345,
+      "sha256": "3b21ad82c233d22b8115017e4d2d51288aee4dcfd1a4d0f7642cf1ca632c4c63",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/launch-webapp-screen.sh",
+      "size": 3861,
+      "sha256": "dc086b15a66ee4c4c244b99deefede367396019dad0b23d67ac679d66c6a1254",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/network-current-mode.sh",
+      "size": 1400,
+      "sha256": "2a2b811591d9da8c9ee9c0012fe0deea1960c5d69b07e9eedddc555de94692c6",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/network-current-mode.sh.pincabos-orig",
+      "size": 1260,
+      "sha256": "9f0d0b0b4c0e606a5e1303083219a3e28de91cc00d5e6897d8f7c4ee2390056c",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/network-info.sh",
+      "size": 2932,
+      "sha256": "0f086d3b3d138ac80063fb00e8c77ccddd19688c60a6aa91b511790d50753a69",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/network-set-dhcp.sh",
+      "size": 3369,
+      "sha256": "3341cb2879b24716bbc464c446f0c1ce70b10f54012c389de2196196f65914e2",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/network-set-static.sh",
+      "size": 1107,
+      "sha256": "752662d5c7da0b0fb774f34988e68d65b70196b118ef5b4364321962701779d6",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-admin-iso-game-mode.sh",
+      "size": 3525,
+      "sha256": "0f9a79bf9138b37298e40afcebaa97045dc42587852b344d5f89b6dd4e36f493",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-apply-update.sh",
+      "size": 14724,
+      "sha256": "93fe253ba8d93ee3d170453a680bbbc9db945afa8ffeb93d6fd77317cee00a24",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-cleanup.sh",
+      "size": 5931,
+      "sha256": "80e3a75d94ec4d845f45dd8d2da9b62ea0ad510eabbacd3353cd63994418aca6",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-dof-driver-status.sh",
+      "size": 1508,
+      "sha256": "de7326975cafa12e23bc6a1fc51e22187167cc3ddfa2a715bb042639e4a3af59",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-ensure-vpx-overlay-runtime.sh",
+      "size": 2565,
+      "sha256": "b38f12dd065c1738cbeb469b1235c8774686982ed57c3d07bb4bd4a1562c729a",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-exit-firstboot-safe.sh",
+      "size": 1192,
+      "sha256": "c4506981e75448c498c0b94b18dd5fa40b04329128626dcb7289a7568e4dd535",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-freeze-dev-for-iso.sh",
+      "size": 5029,
+      "sha256": "f9dffec04284856f2f1faee1a498c55f57e5d35e0926aea3f3f5612d68e4ad4b",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-import-portable-normalize.py",
+      "size": 6408,
+      "sha256": "85e73f722201957dfad235e62227974570a14b72dc612324ad930a14bb216de2",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-smart-archive-import.py",
+      "size": 37518,
+      "sha256": "ddfb18ff70c6d6a0ca7a0798c15efcdf46db05aaeabd79b9dfd88d2edda522e2",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-smb-mount-helper.sh",
+      "size": 1856,
+      "sha256": "f1ff9910367d7ed28c83fd0242ad46514866eae3525b741567405e7fb4dec233",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-sync-dmd-calibrations.sh",
+      "size": 4399,
+      "sha256": "0fb8c8bcb34fa822d5e1b7ddf2d7b1a4316ba3d74b241cbf39b2fd969a8b1f29",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-update-engine.sh",
+      "size": 9471,
+      "sha256": "3cb35a8a7d8a595cdfc659816e74b1e66b09d362bbfe979cd22947bd0322651d",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-update-launcher.sh",
+      "size": 2461,
+      "sha256": "4a25e46c402f4c4025e277c583b3edeafb46aace0b4936fd34f61828ff010412",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/pincabos-vpinfe-port-cleanup.sh",
+      "size": 887,
+      "sha256": "3ad46de3e730eab620076891174ed30dc1c87229c0daf5b4172b96ed44cfe685",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/publy.sh",
+      "size": 30832,
+      "sha256": "0c72f489efbc8e795a443978e977067ae515e7bea4bf8ca9ae3c313df40d532e",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/run-vpinfe.sh",
+      "size": 621,
+      "sha256": "c5349f0a205b6a22f254b0269ae52f8891766d3f4aeda13227f96f64cfb0640f",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/update-all.sh",
+      "size": 547,
+      "sha256": "bedd7a6aacde3318babe002ceb4a1c0ffb3e2951fc21f467868179ec1265c906",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/update-gpu-drivers.sh",
+      "size": 5079,
+      "sha256": "04a342cf0384f88412b3b60cfe79c9beb7ea1319927c68946849c8c1483e90b5",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/update-system.sh",
+      "size": 495,
+      "sha256": "12c4a7144bdfa3bbbf3f47b95433348eabadc8af1686157b0df6541b0d594ed0",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/update-vpinfe.sh",
+      "size": 1569,
+      "sha256": "ffaecc79261247bba4b5728d23d40bb06d08a48a17aac20573d1fa445ff57ad6",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/update-vpx.sh",
+      "size": 7426,
+      "sha256": "65667b3a569e9ae859a35166e69e4e31a6d989d7b4d5e10d2fa111cd8757aeba",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/update-webapp.sh",
+      "size": 78,
+      "sha256": "c1fc5ea8176464b8d49cb93c02a2b1f098b7ac8d4f13ef75d8134da8c3cc7015",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/wifi-hotspot-stop.sh",
+      "size": 558,
+      "sha256": "0d003ad9c5b504a130c60d4937e28e37e1b51b51794e123ac72eb17b7fb2315c",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/wifi-hotspot.sh",
+      "size": 781,
+      "sha256": "b60cd2665dcc432983f18b28c7618d765ce9146b61fd66be2cbed2a4e704cc1f",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/wifi-join.sh",
+      "size": 448,
+      "sha256": "4633f061aa8685e772e2acc25a6341c9152930488762b8d99a350aa02a189534",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "tools/wifi-scan.sh",
+      "size": 283,
+      "sha256": "ce09ef60da038dad56020570b42ff3057404d018e7ae32413de178db60b23360",
+      "modified": "2026-06-14T18:32:18Z"
+    },
+    {
+      "path": "version.json",
+      "size": 4004,
+      "sha256": "3f81bba0539d0eb5587d31f8373b476b361eedb22b7fccab478e24aca6efe0bb",
+      "modified": "2026-06-14T18:32:18Z"
+    }
+  ],
+  "run02_network_ready_gate_after_dhcp4": true,
+  "run02_network_ready_gate_error": "ERR-GO-RUN02-NETWORK-NOT-READY-001",
+  "recognize_end_run_01_after_iso_reboot": true,
+  "note": "go-pincabos recognizes end-run-01 as valid RUN_01 completed state after ISO reboot, so DHCP/network gate runs before public bootstrap and RUN_02.",
+  "curl6_dhcp4_safety": true,
+  "curl6_dhcp4_safety_note": "download_file retries once after DHCP4/network recovery when curl/wget cannot resolve ins.pincabos.cc or another host.",
+  "deviso_single_reboot": true,
+  "deviso_flag": "/opt/pincabos/state/deviso-base-installed",
+  "no_intermediate_reboot_after_run01": true
+}

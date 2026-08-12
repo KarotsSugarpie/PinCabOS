@@ -1,0 +1,62 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2025 Canonical Ltd.
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+# vim: ft=apparmor
+
+abi <abi/4.0>,
+
+include <tunables/global>
+
+@{coreutils_binaries}={\[,cat,head,mktemp,printf,sha*sum,rm,stat,touch,uname}
+
+profile pollinate /usr/bin/pollinate {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+
+  # Used for building/sending challenge payload.
+  include <abstractions/user-tmp>
+
+  file mr /usr/bin/pollinate,
+  priority=1 file rix /usr/bin/curl,
+  file Pix /{usr/,}bin/grep,
+  file Pix /usr/bin/logger,
+  # Who has "Provides: awk"?  apt-cache showpkg awk
+  file Pix /usr/bin/{original-,g,m,}awk,
+  file Pix /{usr/,}bin/sed,
+  file Pix /usr/bin/xxd,
+  # Support coreutils paths (LP: #2123870)
+  file Pix @{coreutil_dirs}@{coreutils_binaries},
+
+  # Allow loading config
+  file r /etc/pollinate/*,
+  file r /etc/default/pollinate,
+
+  # Allow access to user-agent data sent to server.
+  # optional data
+  file Pix /{usr/,}bin/hostname,
+  file r /proc/uptime,
+  file r /etc/cloud/build.info,
+  file r /proc/sys/kernel/osrelease,
+  file PUx /usr/bin/systemd-detect-virt,
+  file PUx /{usr/,}bin/dmesg,
+
+  # required data
+  file r /etc/lsb-release,
+  # required dpkg-query for reporting versions in user_agent
+  file Pix /usr/bin/dpkg{,-query},
+  file r /etc/dpkg/**,
+  file r /var/lib/dpkg/**,
+
+  # Outputs from pollinate
+  file rw /dev/urandom,
+  file rw /var/cache/pollinate/*,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/pollinate>
+}
+ 

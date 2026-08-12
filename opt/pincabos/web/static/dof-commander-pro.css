@@ -1,0 +1,411 @@
+/* PinCabOS-File created by Karots Sugarpie */
+.dof-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.dof-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.dof-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(160, 100, 255, 0.45);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(60, 20, 90, 0.25);
+  font-size: 0.92rem;
+}
+
+.dof-pill strong {
+  color: #fff;
+}
+
+.dof-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.dof-section-title h2 {
+  margin: 0;
+}
+
+.dof-muted {
+  opacity: 0.78;
+  font-size: 0.92rem;
+}
+
+.dof-test-panel {
+  border: 1px solid rgba(95, 42, 145, 0.85);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(25, 8, 36, 0.55);
+  margin: 14px 0;
+}
+
+.dof-test-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr;
+  gap: 16px;
+  align-items: end;
+}
+
+.dof-output-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.dof-output-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 0.86rem;
+  opacity: 0.8;
+}
+
+.dof-output-table td {
+  padding: 12px;
+  background: rgba(20, 10, 28, 0.62);
+  border-top: 1px solid rgba(130, 80, 200, 0.25);
+  border-bottom: 1px solid rgba(130, 80, 200, 0.25);
+  vertical-align: middle;
+}
+
+.dof-output-table td:first-child {
+  border-left: 1px solid rgba(130, 80, 200, 0.25);
+  border-radius: 12px 0 0 12px;
+}
+
+.dof-output-table td:last-child {
+  border-right: 1px solid rgba(130, 80, 200, 0.25);
+  border-radius: 0 12px 12px 0;
+}
+
+.dof-device-name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.dof-device-sub {
+  display: block;
+  margin-top: 4px;
+  opacity: 0.74;
+  font-size: 0.86rem;
+}
+
+.dof-output-name {
+  font-weight: 700;
+}
+
+.dof-output-meta {
+  display: block;
+  margin-top: 5px;
+  opacity: 0.75;
+  font-size: 0.84rem;
+}
+
+.dof-output-code {
+  display: inline-block;
+  min-width: 44px;
+  text-align: center;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.dof-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.dof-badge-testable {
+  color: #2fff7f;
+  background: rgba(47,255,127,0.10);
+  border: 1px solid rgba(47,255,127,0.32);
+}
+
+.dof-badge-info {
+  color: #ffcc66;
+  background: rgba(255,204,102,0.10);
+  border: 1px solid rgba(255,204,102,0.30);
+}
+
+.dof-import-help {
+  border: 1px solid rgba(95, 42, 145, 0.75);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(30, 10, 44, 0.42);
+}
+
+@media (max-width: 900px) {
+  .dof-hero,
+  .dof-test-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dof-output-table {
+    font-size: 0.9rem;
+  }
+}
+
+/* Compact test controls */
+.dof-test-panel-compact {
+  padding: 12px 14px;
+}
+
+.dof-test-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.dof-test-head h3 {
+  margin: 0 0 3px 0;
+}
+
+.dof-test-controls {
+  display: grid;
+  grid-template-columns: 1.3fr 180px 1fr;
+  gap: 14px;
+  align-items: end;
+}
+
+.dof-control label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+
+.dof-range-line {
+  display: grid;
+  grid-template-columns: 1fr 78px;
+  gap: 10px;
+  align-items: center;
+}
+
+.dof-range-line code {
+  text-align: center;
+  padding: 7px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.dof-control select {
+  width: 100%;
+  min-height: 36px;
+}
+
+@media (max-width: 900px) {
+  .dof-test-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .dof-range-line {
+    grid-template-columns: 1fr 78px;
+  }
+}
+
+/* Auto repeat controls */
+.dof-control-auto {
+  min-width: 180px;
+}
+
+.dof-mini-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  cursor: pointer;
+}
+
+.dof-mini-check input {
+  width: 18px;
+  height: 18px;
+}
+
+.dof-mini-check span {
+  font-size: 0.88rem;
+  opacity: 0.9;
+}
+
+/* La barre de réglages a maintenant 5 colonnes */
+.dof-test-controls {
+  grid-template-columns: 1.15fr 170px 210px 1fr 1fr;
+}
+
+@media (max-width: 1100px) {
+  .dof-test-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .dof-test-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* DOF Commander ON/OFF toggle label */
+.dof-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 92px;
+  justify-content: flex-start;
+}
+
+.dof-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(255,255,255,0.16);
+}
+
+.dof-toggle-label.dof-off {
+  color: #ff7777;
+  background: rgba(255, 60, 60, 0.12);
+  border-color: rgba(255, 90, 90, 0.35);
+}
+
+.dof-toggle-label.dof-on {
+  color: #2fff7f;
+  background: rgba(47, 255, 127, 0.14);
+  border-color: rgba(47, 255, 127, 0.45);
+  box-shadow: 0 0 12px rgba(47, 255, 127, 0.28);
+}
+
+.dof-toggle-wrap.is-on {
+  filter: drop-shadow(0 0 6px rgba(47, 255, 127, 0.28));
+}
+
+/* Force visuel ON/OFF DOF Commander */
+.dof-toggle-label.dof-on {
+  color: #2fff7f !important;
+  background: rgba(47, 255, 127, 0.18) !important;
+  border: 1px solid rgba(47, 255, 127, 0.55) !important;
+  box-shadow: 0 0 12px rgba(47, 255, 127, 0.35) !important;
+}
+
+.dof-toggle-label.dof-off {
+  color: #ff7777 !important;
+  background: rgba(255, 60, 60, 0.14) !important;
+  border: 1px solid rgba(255, 90, 90, 0.38) !important;
+}
+
+.dof-toggle-wrap.is-on {
+  filter: drop-shadow(0 0 7px rgba(47, 255, 127, 0.35));
+}
+
+/* Force visuel ON/OFF DOF Commander */
+.dof-toggle-label.dof-on {
+  color: #2fff7f !important;
+  background: rgba(47, 255, 127, 0.18) !important;
+  border: 1px solid rgba(47, 255, 127, 0.55) !important;
+  box-shadow: 0 0 12px rgba(47, 255, 127, 0.35) !important;
+}
+
+.dof-toggle-label.dof-off {
+  color: #ff7777 !important;
+  background: rgba(255, 60, 60, 0.14) !important;
+  border: 1px solid rgba(255, 90, 90, 0.38) !important;
+}
+
+.dof-toggle-wrap.is-on {
+  filter: drop-shadow(0 0 7px rgba(47, 255, 127, 0.35));
+}
+
+/* Force visuel ON/OFF DOF Commander */
+.dof-toggle-label.dof-on {
+  color: #2fff7f !important;
+  background: rgba(47, 255, 127, 0.18) !important;
+  border: 1px solid rgba(47, 255, 127, 0.55) !important;
+  box-shadow: 0 0 12px rgba(47, 255, 127, 0.35) !important;
+}
+
+.dof-toggle-label.dof-off {
+  color: #ff7777 !important;
+  background: rgba(255, 60, 60, 0.14) !important;
+  border: 1px solid rgba(255, 90, 90, 0.38) !important;
+}
+
+.dof-toggle-wrap.is-on {
+  filter: drop-shadow(0 0 7px rgba(47, 255, 127, 0.35));
+}
+
+/* =========================================================
+   PinCabOS DOF Commander - Toggle ON/OFF CSS pur
+   Modifié par PinCabOS fonction(DOF Commander Toggle Visual)
+   ========================================================= */
+
+.dof-toggle-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 100px !important;
+}
+
+.dof-toggle-label {
+  font-size: 0 !important;
+  min-width: 48px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 5px 10px !important;
+  border-radius: 999px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em !important;
+  border: 1px solid rgba(255, 90, 90, 0.45) !important;
+  background: rgba(255, 60, 60, 0.14) !important;
+  color: #ff7777 !important;
+}
+
+.dof-toggle-label::after {
+  content: "OFF" !important;
+  font-size: 0.82rem !important;
+  color: #ff7777 !important;
+}
+
+.dof-output-toggle:checked ~ .dof-toggle-label {
+  border-color: rgba(47, 255, 127, 0.60) !important;
+  background: rgba(47, 255, 127, 0.18) !important;
+  color: #2fff7f !important;
+  box-shadow: 0 0 14px rgba(47, 255, 127, 0.36) !important;
+}
+
+.dof-output-toggle:checked ~ .dof-toggle-label::after {
+  content: "ON" !important;
+  color: #2fff7f !important;
+}
+
+.dof-output-toggle:checked ~ .dof-toggle-slider {
+  box-shadow: 0 0 12px rgba(47, 255, 127, 0.45) !important;
+}

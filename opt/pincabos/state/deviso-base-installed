@@ -1,0 +1,5 @@
+status=GO
+profile=deviso-base
+skip_run01=1
+plymouth_install_theme=GO
+created_by=calamares-finalize

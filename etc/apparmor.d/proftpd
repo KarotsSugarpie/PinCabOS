@@ -1,0 +1,58 @@
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile proftpd /usr/sbin/proftpd {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/user-tmp>
+  include <abstractions/wutmp>
+  include <abstractions/authentication>
+  include <abstractions/private-files-strict>
+
+  capability setgid,
+  capability setuid,
+  # Required for logging user login attempts
+  capability audit_write,
+  # Required for chrooting ftp users when accessing files (Used by DefaultRoot in proftpd.conf)
+  capability sys_chroot,
+
+  mqueue getattr type=posix /,
+  mqueue read type=posix /,
+
+
+  # Configuration files
+  /etc/ftpusers r,
+  /etc/shells r,
+  owner /etc/security/capability.conf r,
+
+  # User/Group Records
+  /run/systemd/userdb/ r,
+  /run/systemd/userdb/io.systemd.DynamicUser rw,
+
+  # ProFTPD logs
+  /var/log/proftpd/** rw,
+  owner /etc/proftpd/** rw,
+
+  # Process info
+  /run/proftpd.delay rwk,
+  /run/proftpd.pid rwk,
+  /run/proftpd.scoreboard rwk,
+  /run/proftpd.scoreboard.lck rwk,
+  owner /run/proftpd/* rw,
+  owner /run/test.sock w,
+  owner /var/log/xferlog w,
+
+  # Need to be able to write to where FTP is configured
+  owner @{HOME}/** rw,
+  @{HOME} rw,
+  /srv/ftp/** rw,
+  /srv/www/** rw,
+  /var/ftp/** rw,
+  /var/www/** rw,
+
+  # For running in confined environments
+  /usr/sbin/proftpd mr,
+
+  include if exists <local/proftpd>
+}

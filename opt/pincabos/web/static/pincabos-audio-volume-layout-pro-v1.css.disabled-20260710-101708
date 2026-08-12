@@ -1,0 +1,267 @@
+/* ============================================================
+   PinCabOS — Audio Volume Professional Layout V1
+   Corrige la carte audio dashboard:
+   - pas de chevauchement
+   - tout rentre dans la carte
+   - marges propres
+   - look pro
+   ============================================================ */
+
+#pco-lobby .pco-audio-volume-card,
+#pco-lobby .pco-audio-volume-card * {
+  box-sizing: border-box !important;
+}
+
+#pco-lobby .pco-audio-volume-card {
+  overflow: hidden !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-card-head {
+  min-height: 56px !important;
+  padding: 14px 18px !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-card-head strong {
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  line-height: 1.15 !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-card-head span {
+  font-size: .95rem !important;
+  font-weight: 400 !important;
+  line-height: 1.15 !important;
+}
+
+#pco-lobby .pco-audio-volume-head-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+#pco-lobby .pco-audio-volume-head-actions button {
+  width: 46px !important;
+  min-width: 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  border-radius: 14px !important;
+  padding: 0 !important;
+  font-size: 1rem !important;
+  line-height: 1 !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-card-body {
+  padding: 14px 16px 16px !important;
+  overflow: hidden !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-card {
+  display: grid !important;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 14px !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 88px !important;
+
+  margin: 0 0 12px 0 !important;
+  padding: 14px 16px !important;
+
+  border-radius: 18px !important;
+  overflow: hidden !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-card:last-child {
+  margin-bottom: 0 !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-title {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+
+  font-size: .86rem !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-row {
+  display: grid !important;
+  grid-template-columns:
+    minmax(72px, 90px)
+    40px
+    minmax(180px, 1fr)
+    40px
+    52px
+    40px !important;
+  align-items: center !important;
+  gap: 10px !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-label {
+  min-width: 0 !important;
+  font-size: .82rem !important;
+  font-weight: 500 !important;
+  line-height: 1.1 !important;
+
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-step,
+#pco-lobby .pco-audio-volume-card .pco-av-mute {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  line-height: 1 !important;
+  font-weight: 700 !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-step {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: 12px !important;
+  font-size: .95rem !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-mute {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: 12px !important;
+  font-size: .95rem !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-slider,
+#pco-lobby .pco-audio-volume-card input[type="range"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-slider {
+  height: 6px !important;
+  min-height: 6px !important;
+  margin: 0 !important;
+}
+
+#pco-lobby .pco-audio-volume-card input[type="range"]::-webkit-slider-thumb {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+#pco-lobby .pco-audio-volume-card input[type="range"]::-moz-range-thumb {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+#pco-lobby .pco-audio-volume-card .pco-av-pct {
+  min-width: 52px !important;
+  text-align: center !important;
+  font-size: .84rem !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+/* Responsive: si la carte devient trop étroite, on empile proprement */
+@media (max-width: 1250px) {
+  #pco-lobby .pco-audio-volume-card .pco-av-card {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    min-height: auto !important;
+  }
+
+  #pco-lobby .pco-audio-volume-card .pco-av-title {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  #pco-lobby .pco-audio-volume-card .pco-av-row {
+    grid-template-columns:
+      minmax(64px, 82px)
+      36px
+      minmax(120px, 1fr)
+      36px
+      48px
+      36px !important;
+    gap: 8px !important;
+  }
+
+  #pco-lobby .pco-audio-volume-card .pco-av-step,
+  #pco-lobby .pco-audio-volume-card .pco-av-mute {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    border-radius: 11px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  #pco-lobby .pco-audio-volume-card .pco-card-head {
+    padding: 12px 14px !important;
+  }
+
+  #pco-lobby .pco-audio-volume-card .pco-card-body {
+    padding: 12px !important;
+  }
+
+  #pco-lobby .pco-audio-volume-card .pco-av-card {
+    padding: 12px !important;
+  }
+
+  #pco-lobby .pco-audio-volume-card .pco-av-row {
+    grid-template-columns:
+      minmax(58px, 74px)
+      32px
+      minmax(90px, 1fr)
+      32px
+      44px
+      32px !important;
+    gap: 6px !important;
+  }
+
+  #pco-lobby .pco-audio-volume-card .pco-av-label,
+  #pco-lobby .pco-audio-volume-card .pco-av-title {
+    font-size: .78rem !important;
+  }
+
+  #pco-lobby .pco-audio-volume-card .pco-av-step,
+  #pco-lobby .pco-audio-volume-card .pco-av-mute {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    border-radius: 10px !important;
+    font-size: .82rem !important;
+  }
+
+  #pco-lobby .pco-audio-volume-card .pco-av-pct {
+    min-width: 44px !important;
+    font-size: .78rem !important;
+  }
+}

@@ -1,0 +1,43 @@
+# vim: ft=apparmor
+#------------------------------------------------------------------
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    Author: Eduardo Barretto <eduardo.barretto@canonical.com>
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+#------------------------------------------------------------------
+
+abi <abi/5.0>,
+
+include <tunables/global>
+
+profile mbsync /usr/bin/mbsync {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet stream,
+  network inet6 dgram,
+  network inet6 stream,
+  network netlink raw,
+
+  @{etc_ro}/gss/mech.d/ r,
+  /usr/bin/mbsync mr,
+  owner @{HOME}/.config/isyncrc r,
+  owner @{HOME}/.mbsyncrc r,
+  owner @{HOME}/Mail/**/ rw,
+  owner @{HOME}/Mail/**/.mbsyncstate rw,
+  owner @{HOME}/Mail/**/.mbsyncstate.journal rw,
+  owner @{HOME}/Mail/**/.mbsyncstate.lock wk,
+  owner @{HOME}/Mail/**/.mbsyncstate.new rw,
+  owner @{HOME}/Mail/**/.uidvalidity rwk,
+  owner @{HOME}/Mail/**/cur/* rw,
+  owner @{HOME}/Mail/**/new/* rw,
+  owner @{HOME}/Mail/**/tmp/* rw,
+
+  include if exists <local/mbsync>
+}

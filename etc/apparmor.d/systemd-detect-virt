@@ -1,0 +1,103 @@
+abi <abi/5.0>,
+
+include <tunables/global>
+
+# /proc/device-tree is sometimes a symlink, so we need to handle the
+# symlink targets as well as cases where it isn't a symlink
+@{device_tree_dir}=/proc/device-tree /sys/firmware/devicetree/base
+
+# See comments on /proc/@{pid}/ns/{cgroup,pid} for why we need the flag
+profile systemd-detect-virt /usr/bin/systemd-detect-virt flags=(attach_disconnected.path=/apparmor/disconnected/) {
+  include <abstractions/base>
+
+  # Temporarily needed until fd delegation lands
+  # Also needed while delegation from unconfined is broken
+  include <abstractions/consoles>
+  
+  /usr/bin/systemd-detect-virt mr,
+  
+  # Not using @{run}, etc. because all the paths below are hardcoded absolute prefixes
+  # F_OK and access(2) not mediated but still note these in case we need to do something with them later
+
+  ## systemd/src/basic/virt.c:detect_container
+  #/proc/{vz,bc} r, # F_OK
+
+  /proc/sys/kernel/osrelease r,
+  # /proc/self/status -> /proc/@{TracerPid}/comm -> startswith("proot")
+  /proc/@{pid}/status r,
+  /proc/@{pids}/comm r,
+
+  /run/host/container-manager r,
+
+  /run/systemd/container r,
+  # Check env vars of non-systemd init, which (according to source comment) needs CAP_SYS_PTRACE
+  /proc/1/environ r,
+  capability sys_ptrace,
+  # peer=systemd itself but unfortunately we can't be more fine-grained than this
+  ptrace read peer=unconfined,
+
+  # systemd/src/basic/virt.c:detect_container_files
+  #/run/.containerenv r, # F_OK
+  #/.dockerenv r, # F_OK
+  # systemd/src/basic/virt.c:running_in_pidns -> systemd/src/basic/namespace-util.c:namespace_is_init
+  /proc/sys/kernel/cap_last_cap r,
+  /proc/filesystems r,
+  /proc/@{pid}/{g,u}id_map r,
+  #/proc/ns/pid/ r, # stat
+  # Unsure if /proc/ r, is needed for checking whether /proc/ is set up
+  #/proc/@{pid}/ns/cgroup r, # F_OK
+  # Ubuntu Plucky+ systemd-detect-virt does getattr on the symlink
+  # See further comment below for why we don't just add this rule
+  #/proc/@{pid}/ns/{cgroup,pid} r,
+  #/sys/fs/cgroup/ r, # statfs
+  #/sys/fs/cgroup/cgroup.events r, # F_OK
+
+  ## systemd/src/basic/virt.c:detect_vm
+  # detect_vm_dmi -> detect_vm_dmi_vendor
+  # /sys/class/dmi/id is symlink to /sys/devices/virtual/dmi/id
+  /sys/devices/virtual/dmi/id/{product_name,sys_vendor,board_vendor,bios_vendor,product_version} r,
+  # detect_vm_dmi -> detect_vm_smbios
+  /sys/firmware/dmi/entries/0-0/raw r,
+  # detect_vm_uml
+  /proc/cpuinfo r,
+  # detect_vm_xen
+  #/proc/xen r, # F_OK
+  # detect_vm_xen -> detect_vm_xen_dom0
+  /sys/hypervisor/properties/features r,
+  /proc/xen/capabilities r,
+  # detect_vm_cpuid uses the cpuid instruction and doesn't need rules
+  # detect_vm_hypervisor
+  /sys/hypervisor/type r,
+  # detect_vm_device_tree
+  @{device_tree_dir}/hypervisor/compatible r,
+  #"@{device_tree_dir}/ibm,partition-name" r, # F_OK
+  #"@{device_tree_dir}/hmc-managed?" r, # F_OK
+  #"@{device_tree_dir}/chosen/qemu,graphic-width" r, #F_OK
+  @{device_tree_dir}/ r, # FOREACH_DIRENT looking for @{device_tree_dir}/*fw-cfg*
+  @{device_tree_dir}/compatible r,
+  # detect_vm_zvm
+  /proc/sysinfo r,
+
+  ##systemd/src/basic/confidential-virt.c:detect_confidential_virtualization
+  # defined(__x86_64__)
+  # detect_sev -> msr
+  /dev/cpu/0/msr r,
+  # detect_tdx has no accesses
+  # defined(__s390x__)
+  /sys/firmware/uv/prot_virt_guest r,
+  # defined(__aarch64__)
+  #/sys/devices/platform/arm-cca-dev r, # F_OK
+
+  # Addressing Ubuntu Plucky+Questing denial logs
+  capability net_admin,
+  @{run}/systemd/notify w,
+  @{run}/systemd/journal/socket w,
+  # getattr is called on /proc/@{pid}/ns/{cgroup,pid} above. However, these are
+  # symlinks to magic files that do not exist on the filesystem and whose paths
+  # get resolved to a disconnected "/". Until we can better mediate such magic
+  # files, we can only allow them through allowing read access to "/"
+  # (translated to /apparmor/disconnected/ via attach_disconnected.path)
+  /apparmor/disconnected/ r,
+
+  include if exists <local/systemd-detect-virt>
+}

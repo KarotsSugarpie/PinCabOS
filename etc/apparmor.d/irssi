@@ -1,0 +1,46 @@
+#------------------------------------------------------------------
+#    Copyright (C) 2024 Canonical Ltd.
+#
+#    Author: Leonidas S. Barbosa (leosilva)
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of version 2 of the GNU General Public
+#    License published by the Free Software Foundation.
+
+abi <abi/4.0>,
+
+#include <tunables/global>
+
+
+profile irssi /usr/bin/irssi {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/aspell>
+  #include <abstractions/bash>
+  #include <abstractions/perl>
+  #include <abstractions/python>
+  #include <abstractions/ssl_certs>
+
+  /usr/bin/irssi mr,
+
+  # Allow connections TCP/IP IPV4 and IPV6.
+  network stream,
+
+  # Allow system/global irssi config.
+  file r @{etc_ro}/irssi.conf,
+
+  # Allow access to help, scripts and themes.
+  /usr/share/irssi/** r,
+  /usr/share/terminfo/** r,
+
+   # Allow irssi use /exec command but inherit current confinement
+   /bin/dash ix,
+
+  # Allow log creation, and other specific things like access default.theme
+  owner @{HOME}/.irssi/** rwk,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/irssi>
+
+}
+

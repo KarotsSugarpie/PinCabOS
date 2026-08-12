@@ -1,0 +1,232 @@
+/* PinCabOS-File created by Karots Sugarpie */
+/* PinCabOS Dashboard Compact v2 */
+
+body.dashboard-compact {
+  font-size: 13px !important;
+}
+
+/* Réduit les cartes */
+body.dashboard-compact .card {
+  font-size: 13px !important;
+  padding: 10px 12px !important;
+  margin-top: 10px !important;
+  margin-bottom: 10px !important;
+  border-radius: 12px !important;
+}
+
+/* Titres moins gros */
+body.dashboard-compact h1 {
+  font-size: 22px !important;
+  margin: 0 0 8px 0 !important;
+}
+
+body.dashboard-compact h2 {
+  font-size: 16px !important;
+  margin: 0 0 7px 0 !important;
+}
+
+body.dashboard-compact h3 {
+  font-size: 14px !important;
+  margin: 7px 0 5px 0 !important;
+}
+
+/* Paragraphes compacts */
+body.dashboard-compact p {
+  margin: 3px 0 !important;
+  line-height: 1.22 !important;
+}
+
+/* Listes compactes */
+body.dashboard-compact ul,
+body.dashboard-compact ol {
+  margin-top: 5px !important;
+  margin-bottom: 5px !important;
+  padding-left: 20px !important;
+}
+
+body.dashboard-compact li {
+  margin: 2px 0 !important;
+}
+
+/* Tableaux compacts */
+body.dashboard-compact table {
+  font-size: 12px !important;
+  border-collapse: collapse !important;
+  width: 100%;
+}
+
+body.dashboard-compact th,
+body.dashboard-compact td {
+  padding: 4px 6px !important;
+  line-height: 1.2 !important;
+}
+
+/* Gros blocs techniques en scroll */
+body.dashboard-compact pre,
+body.dashboard-compact code {
+  font-size: 11px !important;
+}
+
+body.dashboard-compact pre {
+  max-height: 115px !important;
+  overflow: auto !important;
+  line-height: 1.2 !important;
+  padding: 7px !important;
+  margin: 5px 0 !important;
+  border-radius: 8px !important;
+}
+
+/* Boutons plus petits */
+body.dashboard-compact .button,
+body.dashboard-compact button,
+body.dashboard-compact input[type="submit"] {
+  padding: 5px 8px !important;
+  font-size: 12px !important;
+  border-radius: 8px !important;
+}
+
+/* Si le dashboard utilise des grids */
+body.dashboard-compact .grid,
+body.dashboard-compact .cards,
+body.dashboard-compact .dashboard-grid {
+  gap: 8px !important;
+}
+
+/* Cartes de métriques plus petites */
+body.dashboard-compact .metric,
+body.dashboard-compact .stat,
+body.dashboard-compact .tile {
+  padding: 7px !important;
+  min-height: auto !important;
+}
+
+/* Les cartes qui contiennent beaucoup d'info peuvent scroller */
+body.dashboard-compact .card {
+  max-height: none;
+}
+
+body.dashboard-compact .card.dashboard-scroll {
+  max-height: 260px !important;
+  overflow: auto !important;
+}
+
+/* Tables longues : scroll dans la carte */
+body.dashboard-compact .card table {
+  display: table;
+}
+
+/* Services et chemins essentiels plus compacts */
+body.dashboard-compact .card:has(table) {
+  overflow-x: auto;
+}
+
+/* Réduit l'espace global */
+body.dashboard-compact main,
+body.dashboard-compact .content,
+body.dashboard-compact .container {
+  gap: 8px !important;
+}
+
+/* === PinCabOS Dashboard Margins 5px START === */
+body.dashboard-compact .card {
+  margin-top: 5px !important;
+  margin-bottom: 5px !important;
+}
+
+body.dashboard-compact .grid,
+body.dashboard-compact .cards,
+body.dashboard-compact .dashboard-grid {
+  gap: 5px !important;
+}
+
+body.dashboard-compact main,
+body.dashboard-compact .content,
+body.dashboard-compact .container {
+  gap: 5px !important;
+}
+
+body.dashboard-compact .card[style*="margin-top:20px"],
+body.dashboard-compact div[style*="margin-top:20px"] {
+  margin-top: 5px !important;
+}
+/* === PinCabOS Dashboard Margins 5px END === */
+
+/* === PinCabOS Dashboard Inner Card Spacing 5px START === */
+body.dashboard-compact .card {
+  padding: 5px !important;
+}
+
+body.dashboard-compact .card h2,
+body.dashboard-compact .card h3,
+body.dashboard-compact .card p {
+  margin-top: 3px !important;
+  margin-bottom: 3px !important;
+}
+/* === PinCabOS Dashboard Inner Card Spacing 5px END === */
+
+/* === PinCabOS Dashboard Compact Info Cards START === */
+body.dashboard-compact .pco-compact-card {
+  padding: 5px !important;
+  min-height: auto !important;
+}
+
+body.dashboard-compact .pco-compact-card p {
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
+}
+
+body.dashboard-compact .pco-compact-card pre {
+  max-height: 95px !important;
+}
+
+body.dashboard-compact .pco-paths-bottom {
+  margin-top: 5px !important;
+}
+
+body.dashboard-compact .pco-paths-bottom table {
+  font-size: 11px !important;
+}
+/* === PinCabOS Dashboard Compact Info Cards END === */
+
+/* === PinCabOS Dashboard Compact Info Cards v2 START === */
+body.dashboard-compact .pco-compact-card {
+  padding: 5px !important;
+  min-height: auto !important;
+}
+
+body.dashboard-compact .pco-compact-card p {
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
+}
+
+body.dashboard-compact .pco-compact-card pre {
+  max-height: 95px !important;
+}
+
+body.dashboard-compact .pco-paths-bottom {
+  margin-top: 5px !important;
+}
+
+body.dashboard-compact .pco-paths-bottom table {
+  font-size: 11px !important;
+}
+/* === PinCabOS Dashboard Compact Info Cards v2 END === */
+
+/* === PinCabOS Dashboard Clean Info v3 START === */
+body.dashboard-compact .pco-compact-card {
+  padding: 5px !important;
+  min-height: auto !important;
+}
+
+body.dashboard-compact .pco-compact-card p,
+body.dashboard-compact .pco-compact-card h2,
+body.dashboard-compact .pco-compact-card h3 {
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
+}
+
+body.dashboard-compact .pco-compact-card pre {
+  max-height: 95px !important;
+  overflow: auto !important;
+}
+/* === PinCabOS Dashboard Clean Info v3 END === */

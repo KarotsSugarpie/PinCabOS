@@ -1,0 +1,1 @@
+/opt/pincabos/script/iso.sh

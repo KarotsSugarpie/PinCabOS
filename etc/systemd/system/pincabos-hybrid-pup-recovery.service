@@ -1,0 +1,11 @@
+[Unit]
+Description=PinCabOS restore temporarily hidden PuP folders
+After=local-fs.target
+Before=display-manager.service pincabos-vpinfe.service pincabos-webapp.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-hybrid-pup-mode recover
+
+[Install]
+WantedBy=multi-user.target

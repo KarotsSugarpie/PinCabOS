@@ -1,0 +1,364 @@
+
+Log:
+/opt/pincabos/build/logs/iso-v8.1g-20260812-115439.log
+
+=== 1) Safety audit before cleanup ===
+Build base: /opt/pincabos/build
+Work dir:   /opt/pincabos/build/live-v8.1g-english
+Output ISO: /opt/pincabos/build/output/PinCabOS-beta-Installer.iso
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p2  938G  227G  664G  26% /
+18G	/opt/pincabos/build
+
+=== 2) Cleanup obsolete/generated build files only ===
+Cleaning generated build work, old payloads and old ISOs.
+The installed PinCabOS system is NOT touched.
+PINCABOS_V81G_GENERATED_CLEANUP_V2
+
+--- Before cleanup ---
+18G	/opt/pincabos/build
+52K	/root/pincabos-v8.1g-installer-upgrades
+8.0K	/root/pincabos-v8.1g-installer-upgrades.tar.gz
+12K	/root/pincabos-v8.1g-integrate-orientation-rootadmin.sh
+
+--- Removing current/old generated live build work ---
+
+--- Removing old generated ISO outputs ---
+/opt/pincabos/build/output/PinCabOS-beta-Installer.iso
+/opt/pincabos/build/output/PinCabOS-beta-Installer.iso.sha256
+
+--- Removing old generated root payload directories only ---
+
+--- Removing accidental root-level generated payload files only ---
+PINCABOS_ROOT_GENERATED_PAYLOAD_CLEANUP_V1
+
+--- Removing stale partial downloads only, preserving cached base ISO ---
+
+--- After cleanup ---
+9.4G	/opt/pincabos/build
+52K	/root/pincabos-v8.1g-installer-upgrades
+8.0K	/root/pincabos-v8.1g-installer-upgrades.tar.gz
+12K	/root/pincabos-v8.1g-integrate-orientation-rootadmin.sh
+
+=== 3) Install required host builder tools ===
+Hit:1 https://dl.google.com/linux/chrome-stable/deb stable InRelease
+Hit:2 http://security.ubuntu.com/ubuntu resolute-security InRelease
+Hit:3 http://archive.ubuntu.com/ubuntu resolute InRelease
+Hit:4 http://archive.ubuntu.com/ubuntu resolute-updates InRelease
+Hit:5 http://archive.ubuntu.com/ubuntu resolute-backports InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+xorriso is already the newest version (1:1.5.6-1.1ubuntu4).
+squashfs-tools is already the newest version (1:4.7.5-1).
+rsync is already the newest version (3.4.1+ds1-7ubuntu0.3).
+wget is already the newest version (1.25.0-2ubuntu4.3).
+zstd is already the newest version (1.5.7+dfsg-3).
+ca-certificates is already the newest version (20260601~26.04.1).
+parted is already the newest version (3.6-6).
+dosfstools is already the newest version (4.2-1.2build1).
+gdisk is already the newest version (1.0.10-2build1).
+util-linux is already the newest version (2.41.3-3ubuntu2).
+coreutils is already the newest version (9.5-1ubuntu2+0.0.0~ubuntu25).
+grub-pc-bin is already the newest version (2.14-2ubuntu2.1).
+grub-efi-amd64-bin is already the newest version (2.14-2ubuntu1).
+mtools is already the newest version (4.0.49-1).
+e2fsprogs is already the newest version (1.47.2-3ubuntu4).
+Solving dependencies...
+0 upgraded, 0 newly installed, 0 to remove and 27 not upgraded.
+
+=== 4) Validate source cabinet boot, modules, GRUB and Plymouth ===
+OK: source boot/modules/grub/plymouth present
+
+=== 5) Build lean PinCabOS payload from current cabinet ===
+PinCabOS V8.1G LEAN CAB PAYLOAD
+Generated: 2026-08-12T11:54:42-04:00
+
+Excluded:
+/home/pinball/Tables
+/opt/pincabos/build
+/swap.img
+/swapfile
+venv/.venv/virtualenv preserved when needed for WebApp runtime
+node_modules
+__pycache__
+/root old payloads
+/opt/pincabos/cache
+/opt/pincabos/logs
+/var/tmp, /var/crash, /var/cache, /var/log, apt archives, journals
+
+TARGET SOURCE         FSTYPE OPTIONS
+/      /dev/nvme0n1p2 ext4   rw,relatime
+
+-rw-r--r-- 1 root root 90M Jul 29 06:09 /boot/initrd.img-7.0.0-28-generic
+-rw-r--r-- 1 root root 90M Aug 11 06:20 /boot/initrd.img-7.0.0-29-generic
+-rw------- 1 root root 17M Jun 20 17:59 /boot/vmlinuz-7.0.0-28-generic
+-rw------- 1 root root 17M Jul 17 12:44 /boot/vmlinuz-7.0.0-29-generic
+
+total 24K
+drwxr-xr-x  6 root root 4.0K Aug  6 06:31 .
+drwxr-xr-x 86 root root 4.0K Aug  6 06:32 ..
+drwxr-xr-x  2 root root 4.0K Jul 22 06:12 7.0.0-22-generic
+drwxr-xr-x  2 root root 4.0K Aug  6 06:33 7.0.0-27-generic
+drwxr-xr-x  5 root root 4.0K Jul 29 06:09 7.0.0-28-generic
+drwxr-xr-x  6 root root 4.0K Aug  6 06:32 7.0.0-29-generic
+
+# If you change this file or any /etc/default/grub.d/*.cfg file,
+# run 'update-grub' afterwards to update /boot/grub/grub.cfg.
+# For full documentation of the options in these files, see:
+#   info -f grub -n 'Simple configuration'
+
+GRUB_DEFAULT=0
+GRUB_TIMEOUT_STYLE=hidden
+GRUB_TIMEOUT=0
+GRUB_DISTRIBUTOR=`( . /etc/os-release && echo ${NAME} )`
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
+GRUB_CMDLINE_LINUX=""
+
+# If your computer has multiple operating systems installed, then you
+# probably want to run os-prober. However, if your computer is a host
+# for guest OSes installed via LVM or raw disk devices, running
+# os-prober can cause damage to those guest OSes as it mounts
+# filesystems to look for things.
+#GRUB_DISABLE_OS_PROBER=false
+
+# Uncomment to enable BadRAM filtering, modify to suit your needs
+# This works with Linux (no patch required) and with any kernel that obtains
+# the memory map information from GRUB (GNU Mach, kernel of FreeBSD ...)
+#GRUB_BADRAM="0x01234567,0xfefefefe,0x89abcdef,0xefefefef"
+
+# Uncomment to disable graphical terminal
+#GRUB_TERMINAL=console
+
+# The resolution used on graphical terminal
+# note that you can use only modes which your graphic card supports via VBE/GOP/UGA
+# you can see them in real GRUB with the command `videoinfo'
+#GRUB_GFXMODE=640x480
+
+# Uncomment if you don't want GRUB to pass "root=UUID=xxx" parameter to Linux
+#GRUB_DISABLE_LINUX_UUID=true
+
+# Uncomment to disable generation of recovery mode menu entries
+#GRUB_DISABLE_RECOVERY="true"
+
+# Uncomment to get a beep at grub start
+#GRUB_INIT_TUNE="480 440 1"
+GRUB_RECORDFAIL_TIMEOUT=0
+
+/usr/share/plymouth/themes/pincabos/PCOLoading.png
+/usr/share/plymouth/themes/pincabos/pincabos.plymouth
+/usr/share/plymouth/themes/pincabos/pincabos.png
+/usr/share/plymouth/themes/pincabos/pincabos.script
+/usr/share/plymouth/themes/pincabos/progress_bar.png
+/usr/share/plymouth/themes/pincabos/progress_box.png
+GO [√] VPinballX.ini neutralisés : 1
+Creating live cabinet payload with controlled TAR status.
+tar: archived 10000 entries...
+tar: archived 20000 entries...
+tar: archived 30000 entries...
+tar: archived 40000 entries...
+tar: archived 50000 entries...
+tar: archived 60000 entries...
+tar: archived 70000 entries...
+tar: archived 80000 entries...
+tar: archived 90000 entries...
+tar: archived 100000 entries...
+tar: archived 110000 entries...
+tar: archived 120000 entries...
+tar: archived 130000 entries...
+tar: archived 140000 entries...
+tar: archived 150000 entries...
+tar: archived 160000 entries...
+tar: archived 170000 entries...
+tar: archived 180000 entries...
+tar: archived 190000 entries...
+tar: archived 200000 entries...
+tar: archived 210000 entries...
+tar: archived 220000 entries...
+tar: archived 230000 entries...
+tar: archived 240000 entries...
+tar: archived 250000 entries...
+tar: archived 260000 entries...
+tar: archived 270000 entries...
+tar: archived 280000 entries...
+tar: archived 290000 entries...
+tar: archived 300000 entries...
+tar: archived 310000 entries...
+tar: archived 320000 entries...
+tar: archived 330000 entries...
+tar: archived 340000 entries...
+tar: archived 350000 entries...
+tar: archived 360000 entries...
+tar: archived 370000 entries...
+tar: archived 380000 entries...
+tar: archived 390000 entries...
+tar: archived 400000 entries...
+tar: archived 410000 entries...
+tar: archived 420000 entries...
+tar: archived 430000 entries...
+tar: archived 440000 entries...
+tar: archived 450000 entries...
+tar: archived 460000 entries...
+tar: archived 470000 entries...
+tar: archived 480000 entries...
+tar: archived 490000 entries...
+tar: archived 500000 entries...
+tar: archived 510000 entries...
+tar: archived 520000 entries...
+tar: archived 530000 entries...
+tar: archived 540000 entries...
+tar: archived 550000 entries...
+tar: archived 560000 entries...
+tar: archived 570000 entries...
+tar: archived 580000 entries...
+tar: archived 590000 entries...
+tar: archived 600000 entries...
+tar: archived 610000 entries...
+tar: archived 620000 entries...
+tar: archived 630000 entries...
+tar: archived 640000 entries...
+tar: archived 650000 entries...
+tar: archived 660000 entries...
+tar: archived 670000 entries...
+tar: archived 680000 entries...
+tar: archived 690000 entries...
+tar: archived 700000 entries...
+tar: archived 710000 entries...
+tar: archived 720000 entries...
+
+=== Validate completed live payload archive ===
+TAR_CREATE_RC=0
+--- Zstandard integrity test ---
+/opt/pincabos/build/live-v8.1g-english/payload-full/pincabos-rootfs-cab-v8.1g.tar.zst: 7381432320 bytes 
+--- TAR stream readability test ---
+GO [√] Payload audio privacy validation passed
+--- Completed live payload archive ---
+-rw-rw-r--+ 1 root pinball 3.0G Aug 12 11:57 /opt/pincabos/build/live-v8.1g-english/payload-full/pincabos-rootfs-cab-v8.1g.tar.zst
+OK: TAR completed with status 0.
+GO [√] Live payload archive is structurally valid
+
+=== 6) Build Plymouth overlay ===
+
+=== 7) Validate payload exclusions and boot contents ===
+./boot/initrd.img-7.0.0-29-generic
+./boot/vmlinuz.old
+./boot/vmlinuz-7.0.0-29-generic
+./boot/vmlinuz-7.0.0-28-generic
+./boot/initrd.img
+./boot/initrd.img.old
+./boot/grub/
+./boot/grub/x86_64-efi/
+./boot/grub/x86_64-efi/grub.efi
+./boot/grub/x86_64-efi/efinet.mod
+./boot/grub/x86_64-efi/password.mod
+./boot/grub/x86_64-efi/gcry_hwfeatures.mod
+./boot/grub/x86_64-efi/usbtest.mod
+./boot/grub/x86_64-efi/morse.mod
+./boot/grub/x86_64-efi/ufs1_be.mod
+./boot/grub/x86_64-efi/gcry_sm4.mod
+./boot/grub/x86_64-efi/iorw.mod
+./boot/grub/x86_64-efi/datehook.mod
+./boot/grub/x86_64-efi/bitmap_scale.mod
+./boot/grub/x86_64-efi/zfs.mod
+./boot/grub/x86_64-efi/minix3.mod
+./boot/grub/x86_64-efi/part_apple.mod
+./boot/grub/x86_64-efi/probe.mod
+./boot/grub/x86_64-efi/file.mod
+./boot/grub/x86_64-efi/memdisk.mod
+./boot/grub/x86_64-efi/linux.mod
+./boot/grub/x86_64-efi/search.mod
+./boot/grub/x86_64-efi/hashsum.mod
+./boot/grub/x86_64-efi/cryptodisk.mod
+./boot/grub/x86_64-efi/font.mod
+./boot/grub/x86_64-efi/help.mod
+./boot/grub/x86_64-efi/minix2.mod
+./boot/grub/x86_64-efi/gcry_aria.mod
+./boot/grub/x86_64-efi/gfxterm_background.mod
+./boot/grub/x86_64-efi/read.mod
+./boot/grub/x86_64-efi/msdospart.mod
+./boot/grub/x86_64-efi/part_sun.mod
+./boot/grub/x86_64-efi/ata.mod
+./boot/grub/x86_64-efi/eval.mod
+./boot/grub/x86_64-efi/regexp.mod
+./boot/grub/x86_64-efi/gcry_rsa.mod
+./boot/grub/x86_64-efi/nilfs2.mod
+./boot/grub/x86_64-efi/net.mod
+./boot/grub/x86_64-efi/cbfs.mod
+./boot/grub/x86_64-efi/ntfs.mod
+./boot/grub/x86_64-efi/chain.mod
+./boot/grub/x86_64-efi/serial.mod
+./boot/grub/x86_64-efi/backtrace.mod
+./boot/grub/x86_64-efi/video_colors.mod
+./boot/grub/x86_64-efi/efitextmode.mod
+./boot/grub/x86_64-efi/lvm.mod
+./boot/grub/x86_64-efi/rsa_sexp_test.mod
+./boot/grub/x86_64-efi/ufs2.mod
+./boot/grub/x86_64-efi/afsplitter.mod
+./boot/grub/x86_64-efi/odc.mod
+./boot/grub/x86_64-efi/gcry_cast5.mod
+./boot/grub/x86_64-efi/moddep.lst
+./boot/grub/x86_64-efi/tss2.mod
+./boot/grub/x86_64-efi/crypto_cipher_mode_test.mod
+./boot/grub/x86_64-efi/gcry_idea.mod
+./boot/grub/x86_64-efi/cpio_be.mod
+./boot/grub/x86_64-efi/elf.mod
+./boot/grub/x86_64-efi/pbkdf2.mod
+./boot/grub/x86_64-efi/usbserial_usbdebug.mod
+./boot/grub/x86_64-efi/gfxmenu.mod
+./boot/grub/x86_64-efi/macbless.mod
+./boot/grub/x86_64-efi/videoinfo.mod
+./boot/grub/x86_64-efi/bitmap.mod
+./boot/grub/x86_64-efi/test.mod
+./boot/grub/x86_64-efi/f2fs.mod
+./boot/grub/x86_64-efi/gcry_salsa20.mod
+./boot/grub/x86_64-efi/command.lst
+./boot/grub/x86_64-efi/fs.lst
+./boot/grub/x86_64-efi/pata.mod
+./boot/grub/x86_64-efi/minicmd.mod
+./boot/grub/x86_64-efi/rdmsr.mod
+./boot/grub/x86_64-efi/cbls.mod
+./boot/grub/x86_64-efi/loadenv.mod
+./boot/grub/x86_64-efi/gcry_md4.mod
+./boot/grub/x86_64-efi/gcry_rijndael.mod
+./boot/grub/x86_64-efi/lsmmap.mod
+./boot/grub/x86_64-efi/jpeg.mod
+./boot/grub/x86_64-efi/cmp.mod
+./boot/grub/x86_64-efi/part_dfly.mod
+./boot/grub/x86_64-efi/argon2.mod
+./boot/grub/x86_64-efi/lsacpi.mod
+./boot/grub/x86_64-efi/efifwsetup.mod
+./boot/grub/x86_64-efi/key_protector.mod
+./boot/grub/x86_64-efi/gcry_whirlpool.mod
+./boot/grub/x86_64-efi/cmostest.mod
+./boot/grub/x86_64-efi/argon2_test.mod
+./boot/grub/x86_64-efi/gettext.mod
+./boot/grub/x86_64-efi/affs.mod
+./boot/grub/x86_64-efi/syslinuxcfg.mod
+./boot/grub/x86_64-efi/date.mod
+./boot/grub/x86_64-efi/datetime.mod
+./boot/grub/x86_64-efi/bufio.mod
+./boot/grub/x86_64-efi/video_cirrus.mod
+./boot/grub/x86_64-efi/hexdump.mod
+./boot/grub/x86_64-efi/btrfs.mod
+./boot/grub/x86_64-efi/mmap.mod
+./boot/grub/x86_64-efi/sleep_test.mod
+./boot/grub/x86_64-efi/minix3_be.mod
+./boot/grub/x86_64-efi/bswap_test.mod
+./boot/grub/x86_64-efi/pubkey.mod
+./boot/grub/x86_64-efi/keystatus.mod
+./boot/grub/x86_64-efi/gcry_sha1.mod
+./boot/grub/x86_64-efi/terminal.lst
+./boot/grub/x86_64-efi/video.lst
+./boot/grub/x86_64-efi/play.mod
+./boot/grub/x86_64-efi/luks2.mod
+./boot/grub/x86_64-efi/xnu_uuid.mod
+./boot/grub/x86_64-efi/configfile.mod
+./boot/grub/x86_64-efi/crypto.mod
+./boot/grub/x86_64-efi/blocklist.mod
+./boot/grub/x86_64-efi/crypto.lst
+./boot/grub/x86_64-efi/uhci.mod
+./boot/grub/x86_64-efi/tar.mod
+./boot/grub/x86_64-efi/usb.mod
+./boot/grub/x86_64-efi/random.mod
+OK: Tables excluded

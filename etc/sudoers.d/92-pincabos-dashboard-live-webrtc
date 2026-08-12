@@ -1,0 +1,3 @@
+# PinCabOS Dashboard V15 — scoped single-screen GPU WebRTC controller.
+# The executable validates that heartbeat accepts only 0, 1, or 2.
+pinball ALL=(root) NOPASSWD: /usr/local/lib/pincabos/pincabos-dashboard-live-webrtc heartbeat *, /usr/local/lib/pincabos/pincabos-dashboard-live-webrtc status, /usr/local/lib/pincabos/pincabos-dashboard-live-webrtc stop

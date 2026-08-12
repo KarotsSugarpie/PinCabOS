@@ -1,0 +1,476 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import pwd
+import re
+import shutil
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+TABLES_ROOT = Path("/home/pinball/Tables").resolve()
+BACKUP_ROOT = Path(
+    "/opt/pincabos/backups/dmd-persistence-runtime"
+)
+PROFILE_NAME = "PinCabOS-DMD-manual.env"
+
+SECTION_RE = re.compile(
+    r"^\s*\[\s*Plugin\.B2SLegacy\s*\]\s*(?:[;#].*)?$",
+    re.IGNORECASE,
+)
+
+ANY_SECTION_RE = re.compile(
+    r"^\s*\[[^\]]+\]\s*(?:[;#].*)?$"
+)
+
+KEY_RE = re.compile(
+    r"^\s*([^=:#\s]+)\s*[:=]"
+)
+
+MANAGED_KEYS = (
+    "Enable",
+    "B2SHideB2SDMD",
+    "B2SHideDMD",
+    "ScoreViewDMDOverlay",
+    "ScoreViewDMDAutoPos",
+    "ScoreViewDMDX",
+    "ScoreViewDMDY",
+    "ScoreViewDMDW",
+    "ScoreViewDMDH",
+)
+
+
+def fail(message: str, code: int = 2) -> None:
+    print(message, file=sys.stderr)
+    raise SystemExit(code)
+
+
+def integer(
+    value: str,
+    minimum: int,
+    maximum: int,
+    name: str,
+) -> int:
+    try:
+        result = int(value)
+    except ValueError:
+        fail(f"{name} invalide : {value!r}")
+
+    if not minimum <= result <= maximum:
+        fail(
+            f"{name} hors plage "
+            f"{minimum}..{maximum} : {result}"
+        )
+
+    return result
+
+
+def pinball_identity() -> tuple[int, int]:
+    try:
+        account = pwd.getpwnam("pinball")
+        return account.pw_uid, account.pw_gid
+    except KeyError:
+        return 1000, 1000
+
+
+def atomic_write(
+    path: Path,
+    text: str,
+    uid: int,
+    gid: int,
+    mode: int,
+) -> None:
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=str(path.parent),
+    )
+
+    temporary = Path(temporary_name)
+
+    try:
+        with os.fdopen(
+            descriptor,
+            "w",
+            encoding="utf-8",
+            newline="",
+        ) as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        os.chmod(temporary, mode)
+        os.chown(temporary, uid, gid)
+        os.replace(temporary, path)
+
+        directory_fd = os.open(
+            str(path.parent),
+            os.O_DIRECTORY,
+        )
+
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def patch_section(
+    original: str,
+    values: dict[str, str],
+) -> str:
+    newline = (
+        "\r\n"
+        if "\r\n" in original
+        else "\n"
+    )
+
+    lines = original.splitlines()
+
+    wanted = {
+        key.casefold(): key
+        for key in MANAGED_KEYS
+    }
+
+    output: list[str] = []
+    inside = False
+    found = False
+    seen: set[str] = set()
+
+    def add_missing() -> None:
+        for canonical in MANAGED_KEYS:
+            folded = canonical.casefold()
+
+            if folded not in seen:
+                output.append(
+                    f"{canonical} = {values[canonical]}"
+                )
+
+    for line in lines:
+        if ANY_SECTION_RE.match(line):
+            if inside:
+                add_missing()
+
+            inside = bool(
+                SECTION_RE.match(line)
+            )
+
+            seen = set()
+
+            if inside:
+                found = True
+
+            output.append(line)
+            continue
+
+        if not inside:
+            output.append(line)
+            continue
+
+        match = KEY_RE.match(line)
+
+        if not match:
+            output.append(line)
+            continue
+
+        folded = match.group(1).casefold()
+        canonical = wanted.get(folded)
+
+        if canonical is None:
+            output.append(line)
+            continue
+
+        # Élimine aussi les doublons de clés DMD.
+        if folded in seen:
+            continue
+
+        output.append(
+            f"{canonical} = {values[canonical]}"
+        )
+
+        seen.add(folded)
+
+    if inside:
+        add_missing()
+
+    if not found:
+        if output and output[-1].strip():
+            output.append("")
+
+        output.append(
+            "[Plugin.B2SLegacy]"
+        )
+
+        for canonical in MANAGED_KEYS:
+            output.append(
+                f"{canonical} = {values[canonical]}"
+            )
+
+    return newline.join(output) + newline
+
+
+def verify_ini(
+    text: str,
+    expected: dict[str, str],
+) -> None:
+    section_match = re.search(
+        r"(?ims)^\s*\[\s*Plugin\.B2SLegacy\s*\]\s*$"
+        r"(.*?)(?=^\s*\[|\Z)",
+        text,
+    )
+
+    if not section_match:
+        fail(
+            "Section [Plugin.B2SLegacy] "
+            "absente après écriture."
+        )
+
+    section = section_match.group(1)
+
+    for key, value in expected.items():
+        matches = re.findall(
+            rf"(?im)^\s*{re.escape(key)}"
+            rf"\s*[:=]\s*([^\r\n;#]*)",
+            section,
+        )
+
+        cleaned = [
+            item.strip()
+            for item in matches
+        ]
+
+        if cleaned != [value]:
+            fail(
+                f"Vérification INI échouée pour {key}. "
+                f"Attendu={[value]!r}, trouvé={cleaned!r}"
+            )
+
+
+def save(
+    table_text: str,
+    auto_text: str,
+    x_text: str,
+    y_text: str,
+    w_text: str,
+    h_text: str,
+) -> dict:
+    table = Path(
+        table_text
+    ).expanduser().resolve()
+
+    try:
+        table.relative_to(TABLES_ROOT)
+    except ValueError:
+        fail(
+            f"Table refusée hors de "
+            f"{TABLES_ROOT} : {table}"
+        )
+
+    if (
+        table.suffix.casefold() != ".vpx"
+        or not table.is_file()
+    ):
+        fail(
+            f"Table VPX invalide ou absente : {table}"
+        )
+
+    auto = integer(
+        auto_text, 0, 1, "AUTO"
+    )
+
+    x = integer(
+        x_text, 0, 65535, "X"
+    )
+
+    y = integer(
+        y_text, 0, 65535, "Y"
+    )
+
+    width = integer(
+        w_text, 1, 65535, "W"
+    )
+
+    height = integer(
+        h_text, 1, 65535, "H"
+    )
+
+    ini = table.with_suffix(".ini")
+
+    profile = (
+        table.parent
+        / "fulldmd"
+        / PROFILE_NAME
+    )
+
+    stamp = time.strftime(
+        "%Y%m%d-%H%M%S"
+    )
+
+    digest = hashlib.sha256(
+        str(table).encode("utf-8")
+    ).hexdigest()[:12]
+
+    backup = (
+        BACKUP_ROOT
+        / f"{stamp}-{digest}"
+    )
+
+    backup.mkdir(
+        parents=True,
+        exist_ok=False,
+    )
+
+    if ini.exists():
+        shutil.copy2(
+            ini,
+            backup / "table.ini.before",
+        )
+
+        original = ini.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+
+        stat = ini.stat()
+        ini_uid = stat.st_uid
+        ini_gid = stat.st_gid
+        ini_mode = stat.st_mode & 0o777
+
+    else:
+        original = ""
+        ini_uid, ini_gid = pinball_identity()
+        ini_mode = 0o664
+
+    if profile.exists():
+        shutil.copy2(
+            profile,
+            backup / "manual-profile.before.env",
+        )
+
+    values = {
+        "Enable": "1",
+        "B2SHideB2SDMD": "0",
+        "B2SHideDMD": "1",
+        "ScoreViewDMDOverlay": "1",
+        "ScoreViewDMDAutoPos": str(auto),
+        "ScoreViewDMDX": str(x),
+        "ScoreViewDMDY": str(y),
+        "ScoreViewDMDW": str(width),
+        "ScoreViewDMDH": str(height),
+    }
+
+    updated = patch_section(
+        original,
+        values,
+    )
+
+    atomic_write(
+        ini,
+        updated,
+        ini_uid,
+        ini_gid,
+        ini_mode,
+    )
+
+    verify_ini(
+        ini.read_text(
+            encoding="utf-8",
+            errors="replace",
+        ),
+        values,
+    )
+
+    uid, gid = pinball_identity()
+
+    profile_text = (
+        "# PINCABOS_DMD_PERSISTENCE_RUNTIME_V2\n"
+        f"PINCABOS_DMD_MANUAL={0 if auto else 1}\n"
+        f"PINCABOS_DMD_AUTO={auto}\n"
+        f"PINCABOS_DMD_X={x}\n"
+        f"PINCABOS_DMD_Y={y}\n"
+        f"PINCABOS_DMD_W={width}\n"
+        f"PINCABOS_DMD_H={height}\n"
+        "PINCABOS_DMD_UPDATED_AT="
+        f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n"
+    )
+
+    atomic_write(
+        profile,
+        profile_text,
+        uid,
+        gid,
+        0o664,
+    )
+
+    saved_profile = profile.read_text(
+        encoding="utf-8"
+    )
+
+    expected_profile = {
+        "PINCABOS_DMD_MANUAL": str(
+            0 if auto else 1
+        ),
+        "PINCABOS_DMD_AUTO": str(auto),
+        "PINCABOS_DMD_X": str(x),
+        "PINCABOS_DMD_Y": str(y),
+        "PINCABOS_DMD_W": str(width),
+        "PINCABOS_DMD_H": str(height),
+    }
+
+    for key, value in expected_profile.items():
+        if f"{key}={value}\n" not in saved_profile:
+            fail(
+                "Vérification du profil échouée : "
+                f"{key}={value}"
+            )
+
+    return {
+        "ok": True,
+        "table": str(table),
+        "ini": str(ini),
+        "profile": str(profile),
+        "backup": str(backup),
+        "auto": bool(auto),
+        "x": x,
+        "y": y,
+        "w": width,
+        "h": height,
+    }
+
+
+def main() -> None:
+    if (
+        len(sys.argv) != 8
+        or sys.argv[1] != "save"
+    ):
+        fail(
+            "Usage : "
+            "pincabos-b2s-dmd-tuner-helper "
+            "save TABLE.vpx AUTO X Y W H"
+        )
+
+    result = save(
+        *sys.argv[2:]
+    )
+
+    print(
+        json.dumps(
+            result,
+            ensure_ascii=False,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
