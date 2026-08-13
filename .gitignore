@@ -185,3 +185,32 @@
 
 # Ancienne cle CA generee par les tests Sunshine
 /opt/pincabos/apps/sunshine-stream-test/**/cakey.pem
+/opt/pincabos/backups/
+/opt/pincabos/build/
+/opt/pincabos/cache/
+/opt/pincabos/config/admin-password.txt
+/opt/pincabos/config/webapp-secret.key
+/home/pinball/.ssh/
+/home/pinball/Imports/
+/opt/pincabos/imports/
+/opt/pincabos/script/*.bak-*
+/opt/pincabos/script/*.before-*
+/opt/pincabos/web/*.bak-*
+/opt/pincabos/web/*.before-*
+/home/pinball/.cache/
+/home/pinball/.local/share/Trash/
+/home/pinball/.local/share/VPinballX/10.8/vpinball.log
+/home/pinball/vpinfe/_internal/DirectOutput.log
+/var/backups/
+/var/lib/chrony/chrony.drift
+/var/lib/pincabos/media-hunter/results.json
+/var/lib/pincabos/media-hunter/state.json
+/var/lib/pincabos/table-test/state.json
+/root/.bash_history
+/root/.config/gh/
+/root/.gitconfig
+/root/*.before-*
+/root/*audit*.txt
+/root/pincabos-v8.1g-installer-upgrades/
+/root/pincabos-v8.1g-installer-upgrades.tar.gz
+/root/pincabos-v8.1g-integrate-*.sh

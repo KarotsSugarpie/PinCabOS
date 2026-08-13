@@ -165,3 +165,23 @@
 # Git imbriques : garder le code, pas leurs metadata .git
 # ------------------------------------------------------------
 **/.git/
+
+# ============================================================
+# Cache / runtime PinCabOS
+# ============================================================
+
+# VPinFE — medias/cache generes a partir des tables
+/home/pinball/.config/vpinfe/cache/
+
+# Logs runtime
+/home/pinball/.config/vpinfe/vpinfe.log
+/opt/pincabos/logs/
+
+# Etats temporaires des workers
+/var/lib/pincabos/batch-live-import/worker-heartbeat.json
+
+# Historique local shell
+/root/.lesshst
+
+# Ancienne cle CA generee par les tests Sunshine
+/opt/pincabos/apps/sunshine-stream-test/**/cakey.pem

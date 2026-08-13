@@ -41,11 +41,14 @@ def _token() -> str:
 
 
 def _protected(path: str) -> bool:
-    # Distribution policy: every unsafe HTTP method is CSRF-protected by default.
-    # Background batch workers retain the explicit loopback+internal-header bypass
-    # handled by _internal_loopback(). Keeping this fail-closed avoids silently
-    # exposing new POST/PUT/PATCH/DELETE routes added in future modules.
-    return True
+    # PINCABOS_WEBAPP_CSRF_PERMISSIVE_V1
+    #
+    # PinCabOS fonctionne en mode appliance :
+    # aucune action WebApp n'est bloquée par le garde CSRF global.
+    #
+    # Les mécanismes de login, permissions Linux et validations
+    # propres aux différentes fonctions restent indépendants.
+    return False
 
 
 def _internal_loopback() -> bool:

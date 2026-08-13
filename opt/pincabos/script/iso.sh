@@ -465,6 +465,14 @@ tar \
   --exclude='./root/pincabos-v8.1g-iso-ready/*' \
   --exclude='./opt/pincabos/build' \
   --exclude='./opt/pincabos/build/*' \
+  --exclude='./opt/pincabos/.git-rootfs' \
+  --exclude='./opt/pincabos/.git-rootfs/*' \
+  --exclude='./opt/pincabos/backups' \
+  --exclude='./opt/pincabos/backups/*' \
+  --exclude='./opt/pincabos/script/*.bak-*' \
+  --exclude='./opt/pincabos/script/*.before-*' \
+  --exclude='./opt/pincabos/web/*.bak-*' \
+  --exclude='./opt/pincabos/web/*.before-*' \
   --exclude='./opt/pincabos/cache' \
   --exclude='./opt/pincabos/cache/*' \
   --exclude='./opt/pincabos/logs/*' \
@@ -581,6 +589,21 @@ if tar -I zstd -tf "$ARCHIVE" | grep -q '^./opt/pincabos/build/'; then
   die "/opt/pincabos/build included in payload"
 fi
 echo "OK: /opt/pincabos/build excluded"
+
+
+# PINCABOS_PAYLOAD_TRANSIENT_VALIDATION_V1
+echo "=== Validation fichiers transitoires exclus ==="
+
+if tar -I zstd -tf "$ARCHIVE" | grep -E -q \
+'^\./opt/pincabos/(\.git-rootfs(/|$)|backups(/|$)|script/.*\.(bak|before)-|web/.*\.(bak|before)-)'
+then
+    die "Fichiers transitoires PinCabOS inclus dans le payload"
+fi
+
+echo "OK: .git-rootfs excluded"
+echo "OK: /opt/pincabos/backups excluded"
+echo "OK: script/web backups excluded"
+
 
 if tar -I zstd -tf "$ARCHIVE" | grep -Eq '^\./swap\.img$|^\./swapfile$'; then
   echo "Bad swap entries:"
@@ -5491,12 +5514,57 @@ echo "GRUB initrd: $INITRD_REL"
 
 mkdir -p "$ISO_DIR/boot/grub"
 
+# PINCABOS_GRUB_FONT_COMPAT_V1
+echo "=== Validation police GRUB PinCabOS ==="
+
+GRUB_FONT_DIR="$ISO_DIR/boot/grub"
+GRUB_FONT_REAL="$GRUB_FONT_DIR/fonts/unicode.pf2"
+GRUB_FONT_COMPAT="$GRUB_FONT_DIR/font.pf2"
+
+if [ ! -s "$GRUB_FONT_REAL" ]; then
+    echo "WARNING: police GRUB absente de l ISO de base."
+
+    mkdir -p "$GRUB_FONT_DIR/fonts"
+
+    if [ -s /usr/share/grub/unicode.pf2 ]; then
+        cp -f \
+            /usr/share/grub/unicode.pf2 \
+            "$GRUB_FONT_REAL"
+    elif [ -s /boot/grub/fonts/unicode.pf2 ]; then
+        cp -f \
+            /boot/grub/fonts/unicode.pf2 \
+            "$GRUB_FONT_REAL"
+    elif [ -s /boot/grub/unicode.pf2 ]; then
+        cp -f \
+            /boot/grub/unicode.pf2 \
+            "$GRUB_FONT_REAL"
+    else
+        die "Impossible de trouver unicode.pf2 pour GRUB"
+    fi
+fi
+
+# Copie de compatibilité pour les firmwares/configurations
+# qui recherchent encore /boot/grub/font.pf2.
+cp -f \
+    "$GRUB_FONT_REAL" \
+    "$GRUB_FONT_COMPAT"
+
+test -s "$GRUB_FONT_REAL" || \
+    die "unicode.pf2 absent"
+
+test -s "$GRUB_FONT_COMPAT" || \
+    die "font.pf2 compat absent"
+
+echo "GO [OK] $GRUB_FONT_REAL"
+echo "GO [OK] $GRUB_FONT_COMPAT"
+
+
 cat >"$ISO_DIR/boot/grub/grub.cfg" <<PINCABOS_GRUB
 set default=0
 set timeout=10
 set timeout_style=menu
 
-if loadfont /boot/grub/font.pf2 ; then
+if loadfont /boot/grub/fonts/unicode.pf2 ; then
   set gfxmode=auto
   insmod all_video
   insmod gfxterm
@@ -6209,10 +6277,10 @@ pincabos_offer_web_publish() {
     echo
     echo "=== Transfert ISO + SHA256 ==="
 
+# PINCABOS_WEB_RSYNC_SAFE_V3
     if ! sshpass -e rsync \
         -avhP \
-        --partial \
-        --append-verify \
+        --checksum \
         -e "ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 -o ServerAliveCountMax=6" \
         "$ISO_FILE" \
         "${ISO_FILE}.sha256" \
