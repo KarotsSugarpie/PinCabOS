@@ -1,1061 +1,0 @@
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\===============================================================
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\ PINCABOS — AUDIT ACTIONS PINCAB EXPLORER
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\===============================================================
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 1. WebApp ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\active
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\● pincabos-webapp.service - PinCabOS WebApp
-     Loaded: loaded (/etc/systemd/system/pincabos-webapp.service; enabled; preset: enabled)
-    Drop-In: /etc/systemd/system/pincabos-webapp.service.d
-             └─10-pincabos-web-port.conf, 20-sudo-privilege-transition.conf, 30-direct-port80.conf, 40-waitress.conf, 50-smart-import-6g-root-disk.conf, 60-dashboard-live-runtime.conf
-     Active: active (running) since Sun 2026-08-02 11:01:17 EDT; 1 week 2 days ago
- Invocation: 3eb67feba6c24cb4b9b8d919a5186716
-       Docs: https://pincabos.cc/
-   Main PID: 1992069 (waitress-serve)
-      Tasks: 9 (limit: 18314)
-     Memory: 2.6G (peak: 6.6G)
-        CPU: 13h 50min 37.480s
-     CGroup: /system.slice/pincabos-webapp.service
-             └─1992069 /opt/pincabos/web/.venv/bin/python /opt/pincabos/web/.venv/bin/waitress-serve --host=0.0.0.0 --port=80 --threads=8 --channel-timeout=900 --max-request-body-size=6442450944 --inbuf-overflow=524288 app:app
-
-Aug 11 11:58:03 PinCabOs sudo[455717]: pam_unix(sudo:session): session closed for user root
-Aug 11 11:59:36 PinCabOs sudo[520998]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)
-Aug 11 11:59:36 PinCabOs sudo[520998]: pinball :  PWD=/opt/pincabos/web ; USER=root ; COMMAND=/usr/local/sbin/pincabos-table-test-control stop
-Aug 11 11:59:37 PinCabOs sudo[520998]: pam_unix(sudo:session): session closed for user root
-Aug 11 12:01:20 PinCabOs sudo[591788]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)
-Aug 11 12:01:20 PinCabOs sudo[591788]: pinball :  PWD=/opt/pincabos/web ; USER=root ; COMMAND=/usr/local/sbin/pincabos-table-test-control play
-Aug 11 12:01:32 PinCabOs sudo[591788]: pam_unix(sudo:session): session closed for user root
-Aug 11 12:03:56 PinCabOs sudo[667702]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)
-Aug 11 12:03:56 PinCabOs sudo[667702]: pinball :  PWD=/opt/pincabos/web ; USER=root ; COMMAND=/usr/local/sbin/pincabos-table-test-control stop
-Aug 11 12:03:56 PinCabOs sudo[667702]: pam_unix(sudo:session): session closed for user root
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 2. Fichier principal ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\-rw-r--r--+ 1 root pinball 544K Aug  9 15:22 /opt/pincabos/web/app.py
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 3. Routes Explorer ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\1287:      <a class="button pco-topbar-tool-copy" href="/tools/commander">PinCab Explorer</a>
-3240:    <a class="button secondary" href="/tools/commander">Ouvrir Commander</a>
-4367:    upload_dir = Path("/opt/pincabos/uploads/dof")
-4372:    upload_dir.mkdir(parents=True, exist_ok=True)
-4410:        upload_key = None
-4412:            upload_key = "dof_file"
-4415:            upload_key = "dofzip"
-4418:            upload_key = list(request.files.keys())[0]
-4420:        if not upload_key:
-4421:            log("ERREUR: aucun fichier uploadé.")
-4424:        log(f"Champ upload utilisé : {upload_key}")
-4425:        uploaded = request.files[upload_key]
-4427:        if uploaded is None or not uploaded.filename:
-4431:        original_name = uploaded.filename
-4447:        upload_path = upload_dir / f"{stamp}-{filename}"
-4448:        uploaded.save(str(upload_path))
-4450:        log(f"Fichier reçu : {upload_path}")
-4451:        log(f"Taille : {upload_path.stat().st_size if upload_path.exists() else 0} octets")
-4476:            extract_dir = upload_dir / f"extract-{stamp}"
-4480:                with zipfile.ZipFile(upload_path, "r") as z:
-4511:            safe_copy(upload_path, dest_name)
-4514:            safe_copy(upload_path, filename)
-4526:            "uploaded_file": filename,
-4584:    upload_dir = Path("/opt/pincabos/uploads/dof")
-4590:    upload_dir.mkdir(parents=True, exist_ok=True)
-4626:        uploaded = request.files["cabinet_json_file"]
-4627:        original_name = Path(uploaded.filename or "").name
-4632:        upload_path = upload_dir / f"{stamp}-{original_name}"
-4633:        uploaded.save(str(upload_path))
-4635:        raw = upload_path.read_text(errors="replace").lstrip()
-5414:        <input type="hidden" name="mode" value="upload">
-10114:          <input type="file" id="pco-ball-upload" name="ball_upload" accept=".png,.jpg,.jpeg,.webp,.bmp" onchange="pcoUserBallUploadPreview(this, 'pco-ball-preview')">
-10136:          <input type="file" id="pco-decal-upload" name="decal_upload" accept=".png,.jpg,.jpeg,.webp,.bmp" onchange="pcoUserBallUploadPreview(this, 'pco-decal-preview')">
-10347:    def save_upload(field, folder):
-10367:        uploaded_ball = save_upload("ball_upload", VPX_SIMPLE_BALL_IMAGE_DIR)
-10368:        uploaded_decal = save_upload("decal_upload", VPX_SIMPLE_BALL_DECAL_DIR)
-10378:    if uploaded_ball:
-10379:        ball_path = uploaded_ball
-10380:    if uploaded_decal:
-10381:        decal_path = uploaded_decal
-10530:                    # Nettoyage du batch upload après import manifest.
-10532:                        uploads_root = Path("/home/pinball/Downloads").resolve()
-10534:                        if batch_real.exists() and uploads_root in batch_real.parents:
-10538:                        result["skipped"].append(f"WARNING cleanup upload batch: {e}")
-10578:    uploads_root = Path("/home/pinball/Downloads").resolve()
-10580:    if not batch_dir.exists() or uploads_root not in batch_dir.parents:
-10598:    if action not in ["replace", "rename"]:
-10611:    if action == "rename":
-10647:                if batch_dir.exists() and uploads_root in batch_dir.parents:
-10651:                result["skipped"].append(f"WARNING cleanup upload batch: {e}")
-10768:    uploads = request.files.getlist("packages")
-10769:    uploads = [u for u in uploads if u and u.filename]
-10787:    if expected_count and expected_count != len(uploads):
-10794:    mais le serveur en a reçu {len(uploads)}.
-10809:    if not uploads:
-10823:    for upload in uploads:
-10824:        filename = secure_filename(upload.filename)
-10828:        upload.save(dest)
-11449:    <form action="/tools/import-table/manifest-conflict" method="post" onsubmit="document.getElementById('renameSpinner').style.display='inline-block';">
-11452:      <input type="hidden" name="conflict_action" value="rename">
-11458:      <span id="renameSpinner" style="display:none; margin-left:10px; vertical-align:middle;"><svg width="20" height="20" viewBox="0 0 50 50" style="vertical-align:middle;"><circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="6"></circle><path d="M25 5 A20 20 0 0 1 45 25" fill="none" stroke="#ff7a00" stroke-width="6" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.75s" repeatCount="indefinite"/></path></svg></span>
-11698:            zip_path = Path(td) / "upload.zip"
-11743:            "/opt/pincabos/uploads/",
-11959:        output += f"\n\nWARNING: impossible de supprimer le batch upload: {e}"
-11989:    <a class="button secondary" href="/tools/commander?root=Tables">Voir les tables</a>
-12147:    <a class="button" href="/tools/commander?root=Lecteurs%20SMB">Ouvrir Lecteurs SMB dans PinCab Explorer</a>
-12424:    <a class="button" href="/tools/commander?root=Lecteurs%20SMB">Ouvrir dans PinCab Explorer</a>
-12466:        "/tools/commander?root="
-12531:@app.route("/tools/commander")
-12585:            '<a class="' + cls + '" href="/tools/commander?root=' + urllib.parse.quote(name) + '">' +
-12592:        parent_button = '<a class="pcx-btn" href="/tools/commander?root=' + encoded_root + '&path=' + urllib.parse.quote(parent_rel) + '">⬅ Parent</a>'
-12632:        parent_href_for_row = "/tools/commander?root=" + encoded_root + "&path=" + urllib.parse.quote(parent_rel_for_row)
-12678:                open_href = "/tools/commander?root=" + encoded_root + "&path=" + item_url
-12682:                download_href = "/tools/commander/download?root=" + encoded_root + "&path=" + item_url
-12684:                action = '<a class="pcx-small" href="' + download_href + '">Télécharger</a>'
-12944:.pcx-page .pcx-delete-danger,
-12945:.pcx-page button.pcx-delete-danger,
-12946:.pcx-page a.pcx-delete-danger,
-12947:.pcx-page input.pcx-delete-danger {
-12954:.pcx-page .pcx-delete-danger:hover,
-12955:.pcx-page button.pcx-delete-danger:hover,
-12956:.pcx-page a.pcx-delete-danger:hover,
-12957:.pcx-page input.pcx-delete-danger:hover {
-13001:        el.classList.add("pcx-delete-danger");
-13076:    <form id="pcxUploadForm" action="/tools/commander/upload" method="post" enctype="multipart/form-data" style="display:none;">
-13156:  pcxPost('/tools/commander/create-folder', {folder_name: name});
-13170:  pcxPost('/tools/commander/rename', {new_name: name});
-13181:  pcxPost('/tools/commander/delete');
-13190:  pcxPost('/tools/commander/clipboard', {mode: 'copy'});
-13199:  pcxPost('/tools/commander/clipboard', {mode: 'cut'});
-13203:  pcxPost('/tools/commander/paste');
-13213:  pcxPost('/tools/commander/duplicate');
-13229:  pcxPost('/tools/commander/extract-zip');
-13258:  pcxPost('/tools/commander/archive-selection', { archive_name: cleaned });
-13280:    pcxPost('/tools/commander/extract-script');
-13290:  pcxPost('/tools/commander/info');
-13528:@app.route("/tools/commander/download")
-13529:def tools_commander_download():
-13541:    return send_file(target, as_attachment=True, download_name=target.name)
-13544:@app.route("/tools/commander/duplicate", methods=["POST"])
-13582:@app.route("/tools/commander/extract-zip", methods=["POST"])
-13631:@app.route("/tools/commander/archive-selection", methods=["POST"])
-13730:@app.route("/tools/commander/info", methods=["POST"])
-13790:    <a class="button" href="/tools/commander?root={urllib.parse.quote(root_name)}&path={urllib.parse.quote(rel)}">Retour PinCab Explorer</a>
-13802:    <a class="button" href="/tools/commander?root={urllib.parse.quote(root_name)}&path={urllib.parse.quote(rel)}">Retour PinCab Explorer</a>
-13809:@app.route("/tools/commander/create-folder", methods=["POST"])
-13825:        print("PCX create-folder error:", e)
-13830:@app.route("/tools/commander/upload", methods=["POST"])
-13831:def tools_commander_upload():
-13839:        for upload in files:
-13840:            if not upload or not upload.filename:
-13843:            filename = secure_filename(upload.filename)
-13855:            upload.save(target)
-13857:        print("PCX upload error:", e)
-13864:@app.route("/tools/commander/extract-script", methods=["POST"])
-14056:        "/tools/commander?root="
-14082:@app.route("/tools/commander/delete", methods=["POST"])
-14083:def tools_commander_delete():
-14102:        print("PCX delete error:", e)
-14107:@app.route("/tools/commander/rename", methods=["POST"])
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 4. Éditeur / Viewer ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\15582:# PINCABOS_PCX_LIVE_VIEWER_V1
-15753:        Path("/home/pinball/.local/share/pincabos/editor-backups")
-15811:def _pcx_lv_render_editor(
-15854:        '<div class="card pcx-live-editor">'
-15896:        '.pcx-live-editor{max-width:1800px;margin:20px auto;}'
-15927:    return page("Éditeur PinCab Explorer", body)
-15971:        return _pcx_lv_render_editor(
-15990:    viewer = (
-15999:        viewer += (
-16008:        viewer += (
-16016:        viewer += (
-16025:        viewer += (
-16031:        viewer += (
-16039:    viewer += '</div>'
-16041:    return page("Vue PinCab Explorer", viewer)
-16100:        return _pcx_lv_render_editor(
-16121:        return _pcx_lv_render_editor(
-16135:        return _pcx_lv_render_editor(
-16157:        return _pcx_lv_render_editor(
-16224:  function openViewer(url) {
-16242:      openViewer(url);
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 5. Image Studio ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\/opt/pincabos/web/app.py:16526:        app.logger.exception("PinCabOS Image Studio registration failed: %s", _pincabos_image_studio_error)
-/opt/pincabos/web/pincabos_image_studio.py:30:    # Racines autorisées pour Image Studio.
-/opt/pincabos/web/pincabos_image_studio.py:90:    raise PermissionError("Racine PinCab Explorer non supportée par Image Studio: " + str(root_name))
-/opt/pincabos/web/pincabos_image_studio.py:113:        raise PermissionError("Extension image non supportée par Image Studio.")
-/opt/pincabos/web/pincabos_image_studio.py:128:    file_url = "/tools/commander/live/image-studio-file?root=" + root_q + "&path=" + path_q
-/opt/pincabos/web/pincabos_image_studio.py:129:    save_url = "/tools/commander/live/image-save"
-/opt/pincabos/web/pincabos_image_studio.py:146:      <h2>🎨 PinCabOS Image Studio</h2>
-/opt/pincabos/web/pincabos_image_studio.py:361:        return _fail("Erreur lecture Image Studio: " + str(exc), 500)
-/opt/pincabos/web/pincabos_image_studio.py:436:        return _fail("Erreur sauvegarde Image Studio: " + str(exc), 500)
-/opt/pincabos/web/pincabos_image_studio.py:443:            "/tools/commander/live/image-studio-file",
-/opt/pincabos/web/pincabos_image_studio.py:449:            "/tools/commander/live/image-save",
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 6. Actions affichées dans Explorer ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\1018:    #pco-impexp-live-overlay-root .pcos-bxp6-actions,
-1019:    #pco-impexp-live-overlay-root .pcos-bip-global-actions {{
-1284:      <a href="http://{ip}:8001" target="_blank" class="secondary nav-action">Ouvrir VPinFE</a>
-1285:      <a href="https://virtualpinballspreadsheet.github.io/" target="_blank" rel="noopener noreferrer" class="secondary nav-action">Ouvrir VPS</a>
-3240:    <a class="button secondary" href="/tools/commander">Ouvrir Commander</a>
-3725:      Log actions : <code>/opt/pincabos/logs/dof-manager-action.log</code>
-3780:      <th style="text-align:left;">Actions</th>
-3874:    # Recherche large : DOF XML peut avoir plusieurs structures.
-4887:      <a class="button" href="https://configtool.vpuniverse.com/" target="_blank">Ouvrir DOF Config Tool</a>
-4949:    <p><strong>Pour le télécharger depuis DOF Config Tool V3 :</strong></p>
-5402:      <a class="button secondary" href="/dof/commander">Ouvrir DOF Commander</a>
-5527:    Actions supportées: start, stop, restart, reload, kill.
-5784:        "https://api.github.com/repos/vpinball/vpinball/actions/artifacts",
-6077:    # VPinFE officiel: modifier uniquement [Displays].
-6091:    # VPinballX.ini: modifier uniquement [Displays].
-6210:      <div class="fulldmd-actions-column">
-6264:      <div class="fulldmd-actions-column">
-6564:            Ouvrir Calibration FullDMD
-6602:            Ouvrir Calibration DMD
-6842:    <button class="button" type="submit">Ouvrir calibration DMD</button>
-7643:      Ouvrir la console dans un nouvel onglet
-8789:      <a class="button secondary" href="/about#testeurs-soutiens-fondateurs">👁️ Voir dans About</a>
-9923:.vpxbc-actions{{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0}}.vpxbc-actions .button{{margin:0;min-height:40px;display:inline-flex;align-items:center;justify-content:center}}.vpxbc-section{{padding:0;margin:16px 0;overflow:hidden}}.vpxbc-section h2{{margin:0;padding:12px 18px;background:linear-gradient(90deg,rgba(255,176,0,.18),rgba(255,176,0,.06));border-bottom:1px solid rgba(255,176,0,.30);font-size:1rem;color:#ffbd00}}
-9929:@media(max-width:1180px){{.vpxbc-row{{grid-template-columns:minmax(220px,.8fr) minmax(360px,1.35fr) minmax(180px,.65fr);gap:14px;padding:13px 15px}}.vpxbc-image-input{{grid-template-columns:minmax(0,1fr) 128px}}.vpxbc-image-input .vpxbc-browse{{width:128px;min-width:128px;font-size:.9rem}}}}@media(max-width:900px){{.vpxbc-row{{grid-template-columns:1fr;gap:8px}}.vpxbc-current{{padding:0}}.vpxbc-current-image-row img{{width:52px;height:52px;flex-basis:52px}}}}@media(max-width:560px){{.vpxbc-shell{{padding:0 0 20px}}.vpxbc-hero{{padding:16px}}.vpxbc-actions{{gap:8px}}.vpxbc-actions .button{{width:100%}}.vpxbc-row{{padding:13px}}.vpxbc-image-input{{grid-template-columns:1fr}}.vpxbc-image-input .vpxbc-browse{{width:100%;min-width:0}}.vpxbc-picker{{width:calc(100vw - 20px);padding:14px}}.vpxbc-gallery{{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}.vpxbc-thumb{{grid-template-rows:90px auto}}.vpxbc-thumb img{{height:90px}}}}
-9932:<form method="post"><div class="vpxbc-actions"><button class="button secondary" type="submit" formaction="/tools/vpx-ball-cabinet/validate">Valider sans écrire</button><button class="button" type="submit" formaction="/tools/vpx-ball-cabinet/apply">Appliquer dans VPinballX.ini officiel</button><a class="button secondary" href="/tools">Retour Outils</a></div>{vpx_ballcab_rows(lines)}</form>
-9934:<div class="vpxbc-overlay" id="vpxbc-overlay"></div><section class="vpxbc-picker" id="vpxbc-picker" aria-hidden="true"><div class="vpxbc-picker-head"><h2 id="vpxbc-picker-title">Choisir une image</h2><button class="button secondary" id="vpxbc-close" type="button">Fermer</button></div><p class="vpxbc-picker-meta" id="vpxbc-meta">Chargement…</p><input class="vpxbc-picker-filter" id="vpxbc-filter" type="search" placeholder="Filtrer les fichiers affichés…"><div class="vpxbc-gallery" id="vpxbc-gallery"></div><div class="vpxbc-actions"><button class="button" id="vpxbc-use" type="button" disabled>Utiliser cette image</button></div></section>
-11989:    <a class="button secondary" href="/tools/commander?root=Tables">Voir les tables</a>
-12147:    <a class="button" href="/tools/commander?root=Lecteurs%20SMB">Ouvrir Lecteurs SMB dans PinCab Explorer</a>
-12424:    <a class="button" href="/tools/commander?root=Lecteurs%20SMB">Ouvrir dans PinCab Explorer</a>
-12680:                action = '<a class="pcx-small" href="' + open_href + '">Ouvrir</a>'
-12684:                action = '<a class="pcx-small" href="' + download_href + '">Télécharger</a>'
-12723:.pcx-actions-title {
-12910:    <div class="pcx-actions-title">Actions</div>
-13107:              <th>Actions</th>
-13286:    alert('Sélectionne un seul élément pour voir les infos.');
-14593:    <a class="button" href="/download-export?file={esc(final_pkg.name)}">Télécharger .PinCabOs</a>
-15861:        '<div class="pcx-live-actions">'
-15898:        '.pcx-live-actions,.pcx-live-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}'
-15993:        '<a class="button secondary" href="' + _pcx_lv_html(download_url) + '">⬇ Télécharger</a></p>'
-16035:            '<p>Utilise Télécharger pour l’ouvrir avec un outil adapté.</p>'
-16238:    button.title = "Ouvrir aperçu, lecteur média ou éditeur";
-16252:      return /actions/i.test(candidate.textContent || "");
-16455:.fulldmd-calibration-grid > .card .fulldmd-actions-column {
-16526:        app.logger.exception("PinCabOS Image Studio registration failed: %s", _pincabos_image_studio_error)
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 7. Extensions gérées ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\10412:    lines = vpx_simple_ball_set(lines, "PinCabOS.BallCabinet", "managed_by", "PinCabOS VPX Ball Image")
-10413:    lines = vpx_simple_ball_set(lines, "PinCabOS.BallCabinet", "ball_dir", str(VPX_SIMPLE_BALL_IMAGE_DIR))
-10414:    lines = vpx_simple_ball_set(lines, "PinCabOS.BallCabinet", "decal_dir", str(VPX_SIMPLE_BALL_DECAL_DIR))
-10415:    lines = vpx_simple_ball_set(lines, "PinCabOS.BallCabinet", "updated_at", datetime.now().isoformat(timespec="seconds"))
-10417:    vpx_simple_ball_write_lines(lines)
-10419:    backup_txt = str(backup) if backup else "Aucun backup, fichier créé."
-10423:  <h2>VPX Ball / Cabinet appliqué</h2>
-10427:    <tr><td>INI</td><td><code>__INI__</code></td></tr>
-10444:    body = body.replace("__INI__", esc(str(VPX_SIMPLE_BALL_INI)))
-10445:    body = body.replace("__BACKUP__", esc(backup_txt))
-10456:# === PINCABOS SIMPLE VPX BALL CARD END ===
-10474:    - si le batch contient un .PinCabOs/.pincabos/.zip/.7z/.rar avec pincabos-export-manifest.json,
-10493:            with tempfile.TemporaryDirectory(prefix="pincabos-json-found-") as td:
-10509:                    n.name == "pincabos-export-manifest.json"
-10519:                    table_root = pincabos_vpx_tables_dir() / table_folder
-10546:                log_dir = Path("/opt/pincabos/logs")
-10547:                log_dir.mkdir(parents=True, exist_ok=True)
-10548:                log_file = log_dir / "import-manifest-error.log"
-10549:                with log_file.open("a", encoding="utf-8") as lf:
-10563:  <p class="warn">Traceback complet écrit dans <code>/opt/pincabos/logs/import-manifest-error.log</code></p>
-10715:        return jsonify({"ok": False, "matches": [], "error": "Recherche vide"})
-10763:    return jsonify({"ok": True, "matches": out})
-10843:    direct_vpx = [
-10846:        if file_path.suffix.lower() == ".vpx"
-10852:        if file_path.name.lower().endswith(".directb2s")
-10861:    direct_ini = [
-10864:        if file_path.suffix.lower() == ".ini"
-10867:    direct_vbs = [
-10870:        if file_path.suffix.lower() == ".vbs"
-10882:    if direct_vpx:
-10883:        detected["main_vpx"] = (
-10884:            detected.get("main_vpx")
-10885:            or direct_vpx[0].name
-10889:            detected["table_name"] = direct_vpx[0].stem
-10900:    if direct_ini:
-10901:        detected["has_ini"] = True
-10903:    if direct_vbs:
-10904:        detected["has_vbs"] = True
-10925:        value = html.escape(json.dumps({
-10949:            "Fichier VPX principal",
-10950:            bool(detected.get("main_vpx")),
-10951:            detected.get("main_vpx", ""),
-10961:        ("Fichier INI", bool(detected.get("has_ini")), ""),
-10962:        ("Script VBS", bool(detected.get("has_vbs")), ""),
-11226:              headers: {{ "Accept": "application/json" }}
-11230:            const data = JSON.parse(raw);
-11247:              opt.value = JSON.stringify({{
-11271:            console.log("Erreur recherche VPSdb:", e);
-11359:    direct = extract_dir / "pincabos-export-manifest.json"
-11363:    matches = list(extract_dir.rglob("pincabos-export-manifest.json"))
-11398:            manifest = json.loads(manifest_path.read_text(errors="replace"))
-11414:    table_root = pincabos_vpx_tables_dir() / table_folder
-11418:    while (pincabos_vpx_tables_dir() / suggested).exists():
-11441:      <span id="replaceSpinner" style="display:none; margin-left:10px; vertical-align:middle;"><svg width="20" height="20" viewBox="0 0 50 50" style="vertical-align:middle;"><circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="6"></circle><path d="M25 5 A20 20 0 0 1 45 25" fill="none" stroke="#ff7a00" stroke-width="6" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.75s" repeatCount="indefinite"/></path></svg></span>
-11458:      <span id="renameSpinner" style="display:none; margin-left:10px; vertical-align:middle;"><svg width="20" height="20" viewBox="0 0 50 50" style="vertical-align:middle;"><circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="6"></circle><path d="M25 5 A20 20 0 0 1 45 25" fill="none" stroke="#ff7a00" stroke-width="6" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.75s" repeatCount="indefinite"/></path></svg></span>
-11482:    manifest = json.loads(manifest_path.read_text(errors="replace"))
-11501:    table_root = pincabos_vpx_tables_dir() / table_folder
-11606:        "pinmame", "pinmame/roms", "pinmame/nvram", "pinmame/cfg", "pinmame/ini",
-11680:    Si l'utilisateur importe un ZIP PinCabOS contenant pincabos-export-manifest.json,
-11819:def pincabos_run_vpinfe_vpx_standardizer():
-11821:    Normalise les tables vers le layout portable VPinFE/VPX après import.
-11826:            [str(pco_script("vpinfe_vpx_standard")), "--apply"],
-11892:            assoc = json.loads(assoc_raw) if assoc_raw else {}
-12163:    <input name="server" placeholder="exemple: 192.168.254.10 ou NAS-SYNOLOGY" style="width:90%; padding:8px;"><br><br>
-12165:    <label>Login</label><br>
-12203:    import json
-12220:  <p class="bad">Serveur/IP et login requis.</p>
-12233:    session_file = session_dir / (session_id + ".json")
-12234:    session_file.write_text(json.dumps({
-12280:    Vérifie l’adresse/IP, le login, le mot de passe et les permissions du compte.
-12323:    import json
-12331:    session_file = Path("/home/pinball/.config/pincabos/smb-sessions") / (session_id + ".json")
-12342:    data = json.loads(session_file.read_text())
-12434:        "Tables": pincabos_vpx_tables_dir(),
-12438:        "Logs": Path("/opt/pincabos/logs"),
-12487:        data = request.form.get("selected_json", "[]")
-12488:        items = json.loads(data)
-12571:        elif name == "Logs":
-12614:                native_catalog_context,
-12624:                native_catalog_context(),
-12664:                elif suffix == ".vpx":
-12666:                elif suffix == ".directb2s":
-12668:                elif suffix in [".png", ".jpg", ".jpeg", ".webp", ".gif"]:
-12674:                elif suffix in [".json", ".txt", ".ini", ".vbs", ".pov"]:
-12922:    const txt = (el.innerText || el.value || "").trim();
-12923:    return txt.includes("Vue grille");
-13137:    selected_json: JSON.stringify(pcxSelected()),
-13180:  if (!confirm('Supprimer définitivement ' + selected.length + ' élément(s) ?')) return;
-13267:      alert('Sélectionne exactement une table .vpx.');
-13271:    if (!selected[0].toLowerCase().endsWith('.vpx')) {
-13272:      alert('Extraction possible seulement pour un fichier .vpx.');
-13276:    if (!confirm('Extraire et sauvegarder le script VBS de cette table ?')) {
-13714:                z.writestr("README.txt", "Aucun fichier valide dans la sélection PinCabOS.\n")
-13876:    expected_vbs = None
-13877:    backup_vbs = None
-13892:            raise ValueError("Sélectionne exactement une table .vpx.")
-13899:        if not target.is_file() or target.suffix.lower() != ".vpx":
-13900:            raise ValueError("Sélectionne un fichier .vpx.")
-13911:                "VPX est actif. Ferme la table avant d'extraire son script."
-13914:        launcher_cfg = Path("/opt/pincabos/scripts/VPXlauncher.sh")
-13917:            raise RuntimeError("Configuration VPXlauncher absente.")
-13925:            r'^\s*VPX_MAIN="([^"]+)"',
-13931:            raise RuntimeError("VPX_MAIN introuvable dans VPXlauncher.")
-13933:        vpx_binary = Path(match.group(1)).expanduser()
-13935:        if not vpx_binary.is_file() or not os.access(vpx_binary, os.X_OK):
-13937:                f"Binaire VPX direct introuvable: {vpx_binary}"
-13940:        direct_cmd = [str(vpx_binary), "-ExtractVBS", str(target)]
-13957:                "LOGNAME=pinball",
-13970:                    "LOGNAME": "pinball",
-13978:        expected_vbs = target.with_suffix(".vbs")
-13980:        if expected_vbs.exists():
-13981:            backup_vbs = (
-13985:                / expected_vbs.name
-13987:            backup_vbs.parent.mkdir(parents=True, exist_ok=True)
-13988:            shutil.copy2(expected_vbs, backup_vbs)
-14009:        if not expected_vbs.is_file() or expected_vbs.stat().st_size < 1000:
-14011:                "VPinballX n'a pas produit de script VBS valide."
-14015:            shutil.chown(expected_vbs, user="pinball", group="pinball")
-14016:            expected_vbs.chmod(0o664)
-14023:            f"OK: {expected_vbs}\n"
-14024:            f"Taille: {expected_vbs.stat().st_size} octets\n"
-14025:            f"Backup VBS précédent: {backup_vbs or '(aucun)'}\n"
-14036:        output = "VPX a dépassé le délai prévu pendant l'extraction."
-14044:            if backup_vbs and backup_vbs.is_file() and expected_vbs:
-14045:                shutil.copy2(backup_vbs, expected_vbs)
-14047:                expected_vbs
-14048:                and expected_vbs.exists()
-14049:                and expected_vbs.stat().st_mtime >= started - 1
-14051:                expected_vbs.unlink()
-14165:        clip_path = Path("/home/pinball/Downloads/commander-clipboard.json")
-14167:        pincabos_write_json_with_meta(clip_path, clip, "Commander Clipboard")
-14182:        clip_path = Path("/home/pinball/Downloads/commander-clipboard.json")
-14186:        clip = json.loads(clip_path.read_text())
-14222:    Cherche récursivement une clé dans un dict/list JSON.
-14263:        "tables_root": pincabos_vpx_tables_dir(),
-14284:        "logs",
-14285:        "log",
-14297:    if name.endswith((".log", ".tmp", ".temp", ".pincabos-fulldmd-before-autoarrange.bak")):
-14305:    manifest_path = table_dir / "pincabos-export-manifest.json"
-14354:            "backups, caches, temporary files and technical logs."
-14361:        json.dumps(manifest, indent=2, ensure_ascii=False),
-14430:    - *.info JSON
-14431:    - pincabos-table-manifest.json
-14432:    - pincabos-export-manifest.json
-14465:    candidates.append(table_dir / "pincabos-table-manifest.json")
-14466:    candidates.append(table_dir / "pincabos-export-manifest.json")
-14472:            data = json.loads(f.read_text(errors="replace"))
-14639:    return jsonify({
-14664:        data = request.get_json(silent=True) or {}
-14668:            return jsonify({"ok": False, "error": "zip_path manquant"}), 400
-14676:            Path(pincabos_vpx_tables_dir()).resolve(),
-14680:            return jsonify({"ok": False, "error": "chemin zip non autorisé"}), 403
-14682:        return jsonify(analyze_zip(zp))
-14685:        return jsonify({"ok": False, "error": str(e)}), 500
-14703:        data = request.get_json(silent=True) or {}
-14709:            return jsonify({"ok": False, "error": "zip_path manquant"}), 400
-14711:            return jsonify({"ok": False, "error": "table_dir manquant"}), 400
-14713:            return jsonify({"ok": False, "error": "choice invalide"}), 400
-14722:            Path(pincabos_vpx_tables_dir()).resolve(),
-14725:        tables_root = Path(pincabos_vpx_tables_dir()).resolve()
-14728:            return jsonify({"ok": False, "error": "chemin zip non autorisé"}), 403
-14731:            return jsonify({"ok": False, "error": "table_dir non autorisé"}), 403
-14757:        return jsonify(result)
-14760:        return jsonify({"ok": False, "error": str(e)}), 500
-14851:    from flask import jsonify
-14874:        return jsonify({"ok": True, "unit": unit, "message": "Redémarrage demandé"})
-14876:        return jsonify({"ok": False, "error": str(e)}), 500
-14942:    return jsonify({"ok": True, "status": "available", "message": "DOF manager route alias active"})
-14974:    from flask import jsonify
-14979:        return jsonify({"ok": False, "error": "helper_missing", "helper": helper}), 500
-15004:        return jsonify({
-15010:        return jsonify({"ok": False, "error": str(exc)}), 500
-15017:def _pco_dashboard_plus_final_detect_vpx():
-15023:        "/opt/pincabos/bin/vpx-vpinfe-default.sh",
-15051:                    if re.search(r"(VPinball|Visual Pinball|VPX|VPinballX|version|standalone)", ln, re.I):
-15062:    if "/opt/pincabos/bin/vpx-vpinfe-default.sh" in existing:
-15063:        return "installé / wrapper vpx.sh"
-15094:    vpx_label = _pco_dashboard_plus_final_detect_vpx()
-15100:    # Correct old VPX runtime path.
-15103:    # Correct rendered VPX version text.
-15104:    html = html.replace("VPX : non détecté", "VPX : " + vpx_label)
-15105:    html = html.replace("VPX&nbsp;: non détecté", "VPX&nbsp;: " + vpx_label)
-15107:    # Correct common HTML separated VPX value patterns.
-15109:        r"(VPX\s*</[^>]+>\s*<[^>]+>)(non détecté|non detecte|not detected)(</[^>]+>)",
-15110:        r"\1" + vpx_label + r"\3",
-15127:    html = html.replace("VPX runtime", "VPX runtime")
-15300:            app.logger.exception(
-15670:        ".ini", ".cfg", ".conf", ".txt", ".log", ".vbs", ".vbe",
-15671:        ".json", ".xml", ".yaml", ".yml", ".csv", ".tsv", ".md",
-15678:        ".vpx", ".directb2s", ".zip", ".7z", ".rar", ".tar",
-15713:        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg",
-16061:    if target.suffix.lower() in {".ini", ".cfg", ".conf", ".vbs", ".vbe"}:
-16359:# Applique le JSON FullDMD courant aux INI actifs, puis redémarre VPinFE.
-16399:  <h2>INI sauvegardés, mais VPinFE n'a pas redémarré</h2>
-16489:        log(f"FullDMD AutoArrange routes unavailable: {_pincabos_fulldmd_autoarrange_error}")
-16504:    app.logger.exception("PinCabOS Batch Import/Export registration failed")
-16513:        app.logger.exception("PinCabOS audio volume API registration failed: %s", _pincabos_audio_volume_widget_error)
-16526:        app.logger.exception("PinCabOS Image Studio registration failed: %s", _pincabos_image_studio_error)
-16554:        app.logger.exception("PinCabOS About/Help registration failed: %s", _pco_ah_error)
-16567:        app.logger.exception("PinCabOS DudesCabConfig V3 registration failed: %s", _pincabos_dudescab_config_error)
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 8. JavaScript Explorer ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\1225:  <link rel="stylesheet" href="/static/pincabos-commander-purple-buttons-v1.css?v=1">
-1287:      <a class="button pco-topbar-tool-copy" href="/tools/commander">PinCab Explorer</a>
-1313:<script src="/static/pincabos-explorer-same-tab-v2.js?v=20260716-vps-new-tab-v2"></script>
-3240:    <a class="button secondary" href="/tools/commander">Ouvrir Commander</a>
-3668:  document.querySelectorAll('.dof-live-btn').forEach(function(btn) {
-3841:def dof_commander_find_configs():
-3856:def dof_commander_read_text(path):
-3863:def dof_commander_parse_xml_outputs(path):
-3902:def dof_commander_parse_ini_outputs(path):
-3906:    raw = dof_commander_read_text(path)
-3932:def dof_commander_load_inventory():
-3933:    configs = dof_commander_find_configs()
-3943:            controllers, outputs, err = dof_commander_parse_xml_outputs(f)
-3945:            controllers, outputs, err = dof_commander_parse_ini_outputs(f)
-3960:def dof_commander_devices_summary():
-4112:def dof_commander_get_active_cabinet_json_path_pcb():
-4141:def dof_commander_load_cabinet_json_pcb():
-4142:    p = dof_commander_get_active_cabinet_json_path_pcb()
-4155:def dof_commander_inventory_from_cabinet_json_pcb(data):
-4266:def dof_commander_load_inventory_active_pcb():
-4267:    configs = dof_commander_find_configs()
-4270:    active_path = dof_commander_get_active_cabinet_json_path_pcb()
-4271:    data, err = dof_commander_load_cabinet_json_pcb()
-4274:        cabinet_name, controllers, outputs = dof_commander_inventory_from_cabinet_json_pcb(data)
-4317:    Pour importer le <strong>cabinet JSON</strong>, utilise plutôt DOF Commander :
-4320:    <a class="button" href="/dof/commander">Importer cabinet JSON dans DOF Commander</a>
-4395:    <a class="button" href="/dof/commander">Retour DOF Commander</a>
-4400:        return page("DOF Commander", body)
-4610:    <a class="button" href="/dof/commander">Retour DOF Commander</a>
-4615:        return page("DOF Commander", body)
-4661:        # On garde seulement les champs utiles au DOF Commander local.
-4691:        cabinet_name, controllers, outputs = dof_commander_inventory_from_cabinet_json_pcb(clean)
-4759:            "La configuration du cabinet a été analysée et nettoyée pour DOF Commander.",
-4775:@app.route("/dof/commander")
-4776:def dof_commander_page():
-4777:    configs, controllers, outputs, errors, inventory_source, cabinet_name = dof_commander_load_inventory_active_pcb()
-4778:    devices, raw_usb, raw_hid, raw_serial = dof_commander_devices_summary()
-4876:    <h2>DOF Commander</h2>
-4944:      Le fichier <code>.json</code> du cabinet sert à associer les tests DOF Commander
-4949:    <p><strong>Pour le télécharger depuis DOF Config Tool V3 :</strong></p>
-5042:<div id="dof-commander-log-panel" class="card" style="margin-top:20px; display:none; border-color:#ffb000;">
-5051:  <pre id="dof-commander-log" style="max-height:360px; overflow:auto; background:#050007; border:1px solid #5f2a91; border-radius:12px; padding:12px;">Aucun test lancé.</pre>
-5072:<link rel="stylesheet" href="/static/dof-commander-pro.css?v=20260518-toggle-css-pure">
-5073:<script src="/static/dof-commander-onoff.js?v=20260518-toggle-css-pure"></script>
-5075:    return page("DOF Commander", body)
-5078:@app.route("/api/dof/commander/test", methods=["POST"])
-5079:def api_dof_commander_test():
-5095:    script = str(pco_script("dof_commander_test_output"))
-5402:      <a class="button secondary" href="/dof/commander">Ouvrir DOF Commander</a>
-5403:      <a class="button" href="/dof/commander">Importer cabinet JSON</a>
-5457:      Le Driver Pack installe les modules PinCabOS nécessaires au routage DOF Commander.
-5490:      const newCard = temp.querySelector('#dof-driver-pack-status-card');
-5594:        # Console Commander
-7785:    "PinCabOSConsoleCommander",
-8042:        const ipcidr = form.querySelector('input[name="ipcidr"]').value || "";
-8438:# === SSF COMMANDER V1 - PINCABOS START ===
-9936:(()=>{{const root=document.querySelector('[data-vpxbc]');if(!root)return;const picker=document.getElementById('vpxbc-picker'),overlay=document.getElementById('vpxbc-overlay'),gallery=document.getElementById('vpxbc-gallery'),meta=document.getElementById('vpxbc-meta'),filter=document.getElementById('vpxbc-filter'),use=document.getElementById('vpxbc-use'),title=document.getElementById('vpxbc-picker-title');let target=null,images=[],selected='';const previewUrl=value=>'/tools/vpx-ball-cabinet/image-preview?path='+encodeURIComponent(value);const setPreview=(input,value)=>{{const pane=input&&input.dataset.preview?document.getElementById(input.dataset.preview):null;if(!pane)return;const img=pane.querySelector('img'),code=pane.querySelector('code');if(code)code.textContent=value||'vide';if(img){{if(value){{img.src=previewUrl(value);img.classList.remove('vpxbc-no-image');}}else{{img.removeAttribute('src');img.classList.add('vpxbc-no-image');}}}}}};const close=()=>{{picker.classList.remove('open');overlay.classList.remove('open');picker.setAttribute('aria-hidden','true');target=null;images=[];selected='';use.disabled=true;}};const choose=value=>{{selected=value;use.disabled=!selected;gallery.querySelectorAll('.vpxbc-thumb').forEach(card=>card.classList.toggle('active',card.dataset.value===selected));}};const render=()=>{{const query=(filter.value||'').trim().toLowerCase();gallery.innerHTML='';const shown=images.filter(image=>!query||(image.label+' '+image.value).toLowerCase().includes(query));if(!shown.length){{gallery.innerHTML='<div class="vpxbc-empty">Aucune image ne correspond au filtre.</div>';return;}}for(const image of shown){{const card=document.createElement('button');card.type='button';card.className='vpxbc-thumb';card.dataset.value=image.value;const img=document.createElement('img');img.loading='lazy';img.src=previewUrl(image.value);img.alt='';img.onerror=()=>img.remove();const text=document.createElement('div');const strong=document.createElement('strong');strong.textContent=image.label;const small=document.createElement('small');small.textContent=image.value;text.append(strong,small);card.append(img,text);card.addEventListener('click',()=>choose(image.value));card.addEventListener('dblclick',()=>{{choose(image.value);if(target){{target.value=image.value;setPreview(target,image.value);close();}}}});gallery.appendChild(card);}}}};document.getElementById('vpxbc-close').addEventListener('click',close);overlay.addEventListener('click',close);filter.addEventListener('input',render);document.querySelectorAll('.vpxbc-browse').forEach(button=>button.addEventListener('click',async()=>{{target=document.getElementById(button.dataset.target);images=[];selected='';filter.value='';use.disabled=true;gallery.innerHTML='';title.textContent=button.dataset.kind==='decal'?'Choisir un décalque':'Choisir une image de bille';meta.textContent='Chargement des miniatures…';picker.classList.add('open');overlay.classList.add('open');picker.setAttribute('aria-hidden','false');try{{const response=await fetch('/tools/vpx-ball-cabinet/images.json?kind='+encodeURIComponent(button.dataset.kind),{{cache:'no-store'}});const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'Impossible de lire les images.');images=data.images||[];meta.textContent=images.length+' image(s) compatible(s) disponible(s). Les dossiers Décalque sont affichés en premier.';render();}}catch(error){{meta.textContent=error.message||String(error);gallery.innerHTML='<div class="vpxbc-empty">Le navigateur d’images n’a pas pu être chargé.</div>';}}}}));use.addEventListener('click',()=>{{if(target&&selected){{target.value=selected;setPreview(target,selected);close();}}}});}})();
-10532:                        uploads_root = Path("/home/pinball/Downloads").resolve()
-10578:    uploads_root = Path("/home/pinball/Downloads").resolve()
-10819:    batch_dir = Path("/home/pinball/Downloads") / f"batch-{job_id}"
-11744:            "/home/pinball/Downloads/",
-11842:    imports_root = Path("/home/pinball/Downloads").resolve()
-11962:        for work_root in [Path("/home/pinball/Downloads/work"), Path("/home/pinball/Downloads/work")]:
-11989:    <a class="button secondary" href="/tools/commander?root=Tables">Voir les tables</a>
-11996:def pincabos_commander_roots():
-12006:        "Imports temporaires": Path("/home/pinball/Downloads"),
-12024:def pincabos_commander_resolve(root_name, rel_path=""):
-12025:    roots = pincabos_commander_roots()
-12142:    Après montage, il apparaîtra dans <strong>PinCab Explorer → Lecteurs SMB</strong>.
-12147:    <a class="button" href="/tools/commander?root=Lecteurs%20SMB">Ouvrir Lecteurs SMB dans PinCab Explorer</a>
-12183:    <strong>PinCab Explorer → Clés USB</strong>.
-12424:    <a class="button" href="/tools/commander?root=Lecteurs%20SMB">Ouvrir dans PinCab Explorer</a>
-12436:        "Imports": Path("/home/pinball/Downloads"),
-12466:        "/tools/commander?root="
-12531:@app.route("/tools/commander")
-12532:def tools_commander():
-12585:            '<a class="' + cls + '" href="/tools/commander?root=' + urllib.parse.quote(name) + '">' +
-12592:        parent_button = '<a class="pcx-btn" href="/tools/commander?root=' + encoded_root + '&path=' + urllib.parse.quote(parent_rel) + '">⬅ Parent</a>'
-12597:    # PINCABOS_EXPLORER_NATIVE_TABLES_V1_ROUTE
-12603:    # PINCABOS_EXPLORER_CONTROLS_IN_TABLE_V41
-12613:            from pincabos_explorer_table_test import (
-12632:        parent_href_for_row = "/tools/commander?root=" + encoded_root + "&path=" + urllib.parse.quote(parent_rel_for_row)
-12678:                open_href = "/tools/commander?root=" + encoded_root + "&path=" + item_url
-12682:                download_href = "/tools/commander/download?root=" + encoded_root + "&path=" + item_url
-12684:                action = '<a class="pcx-small" href="' + download_href + '">Télécharger</a>'
-12909:    <h2>PinCab Explorer</h2>
-12914:  const page = document.querySelector(".pcx-page");
-12917:  if (page.querySelector(".pcx-refresh-btn")) return;
-12919:  const buttons = Array.from(page.querySelectorAll("button, a.pcx-btn, input[type='submit'], input[type='button']"));
-12943:/* PinCab Explorer : bouton Supprimer rouge foncé */
-12972:  const page = document.querySelector(".pcx-page");
-12991:  const candidates = page.querySelectorAll("button, a.pcx-btn, input[type='submit'], input[type='button']");
-13020:/* PinCab Explorer : bouton Retour Outils orange seulement */
-13037:/* PinCab Explorer : liens fichiers/dossiers en blanc */
-13076:    <form id="pcxUploadForm" action="/tools/commander/upload" method="post" enctype="multipart/form-data" style="display:none;">
-13126:  return Array.from(document.querySelectorAll('.pcx-check:checked')).map(cb => cb.value);
-13156:  pcxPost('/tools/commander/create-folder', {folder_name: name});
-13170:  pcxPost('/tools/commander/rename', {new_name: name});
-13181:  pcxPost('/tools/commander/delete');
-13190:  pcxPost('/tools/commander/clipboard', {mode: 'copy'});
-13199:  pcxPost('/tools/commander/clipboard', {mode: 'cut'});
-13203:  pcxPost('/tools/commander/paste');
-13213:  pcxPost('/tools/commander/duplicate');
-13229:  pcxPost('/tools/commander/extract-zip');
-13258:  pcxPost('/tools/commander/archive-selection', { archive_name: cleaned });
-13280:    pcxPost('/tools/commander/extract-script');
-13290:  pcxPost('/tools/commander/info');
-13311:  document.querySelectorAll('.pcx-row').forEach(row => {
-13315:  document.querySelectorAll('.pcx-card').forEach(card => {
-13323:  const tbody = document.querySelector(".pcx-table tbody");
-13326:  const parentRow = tbody.querySelector(".pcx-parent-row");
-13327:  const rows = Array.from(tbody.querySelectorAll("tr.pcx-row"));
-13386:  const checks = Array.from(document.querySelectorAll('.pcx-check'));
-13404:  const checks = Array.from(document.querySelectorAll('.pcx-check'));
-13418:document.querySelectorAll('.pcx-check').forEach(cb => {
-13467:                "Champ Rechercher introuvable dans PinCab Explorer."
-13477:    # PINCABOS_COMMANDER_ZERO_BACKGROUND_V1_NATIVE_COUNT
-13496:            '<div id="pco-explorer-installed-table-count" '
-13497:            'class="pco-explorer-installed-table-count '
-13499:            '<span class="pco-explorer-table-count-icon" '
-13501:            '<span class="pco-explorer-table-count-value">'
-13504:            '<span class="pco-explorer-table-count-label">'
-13510:        pco_heading = "<h2>PinCab Explorer</h2>"
-13514:            and 'id="pco-explorer-installed-table-count"' not in body
-13518:                '<div class="pco-explorer-native-heading">'
-13525:    return page("PinCab Explorer", body)
-13528:@app.route("/tools/commander/download")
-13529:def tools_commander_download():
-13541:    return send_file(target, as_attachment=True, download_name=target.name)
-13544:@app.route("/tools/commander/duplicate", methods=["POST"])
-13545:def tools_commander_duplicate():
-13582:@app.route("/tools/commander/extract-zip", methods=["POST"])
-13583:def tools_commander_extract_zip():
-13631:@app.route("/tools/commander/archive-selection", methods=["POST"])
-13632:def tools_commander_archive_selection():
-13730:@app.route("/tools/commander/info", methods=["POST"])
-13731:def tools_commander_info():
-13777:  <h2>Infos PinCab Explorer</h2>
-13790:    <a class="button" href="/tools/commander?root={urllib.parse.quote(root_name)}&path={urllib.parse.quote(rel)}">Retour PinCab Explorer</a>
-13794:        return page("Infos PinCab Explorer", body)
-13799:  <h2>Erreur infos PinCab Explorer</h2>
-13802:    <a class="button" href="/tools/commander?root={urllib.parse.quote(root_name)}&path={urllib.parse.quote(rel)}">Retour PinCab Explorer</a>
-13806:        return page("Infos PinCab Explorer", body)
-13809:@app.route("/tools/commander/create-folder", methods=["POST"])
-13810:def tools_commander_create_folder():
-13830:@app.route("/tools/commander/upload", methods=["POST"])
-13831:def tools_commander_upload():
-13864:@app.route("/tools/commander/extract-script", methods=["POST"])
-13865:def tools_commander_extract_script():
-14056:        "/tools/commander?root="
-14075:        + '">Retour PinCab Explorer</a></p>'
-14082:@app.route("/tools/commander/delete", methods=["POST"])
-14083:def tools_commander_delete():
-14107:@app.route("/tools/commander/rename", methods=["POST"])
-14108:def tools_commander_rename():
-14140:@app.route("/tools/commander/clipboard", methods=["POST"])
-14141:def tools_commander_clipboard():
-14165:        clip_path = Path("/home/pinball/Downloads/commander-clipboard.json")
-14167:        pincabos_write_json_with_meta(clip_path, clip, "Commander Clipboard")
-14174:@app.route("/tools/commander/paste", methods=["POST"])
-14175:def tools_commander_paste():
-14182:        clip_path = Path("/home/pinball/Downloads/commander-clipboard.json")
-14593:    <a class="button" href="/download-export?file={esc(final_pkg.name)}">Télécharger .PinCabOs</a>
-14600:@app.route("/download-export")
-14601:def download_export():
-14621:        download_name=target.name,
-14673:            Path("/home/pinball/Downloads").resolve(),
-14719:            Path("/home/pinball/Downloads").resolve(),
-14764:# === INPUTS COMMANDER V1 - PINCABOS START ===
-14807:# === INPUTS COMMANDER V1 - PINCABOS END ===
-15210:        if _request.path.rstrip("/") != "/tools/commander":
-15228:            r'/tools/commander\?root=Lecteurs(?:%20|\+| )SMB[^"\']*(?P=quote)[^>]*)>'
-15621:        raise PermissionError("Fichier hors racine PinCab Explorer.") from exc
-15825:        "/tools/commander/live",
-15831:        "/tools/commander?"
-15868:        + '<form method="post" action="/tools/commander/live/save" id="pcx-live-form">'
-15927:    return page("Éditeur PinCab Explorer", body)
-15930:@app.route("/tools/commander/live")
-15931:def tools_commander_live():
-15950:        "/tools/commander/live/file",
-15955:    download_url = _pcx_lv_url(
-15956:        "/tools/commander/download",
-15963:        "/tools/commander?"
-15992:        '<p><a class="button secondary" href="' + _pcx_lv_html(back_url) + '">← Retour Explorer</a> '
-15993:        '<a class="button secondary" href="' + _pcx_lv_html(download_url) + '">⬇ Télécharger</a></p>'
-16034:            '<p>Ce type de fichier ne peut pas être édité de façon sécuritaire dans PinCab Explorer.</p>'
-16035:            '<p>Utilise Télécharger pour l’ouvrir avec un outil adapté.</p>'
-16041:    return page("Vue PinCab Explorer", viewer)
-16044:@app.route("/tools/commander/live/file")
-16045:def tools_commander_live_file():
-16072:@app.route("/tools/commander/live/save", methods=["POST"])
-16073:def tools_commander_live_save():
-16172:            "/tools/commander/live",
-16182:    # PINCABOS_COMMANDER_ZERO_BACKGROUND_V1_NO_DOM_ENHANCER
-16188:        if _request.path.rstrip("/") != "/tools/commander":
-16205:  function buildViewUrl(downloadLink) {
-16207:      const parsed = new URL(downloadLink.href, window.location.href);
-16215:      return "/tools/commander/live?root="
-16249:    const tables = Array.from(document.querySelectorAll("table"));
-16260:      table.querySelector("thead tr")
-16261:      || table.querySelector("tr");
-16263:    if (!headerRow || headerRow.querySelector("[data-pcx-live-view-head]")) {
-16273:    let rows = Array.from(table.querySelectorAll("tbody tr"));
-16276:      rows = Array.from(table.querySelectorAll("tr"))
-16283:      if (row.querySelector("[data-pcx-live-view-cell]")) {
-16291:      const download = row.querySelector(
-16292:        'a[href*="/tools/commander/download"]'
-16295:      if (download) {
-16296:        const url = buildViewUrl(download);
-16308:    document.querySelectorAll(
-16309:      'a[href*="/tools/commander/download"]'
-16310:    ).forEach(function(download) {
-16311:      if (download.closest("table")) {
-16315:      if (download.parentElement.querySelector("[data-pcx-live-grid-button]")) {
-16319:      const url = buildViewUrl(download);
-16328:      download.insertAdjacentElement("afterend", button);
-16589:# PINCABOS_EXPLORER_INSTALL_PINCABOS_LOADER_V1
-16591:    import importlib.util as _pco_explorer_install_importlib_util
-16592:    from pathlib import Path as _pco_explorer_install_Path
-16594:    _pco_explorer_install_path = _pco_explorer_install_Path(__file__).with_name("PinCabOS-ExplorerInstall.py")
-16595:    _pco_explorer_install_spec = _pco_explorer_install_importlib_util.spec_from_file_location(
-16596:        "pincabos_explorer_install_external",
-16597:        str(_pco_explorer_install_path),
-16599:    _pco_explorer_install_mod = _pco_explorer_install_importlib_util.module_from_spec(_pco_explorer_install_spec)
-16600:    _pco_explorer_install_spec.loader.exec_module(_pco_explorer_install_mod)
-16601:    _pco_explorer_install_mod.register(
-16607:except Exception as _pco_explorer_install_e:
-16608:    print("WARN: PinCabOS ExplorerInstall module load failed:", _pco_explorer_install_e)
-16626:# PINCABOS_EXPLORER_TABLE_TEST_CENTER_V1_REGISTER
-16628:    import pincabos_explorer_table_test as _pco_explorer_table_test
-16629:    _pco_explorer_table_test.register(
-16633:except Exception as _pco_explorer_table_test_error:
-16635:        "WARN: Explorer Table Test Center load failed:",
-16636:        _pco_explorer_table_test_error,
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 9. Modules Explorer ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\2026-07-17 14:22  /opt/pincabos/web/__pycache__/PinCabOS-ExplorerInstall.cpython-314.pyc
-2026-07-17 14:22  /opt/pincabos/web/__pycache__/pincabos_image_studio.cpython-314.pyc
-2026-08-02 11:01  /opt/pincabos/web/__pycache__/pincabos_explorer_table_test.cpython-314.pyc
-2026-08-09 15:09  /opt/pincabos/web/PinCabOS-ExplorerInstall.py
-2026-08-09 15:09  /opt/pincabos/web/pincabos_explorer_table_test.py
-2026-08-09 15:09  /opt/pincabos/web/pincabos_image_studio.py
-2026-08-09 15:09  /opt/pincabos/web/static/dof-commander-onoff.js
-2026-08-09 15:09  /opt/pincabos/web/static/dof-commander-pro.css
-2026-08-09 15:09  /opt/pincabos/web/static/pincabos-commander-purple-buttons-v1.css
-2026-08-09 15:09  /opt/pincabos/web/static/pincabos-explorer-same-tab-v1.js
-2026-08-09 15:09  /opt/pincabos/web/static/pincabos-explorer-same-tab-v2.js
-2026-08-09 15:09  /opt/pincabos/web/static/pincabos-explorer-table-test-v1.css
-2026-08-09 15:09  /opt/pincabos/web/static/pincabos-explorer-table-test-v1.js
-2026-08-09 15:09  /opt/pincabos/web/static/pincabos-image-studio-v1.css
-2026-08-09 15:09  /opt/pincabos/web/static/pincabos-image-studio-v1.js
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 10. Backups Explorer disponibles ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 11. Erreurs WebApp récentes ===
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\===============================================================
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\ AUDIT TERMINÉ
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\ Rapport : /root/pincabos-explorer-actions-audit-20260811-130054.txt
-]3008;start=1d56f12b-9eb4-4cee-ac31-049375552145;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\===============================================================
-]3008;end=1d56f12b-9eb4-4cee-ac31-049375552145;exit=success\]3008;start=f71ccf4f-61a9-4f8e-a883-44922d99dea4;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=shell;cwd=/root\[?2004hroot@PinCabOs:~# [H[2Jroot@PinCabOs:~# clear
-
-APP="/opt/pincabos/web/app.py"
-STAMP="$(date +%Y%m%d-%H%M%S)"
-BACKUP="/root/app.py.before-pcx-file-actions-${STAMP}"
-
-echo "==============================================================="
-echo " PINCABOS — RESTORE EXPLORER FILE ACTIONS V1"
-echo " ÉDITER / VOIR / TÉLÉCHARGER"
-echo "==============================================================="
-echo
-
-echo "=== 1. Validation ==="
-
-if [ ! -f "$APP" ]; then
-    echo "NOGO [X] $APP introuvable"
-    exit 1
-fi
-
-systemctl is-active --quiet pincabos-webapp.service || {
-    echo "NOGO [X] WebApp inactive"
-    exit 1
-}
-
-echo "GO [√] WebApp active"
-echo "GO [√] app.py présent"
-
-echo
-echo "=== 2. Sauvegarde ==="
-
-cp -a "$APP" "$BACKUP" || exit 1
-
-echo "GO [√] Backup : $BACKUP"
-
-echo
-echo "=== 3. Vérification de la régression ==="
-
-grep -n \
-'action = .*Télécharger' \
-"$APP" \
-| head -20
-
-echo
-echo "=== 4. Patch ciblé des actions Explorer ==="
-
-/usr/bin/python3 - "$APP" <<'PY'
-from pathlib import Path
-import sys
-
-path = Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-
-marker = "PINCABOS_PCX_NATIVE_FILE_ACTIONS_V1"
-
-if marker in text:
-    print("NOTICE: correctif déjà présent.")
-    raise SystemExit(0)
-
-old = '''                action = '<a class="pcx-small" href="' + download_href + '">Télécharger</a>' ''' 
-
-if old not in text:
-    print("NOGO [X] Ligne Téléchargement originale introuvable.")
-    print("Aucune modification effectuée.")
-    raise SystemExit(2)
-
-if text.count(old) != 1:
-    print(
-        "NOGO [X] La ligne cible existe",
-        text.count(old),
-        "fois. Patch refusé par sécurité."
-    )
-    raise SystemExit(3)
-
-new = '''                # PINCABOS_PCX_NATIVE_FILE_ACTIONS_V1
-                #
-                # Les fonctions Live Viewer / Editor existent déjà.
-                # Ne pas forcer tous les fichiers vers Download.
-                #
-                live_href = (
-                    "/tools/commander/live?root="
-                    + encoded_root
-                    + "&path="
-                    + item_url
-                )
-
-                pcx_editable_exts = {
-                    ".ini",
-                    ".cfg",
-                    ".conf",
-                    ".txt",
-                    ".log",
-                    ".vbs",
-                    ".vbe",
-                    ".json",
-                    ".xml",
-                    ".yaml",
-                    ".yml",
-                    ".csv",
-                    ".tsv",
-                    ".md",
-                    ".pov",
-                }
-
-                pcx_image_exts = {
-                    ".png",
-                    ".jpg",
-                    ".jpeg",
-                    ".gif",
-                    ".webp",
-                    ".bmp",
-                    ".svg",
-                }
-
-                if suffix in pcx_editable_exts:
-                    action = (
-                        '<a class="pcx-small" href="'
-                        + live_href
-                        + '">✏ Éditer</a> '
-                        + '<a class="pcx-small" href="'
-                        + download_href
-                        + '">Télécharger</a>'
-                    )
-
-                elif suffix in pcx_image_exts:
-                    action = (
-                        '<a class="pcx-small" href="'
-                        + live_href
-                        + '">👁 Voir</a> '
-                        + '<a class="pcx-small" href="'
-                        + download_href
-                        + '">Télécharger</a>'
-                    )
-
-                else:
-                    action = (
-                        '<a class="pcx-small" href="'
-                        + download_href
-                        + '">Télécharger</a>'
-                    )'''
-
-text = text.replace(old, new, 1)
-
-path.write_text(text, encoding="utf-8")
-
-print("GO [√] Actions contextuelles restaurées.")
-PY
-
-RC=$?
-
-if [ "$RC" -ne 0 ]; then
-    echo
-    echo "NOGO [X] Patch refusé."
-    cp -a "$BACKUP" "$APP"
-    echo "GO [√] Original restauré."
-    exit "$RC"
-fi
-
-echo
-echo "=== 5. Validation Python ==="
-
-PYTHON="/opt/pincabos/web/.venv/bin/python"
-
-if [ ! -x "$PYTHON" ]; then
-    PYTHON="/usr/bin/python3"
-fi
-
-if "$PYTHON" -m py_compile "$APP"; then
-    echo "GO [√] Syntaxe Python valide."
-else
-    echo "NOGO [X] Erreur Python."
-    cp -a "$BACKUP" "$APP"
-    "$PYTHON" -m py_compile "$APP" || true
-    echo "GO [√] Original restauré."
-    exit 10
-fi
-
-echo
-echo "=== 6. Vérification fonctions existantes ==="
-
-for PATTERN in \
-    "PINCABOS_PCX_LIVE_VIEWER_V1" \
-    "def _pcx_lv_render_editor" \
-    '@app.route("/tools/commander/live")'
-do
-    if grep -Fq "$PATTERN" "$APP"; then
-        echo "GO [√] $PATTERN"
-    else
-        echo "NOGO [X] Fonction manquante : $PATTERN"
-        cp -a "$BACKUP" "$APP"
-        echo "GO [√] Original restauré."
-        exit 11
-    fi
-done
-
-if [ -f /opt/pincabos/web/pincabos_image_studio.py ]; then
-    echo "GO [√] Image Studio présent"
-else
-    echo "WARN [!] Image Studio absent"
-fi
-
-echo
-echo "=== 7. Vérification nouveau bloc ==="
-
-grep -n -A70 -B5 \
-"PINCABOS_PCX_NATIVE_FILE_ACTIONS_V1" \
-"$APP"
-
-echo
-echo "=== 8. Redémarrage WebApp ==="
-
-systemctl restart pincabos-webapp.service
-sleep 3
-
-if systemctl is-active --quiet pincabos-webapp.service; then
-    echo "GO [√] pincabos-webapp.service ACTIVE"
-else
-    echo "NOGO [X] WebApp ne redémarre pas."
-    echo "Restauration automatique..."
-
-    cp -a "$BACKUP" "$APP"
-    systemctl restart pincabos-webapp.service
-
-    echo
-    systemctl status pincabos-webapp.service \
-        --no-pager -l | tail -40
-
-    exit 20
-fi
-
-echo
-echo "=== 9. Test HTTP PinCab Explorer ==="
-
-HTTP="$(
-    curl -s \
-        -o /tmp/pcx-actions-test.html \
-        -w '%{http_code}' \
-        'http://127.0.0.1/tools/commander?root=Tables'
-)"
-
-[7mif [ "$HTTP" = "200" ]; then[27m
-[7m    echo "GO [√] HTTP 200"[27m
-[7melse[27m
-[7m    echo "NOGO [X] HTTP $HTTP"[27m
-[7m    exit 21[27m
-[7mfi[27m
-
-[7mecho[27m
-[7mecho "=== 10. Test dossier 300 ==="[27m
-
-[7mcurl -fsS -G \[27m
-[7m    --data-urlencode "root=Tables" \[27m
-[7m    --data-urlencode "path='300' (Gottlieb 1975)" \[27m
-[7m    http://127.0.0.1/tools/commander \[27m
-[7m    -o /tmp/pcx-300-actions.html \[27m
-[7m    2>/dev/null || true[27m
-
-[7mecho[27m
-[7mecho "--- Actions détectées ---"[27m
-
-[7mgrep -oE \[27m
-[7m'>(✏ Éditer|👁 Voir|Télécharger)<' \[27m
-[7m/tmp/pcx-300-actions.html \[27m
-[7m2>/dev/null \[27m
-[7m| sort \[27m
-[7m| uniq -c || true[27m
-
-[7mecho[27m
-[7mecho "=== 11. Journal WebApp ==="[27m
-
-[7mjournalctl \[27m
-[7m    -u pincabos-webapp.service \[27m
-[7m    -n 30 \[27m
-[7m    --no-pager \[27m
-[7m    | grep -Ei \[27m
-[7m      'error|traceback|exception' \[27m
-[7m    || echo "GO [√] Aucune erreur récente."[27m
-
-[7mecho[27m
-[7mecho "==============================================================="[27m
-[7mecho " GO [√] PINCAB EXPLORER ACTIONS RESTAURÉES"[27m
-[7mecho "==============================================================="[27m
-[7mecho[27m
-[7mecho "Résultat attendu :"[27m
-[7mecho[27m
-[7mecho "  .vbs/.ini/.json/.txt/.log  → ✏ Éditer + Télécharger"[27m
-[7mecho "  .png/.jpg/.webp/...        → 👁 Voir + Télécharger"[27m
-[7mecho "  .vpx/.directb2s/...        → Télécharger"[27m
-[7mecho[27m
-[7mecho "Backup : $BACKUP"[27m[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[Aif [ "$HTTP" = "200" ]; then
-    echo "GO [√] HTTP 200"
-else
-    echo "NOGO [X] HTTP $HTTP"
-    exit 21
-fi
-
-echo
-echo "=== 10. Test dossier 300 ==="
-
-curl -fsS -G \
-    --data-urlencode "root=Tables" \
-    --data-urlencode "path='300' (Gottlieb 1975)" \
-    http://127.0.0.1/tools/commander \
-    -o /tmp/pcx-300-actions.html \
-    2>/dev/null || true
-
-echo
-echo "--- Actions détectées ---"
-
-grep -oE \
-'>(✏ Éditer|👁 Voir|Télécharger)<' \
-/tmp/pcx-300-actions.html \
-2>/dev/null \
-| sort \
-| uniq -c || true
-
-echo
-echo "=== 11. Journal WebApp ==="
-
-journalctl \
-    -u pincabos-webapp.service \
-    -n 30 \
-    --no-pager \
-    | grep -Ei \
-      'error|traceback|exception' \
-    || echo "GO [√] Aucune erreur récente."
-
-echo
-echo "==============================================================="
-echo " GO [√] PINCAB EXPLORER ACTIONS RESTAURÉES"
-echo "==============================================================="
-echo
-echo "Résultat attendu :"
-echo
-echo "  .vbs/.ini/.json/.txt/.log  → ✏ Éditer + Télécharger"
-echo "  .png/.jpg/.webp/...        → 👁 Voir + Télécharger"
-echo "  .vpx/.directb2s/...        → Télécharger"
-echo
-echo "Backup : $BACKUP"
-[?2004l]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\[H[2J[3J]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\===============================================================
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\ PINCABOS — RESTORE EXPLORER FILE ACTIONS V1
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\ ÉDITER / VOIR / TÉLÉCHARGER
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\===============================================================
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 1. Validation ===
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\GO [√] WebApp active
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\GO [√] app.py présent
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 2. Sauvegarde ===
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\GO [√] Backup : /root/app.py.before-pcx-file-actions-20260811-130338
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 3. Vérification de la régression ===
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\12684:                action = '<a class="pcx-small" href="' + download_href + '">Télécharger</a>'
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\=== 4. Patch ciblé des actions Explorer ===
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\NOGO [X] Ligne Téléchargement originale introuvable.
-Aucune modification effectuée.
-]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\]3008;start=df824ee5-e5c0-4a8a-aca3-1421fe41d311;machineid=bb0a10f9b7904ce3ac8304bace6fe8af;user=root;hostname=PinCabOs;bootid=a86d650f-2b17-4611-bb2a-d8349565f39c;pid=00000000000000501652;type=command;cwd=/root\
-NOGO [X] Patch refusé.
-GO [√] Original restauré.
-logout
