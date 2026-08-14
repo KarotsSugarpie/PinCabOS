@@ -6315,7 +6315,17 @@ pincabos_offer_web_publish() {
     echo "GO [OK] ISO distante identique"
 
     echo
-    echo "=== Mise a jour INDEX Web ==="
+    echo "=== INDEX WEB CANONIQUE ==="
+
+    # ==============================================================
+    # PINCABOS_CANONICAL_WEB_INDEX_V6
+    #
+    # IMPORTANT :
+    # - réécrit complètement /updates/index.html
+    # - réécrit complètement /updates/iso/index.html
+    # - n'ajoute jamais de bloc dans un ancien HTML
+    # - une seule ISO affichée : ISO_NAME
+    # ==============================================================
 
     if ! sshpass -e ssh \
         "${SSH_OPTS[@]}" \
@@ -6324,61 +6334,107 @@ pincabos_offer_web_publish() {
         "$REMOTE_ROOT" \
         "$ISO_NAME" \
         "$ISO_SHA" \
-        "$ISO_SIZE_BYTES" \
-        "$PUB_DATE" <<'REMOTE_PUBLISH'
+        "$ISO_SIZE_BYTES" <<'PINCABOS_CANONICAL_INDEX_V6'
 set -Eeuo pipefail
 
 ROOT="$1"
 ISO_NAME="$2"
-ISO_SHA="$3"
-ISO_SIZE_BYTES="$4"
-PUB_DATE="$5"
+EXPECTED_SHA="$3"
+EXPECTED_SIZE="$4"
 
 ISO_DIR="$ROOT/iso"
-ISO_INDEX="$ISO_DIR/index.html"
-UPDATES_INDEX="$ROOT/index.html"
-STAMP="$(date +%Y%m%d-%H%M%S)"
+ISO_FILE="$ISO_DIR/$ISO_NAME"
 
 echo
-echo "--- Backup index ---"
+echo "---------------------------------------------------------------"
+echo " PINCABOS — GENERATION INDEX CANONIQUE V6"
+echo "---------------------------------------------------------------"
 
-for F in "$ISO_INDEX" "$UPDATES_INDEX"; do
-    if [ -f "$F" ]; then
-        cp -a "$F" "${F}.bak-${STAMP}"
-        echo "Backup : ${F}.bak-${STAMP}"
+test -d "$ROOT" || {
+    echo "ERREUR [X] racine Web absente : $ROOT"
+    exit 1
+}
+
+test -s "$ISO_FILE" || {
+    echo "ERREUR [X] ISO distante absente : $ISO_FILE"
+    exit 1
+}
+
+ACTUAL_SHA="$(sha256sum "$ISO_FILE" | awk '{print $1}')"
+ACTUAL_SIZE="$(stat -c '%s' "$ISO_FILE")"
+
+echo
+echo "SHA attendu : $EXPECTED_SHA"
+echo "SHA distant : $ACTUAL_SHA"
+
+if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+    echo "ERREUR [X] SHA ISO distant différent"
+    exit 1
+fi
+
+if [ "$ACTUAL_SIZE" != "$EXPECTED_SIZE" ]; then
+    echo "ERREUR [X] taille ISO distante différente"
+    exit 1
+fi
+
+echo "GO [OK] ISO distante validée"
+
+PUB_DATE="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="/var/backups/pincabos-web-index/$STAMP"
+
+mkdir -p "$BACKUP_DIR"
+
+echo
+echo "--- Backup anciens index ---"
+
+for FILE in \
+    "$ROOT/index.html" \
+    "$ISO_DIR/index.html"
+do
+    if [ -f "$FILE" ]; then
+        cp -a "$FILE" "$BACKUP_DIR/"
+        echo "GO [OK] backup : $FILE"
     fi
 done
 
 echo
-echo "--- Compatibilite anciens liens ---"
+echo "--- SHA256 officiel ---"
 
-cd "$ISO_DIR"
-
-if [ "$ISO_NAME" != "PinCabOS-Installer.iso" ]; then
-    ln -sfn "$ISO_NAME" PinCabOS-Installer.iso
-fi
-
-if [ "$ISO_NAME.sha256" != "PinCabOS-Installer.iso.sha256" ]; then
-    ln -sfn "$ISO_NAME.sha256" PinCabOS-Installer.iso.sha256
-fi
+printf '%s  %s\n' \
+    "$ACTUAL_SHA" \
+    "$ISO_NAME" \
+    > "$ISO_FILE.sha256"
 
 chmod 0644 \
-    "$ISO_DIR/$ISO_NAME" \
-    "$ISO_DIR/$ISO_NAME.sha256" \
-    2>/dev/null || true
+    "$ISO_FILE" \
+    "$ISO_FILE.sha256"
 
 echo
-echo "--- Mise a jour HTML ---"
+echo "--- Liens de compatibilité ---"
+
+ln -sfn \
+    "$ISO_NAME" \
+    "$ISO_DIR/PinCabOS-Installer.iso"
+
+ln -sfn \
+    "$ISO_NAME.sha256" \
+    "$ISO_DIR/PinCabOS-Installer.iso.sha256"
+
+echo "GO [OK] liens"
+
+echo
+echo "--- Génération HTML complète ---"
 
 python3 - \
     "$ROOT" \
     "$ISO_NAME" \
-    "$ISO_SHA" \
-    "$ISO_SIZE_BYTES" \
-    "$PUB_DATE" <<'PYREMOTE'
+    "$ACTUAL_SHA" \
+    "$ACTUAL_SIZE" \
+    "$PUB_DATE" <<'PYHTML'
 from pathlib import Path
 import html
-import re
 import sys
 
 root = Path(sys.argv[1])
@@ -6387,682 +6443,446 @@ sha = sys.argv[3]
 size_bytes = int(sys.argv[4])
 pub_date = sys.argv[5]
 
-iso_dir = root / "iso"
-iso_index = iso_dir / "index.html"
-updates_index = root / "index.html"
-
 
 def human_size(value):
-    units = ["B", "KB", "MB", "GB", "TB"]
-    size = float(value)
+    value = float(value)
 
-    for unit in units:
-        if size < 1024 or unit == units[-1]:
-            if unit in ("GB", "TB"):
-                return f"{size:.2f} {unit}"
-            if unit == "MB":
-                return f"{size:.1f} {unit}"
-            return f"{size:.0f} {unit}"
-        size /= 1024
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+        if value < 1024 or unit == "TiB":
+            if unit in ("GiB", "TiB"):
+                return f"{value:.2f} {unit}"
+            if unit == "MiB":
+                return f"{value:.1f} {unit}"
+            return f"{value:.0f} {unit}"
 
-
-size = human_size(size_bytes)
-
-safe_iso = html.escape(iso_name)
-safe_sha = html.escape(sha)
-safe_size = html.escape(size)
-safe_date = html.escape(pub_date)
-
-# -------------------------------------------------------------
-# /updates/iso/index.html
-# -------------------------------------------------------------
-
-if iso_index.exists():
-    text = iso_index.read_text(
-        encoding="utf-8",
-        errors="replace"
-    )
-
-    # Corrige les noms historiques utilisés par l'ancienne page.
-    for old in (
-        "PinCabOS-Installer.iso",
-        "PinCabOS-beta-Installer.iso",
-    ):
-        if old != iso_name:
-            text = text.replace(
-                old + ".sha256",
-                iso_name + ".sha256"
-            )
-            text = text.replace(
-                old,
-                iso_name
-            )
-
-    start = "<!-- PINCABOS_PUBLISH_INFO_START -->"
-    end = "<!-- PINCABOS_PUBLISH_INFO_END -->"
-
-    section = f"""
-{start}
-<div class="pincabos-publish-info">
-  <h2>Dernière ISO PinCabOS</h2>
-  <p>
-    <strong>Fichier :</strong>
-    <a href="{safe_iso}">{safe_iso}</a><br>
-    <strong>Taille :</strong> {safe_size}<br>
-    <strong>Publication :</strong> {safe_date}
-  </p>
-  <p>
-    <strong>SHA256 :</strong><br>
-    <code>{safe_sha}</code>
-  </p>
-  <p>
-    <a href="{safe_iso}.sha256">
-      Télécharger le fichier SHA256
-    </a>
-  </p>
-</div>
-{end}
-""".strip()
-
-    pattern = re.compile(
-        re.escape(start) + r".*?" + re.escape(end),
-        re.S,
-    )
-
-    if pattern.search(text):
-        text = pattern.sub(section, text, count=1)
-    elif "</body>" in text.lower():
-        pos = text.lower().rfind("</body>")
-        text = (
-            text[:pos]
-            + "\n"
-            + section
-            + "\n"
-            + text[pos:]
-        )
-    else:
-        text += "\n" + section + "\n"
-
-    iso_index.write_text(
-        text,
-        encoding="utf-8"
-    )
-
-    print("GO [OK] /updates/iso/index.html")
+        value /= 1024
 
 
-# -------------------------------------------------------------
-# /updates/index.html
-# -------------------------------------------------------------
+filename = html.escape(iso_name)
+checksum = html.escape(sha)
+size = html.escape(human_size(size_bytes))
+published = html.escape(pub_date)
 
-start = "<!-- PINCABOS_ISO_SECTION_START -->"
-end = "<!-- PINCABOS_ISO_SECTION_END -->"
+byte_text = f"{size_bytes:,}".replace(",", " ")
 
-section = f"""
-{start}
-<div class="card" id="pincabos-iso">
-  <h2>PinCabOS V8.1G — Installer ISO</h2>
 
-  <p>
-    <strong>Dernière publication :</strong> {safe_date}<br>
-    <strong>Taille :</strong> {safe_size}
-  </p>
+def render(prefix):
+    iso_url = html.escape(prefix + iso_name)
+    sha_url = html.escape(prefix + iso_name + ".sha256")
 
-  <p>
-    <a href="iso/{safe_iso}">
-      Télécharger {safe_iso}
-    </a>
-  </p>
-
-  <p>
-    <a href="iso/{safe_iso}.sha256">
-      Télécharger le SHA256
-    </a>
-  </p>
-
-  <p>
-    <strong>SHA256 :</strong><br>
-    <code>{safe_sha}</code>
-  </p>
-</div>
-{end}
-""".strip()
-
-if updates_index.exists():
-    text = updates_index.read_text(
-        encoding="utf-8",
-        errors="replace"
-    )
-
-    pattern = re.compile(
-        re.escape(start) + r".*?" + re.escape(end),
-        re.S,
-    )
-
-    if pattern.search(text):
-        text = pattern.sub(section, text, count=1)
-
-    elif "</body>" in text.lower():
-        pos = text.lower().rfind("</body>")
-        text = (
-            text[:pos]
-            + "\n"
-            + section
-            + "\n"
-            + text[pos:]
-        )
-
-    else:
-        text += "\n" + section + "\n"
-
-    updates_index.write_text(
-        text,
-        encoding="utf-8"
-    )
-
-    print("GO [OK] /updates/index.html")
-
-else:
-    updates_index.write_text(
-        f"""<!DOCTYPE html>
+    return f"""<!doctype html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PinCabOS Updates</title>
+<meta charset="utf-8">
+<meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+>
+
+<title>PinCabOS Installer</title>
+
+<style>
+:root {{
+    color-scheme: dark;
+
+    --bg: #070a0f;
+    --panel: #111822;
+    --panel2: #0d131c;
+    --border: #2d3948;
+
+    --text: #f6f8fb;
+    --muted: #9bacc0;
+
+    --orange: #ff9700;
+    --orange-light: #ffb32d;
+
+    --green: #36df8c;
+    --blue: #58baff;
+}}
+
+* {{
+    box-sizing: border-box;
+}}
+
+html {{
+    min-height: 100%;
+    background: var(--bg);
+}}
+
+body {{
+    margin: 0;
+    min-height: 100vh;
+
+    background:
+        radial-gradient(
+            circle at 50% -160px,
+            rgba(73, 45, 107, .38) 0,
+            rgba(24, 18, 40, .20) 300px,
+            transparent 650px
+        ),
+        var(--bg);
+
+    color: var(--text);
+
+    font-family:
+        Inter,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif;
+
+    -webkit-font-smoothing: antialiased;
+}}
+
+.wrapper {{
+    width: min(760px, calc(100% - 36px));
+    margin: 0 auto;
+    padding: 72px 0 50px;
+}}
+
+.status {{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 12px;
+
+    color: var(--green);
+    font-size: 14px;
+    font-weight: 750;
+}}
+
+.status-dot {{
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+    background: var(--green);
+
+    box-shadow:
+        0 0 10px rgba(54, 223, 140, .8);
+}}
+
+h1 {{
+    margin: 0;
+
+    font-size: clamp(34px, 6vw, 48px);
+    line-height: 1.08;
+    letter-spacing: -.8px;
+}}
+
+.subtitle {{
+    margin: 13px 0 30px;
+
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+}}
+
+.download {{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 48px;
+    padding: 0 25px;
+
+    border: 0;
+    border-radius: 9px;
+
+    background:
+        linear-gradient(
+            180deg,
+            var(--orange-light),
+            var(--orange)
+        );
+
+    color: #111;
+    text-decoration: none;
+
+    font-size: 14px;
+    font-weight: 800;
+
+    box-shadow:
+        0 10px 25px rgba(0, 0, 0, .35);
+
+    transition:
+        transform .12s ease,
+        filter .12s ease;
+}}
+
+.download:hover {{
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}}
+
+.card {{
+    margin-top: 30px;
+
+    overflow: hidden;
+
+    border: 1px solid var(--border);
+    border-radius: 13px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(19, 27, 38, .96),
+            rgba(13, 19, 28, .96)
+        );
+
+    box-shadow:
+        0 20px 55px rgba(0, 0, 0, .33);
+}}
+
+.row {{
+    display: grid;
+
+    grid-template-columns:
+        135px
+        minmax(0, 1fr);
+
+    gap: 20px;
+
+    padding: 16px 19px;
+
+    border-bottom:
+        1px solid var(--border);
+}}
+
+.row:last-child {{
+    border-bottom: 0;
+}}
+
+.label {{
+    color: var(--muted);
+    font-size: 14px;
+}}
+
+.value {{
+    min-width: 0;
+
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 650;
+
+    overflow-wrap: anywhere;
+}}
+
+code {{
+    font-family:
+        Consolas,
+        "SFMono-Regular",
+        Monaco,
+        monospace;
+
+    font-size: 12px;
+    line-height: 1.55;
+
+    color: #e5edf7;
+}}
+
+.sha-link {{
+    color: var(--blue);
+    text-decoration: none;
+}}
+
+.sha-link:hover {{
+    text-decoration: underline;
+}}
+
+footer {{
+    margin-top: 29px;
+
+    color: #718398;
+
+    font-size: 12px;
+}}
+
+@media (max-width: 600px) {{
+
+    .wrapper {{
+        width: min(100% - 24px, 760px);
+        padding-top: 38px;
+    }}
+
+    .row {{
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }}
+
+    h1 {{
+        font-size: 34px;
+    }}
+
+    .download {{
+        width: 100%;
+    }}
+}}
+</style>
 </head>
+
 <body>
-<h1>PinCabOS Updates</h1>
-{section}
+
+<main class="wrapper">
+
+    <div class="status">
+        <span class="status-dot"></span>
+        <span>ISO disponible</span>
+    </div>
+
+    <h1>PinCabOS Installer</h1>
+
+    <p class="subtitle">
+        Dernière image d'installation officielle de PinCabOS.
+    </p>
+
+    <a
+        class="download"
+        href="{iso_url}"
+    >
+        Télécharger PinCabOS
+    </a>
+
+    <section class="card">
+
+        <div class="row">
+            <div class="label">Fichier</div>
+
+            <div class="value">
+                <code>{filename}</code>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="label">Taille</div>
+
+            <div class="value">
+                {size} — {byte_text} octets
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="label">SHA-256</div>
+
+            <div class="value">
+                <code>{checksum}</code>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="label">Somme</div>
+
+            <div class="value">
+                <a
+                    class="sha-link"
+                    href="{sha_url}"
+                >
+                    {filename}.sha256
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="label">Publication</div>
+
+            <div class="value">
+                {published}
+            </div>
+        </div>
+
+    </section>
+
+    <footer>
+        PinCabOS — Linux Virtual Pinball Cabinet OS
+    </footer>
+
+</main>
+
+<!-- PINCABOS_CANONICAL_INDEX_V6 -->
+
 </body>
 </html>
-""",
-        encoding="utf-8",
-    )
+"""
 
-    print("GO [OK] /updates/index.html cree")
-PYREMOTE
+
+# /updates/
+(root / "index.html").write_text(
+    render("iso/"),
+    encoding="utf-8",
+)
+
+# /updates/iso/
+(root / "iso" / "index.html").write_text(
+    render(""),
+    encoding="utf-8",
+)
+
+print("GO [OK] /updates/index.html")
+print("GO [OK] /updates/iso/index.html")
+PYHTML
+
+chmod 0644 \
+    "$ROOT/index.html" \
+    "$ISO_DIR/index.html"
 
 echo
-echo "--- Validation fichiers Web ---"
+echo "--- Validation HTML ---"
 
-test -s "$ISO_DIR/$ISO_NAME"
-test -s "$ISO_DIR/$ISO_NAME.sha256"
-test -s "$ISO_INDEX"
-test -s "$UPDATES_INDEX"
+for INDEX in \
+    "$ROOT/index.html" \
+    "$ISO_DIR/index.html"
+do
+    test -s "$INDEX"
 
-ls -lh \
-    "$ISO_DIR/$ISO_NAME" \
-    "$ISO_DIR/$ISO_NAME.sha256" \
-    "$ISO_INDEX" \
-    "$UPDATES_INDEX"
+    COUNT="$(
+        grep -c \
+            'PINCABOS_CANONICAL_INDEX_V6' \
+            "$INDEX" || true
+    )"
+
+    if [ "$COUNT" != "1" ]; then
+        echo "ERREUR [X] marker HTML invalide : $INDEX"
+        exit 1
+    fi
+
+    # Ces anciens blocs ne doivent PLUS exister.
+    if grep -qE \
+        'PINCABOS_(PUBLISH_INFO|AUTO_ISO|ISO_SECTION)_(START|END)' \
+        "$INDEX"
+    then
+        echo "ERREUR [X] ancien bloc HTML détecté : $INDEX"
+        exit 1
+    fi
+
+    echo "GO [OK] index canonique : $INDEX"
+done
+
+echo
+echo "--- Validation checksum ---"
+
+cd "$ISO_DIR"
+sha256sum -c "$ISO_NAME.sha256"
 
 if command -v nginx >/dev/null 2>&1; then
     echo
-    echo "--- Test Nginx ---"
+    echo "--- Validation Nginx ---"
     nginx -t
 fi
 
 echo
-echo "GO [OK] index Web mis a jour"
-REMOTE_PUBLISH
+echo "GO [OK] INDEX WEB CANONIQUE V6"
+PINCABOS_CANONICAL_INDEX_V6
+
     then
-        echo "ERREUR [X] mise a jour de l'index Web."
+        echo "ERREUR [X] génération index canonique."
         unset SSHPASS
         WEB_PASS=""
         return 1
     fi
 
-    # ==============================================================
-    # PINCABOS_WEB_INDEX_SYNC_V2
-    # Synchronise la racine Web PinCabOS active.
-    # ==============================================================
-
-    echo
-    echo "=== Synchronisation finale des INDEX Web ==="
-
-    sshpass -e ssh \
-        "${SSH_OPTS[@]}" \
-        "${WEB_USER}@${WEB_IP}" \
-        bash -s -- \
-        "$ISO_NAME" \
-        "$ISO_SHA" \
-        "$ISO_SIZE_BYTES" \
-        "$PUB_DATE" <<'REMOTE_INDEX_V2'
-set -Eeuo pipefail
-
-ISO_NAME="$1"
-ISO_SHA="$2"
-ISO_SIZE="$3"
-PUB_DATE="$4"
-
-echo
-echo "---------------------------------------------------------------"
-echo " PINCABOS — REMOTE WEB INDEX SYNC V2"
-echo "---------------------------------------------------------------"
-
-# Racine Web PinCabOS active.
-WEB_ROOTS=(
-    "/var/www/html/updates"
-)
-
-SOURCE_ISO=""
-
-for ROOT in "${WEB_ROOTS[@]}"; do
-    CANDIDATE="$ROOT/iso/$ISO_NAME"
-
-    if [ -s "$CANDIDATE" ]; then
-        SOURCE_ISO="$CANDIDATE"
-        break
-    fi
-done
-
-if [ -z "$SOURCE_ISO" ]; then
-    echo "ERREUR [X] ISO source distante introuvable."
-    exit 1
-fi
-
-echo "Source ISO : $SOURCE_ISO"
-
-STAMP="$(date +%Y%m%d-%H%M%S)"
-
-for ROOT in "${WEB_ROOTS[@]}"; do
-
-    echo
-    echo "==============================================================="
-    echo " RACINE : $ROOT"
-    echo "==============================================================="
-
-    mkdir -p "$ROOT/iso"
-
-    #
-    # Synchroniser ISO
-    #
-    TARGET_ISO="$ROOT/iso/$ISO_NAME"
-
-    if [ "$SOURCE_ISO" != "$TARGET_ISO" ]; then
-        echo "Synchronisation ISO..."
-
-        rsync \
-            -a \
-            --inplace \
-            "$SOURCE_ISO" \
-            "$TARGET_ISO"
-    fi
-
-    #
-    # SHA
-    #
-    printf '%s  %s\n' \
-        "$ISO_SHA" \
-        "$ISO_NAME" \
-        > "$ROOT/iso/$ISO_NAME.sha256"
-
-    #
-    # Compatibilité avec l'ancien nom
-    #
-    ln -sfn \
-        "$ISO_NAME" \
-        "$ROOT/iso/PinCabOS-Installer.iso"
-
-    ln -sfn \
-        "$ISO_NAME.sha256" \
-        "$ROOT/iso/PinCabOS-Installer.iso.sha256"
-
-    #
-    # Backups index
-    #
-    if [ -f "$ROOT/iso/index.html" ]; then
-        cp -a \
-            "$ROOT/iso/index.html" \
-            "$ROOT/iso/index.html.bak-$STAMP"
-    fi
-
-    if [ -f "$ROOT/index.html" ]; then
-        cp -a \
-            "$ROOT/index.html" \
-            "$ROOT/index.html.bak-$STAMP"
-    fi
-
-    export ROOT
-    export ISO_NAME
-    export ISO_SHA
-    export ISO_SIZE
-    export PUB_DATE
-
-    python3 <<'PYREMOTE'
-from pathlib import Path
-import html
-import os
-import re
-
-root = Path(os.environ["ROOT"])
-
-iso_name = os.environ["ISO_NAME"]
-sha = os.environ["ISO_SHA"]
-size_bytes = int(os.environ["ISO_SIZE"])
-date = os.environ["PUB_DATE"]
-
-
-def human_size(n):
-    size = float(n)
-
-    for unit in ("B", "KB", "MB", "GB", "TB"):
-        if size < 1024 or unit == "TB":
-            if unit in ("GB", "TB"):
-                return f"{size:.2f} {unit}"
-
-            if unit == "MB":
-                return f"{size:.1f} {unit}"
-
-            return f"{size:.0f} {unit}"
-
-        size /= 1024
-
-
-size = human_size(size_bytes)
-
-fn = html.escape(iso_name)
-sha_html = html.escape(sha)
-date_html = html.escape(date)
-size_html = html.escape(size)
-
-
-# ==============================================================
-# PAGE /updates/iso/
-# ==============================================================
-
-iso_index = root / "iso" / "index.html"
-
-if iso_index.exists():
-
-    text = iso_index.read_text(
-        encoding="utf-8",
-        errors="replace"
-    )
-
-else:
-
-    text = """<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PinCabOS Installer</title>
-</head>
-<body>
-<h1>PinCabOS Installer</h1>
-</body>
-</html>
-"""
-
-
-start = "<!-- PINCABOS_AUTO_ISO_START -->"
-end = "<!-- PINCABOS_AUTO_ISO_END -->"
-
-section = f"""
-{start}
-<section id="pincabos-current-iso">
-<h2>PinCabOS V8.1G</h2>
-
-<p>
-<strong>ISO actuelle :</strong>
-<a class="download"
-   href="{fn}"
-   download>
-Télécharger PinCabOS
-</a>
-</p>
-
-<p>
-<strong>Fichier :</strong>
-<code>{fn}</code><br>
-
-<strong>Taille :</strong>
-{size_html}<br>
-
-<strong>Publication :</strong>
-{date_html}
-</p>
-
-<p>
-<strong>SHA256 :</strong><br>
-<code>{sha_html}</code>
-</p>
-
-<p>
-<a href="{fn}.sha256">
-Télécharger le SHA256
-</a>
-</p>
-</section>
-{end}
-""".strip()
-
-
-pattern = re.compile(
-    re.escape(start) +
-    r".*?" +
-    re.escape(end),
-    re.S
-)
-
-
-if pattern.search(text):
-
-    text = pattern.sub(
-        section,
-        text,
-        count=1
-    )
-
-else:
-
-    # Retirer les anciennes références ISO connues lorsque possible.
-    text = text.replace(
-        "PinCabOS-Installer.iso.sha256",
-        iso_name + ".sha256"
-    )
-
-    text = text.replace(
-        "PinCabOS-Installer.iso",
-        iso_name
-    )
-
-    text = text.replace(
-        "PinCabOS-beta-Installer.iso.sha256",
-        iso_name + ".sha256"
-    )
-
-    text = text.replace(
-        "PinCabOS-beta-Installer.iso",
-        iso_name
-    )
-
-    pos = text.lower().rfind("</body>")
-
-    if pos >= 0:
-        text = (
-            text[:pos]
-            + "\n"
-            + section
-            + "\n"
-            + text[pos:]
-        )
-    else:
-        text += "\n" + section + "\n"
-
-
-iso_index.write_text(
-    text,
-    encoding="utf-8"
-)
-
-
-# ==============================================================
-# PAGE /updates/
-# ==============================================================
-
-index = root / "index.html"
-
-if index.exists():
-
-    text = index.read_text(
-        encoding="utf-8",
-        errors="replace"
-    )
-
-else:
-
-    text = """<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PinCabOS Updates</title>
-</head>
-<body>
-<h1>PinCabOS Updates</h1>
-</body>
-</html>
-"""
-
-
-start = "<!-- PINCABOS_ISO_SECTION_START -->"
-end = "<!-- PINCABOS_ISO_SECTION_END -->"
-
-section = f"""
-{start}
-<section id="pincabos-iso">
-<h2>PinCabOS V8.1G — Installer ISO</h2>
-
-<p>
-<a href="iso/{fn}" download>
-Télécharger {fn}
-</a>
-</p>
-
-<p>
-<strong>Taille :</strong>
-{size_html}<br>
-
-<strong>Publication :</strong>
-{date_html}
-</p>
-
-<p>
-<strong>SHA256 :</strong><br>
-<code>{sha_html}</code>
-</p>
-
-<p>
-<a href="iso/{fn}.sha256">
-SHA256
-</a>
-</p>
-</section>
-{end}
-""".strip()
-
-
-pattern = re.compile(
-    re.escape(start) +
-    r".*?" +
-    re.escape(end),
-    re.S
-)
-
-
-if pattern.search(text):
-
-    text = pattern.sub(
-        section,
-        text,
-        count=1
-    )
-
-else:
-
-    pos = text.lower().rfind("</body>")
-
-    if pos >= 0:
-        text = (
-            text[:pos]
-            + "\n"
-            + section
-            + "\n"
-            + text[pos:]
-        )
-    else:
-        text += "\n" + section + "\n"
-
-
-index.write_text(
-    text,
-    encoding="utf-8"
-)
-
-
-print("GO [OK]", iso_index)
-print("GO [OK]", index)
-PYREMOTE
-
-    chmod 0644 \
-        "$ROOT/iso/$ISO_NAME" \
-        "$ROOT/iso/$ISO_NAME.sha256" \
-        "$ROOT/iso/index.html" \
-        "$ROOT/index.html" \
-        2>/dev/null || true
-
-done
-
-
-echo
-echo "=== SHA256 ISO PUBLIEE ==="
-
-for ROOT in "${WEB_ROOTS[@]}"; do
-
-    printf '%-48s : ' \
-        "$ROOT/iso/$ISO_NAME"
-
-    sha256sum \
-        "$ROOT/iso/$ISO_NAME" \
-        | awk '{print $1}'
-
-done
-
-
-echo
-echo "=== INDEX MODIFIES ==="
-
-for ROOT in "${WEB_ROOTS[@]}"; do
-
-    echo
-    echo "--- $ROOT/iso/index.html ---"
-
-    grep -n \
-        -A25 \
-        'PINCABOS_AUTO_ISO_START' \
-        "$ROOT/iso/index.html" \
-        | head -35
-
-done
-
-
-if command -v nginx >/dev/null 2>&1; then
-
-    echo
-    echo "=== NGINX ==="
-
-    nginx -t
-fi
-
-
-echo
-echo "GO [OK] INDEX WEB SYNCHRONISE"
-REMOTE_INDEX_V2
-
-    echo "GO [OK] mise a jour automatique de l index terminee"
+    echo "GO [OK] index Web canonique terminé"
 
 
     unset SSHPASS
