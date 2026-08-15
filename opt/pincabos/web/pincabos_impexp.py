@@ -262,6 +262,66 @@ def register_pincabos_impexp_routes(app, app_globals):
       button.disabled = false;
     }
   });
+
+  const anForm = document.querySelector('form[action="/tools/import-table/analyze"]');
+  if (anForm) {
+    anForm.addEventListener('submit', (ev) => {
+      const inp = anForm.querySelector('input[type="file"]');
+      const files = Array.from((inp && inp.files) || []);
+      if (!files.length) return;
+      if (!window.XMLHttpRequest || !window.FormData) return;
+      ev.preventDefault();
+      let host = document.getElementById('pco-si-progress');
+      let fill = document.getElementById('pco-si-fill');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'pco-si-progress';
+        host.style.cssText = 'margin-top:10px;font-size:13px;color:#ffb347;';
+        const track = document.createElement('div');
+        track.style.cssText = 'margin-top:6px;height:14px;background:#2a2a2a;border-radius:7px;overflow:hidden;';
+        fill = document.createElement('div');
+        fill.id = 'pco-si-fill';
+        fill.style.cssText = 'height:100%;width:0%;background:linear-gradient(90deg,#ff7a00,#ffb347);transition:width .2s;';
+        track.appendChild(fill);
+        anForm.appendChild(host);
+        anForm.appendChild(track);
+      }
+      const btn = anForm.querySelector('button[type="submit"], input[type="submit"]');
+      if (btn) btn.disabled = true;
+      const totalMb = files.reduce((a, f) => a + f.size, 0) / (1024 * 1024);
+      const names = files.map(f => f.name).join(', ');
+      const started = Date.now();
+      host.textContent = 'Envoi de ' + names + ' (' + totalMb.toFixed(1) + ' Mo)…';
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', anForm.action, true);
+      xhr.responseType = 'json';
+      xhr.setRequestHeader('X-PCOS-Async', '1');
+      xhr.upload.onprogress = (e) => {
+        if (!e.lengthComputable) return;
+        const pct = Math.round(100 * e.loaded / e.total);
+        const secs = Math.max((Date.now() - started) / 1000, 0.2);
+        const mbps = (e.loaded / (1024 * 1024)) / secs;
+        if (fill) fill.style.width = pct + '%';
+        host.textContent = 'Envoi ' + pct + '% — ' + names + ' (' + totalMb.toFixed(1) + ' Mo, ' + mbps.toFixed(1) + ' Mo/s)';
+      };
+      xhr.onerror = () => {
+        host.textContent = 'Erreur réseau pendant l’envoi.';
+        if (btn) btn.disabled = false;
+      };
+      xhr.onload = () => {
+        const data = xhr.response || {};
+        if (xhr.status >= 200 && xhr.status < 300 && data && data.next) {
+          if (fill) fill.style.width = '100%';
+          host.textContent = 'Envoi terminé — analyse en cours…';
+          window.location.href = data.next;
+        } else {
+          host.textContent = 'Analyse impossible : ' + ((data && data.error) || ('HTTP ' + xhr.status));
+          if (btn) btn.disabled = false;
+        }
+      };
+      xhr.send(new FormData(anForm));
+    });
+  }
 })();
 </script>
 """
