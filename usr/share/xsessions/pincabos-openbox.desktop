@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=PinCabOS Openbox
+Comment=PinCabOS cabinet Openbox session
+Exec=/usr/local/bin/pincabos-openbox-session
+Type=Application
+DesktopNames=Openbox
