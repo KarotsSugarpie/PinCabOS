@@ -763,7 +763,7 @@ else
   echo "The fallback service may fail if Flask is only installed by another mechanism."
 fi
 
-tar -I zstd -tf "$OVERLAY" | grep -q '^usr/share/plymouth/themes/pincabos/pincabos.plymouth$' \
+tar -I zstd -tf "$OVERLAY" | grep '^usr/share/plymouth/themes/pincabos/pincabos.plymouth$' \
   || die "Plymouth overlay missing pincabos.plymouth"
 echo "OK: Plymouth overlay valid"
 
