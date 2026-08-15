@@ -935,7 +935,7 @@ function pcoBatchToggle(state) {{
                                 )
 
                         try:
-                            shutil.copytree(source_table, destination, symlinks=False)
+                            shutil.copytree(source_table, destination, symlinks=False, dirs_exist_ok=True)
                             _normalize_imported_tree(destination)
                         except Exception:
                             if backup_path and backup_path.exists() and not destination.exists():
