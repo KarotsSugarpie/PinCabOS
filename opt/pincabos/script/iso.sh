@@ -4005,7 +4005,7 @@ pco_choose_list() {
 
     local PAGE_SIZE=20
     local PAGE=0
-    local FILTER=""
+    local FILTER="${3:-}"
     local CHOICE=""
     local SEARCH=""
     local TMP_FILTER=""
@@ -4440,7 +4440,8 @@ regional_setup() {
         #
         pco_choose_list \
             "Keyboard layout — all XKB layouts" \
-            "$KEYBOARDS"
+            "$KEYBOARDS" \
+            "$LANG_CODE"
 
         REG_XKB_LAYOUT="$PCO_SELECTED"
         REG_KEYBOARD_LABEL="$PCO_SELECTED_LABEL"
