@@ -173,13 +173,171 @@ _PAGE_UI = r'''
     });
   }
 
+  function progressBar() {
+    let bar = document.getElementById("pco-bi-upbar");
+    if (!bar) {
+      let msg = document.getElementById("pco-bi-message");
+      const host = (msg && msg.parentNode) || form();
+      if (!host) return null;
+      if (!msg) {
+        msg = document.createElement("div");
+        msg.id = "pco-bi-message";
+        msg.style.cssText = "margin-top:10px;font-size:13px;color:#ffb347;";
+        host.appendChild(msg);
+      }
+      const wrap = document.createElement("div");
+      wrap.id = "pco-bi-upwrap";
+      wrap.style.cssText = "margin-top:6px;height:14px;background:#2a2a2a;border-radius:7px;overflow:hidden;display:none;";
+      bar = document.createElement("div");
+      bar.id = "pco-bi-upbar";
+      bar.style.cssText = "height:100%;width:0%;background:linear-gradient(90deg,#ff7a00,#ffb347);transition:width .2s;";
+      wrap.appendChild(bar);
+      if (msg.nextSibling) msg.parentNode.insertBefore(wrap, msg.nextSibling); else msg.parentNode.appendChild(wrap);
+    }
+    return bar;
+  }
+
+  function setProgress(fraction, label) {
+    const bar = progressBar();
+    if (!bar) return;
+    const wrap = document.getElementById("pco-bi-upwrap");
+    if (fraction === null) { if (wrap) wrap.style.display = "none"; return; }
+    if (wrap) wrap.style.display = "block";
+    bar.style.width = `${Math.round(fraction * 100)}%`;
+    if (label) setMessage(label);
+  }
+
+  function uploadWithProgress(url, body, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", url, true);
+      xhr.responseType = "json";
+      xhr.withCredentials = true;
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable && onProgress) onProgress(event.loaded, event.total);
+      };
+      xhr.onerror = () => reject(new Error("R\u00e9seau indisponible pendant le t\u00e9l\u00e9versement."));
+      xhr.onload = () => {
+        const data = xhr.response || {};
+        if (xhr.status >= 200 && xhr.status < 300 && data.ok !== false) resolve(data);
+        else reject(new Error((data && data.error) || `HTTP ${xhr.status}`));
+      };
+      xhr.send(body);
+    });
+  }
+
+  function queuePanel(files) {
+    let panel = document.getElementById("pco-bi-queue");
+    if (!panel) {
+      const wrap = document.getElementById("pco-bi-upwrap");
+      const host = (wrap && wrap.parentNode) || form();
+      panel = document.createElement("div");
+      panel.id = "pco-bi-queue";
+      panel.style.cssText = "margin-top:10px;font-size:13px;background:#181818;border:1px solid #333;border-radius:8px;padding:8px 10px;";
+      host.appendChild(panel);
+    }
+    panel.innerHTML = "";
+    const title = document.createElement("div");
+    title.style.cssText = "font-weight:bold;color:#ffb347;margin-bottom:6px;";
+    title.textContent = "File d’import — " + files.length + " package(s)";
+    panel.appendChild(title);
+    files.forEach((file, i) => {
+      const row = document.createElement("div");
+      row.id = "pco-bi-q-" + i;
+      row.style.cssText = "display:flex;gap:8px;align-items:baseline;padding:2px 0;border-top:1px solid #262626;";
+      const icon = document.createElement("span");
+      icon.style.cssText = "width:1.4em;text-align:center;";
+      icon.textContent = "\u23f3";
+      const name = document.createElement("span");
+      name.style.cssText = "color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%;";
+      name.textContent = file.name;
+      const status = document.createElement("span");
+      status.style.cssText = "color:#999;flex:1;";
+      status.textContent = "en attente (" + (file.size / (1024 * 1024)).toFixed(1) + " Mo)";
+      row.appendChild(icon); row.appendChild(name); row.appendChild(status);
+      panel.appendChild(row);
+    });
+    const worker = document.createElement("div");
+    worker.id = "pco-bi-worker";
+    worker.style.cssText = "margin-top:6px;padding-top:6px;border-top:1px solid #333;color:#ffb347;";
+    worker.textContent = "";
+    panel.appendChild(worker);
+    return panel;
+  }
+
+  function setRow(i, icon, text, color) {
+    const row = document.getElementById("pco-bi-q-" + i);
+    if (!row) return;
+    row.children[0].textContent = icon;
+    row.children[2].textContent = text;
+    row.children[2].style.color = color || "#999";
+  }
+
+  function setWorkerLine(text) {
+    const el = document.getElementById("pco-bi-worker");
+    if (el) el.textContent = text;
+  }
+
+  const ROW_STATES = {
+    queued:   ["\u23f3", "en file d\u2019import", "#999"],
+    running:  ["\u2699\ufe0f", "import en cours\u2026", "#ffb347"],
+    done:     ["\u2705", "install\u00e9", "#7ec97e"],
+    success:  ["\u2705", "install\u00e9", "#7ec97e"],
+    warning:  ["\u26a0\ufe0f", "avertissement", "#ffd27e"],
+    skipped:  ["\u26a0\ufe0f", "ignor\u00e9 (d\u00e9j\u00e0 install\u00e9)", "#ffd27e"],
+    failed:   ["\u274c", "\u00e9chec", "#f08080"],
+    error:    ["\u274c", "\u00e9chec", "#f08080"],
+  };
+
+  function applyPacketRows(job, files) {
+    (job.uploads || []).forEach(item => {
+      const i = Number(item.index || 0) - 1;
+      if (i < 0 || i >= files.length) return;
+      const meta = ROW_STATES[String(item.state || "")];
+      if (meta) setRow(i, meta[0], meta[1] + (item.detail ? " \u2014 " + item.detail : ""), meta[2]);
+    });
+  }
+
+  function pollWorker(jobId, files) {
+    let ticks = 0;
+    const timer = window.setInterval(async () => {
+      ticks += 1;
+      if (ticks > 2400) { window.clearInterval(timer); return; }
+      let packet;
+      try {
+        packet = await json(`/api/batch-import/live/status/${encodeURIComponent(jobId)}`);
+      } catch (_) { return; }
+      const job = packet.job || {};
+      const progress = job.progress || {};
+      applyPacketRows(job, files);
+      const bits = [];
+      if (progress.label) bits.push(progress.label);
+      if (progress.current_item) bits.push(progress.current_item);
+      if (progress.total) bits.push(`${progress.completed || 0}/${progress.total} trait\u00e9s`);
+      const counters = [];
+      if (progress.successful) counters.push(progress.successful + " ok");
+      if (progress.warnings) counters.push(progress.warnings + " avert.");
+      if (progress.failed) counters.push(progress.failed + " \u00e9chec(s)");
+      if (counters.length) bits.push(counters.join(", "));
+      setWorkerLine("Worker : " + (bits.join(" \u2014 ") || job.state || ""));
+      const state = String(job.state || "");
+      if (["stopped", "failed", "completed", "finished", "done"].includes(state) || (progress.percent >= 100 && state !== "running" && state !== "queued")) {
+        window.clearInterval(timer);
+        setWorkerLine("Termin\u00e9 : " + (bits.join(" \u2014 ") || state));
+        emit("pcos-batch-import-finished", job);
+      }
+    }, 2500);
+  }
+
   async function submitQueue(target) {
     const input = target.querySelector('input[name="archives"]');
     const files = Array.from(input?.files || []);
     if (!files.length) throw new Error("Choisis au moins un package .PinCabOS.");
     const conflict = target.querySelector('input[name="conflict_mode"]:checked')?.value || "skip";
     disable(target, true);
-    setMessage(`Création de la file séquentielle pour ${files.length} package(s)…`);
+    setProgress(0, null);
+    queuePanel(files);
+    setMessage(`Cr\u00e9ation de la file s\u00e9quentielle pour ${files.length} package(s)\u2026`);
 
     const created = await json("/api/batch-import/live/create", {
       method: "POST",
@@ -192,31 +350,46 @@ _PAGE_UI = r'''
     try {
       for (let index = 0; index < files.length; index += 1) {
         const file = files[index];
-        setMessage(`Téléversement ${index + 1}/${files.length} : ${file.name}`);
         emit("pcos-batch-import-uploading", {job_id: jobId, index: index + 1, total: files.length, name: file.name});
         const body = new FormData();
         body.append("archive", file, file.name);
         body.append("index", String(index + 1));
-        await json(`/api/batch-import/live/upload/${encodeURIComponent(jobId)}`, {method: "POST", body});
-        setMessage(`Traitement ${index + 1}/${files.length} : validation, extraction, manifest et installation…`);
+        const startedAt = Date.now();
+        await uploadWithProgress(`/api/batch-import/live/upload/${encodeURIComponent(jobId)}`, body, (loaded, totalBytes) => {
+          const seconds = Math.max((Date.now() - startedAt) / 1000, 0.2);
+          const mbps = (loaded / (1024 * 1024)) / seconds;
+          const pct = Math.round(100 * loaded / totalBytes);
+          setProgress(loaded / totalBytes, `T\u00e9l\u00e9versement ${index + 1}/${files.length} : ${file.name} \u2014 ${pct}% (${mbps.toFixed(1)} Mo/s)`);
+          setRow(index, "\u2b06\ufe0f", `envoi ${pct}% (${mbps.toFixed(1)} Mo/s)`, "#ffb347");
+          emit("pcos-batch-import-upload-progress", {job_id: jobId, index: index + 1, total: files.length, loaded: loaded, total_bytes: totalBytes});
+        });
+        setProgress(null);
+        const upSeconds = Math.max((Date.now() - startedAt) / 1000, 0.01);
+        const upMbps = (file.size / (1024 * 1024)) / upSeconds;
+        setRow(index, "\u2699\ufe0f", `envoy\u00e9 (${(file.size / (1024 * 1024)).toFixed(1)} Mo, ${upMbps.toFixed(1)} Mo/s) \u2014 analyse\u2026`, "#ffb347");
+        setMessage(`Traitement ${index + 1}/${files.length} : ${file.name}\u2026`);
         while (true) {
           await new Promise(resolve => window.setTimeout(resolve, 900));
           const packet = await json(`/api/batch-import/live/status/${encodeURIComponent(jobId)}`);
           const job = packet.job || {};
+          applyPacketRows(job, files);
           if (["failed", "stopped", "cancelled"].includes(String(job.state || ""))) {
-            throw new Error(job.error || `Le job s’est arrêté à ${index + 1}/${files.length}.`);
+            throw new Error(job.error || `Le job s\u2019est arr\u00eat\u00e9 \u00e0 ${index + 1}/${files.length}.`);
           }
           if (Number(job.processed_archives || 0) >= index + 1) break;
         }
+        setRow(index, "\u23f3", "pr\u00e9par\u00e9 \u2014 en file d\u2019import", "#999");
       }
       const finished = await json(`/api/batch-import/live/finish/${encodeURIComponent(jobId)}`, {method: "POST"});
-      setMessage(`Les ${files.length} packages sont en file. Le worker les importe maintenant un à la fois.`);
+      setMessage(`Les ${files.length} package(s) sont en file. Le worker les importe un \u00e0 la fois \u2014 suivi ci-dessous.`);
       emit("pcos-batch-import-started", finished.job);
+      pollWorker(jobId, files);
     } catch (error) {
       try { await json(`/api/batch-import/live/stop/${encodeURIComponent(jobId)}`, {method: "POST"}); } catch (_) {}
       emit("pcos-batch-import-upload-failed", {job_id: jobId, error: error.message});
       throw error;
     } finally {
+      setProgress(null);
       disable(target, false);
     }
   }
@@ -235,6 +408,7 @@ _PAGE_UI = r'''
     }, true);
   }
 
+  console.info("PinCabOS upload-bar v2 actif");
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire, {once: true});
   else wire();
 })();
