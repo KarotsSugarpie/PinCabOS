@@ -14,7 +14,14 @@ from pathlib import Path
 from typing import Any
 
 STATE_FILE = Path("/var/lib/pincabos/table-test/state.json")
-LAUNCHER = Path("/opt/pincabos/scripts/VPXlauncher.sh")
+# PINCABOS_TABLE_TEST_DUAL_LAUNCH_V1
+DEFAULT_LAUNCHER = Path("/opt/pincabos/scripts/VPXlauncher.sh")
+LEGACY_LAUNCHER = Path(
+    "/opt/pincabos/launchers/pincabos-launch-original.sh"
+)
+PUP_LAUNCHER = Path(
+    "/opt/pincabos/launchers/pincabos-launch-puppack.sh"
+)
 VPINFE_SERVICE = "pincabos-vpinfe.service"
 
 LOG_NAME = "PinCabOS-Test.log"
@@ -361,6 +368,24 @@ def run() -> int:
     state = read_state()
     vpx = Path(_clean_value(state.get("vpx")))
 
+    launch_mode = _clean_value(
+        state.get("launch_mode") or "original"
+    ).casefold()
+
+    if launch_mode in {"pup", "puppack", "pup-pack"}:
+        launch_mode = "pup"
+        launcher = PUP_LAUNCHER
+    elif launch_mode in {"original", "legacy", ""}:
+        launch_mode = "original"
+        launcher = LEGACY_LAUNCHER
+    else:
+        update(
+            phase="error",
+            error=f"Mode de lancement invalide: {launch_mode}",
+            exit_code=5,
+        )
+        return 5
+
     if not vpx.is_file():
         update(
             phase="error",
@@ -369,10 +394,10 @@ def run() -> int:
         )
         return 2
 
-    if not LAUNCHER.is_file():
+    if not launcher.is_file():
         update(
             phase="error",
-            error=f"Lanceur absent: {LAUNCHER}",
+            error=f"Lanceur absent: {launcher}",
             exit_code=3,
         )
         return 3
@@ -383,7 +408,8 @@ def run() -> int:
 
     update(
         phase="launching",
-        launcher=str(LAUNCHER),
+        launch_mode=launch_mode,
+        launcher=str(launcher),
         log_file=str(log_file),
         log_name=LOG_NAME,
         log_status="RUNNING",
@@ -395,7 +421,7 @@ def run() -> int:
 
     try:
         process = subprocess.Popen(
-            [str(LAUNCHER), str(vpx)],
+            [str(launcher), str(vpx)],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,

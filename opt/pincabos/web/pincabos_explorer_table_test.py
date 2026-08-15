@@ -1519,6 +1519,96 @@ def scan_table(folder: Path, deep: bool = False) -> dict[str, Any]:
 
 
 
+
+# PINCABOS_EXPLORER_DUAL_LAUNCH_V1
+_PCO_PUP_ROOT_NAMES = {
+    "pupvideos",
+    "pupvideo",
+    "pinupvideo",
+    "pinupvideos",
+}
+
+_PCO_PUP_MEDIA_EXTENSIONS = {
+    ".mp4",
+    ".mkv",
+    ".avi",
+    ".mov",
+    ".webm",
+    ".m4v",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".mp3",
+    ".ogg",
+    ".wav",
+    ".flac",
+}
+
+
+def _pco_pup_node_has_content(root: Path) -> bool:
+    try:
+        if not root.is_dir():
+            return False
+
+        if (root / "screens.pup").is_file():
+            return True
+
+        if (root / "triggers.pup").is_file():
+            return True
+
+        children = list(root.iterdir())
+
+        if any(
+            child.is_file()
+            and child.suffix.casefold() in _PCO_PUP_MEDIA_EXTENSIONS
+            for child in children
+        ):
+            return True
+
+        for child in children:
+            if not child.is_dir():
+                continue
+
+            if (child / "screens.pup").is_file():
+                return True
+
+            if (child / "triggers.pup").is_file():
+                return True
+
+            try:
+                if any(
+                    item.is_file()
+                    and item.suffix.casefold()
+                    in _PCO_PUP_MEDIA_EXTENSIONS
+                    for item in child.iterdir()
+                ):
+                    return True
+            except OSError:
+                continue
+
+    except OSError:
+        return False
+
+    return False
+
+
+def _pco_local_pup_available(folder: Path) -> bool:
+    try:
+        for child in folder.iterdir():
+            if (
+                child.is_dir()
+                and child.name.casefold() in _PCO_PUP_ROOT_NAMES
+                and _pco_pup_node_has_content(child)
+            ):
+                return True
+    except OSError:
+        return False
+
+    return False
+
+
 def _service_active() -> bool:
     result = subprocess.run(
         ["systemctl", "is-active", "--quiet", SERVICE],
@@ -1920,6 +2010,14 @@ def native_controls_html(
     escaped_title = html.escape(title, quote=True)
     escaped_url = html.escape(vps_url, quote=True)
 
+    pup_available = False
+    try:
+        pup_available = _pco_local_pup_available(
+            _resolve_rel(clean_rel)
+        )
+    except Exception:
+        pup_available = False
+
     play_disabled_attr = " disabled" if play_disabled else ""
     stop_disabled_attr = "" if is_active else " disabled"
 
@@ -1942,14 +2040,26 @@ def native_controls_html(
         + '">'
         + html.escape(status_label)
         + "</span>"
-        + '<button type="button" class="pco-native-button pco-native-play" '
-        + 'data-pco-action="play" data-pco-rel="'
+        + '<button type="button" class="pco-native-button pco-native-play pco-native-play-legacy" '
+        + 'data-pco-action="play-legacy" data-pco-rel="'
         + escaped_rel
         + '" data-pco-base-disabled="'
         + ("1" if play_disabled else "0")
         + '"'
         + play_disabled_attr
-        + ">▶ Play</button>"
+        + ">▶ Play Legacy</button>"
+        + (
+            '<button type="button" class="pco-native-button pco-native-play pco-native-play-pup" '
+            + 'data-pco-action="play-pup" data-pco-rel="'
+            + escaped_rel
+            + '" data-pco-base-disabled="'
+            + ("1" if play_disabled else "0")
+            + '"'
+            + play_disabled_attr
+            + ">▶ Play PuP</button>"
+            if pup_available
+            else ""
+        )
         + '<button type="button" class="pco-native-button pco-native-stop" '
         + 'data-pco-action="stop" data-pco-rel="'
         + escaped_rel
@@ -2141,6 +2251,20 @@ def register(app: Any, detect_batch: Any = None) -> None:
     def pco_explorer_table_test_play():
         try:
             payload = request.get_json(silent=True) or {}
+
+            launch_mode = str(
+                payload.get("mode") or "original"
+            ).strip().casefold()
+
+            if launch_mode == "legacy":
+                launch_mode = "original"
+
+            if launch_mode not in {"original", "pup"}:
+                return jsonify({
+                    "ok": False,
+                    "error": "Mode de lancement invalide.",
+                }), 400
+
             folder = _resolve_rel(str(payload.get("path") or ""))
             if not folder.is_dir():
                 raise NotADirectoryError("Dossier de table invalide.")
@@ -2162,12 +2286,27 @@ def register(app: Any, detect_batch: Any = None) -> None:
                 }), 409
 
             vpx = _resolve_rel(str(health["main_vpx"]))
+
+            if (
+                launch_mode == "pup"
+                and not _pco_local_pup_available(folder)
+            ):
+                return jsonify({
+                    "ok": False,
+                    "error": (
+                        "Aucun PuP-Pack valide détecté "
+                        "pour cette table."
+                    ),
+                    "health": health,
+                }), 400
+
             state = {
                 "phase": "starting",
                 "rel": _relative(folder),
                 "table_name": folder.name,
                 "vpx": str(vpx),
                 "vpx_name": vpx.name,
+                "launch_mode": launch_mode,
                 "started_at": int(time.time()),
                 "stop_requested": False,
                 "exit_code": None,

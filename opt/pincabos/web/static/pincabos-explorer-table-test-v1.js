@@ -1,3 +1,4 @@
+// PINCABOS_EXPLORER_DUAL_LAUNCH_V1_JS
 // PINCABOS_EXPLORER_NATIVE_TABLES_V1_JS
 (() => {
   "use strict";
@@ -241,19 +242,29 @@
     ).forEach(tool => {
       const rel = String(tool.dataset.pcoRel || "");
       const isActive = active && rel === activeRel;
-      const play = tool.querySelector(
-        '[data-pco-action="play"]'
+      const plays = Array.from(
+        tool.querySelectorAll(
+          '[data-pco-action="play"], '
+          + '[data-pco-action="play-legacy"], '
+          + '[data-pco-action="play-pup"]'
+        )
       );
+
       const stop = tool.querySelector(
         '[data-pco-action="stop"]'
       );
 
-      if (play) {
+      plays.forEach(play => {
         const baseDisabled = (
           play.dataset.pcoBaseDisabled === "1"
         );
-        play.disabled = baseDisabled || active || requestBusy;
-      }
+
+        play.disabled = (
+          baseDisabled
+          || active
+          || requestBusy
+        );
+      });
 
       if (stop) {
         stop.disabled = !isActive || requestBusy;
@@ -303,9 +314,16 @@
     }
   }
 
-  async function play(rel) {
+  async function play(rel, mode = "original") {
     requestBusy = true;
-    toast("Préparation du test…");
+
+    const pupMode = mode === "pup";
+
+    toast(
+      pupMode
+        ? "Préparation du test PuP…"
+        : "Préparation du test Legacy…"
+    );
     applyStatus({
       active: false,
       phase: "starting",
@@ -320,11 +338,18 @@
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ path: rel })
+          body: JSON.stringify({
+            path: rel,
+            mode: mode
+          })
         }
       );
 
-      toast("Table lancée. VPinFE a été fermé.");
+      toast(
+        pupMode
+          ? "Table lancée en mode PuP. VPinFE a été fermé."
+          : "Table lancée en mode Legacy. VPinFE a été fermé."
+      );
       scheduleStatus(applyStatus(payload));
     } catch (error) {
       toast(error.message, true);
@@ -366,9 +391,17 @@
     const action = control.dataset.pcoAction;
     const rel = String(control.dataset.pcoRel || "");
 
-    if (action === "play" && rel) {
+    if (
+      (action === "play" || action === "play-legacy")
+      && rel
+    ) {
       event.preventDefault();
-      play(rel);
+      play(rel, "original");
+    }
+
+    if (action === "play-pup" && rel) {
+      event.preventDefault();
+      play(rel, "pup");
     }
 
     if (action === "stop") {

@@ -28,7 +28,7 @@ def find_table(argv: list[str]) -> Path | None:
 
 def has_pup(table: Path) -> bool:
     try:
-        return any(child.is_dir() and child.name.casefold() in {'pupvideo', 'pupvideos'} for child in table.parent.iterdir())
+        return any(child.is_dir() and child.name.casefold() in {'pupvideo', 'pupvideos', 'pinupvideo', 'pinupvideos'} for child in table.parent.iterdir())
     except OSError:
         return False
 

@@ -1,10 +1,10 @@
 {
   "name": "Revolution",
-  "version": "1.2.9",
+  "version": "1.2.11",
   "author": "superhac",
   "description": "A desktop and cab theme with carousel and metadata.",
   "preview_image": "preview.png",
   "supported_screens": 3,
   "type": "both",
-  "change_log": "Fix main menu scaling"
+  "change_log": "Fix the wheel animation on a page jump"
 }

@@ -71,9 +71,17 @@ B2S_FULLDMD = {
 
 B2S_PUP = {
     **B2S_GEOMETRY,
+
+    # PINCABOS_PUP_B2S_OFF_V9
+    #
+    # En mode PuP, le PuP-Pack possède les surfaces Backglass /
+    # FullDMD. B2SLegacy doit être complètement neutralisé.
+    "Enable": "0",
+    "B2SHideB2SBackglass": "1",
     "B2SHideB2SDMD": "1",
     "B2SHideDMD": "1",
     "ScoreViewDMDOverlay": "0",
+    "ScoreViewDMDAutoPos": "0",
 }
 
 DMD_DEFAULTS_ONLY = {
@@ -228,7 +236,7 @@ def has_table_local_pup(table_dir: Path) -> bool:
         return False
 
     for entry in entries:
-        if not entry.is_dir() or entry.name.casefold() not in {"pupvideo", "pupvideos"}:
+        if not entry.is_dir() or entry.name.casefold() not in {"pupvideo", "pupvideos", "pinupvideo", "pinupvideos"}:
             continue
         try:
             return any(item.is_file() for item in entry.rglob("*"))

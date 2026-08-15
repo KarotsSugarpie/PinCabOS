@@ -53,6 +53,7 @@ vpin.ready.then(async () => {
     config = await vpin.call("get_theme_config");
 
     if (windowName === "table") {
+        vpin.enableCorePaging(false);
         vpin.enableCoreAudio(true);
         vpin.setAudioOptions({
             maxVolume: 0.8,
@@ -121,6 +122,18 @@ async function receiveEvent(message) {
     }
 }
 
+// Core stops paging the wheel once the theme takes it, so ask it where a page lands.
+async function pageTables(direction) {
+    const index = await vpin.getPageIndex(direction, currentTableIndex);
+    if (typeof index !== "number" || index < 0 || index === currentTableIndex) {
+        return;
+    }
+    lastWheelMoveDirection = 0;   // a page jump is not a one-step slide
+    currentTableIndex = index;
+    updateScreen();
+    vpin.sendMessageToAllWindows({ type: 'TableIndexUpdate', index: currentTableIndex });
+}
+
 // Input handler function. ***** Only for the "table" window *****
 // These actions are passed to your handler:
 //   joyleft, joyright, joyup, joydown, joyselect, joyback
@@ -177,6 +190,26 @@ async function handleInput(input) {
                 leaveCollectionMode();
             } else {
                 await enterCollectionMode();
+            }
+            break;
+        case "joyup":
+        case "joypageup":
+            if (isCollectionMode()) {
+                lastWheelMoveDirection = -1;
+                currentCollectionIndex = wrapIndex(currentCollectionIndex - 1, collectionEntries.length);
+                updateScreen();
+            } else {
+                await pageTables("prev");
+            }
+            break;
+        case "joydown":
+        case "joypagedown":
+            if (isCollectionMode()) {
+                lastWheelMoveDirection = 1;
+                currentCollectionIndex = wrapIndex(currentCollectionIndex + 1, collectionEntries.length);
+                updateScreen();
+            } else {
+                await pageTables("next");
             }
             break;
     }

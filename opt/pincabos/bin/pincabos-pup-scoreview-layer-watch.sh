@@ -1,62 +1,230 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# PINCABOS_PUP_SCOREVIEW_LAYER_WATCH_V3
 
-PARENT_PID="${1:-0}"
+# PINCABOS_PUP_SCOREVIEW_LAYER_WATCH_V5_SPLIT
+
+PARENT="${1:-0}"
 TABLE="${2:-unknown}"
+
 DISPLAY="${DISPLAY:-:0}"
 XAUTHORITY="${XAUTHORITY:-/home/pinball/.Xauthority}"
-XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-X="${PINCABOS_FULLDMD_X:-5760}"
-Y="${PINCABOS_FULLDMD_Y:-0}"
-W="${PINCABOS_FULLDMD_W:-1920}"
-H="${PINCABOS_FULLDMD_H:-1200}"
-RUNTIME="${XDG_RUNTIME_DIR}/pincabos-pup-scoreview-layer"
-LOG="/var/log/pincabos-hybrid-launcher/pup-scoreview-layer.log"
-mkdir -p "$RUNTIME"
-[[ -w "$(dirname "$LOG")" ]] || LOG="$RUNTIME/pup-scoreview-layer.log"
-exec 9>"$RUNTIME/watcher.lock"
-flock -n 9 || exit 0
 
-log(){ printf '%s %s\n' "$(date -Is)" "$*" >> "$LOG" 2>/dev/null || true; }
-find_score(){ wmctrl -lx 2>/dev/null | awk 'BEGIN{IGNORECASE=1}/Visual Pinball Score View/{print $1;exit}'; }
-vpx_active(){ pgrep -u "$(id -u)" -f '[V]PinballX' >/dev/null 2>&1; }
-apply_layer(){
-  local id="$1"
-  wmctrl -i -r "$id" -e "0,${X},${Y},${W},${H}" >/dev/null 2>&1 || true
-  wmctrl -i -r "$id" -b add,above >/dev/null 2>&1 || true
-  wmctrl -i -r "$id" -b add,skip_taskbar >/dev/null 2>&1 || true
-  wmctrl -i -r "$id" -b add,skip_pager >/dev/null 2>&1 || true
-  command -v xdotool >/dev/null 2>&1 && xdotool windowraise "$id" >/dev/null 2>&1 || true
+VPX_USER="${PINCABOS_VPX_USER:-pinball}"
+VPX_UID="$(id -u "$VPX_USER")"
+VPX_HOME="$(getent passwd "$VPX_USER" | cut -d: -f6)"
+
+[[ -n "$VPX_HOME" ]] || VPX_HOME="/home/pinball"
+
+FULL_X=5760
+FULL_Y=0
+FULL_W=1920
+FULL_H=1200
+
+SPLIT="${PINCABOS_PUP_SPLIT_ACTIVE:-0}"
+
+REL_X="${PINCABOS_SCOREVIEW_REL_X:-0}"
+REL_Y="${PINCABOS_SCOREVIEW_REL_Y:-0}"
+SCORE_W="${PINCABOS_SCOREVIEW_W:-640}"
+SCORE_H="${PINCABOS_SCOREVIEW_H:-160}"
+
+if [[ "$SPLIT" == "1" ]]; then
+    SCORE_X=$((FULL_X + REL_X))
+    SCORE_Y=$((FULL_Y + REL_Y))
+else
+    SCORE_X="$FULL_X"
+    SCORE_Y="$FULL_Y"
+    SCORE_W="$FULL_W"
+    SCORE_H="$FULL_H"
+fi
+
+RUNTIME="/run/user/${VPX_UID}/pincabos-pup-scoreview-layer"
+
+mkdir -p "$RUNTIME" 2>/dev/null || true
+
+LOG="/var/log/pincabos-hybrid-launcher/pup-scoreview-layer.log"
+
+if [[ ! -w "$(dirname "$LOG")" ]]; then
+    LOG="$RUNTIME/pup-scoreview-layer.log"
+fi
+
+log(){
+    printf '%s %s\n' \
+        "$(date -Is)" \
+        "$*" \
+        >> "$LOG" 2>/dev/null || true
 }
 
-seen_vpx=0
-seen_score=0
-last_id=""
-loops=0
-log "START table=$TABLE parent=$PARENT_PID"
+run_x(){
 
-while :; do
-  if vpx_active; then
-    seen_vpx=1
-  elif (( seen_vpx == 1 )); then
-    break
-  elif [[ "$PARENT_PID" =~ ^[0-9]+$ ]] && (( PARENT_PID > 0 )) && ! kill -0 "$PARENT_PID" 2>/dev/null; then
-    break
-  fi
+    if [[ "$(id -u)" -eq 0 ]]; then
 
-  id="$(find_score || true)"
-  if [[ -n "$id" ]]; then
-    apply_layer "$id"
-    seen_score=1
-    if [[ "$id" != "$last_id" ]]; then
-      log "SCOREVIEW_FOUND id=$id geometry=${W}x${H}+${X}+${Y} state=above"
-      last_id="$id"
+        runuser -u "$VPX_USER" -- \
+            env \
+            HOME="$VPX_HOME" \
+            USER="$VPX_USER" \
+            LOGNAME="$VPX_USER" \
+            DISPLAY="$DISPLAY" \
+            XAUTHORITY="$XAUTHORITY" \
+            XDG_RUNTIME_DIR="/run/user/${VPX_UID}" \
+            "$@"
+
+    else
+
+        env \
+            DISPLAY="$DISPLAY" \
+            XAUTHORITY="$XAUTHORITY" \
+            XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/${VPX_UID}}" \
+            "$@"
+
     fi
-  fi
+}
 
-  loops=$((loops+1))
-  (( loops < 80 )) && sleep 0.25 || sleep 0.75
+find_score(){
+
+    run_x wmctrl -lx 2>/dev/null |
+    awk '
+        BEGIN { IGNORECASE=1 }
+        /Visual Pinball Score View/ {
+            print $1
+            exit
+        }
+    '
+}
+
+find_topper(){
+
+    run_x wmctrl -lx 2>/dev/null |
+    awk '
+        BEGIN { IGNORECASE=1 }
+        /Visual Pinball Topper/ {
+            print $1
+            exit
+        }
+    '
+}
+
+vpx_active(){
+
+    pgrep \
+        -u "$VPX_USER" \
+        -f '[V]PinballX' \
+        >/dev/null 2>&1
+}
+
+apply_topper(){
+
+    local id="$1"
+
+    run_x wmctrl \
+        -i -r "$id" \
+        -e "0,${FULL_X},${FULL_Y},${FULL_W},${FULL_H}" \
+        >/dev/null 2>&1 || true
+
+    run_x wmctrl \
+        -i -r "$id" \
+        -b remove,above \
+        >/dev/null 2>&1 || true
+
+    run_x wmctrl \
+        -i -r "$id" \
+        -b add,skip_taskbar \
+        >/dev/null 2>&1 || true
+
+    run_x wmctrl \
+        -i -r "$id" \
+        -b add,skip_pager \
+        >/dev/null 2>&1 || true
+}
+
+apply_score(){
+
+    local id="$1"
+
+    run_x wmctrl \
+        -i -r "$id" \
+        -e "0,${SCORE_X},${SCORE_Y},${SCORE_W},${SCORE_H}" \
+        >/dev/null 2>&1 || true
+
+    run_x wmctrl \
+        -i -r "$id" \
+        -b add,above \
+        >/dev/null 2>&1 || true
+
+    run_x wmctrl \
+        -i -r "$id" \
+        -b add,skip_taskbar \
+        >/dev/null 2>&1 || true
+
+    run_x wmctrl \
+        -i -r "$id" \
+        -b add,skip_pager \
+        >/dev/null 2>&1 || true
+
+    if command -v xdotool >/dev/null 2>&1; then
+
+        run_x xdotool \
+            windowraise "$id" \
+            >/dev/null 2>&1 || true
+    fi
+}
+
+log \
+"START table=$TABLE parent=$PARENT split=$SPLIT score=${SCORE_W}x${SCORE_H}+${SCORE_X}+${SCORE_Y}"
+
+SCORE_SEEN=0
+TOPPER_SEEN=0
+
+while true; do
+
+    PARENT_ALIVE=0
+
+    if [[ "$PARENT" =~ ^[0-9]+$ ]] \
+       && kill -0 "$PARENT" 2>/dev/null; then
+
+        PARENT_ALIVE=1
+    fi
+
+    if [[ "$PARENT_ALIVE" != "1" ]] \
+       && ! vpx_active; then
+
+        break
+    fi
+
+    if [[ "$SPLIT" == "1" ]]; then
+
+        TOPPER="$(find_topper || true)"
+
+        if [[ -n "$TOPPER" ]]; then
+
+            apply_topper "$TOPPER"
+
+            if [[ "$TOPPER_SEEN" != "1" ]]; then
+
+                log \
+"TOPPER_FOUND id=$TOPPER geometry=${FULL_W}x${FULL_H}+${FULL_X}+${FULL_Y}"
+
+                TOPPER_SEEN=1
+            fi
+        fi
+    fi
+
+    SCORE="$(find_score || true)"
+
+    if [[ -n "$SCORE" ]]; then
+
+        apply_score "$SCORE"
+
+        if [[ "$SCORE_SEEN" != "1" ]]; then
+
+            log \
+"SCOREVIEW_FOUND id=$SCORE geometry=${SCORE_W}x${SCORE_H}+${SCORE_X}+${SCORE_Y} state=above"
+
+            SCORE_SEEN=1
+        fi
+    fi
+
+    sleep 0.20
 done
 
-log "STOP scoreview_seen=$seen_score"
+log \
+"STOP topper_seen=$TOPPER_SEEN scoreview_seen=$SCORE_SEEN split=$SPLIT"

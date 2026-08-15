@@ -1,4 +1,5 @@
 # PINCABOS_DMD_RUNTIME_COORDINATE_FIX_V43
+# PINCABOS_RAWSCORE_Y_AXIS_V21_2
 from __future__ import annotations
 
 import configparser
@@ -18,7 +19,7 @@ COMMAND_FILE = RUNTIME_DIR / 'command.env'
 STATE_FILE = RUNTIME_DIR / 'state.env'
 HQ_PREVIEW = Path('/run/pincabos-scoreview-x11-hq/preview.jpg')
 DASHBOARD_PREVIEW = Path('/run/pincabos-dashboard-live/screen2.jpg')
-HELPER = Path('/usr/local/sbin/pincabos-b2s-dmd-tuner-helper')
+HELPER = Path('/usr/local/sbin/pincabos-dmd-bridge-helper')
 GLOBAL_INI = Path('/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini')
 VPINFE_INI = Path('/home/pinball/.config/vpinfe/vpinfe.ini')
 LOCK = threading.RLock()
@@ -160,7 +161,7 @@ def _table_ini_payload(table: Path) -> dict:
         'exists': ini.is_file(),
         'sections': _read_sections(ini, (
             'Displays', 'ScoreView', 'Plugin.B2SLegacy',
-            'Plugin.ScoreView', 'PinCabOS.ScoreViewWindow',
+            'Plugin.ScoreView', 'PinCabOS.ScoreViewWindow', 'PinCabOS.RawScore',
         )),
     }
 
@@ -200,20 +201,230 @@ def _write_command(values: dict) -> None:
     os.replace(temporary, COMMAND_FILE)
 
 
+
 def _runtime_for_pid(pid: int) -> dict | None:
     state = _read_env(STATE_FILE)
+
     if _int(state.get('PID'), -1) != pid:
         return None
+
     return {
-        'overlay': bool(_int(state.get('ENABLED'), 1)),
-        'auto': bool(_int(state.get('AUTO'), 0)),
-        'x': max(0, _int(state.get('X'), 0)),
-        'y': max(0, _int(state.get('Y'), 0)),
-        'w': max(1, _int(state.get('W'), 1)),
-        'h': max(1, _int(state.get('H'), 1)),
-        'override': bool(_int(state.get('OVERRIDE'), 0)),
+        'overlay': bool(
+            _int(
+                state.get('ENABLED'),
+                1
+            )
+        ),
+        'auto': bool(
+            _int(
+                state.get('AUTO'),
+                0
+            )
+        ),
+        'x': max(
+            0,
+            _int(
+                state.get('X'),
+                0
+            )
+        ),
+        'y': max(
+            0,
+            _int(
+                state.get('Y'),
+                0
+            )
+        ),
+        'w': max(
+            1,
+            _int(
+                state.get('W'),
+                1
+            )
+        ),
+        'h': max(
+            1,
+            _int(
+                state.get('H'),
+                1
+            )
+        ),
+        'override': bool(
+            _int(
+                state.get('OVERRIDE'),
+                0
+            )
+        ),
+        'backend': (
+            state.get(
+                'BACKEND',
+                ''
+            )
+            .strip()
+            .lower()
+        ),
+        'dmd_source': (
+            state.get(
+                'SOURCE',
+                ''
+            )
+            .strip()
+        ),
     }
 
+
+def _pup_mode_for_pid(pid: int) -> bool:
+    try:
+        raw = Path(
+            f'/proc/{pid}/environ'
+        ).read_bytes()
+
+    except OSError:
+        return False
+
+    env = {}
+
+    #
+    # bytes([0]) volontaire :
+    # aucun \0 dans le code générateur.
+    #
+    for item in raw.split(
+        bytes([0])
+    ):
+        if b'=' not in item:
+            continue
+
+        key, value = item.split(
+            b'=',
+            1
+        )
+
+        env[
+            key.decode(
+                errors='ignore'
+            )
+        ] = value.decode(
+            errors='ignore'
+        )
+
+    mode = (
+        env.get(
+            'PINCABOS_GAME_CHOICE',
+            ''
+        )
+        .strip()
+        .lower()
+    )
+
+    return (
+        env.get(
+            'PINCABOS_PUP_ENABLED'
+        ) == '1'
+        or
+        mode in (
+            'pup',
+            'puppack',
+            'pup-pack',
+        )
+    )
+
+
+def _rawscore_ini_values(
+    table: Path
+) -> dict:
+
+    values = {
+        'overlay': True,
+        'auto': False,
+        'x': 0,
+        'y': 0,
+        'w': 640,
+        'h': 160,
+    }
+
+    ini = table.with_suffix(
+        '.ini'
+    )
+
+    parser = configparser.ConfigParser(
+        interpolation=None,
+        strict=False,
+    )
+
+    parser.optionxform = str
+
+    try:
+        parser.read(
+            ini,
+            encoding='utf-8',
+        )
+
+    except Exception:
+        return values
+
+
+    section = next(
+        (
+            s
+            for s in parser.sections()
+            if s.casefold()
+            == 'pincabos.rawscore'
+        ),
+        None,
+    )
+
+
+    if not section:
+        return values
+
+
+    options = {
+        key.casefold(): value
+        for key, value
+        in parser.items(section)
+    }
+
+
+    values['auto'] = bool(
+        _int(
+            options.get('auto'),
+            0,
+        )
+    )
+
+    values['x'] = max(
+        0,
+        _int(
+            options.get('x'),
+            0,
+        )
+    )
+
+    values['y'] = max(
+        0,
+        _int(
+            options.get('y'),
+            0,
+        )
+    )
+
+    values['w'] = max(
+        1,
+        _int(
+            options.get('width'),
+            640,
+        )
+    )
+
+    values['h'] = max(
+        1,
+        _int(
+            options.get('height'),
+            160,
+        )
+    )
+
+    return values
 
 def _wait_runtime(values: dict) -> dict:
     deadline = time.monotonic() + 1.8
@@ -232,54 +443,373 @@ def _wait_runtime(values: dict) -> dict:
     )
 
 
+
 def _status_payload() -> dict:
+    # PINCABOS_DMD_BRIDGE_RAWSCORE_V21_1
+
     active = _active_table()
     screen = _screen_geometry()
     window = _scoreview_window()
+
     base = {
         'ok': True,
         'running': bool(active),
         'screen': screen,
         'full_dmd_window': window,
-        'full_dmd_locked': bool(window and window['x'] == screen['x'] and window['y'] == screen['y'] and window['w'] == screen['w'] and window['h'] == screen['h']),
-        'preview': '/api/fulldmd/dmd-overlay/preview',
-        'official': _official_payload(),
+        'full_dmd_locked': bool(
+            window
+            and window['x'] == screen['x']
+            and window['y'] == screen['y']
+            and window['w'] == screen['w']
+            and window['h'] == screen['h']
+        ),
+        'preview':
+            '/api/fulldmd/dmd-overlay/preview',
+        'official':
+            _official_payload(),
+        'backend': 'legacy',
+        'dmd_source': '',
     }
+
+
     if not active:
         return base
-    table: Path = active['table']
-    values = _read_ini_values(table)
-    source = 'table-ini'
-    runtime = _runtime_for_pid(active['pid'])
-    if runtime:
-        values.update(runtime)
-        source = 'runtime-plugin'
-    command = _read_env(COMMAND_FILE)
-    if not runtime and _int(command.get('PID'), -1) == active['pid']:
-        values.update({
-            'auto': bool(_int(command.get('AUTO'), values['auto'])),
-            'x': _int(command.get('X'), values['x']),
-            'y': _int(command.get('Y'), values['y']),
-            'w': _int(command.get('W'), values['w']),
-            'h': _int(command.get('H'), values['h']),
-        })
-        source = 'commande-en-attente'
-    base.update({
-        'pid': active['pid'],
-        'table_name': table.stem,
-        'table_path': str(table),
-        'ini_path': str(table.with_suffix('.ini')),
-        'source': source,
-        'runtime_ready': runtime is not None,
-        'auto': bool(values['auto']),
-        'x': max(0, _int(values['x'])),
-        'y': max(0, _int(values['y'])),
-        'w': max(1, _int(values['w'], 640)),
-        'h': max(1, _int(values['h'], 160)),
-        'table_ini': _table_ini_payload(table),
-    })
-    return base
 
+
+    table: Path = active['table']
+    pid = active['pid']
+
+
+    #
+    # MODE PUP -> RAWSCORE
+    #
+    if _pup_mode_for_pid(
+        pid
+    ):
+        values = (
+            _rawscore_ini_values(
+                table
+            )
+        )
+
+        runtime = (
+            _runtime_for_pid(
+                pid
+            )
+        )
+
+
+        if (
+            runtime
+            and runtime.get(
+                'backend'
+            ) == 'rawscore'
+        ):
+            values.update(
+                runtime
+            )
+
+            runtime_ready = True
+
+            dmd_source = (
+                runtime.get(
+                    'dmd_source'
+                )
+                or
+                'PinMAME'
+            )
+
+            source = (
+                'RawScore / '
+                + dmd_source
+            )
+
+            full_window = {
+                'x':
+                    screen['x']
+                    +
+                    values['x'],
+                'y':
+                    screen['y']
+                    +
+                    values['y'],
+                'w':
+                    values['w'],
+                'h':
+                    values['h'],
+            }
+
+        else:
+            runtime_ready = False
+            dmd_source = ''
+            source = (
+                'RawScore en attente'
+            )
+            full_window = None
+
+
+        command = _read_env(
+            COMMAND_FILE
+        )
+
+
+        if (
+            not runtime_ready
+            and
+            _int(
+                command.get('PID'),
+                -1
+            )
+            == pid
+        ):
+            values.update({
+                'auto': bool(
+                    _int(
+                        command.get(
+                            'AUTO'
+                        ),
+                        values['auto'],
+                    )
+                ),
+                'x': _int(
+                    command.get(
+                        'X'
+                    ),
+                    values['x'],
+                ),
+                'y': _int(
+                    command.get(
+                        'Y'
+                    ),
+                    values['y'],
+                ),
+                'w': _int(
+                    command.get(
+                        'W'
+                    ),
+                    values['w'],
+                ),
+                'h': _int(
+                    command.get(
+                        'H'
+                    ),
+                    values['h'],
+                ),
+            })
+
+
+        base.update({
+            'pid':
+                pid,
+            'table_name':
+                table.stem,
+            'table_path':
+                str(table),
+            'ini_path':
+                str(
+                    table.with_suffix(
+                        '.ini'
+                    )
+                ),
+            'source':
+                source,
+            'backend':
+                'rawscore',
+            'dmd_source':
+                dmd_source,
+            'runtime_ready':
+                runtime_ready,
+            'auto':
+                bool(
+                    values['auto']
+                ),
+            'x':
+                max(
+                    0,
+                    _int(
+                        values['x']
+                    )
+                ),
+            'y':
+                max(
+                    0,
+                    _int(
+                        values['y']
+                    )
+                ),
+            'w':
+                max(
+                    1,
+                    _int(
+                        values['w'],
+                        640,
+                    )
+                ),
+            'h':
+                max(
+                    1,
+                    _int(
+                        values['h'],
+                        160,
+                    )
+                ),
+            'full_dmd_window':
+                full_window,
+            'full_dmd_locked':
+                runtime_ready,
+            'table_ini':
+                _table_ini_payload(
+                    table
+                ),
+        })
+
+        return base
+
+
+    #
+    # LEGACY :
+    # comportement historique conservé.
+    #
+    values = _read_ini_values(
+        table
+    )
+
+    source = 'table-ini'
+
+    runtime = _runtime_for_pid(
+        pid
+    )
+
+
+    if runtime:
+
+        values.update(
+            runtime
+        )
+
+        source = (
+            runtime.get(
+                'dmd_source'
+            )
+            or
+            'runtime-plugin'
+        )
+
+
+    command = _read_env(
+        COMMAND_FILE
+    )
+
+
+    if (
+        not runtime
+        and
+        _int(
+            command.get('PID'),
+            -1
+        )
+        == pid
+    ):
+        values.update({
+            'auto': bool(
+                _int(
+                    command.get(
+                        'AUTO'
+                    ),
+                    values['auto'],
+                )
+            ),
+            'x': _int(
+                command.get(
+                    'X'
+                ),
+                values['x'],
+            ),
+            'y': _int(
+                command.get(
+                    'Y'
+                ),
+                values['y'],
+            ),
+            'w': _int(
+                command.get(
+                    'W'
+                ),
+                values['w'],
+            ),
+            'h': _int(
+                command.get(
+                    'H'
+                ),
+                values['h'],
+            ),
+        })
+
+        source = (
+            'commande-en-attente'
+        )
+
+
+    base.update({
+        'pid':
+            pid,
+        'table_name':
+            table.stem,
+        'table_path':
+            str(table),
+        'ini_path':
+            str(
+                table.with_suffix(
+                    '.ini'
+                )
+            ),
+        'source':
+            source,
+        'backend':
+            'legacy',
+        'runtime_ready':
+            runtime is not None,
+        'auto':
+            bool(
+                values['auto']
+            ),
+        'x':
+            max(
+                0,
+                _int(
+                    values['x']
+                )
+            ),
+        'y':
+            max(
+                0,
+                _int(
+                    values['y']
+                )
+            ),
+        'w':
+            max(
+                1,
+                _int(
+                    values['w'],
+                    640,
+                )
+            ),
+        'h':
+            max(
+                1,
+                _int(
+                    values['h'],
+                    160,
+                )
+            ),
+        'table_ini':
+            _table_ini_payload(
+                table
+            ),
+    })
+
+    return base
 
 def _replace_first_info_card(body: str, replacement: str) -> str:
     for existing_id in (
@@ -321,13 +851,13 @@ def _card_html() -> str:
 <div class="pco-dmd4-grid"><div class="pco-dmd4-preview"><img id="pco-dmd4-preview" alt="Capture réelle DP-2"></div><div id="pco-dmd4-controls" class="pco-dmd4-controls pco-dmd4-disabled">
 <div class="pco-dmd4-panel"><div class="pco-dmd4-title">Pas du DMD</div><div class="pco-dmd4-step"><button type="button" class="button active" data-step="1" title="Pas exact de 1 unité DMD">1 px exact</button><button type="button" class="button secondary" data-step="10">10 px</button><button type="button" class="button secondary" data-step="50">50 px</button></div></div>
 <div class="pco-dmd4-panel"><div class="pco-dmd4-title">Déplacement du DMD en temps réel</div><div class="pco-dmd4-pad"><span></span><button type="button" class="button" data-dy="-1">↑</button><span></span><button type="button" class="button" data-dx="-1">←</button><button type="button" class="button secondary" id="pco-dmd4-center">●</button><button type="button" class="button" data-dx="1">→</button><span></span><button type="button" class="button" data-dy="1">↓</button><span></span></div></div>
-<div class="pco-dmd4-panel"><div class="pco-dmd4-title">Valeurs réelles du DMD ScoreView</div><div class="pco-dmd4-fields"><label>X<input id="pco-dmd4-x" type="number" min="0"></label><label>Y<input id="pco-dmd4-y" type="number" min="0"></label><label>Largeur<input id="pco-dmd4-w" type="number" min="1"></label><label>Hauteur<input id="pco-dmd4-h" type="number" min="1"></label></div><div class="pco-dmd4-resize"><span>Largeur du DMD</span><button type="button" class="button secondary" data-dw="-1">−</button><button type="button" class="button secondary" data-dw="1">+</button></div><div class="pco-dmd4-resize"><span>Hauteur du DMD</span><button type="button" class="button secondary" data-dh="-1">−</button><button type="button" class="button secondary" data-dh="1">+</button></div></div>
+<div class="pco-dmd4-panel"><div class="pco-dmd4-title" id="pco-dmd4-values-title">Valeurs réelles du DMD</div><div class="pco-dmd4-fields"><label>X<input id="pco-dmd4-x" type="number" min="0"></label><label>Y<input id="pco-dmd4-y" type="number" min="0"></label><label>Largeur<input id="pco-dmd4-w" type="number" min="1"></label><label>Hauteur<input id="pco-dmd4-h" type="number" min="1"></label></div><div class="pco-dmd4-resize"><span>Largeur du DMD</span><button type="button" class="button secondary" data-dw="-1">−</button><button type="button" class="button secondary" data-dw="1">+</button></div><div class="pco-dmd4-resize"><span>Hauteur du DMD</span><button type="button" class="button secondary" data-dh="-1">−</button><button type="button" class="button secondary" data-dh="1">+</button></div></div>
 <div class="pco-dmd4-panel"><div class="pco-dmd4-actions"><button type="button" class="button secondary" id="pco-dmd4-detect">Détecter le DMD actuel</button><button type="button" class="button" id="pco-dmd4-apply">Appliquer maintenant</button><button type="button" class="button secondary" id="pco-dmd4-auto">Détection automatique du DMD</button><button type="button" class="button secondary" id="pco-dmd4-cancel">Annuler</button><button type="button" class="button secondary" id="pco-dmd4-reset">Réinitialiser</button><button type="button" class="button" id="pco-dmd4-save">Enregistrer le DMD pour cette table</button></div></div>
 <div id="pco-dmd4-message" class="pco-dmd4-message"></div></div></div>
 <script>
 (()=>{"use strict";const root=document.getElementById('pincabos-dmd-overlay-only-v4');if(!root||root.dataset.ready==='1')return;root.dataset.ready='1';const $=id=>document.getElementById(id);const fields={x:$('pco-dmd4-x'),y:$('pco-dmd4-y'),w:$('pco-dmd4-w'),h:$('pco-dmd4-h')};let status=null,opening=null,step=1,busy=false,nudgeQueue=Promise.resolve();const csrf=()=>document.querySelector('meta[name="pincabos-csrf-token"]')?.content||'';const msg=(text,kind='')=>{const e=$('pco-dmd4-message');e.textContent=text||'';e.className='pco-dmd4-message '+kind};const read=()=>({x:Number(fields.x.value)||0,y:Number(fields.y.value)||0,w:Number(fields.w.value)||1,h:Number(fields.h.value)||1,auto:false});const write=s=>{for(const k of ['x','y','w','h'])fields[k].value=Number(s?.[k]??0)};async function get(url){const r=await fetch(url,{cache:'no-store',credentials:'same-origin'});const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw Error(d.error||`HTTP ${r.status}`);return d}async function post(url,payload={}){const headers={'Content-Type':'application/json','Accept':'application/json'};const token=csrf();if(token)headers['X-PinCabOS-CSRF']=token;const r=await fetch(url,{method:'POST',cache:'no-store',credentials:'same-origin',headers,body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok||d.ok===false)throw Error(d.error||`HTTP ${r.status}`);return d}
-function ensureTableCard(){let card=document.getElementById('pco-table-dmd4-card');if(card)return card;const heading=[...document.querySelectorAll('h1,h2,h3,h4,div')].find(e=>e.textContent.trim()==='Valeurs actuelles VPX / VPinFE');const host=heading?.closest('.card,.fulldmd-info-card')||heading?.parentElement;if(!host)return null;card=document.createElement('div');card.id='pco-table-dmd4-card';card.className='pco-table-dmd4-card';host.appendChild(card);return card}const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));function renderTable(){const card=ensureTableCard();if(!card)return;if(!status?.running){card.innerHTML='<h3>Table active — valeurs FullDMD / DMD ScoreView</h3><div>Aucune table VPX active.</div>';return}const info=status.table_ini||{};const blocks=Object.entries(info.sections||{}).map(([name,text])=>`<div><h4>[${esc(name)}]</h4><pre>${esc(text)}</pre></div>`).join('')||'<div>Aucune section trouvée.</div>';card.innerHTML=`<h3>Table active — valeurs FullDMD / DMD ScoreView</h3><strong>${esc(status.table_name)}</strong><code class="pco-table-dmd4-path">${esc(info.path||status.ini_path)}</code><div class="pco-table-dmd4-sections">${blocks}</div>`}
-function render(){const running=!!status?.running;$('pco-dmd4-table').textContent=running?`Table active : ${status.table_name}`:'Aucune table VPX active';$('pco-dmd4-vpx').textContent=running?'VPX actif':'VPX arrêté';$('pco-dmd4-vpx').className='pco-dmd4-badge '+(running?'ok':'');$('pco-dmd4-runtime').textContent=status?.runtime_ready?'DMD runtime détecté':`Source : ${status?.source||'aucune'}`;$('pco-dmd4-runtime').className='pco-dmd4-badge '+(status?.runtime_ready?'ok':'');$('pco-dmd4-full').textContent=status?.full_dmd_locked?'FullDMD B2S plein DP-2':'FullDMD en attente de verrouillage';$('pco-dmd4-full').className='pco-dmd4-badge '+(status?.full_dmd_locked?'ok':'');$('pco-dmd4-controls').classList.toggle('pco-dmd4-disabled',!running);renderTable()}
+function ensureTableCard(){let card=document.getElementById('pco-table-dmd4-card');if(card)return card;const heading=[...document.querySelectorAll('h1,h2,h3,h4,div')].find(e=>e.textContent.trim()==='Valeurs actuelles VPX / VPinFE');const host=heading?.closest('.card,.fulldmd-info-card')||heading?.parentElement;if(!host)return null;card=document.createElement('div');card.id='pco-table-dmd4-card';card.className='pco-table-dmd4-card';host.appendChild(card);return card}const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));function renderTable(){const card=ensureTableCard();if(!card)return;if(!status?.running){card.innerHTML='<h3>Table active — valeurs FullDMD / DMD</h3><div>Aucune table VPX active.</div>';return}const info=status.table_ini||{};const blocks=Object.entries(info.sections||{}).map(([name,text])=>`<div><h4>[${esc(name)}]</h4><pre>${esc(text)}</pre></div>`).join('')||'<div>Aucune section trouvée.</div>';card.innerHTML=`<h3>Table active — valeurs FullDMD / DMD</h3><strong>${esc(status.table_name)}</strong><code class="pco-table-dmd4-path">${esc(info.path||status.ini_path)}</code><div class="pco-table-dmd4-sections">${blocks}</div>`}
+function render(){const running=!!status?.running;$('pco-dmd4-table').textContent=running?`Table active : ${status.table_name}`:'Aucune table VPX active';$('pco-dmd4-vpx').textContent=running?'VPX actif':'VPX arrêté';$('pco-dmd4-vpx').className='pco-dmd4-badge '+(running?'ok':'');$('pco-dmd4-runtime').textContent=status?.backend==='rawscore'?(status?.runtime_ready?`RawScore : ${status?.dmd_source||'actif'}`:'RawScore en attente'):(status?.runtime_ready?'DMD runtime détecté':`Source : ${status?.source||'aucune'}`);$('pco-dmd4-runtime').className='pco-dmd4-badge '+(status?.runtime_ready?'ok':'');$('pco-dmd4-full').textContent=status?.backend==='rawscore'?(status?.runtime_ready?'RawScore actif sur FullDMD':'RawScore en attente'):(status?.full_dmd_locked?'FullDMD B2S plein DP-2':'FullDMD en attente de verrouillage');$('pco-dmd4-full').className='pco-dmd4-badge '+((status?.backend==='rawscore'?status?.runtime_ready:status?.full_dmd_locked)?'ok':'');$('pco-dmd4-values-title').textContent=status?.backend==='rawscore'?'Valeurs réelles du DMD RawScore':'Valeurs réelles du DMD ScoreView';$('pco-dmd4-controls').classList.toggle('pco-dmd4-disabled',!running);renderTable()}
 async function load(force=false){try{const d=await get('/api/fulldmd/dmd-overlay/status?t='+Date.now());const pidChanged=!status||status.pid!==d.pid;status=d;if(force||pidChanged||!busy){write(d);if(force||pidChanged)opening={x:d.x,y:d.y,w:d.w,h:d.h,auto:d.auto}}render()}catch(e){msg(e.message,'err')}}async function apply(payload=read()){if(!status?.running||busy)return;busy=true;try{const d=await post('/api/fulldmd/dmd-overlay/apply',payload);Object.assign(status,d.state);write(d.state);render();msg(`DMD appliqué en temps réel : X=${d.state.x}, Y=${d.state.y}, ${d.state.w}×${d.state.h}`,'ok')}catch(e){msg(e.message,'err');await load(true)}finally{busy=false}}
 function queueNudge(delta){
     nudgeQueue=nudgeQueue.then(async()=>{
@@ -347,7 +877,7 @@ function queueNudge(delta){
     });
     return nudgeQueue;
 }
-root.querySelectorAll('[data-step]').forEach(b=>b.addEventListener('click',()=>{step=Number(b.dataset.step)||1;root.querySelectorAll('[data-step]').forEach(x=>x.classList.toggle('active',x===b))}));root.querySelectorAll('[data-dx]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();queueNudge({dx:step*Number(b.dataset.dx)})}));root.querySelectorAll('[data-dy]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();queueNudge({dy:-step*Number(b.dataset.dy)})}));root.querySelectorAll('[data-dw]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();queueNudge({dw:step*Number(b.dataset.dw)})}));root.querySelectorAll('[data-dh]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();queueNudge({dh:step*Number(b.dataset.dh)})}));$('pco-dmd4-center').addEventListener('click',()=>{const p=read(),s=status.screen;p.x=Math.floor((s.w-p.w)/2);p.y=Math.floor((s.h-p.h)/2);apply(p)});$('pco-dmd4-detect').addEventListener('click',async()=>{await load(true);msg(status.runtime_ready?'Valeurs réelles relues directement du plugin DMD.':'Valeurs chargées du INI; le runtime apparaîtra dès que le DMD rend une image.',status.runtime_ready?'ok':'')});$('pco-dmd4-apply').addEventListener('click',()=>apply(read()));$('pco-dmd4-auto').addEventListener('click',()=>apply({...read(),auto:true}));$('pco-dmd4-cancel').addEventListener('click',()=>opening&&apply({...opening}));$('pco-dmd4-reset').addEventListener('click',async()=>{try{const d=await post('/api/fulldmd/dmd-overlay/reset',{});Object.assign(status,d.state);write(d.state);opening={...d.state};render();msg(`DMD réinitialisé. Backup : ${d.backup}`,'ok')}catch(e){msg(e.message,'err')}});$('pco-dmd4-save').addEventListener('click',async()=>{try{const applied=await post('/api/fulldmd/dmd-overlay/apply',read());const d=await post('/api/fulldmd/dmd-overlay/save',applied.state);Object.assign(status,d.state);write(d.state);opening={...d.state};render();msg(`DMD enregistré dans ${d.ini}\nBackup : ${d.backup}`,'ok')}catch(e){msg(e.message,'err')}});Object.values(fields).forEach(input=>input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();apply(read())}}));const preview=$('pco-dmd4-preview');const refresh=()=>preview.src='/api/fulldmd/dmd-overlay/preview?t='+Date.now();load(true);refresh();setInterval(()=>load(false),1000);setInterval(refresh,250)})();
+root.querySelectorAll('[data-step]').forEach(b=>b.addEventListener('click',()=>{step=Number(b.dataset.step)||1;root.querySelectorAll('[data-step]').forEach(x=>x.classList.toggle('active',x===b))}));root.querySelectorAll('[data-dx]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();queueNudge({dx:step*Number(b.dataset.dx)})}));root.querySelectorAll('[data-dy]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();queueNudge({dy:(status?.backend==='rawscore'?1:-1)*step*Number(b.dataset.dy)})}));root.querySelectorAll('[data-dw]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();queueNudge({dw:step*Number(b.dataset.dw)})}));root.querySelectorAll('[data-dh]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();queueNudge({dh:step*Number(b.dataset.dh)})}));$('pco-dmd4-center').addEventListener('click',()=>{const p=read(),s=status.screen;p.x=Math.floor((s.w-p.w)/2);p.y=Math.floor((s.h-p.h)/2);apply(p)});$('pco-dmd4-detect').addEventListener('click',async()=>{await load(true);msg(status.runtime_ready?(status.backend==='rawscore'?`RawScore détecté — source ${status.dmd_source||'PinMAME'}.`:'Valeurs réelles relues directement du plugin DMD.'):'Valeurs chargées du INI; le runtime apparaîtra dès que le DMD rend une image.',status.runtime_ready?'ok':'')});$('pco-dmd4-apply').addEventListener('click',()=>apply(read()));$('pco-dmd4-auto').addEventListener('click',()=>apply({...read(),auto:true}));$('pco-dmd4-cancel').addEventListener('click',()=>opening&&apply({...opening}));$('pco-dmd4-reset').addEventListener('click',async()=>{try{const d=await post('/api/fulldmd/dmd-overlay/reset',{});Object.assign(status,d.state);write(d.state);opening={...d.state};render();msg(`DMD réinitialisé. Backup : ${d.backup}`,'ok')}catch(e){msg(e.message,'err')}});$('pco-dmd4-save').addEventListener('click',async()=>{try{const applied=await post('/api/fulldmd/dmd-overlay/apply',read());const d=await post('/api/fulldmd/dmd-overlay/save',applied.state);Object.assign(status,d.state);write(d.state);opening={...d.state};render();msg(`DMD enregistré dans ${d.ini}\nBackup : ${d.backup}`,'ok')}catch(e){msg(e.message,'err')}});Object.values(fields).forEach(input=>input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();apply(read())}}));const preview=$('pco-dmd4-preview');const refresh=()=>preview.src='/api/fulldmd/dmd-overlay/preview?t='+Date.now();load(true);refresh();setInterval(()=>load(false),1000);setInterval(refresh,250)})();
 </script></div>'''
 
 

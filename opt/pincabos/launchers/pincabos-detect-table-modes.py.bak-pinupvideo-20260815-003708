@@ -14,7 +14,7 @@ MEDIA_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp",
     ".mp3", ".ogg", ".wav", ".flac",
 }
-PUP_DIR_NAMES = {"pupvideos", "pupvideo", "pinupvideo", "pinupvideos"}
+PUP_DIR_NAMES = {"pupvideos", "pupvideo"}
 GLOBAL_ROM_DIRS = [
     Path("/home/pinball/.local/share/VPinballX/10.8/pinmame/roms"),
     Path("/home/pinball/.local/share/VPinballX/pinmame/roms"),
