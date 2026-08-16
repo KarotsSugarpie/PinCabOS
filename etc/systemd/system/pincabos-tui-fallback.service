@@ -1,0 +1,18 @@
+[Unit]
+Description=PinCabOS text installer fallback on tty1
+ConditionPathExists=/usr/local/sbin/pincabos-live-installer-console
+
+[Service]
+Type=simple
+Environment=TERM=linux
+ExecStartPre=-/usr/bin/chvt 1
+ExecStart=/usr/local/sbin/pincabos-live-installer-console
+StandardInput=tty-force
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Restart=no
+SendSIGHUP=yes

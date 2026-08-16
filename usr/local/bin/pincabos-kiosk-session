@@ -1,0 +1,5 @@
+#!/bin/sh
+# Session X du kiosk installer : openbox + wizard plein ecran
+xsetroot -solid "#050007" 2>/dev/null || true
+openbox &
+exec /usr/local/bin/pincabos-kiosk.py

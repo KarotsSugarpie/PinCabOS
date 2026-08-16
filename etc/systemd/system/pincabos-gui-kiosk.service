@@ -1,0 +1,18 @@
+[Unit]
+Description=PinCabOS GUI installer kiosk (X11 + openbox + WebKitGTK)
+After=pincabos-gui-wizard.service
+Requires=pincabos-gui-wizard.service
+
+[Service]
+Type=simple
+RuntimeDirectory=pincabos-kiosk
+Environment=XDG_RUNTIME_DIR=%t/pincabos-kiosk
+# plymouth doit rendre le DRM master avant que X puisse le prendre
+ExecStartPre=-/usr/bin/plymouth quit
+ExecStartPre=-/usr/bin/chvt 1
+ExecStart=/usr/bin/xinit /usr/local/bin/pincabos-kiosk-session -- :1 vt1 -nolisten tcp
+Restart=no
+StandardOutput=journal
+StandardError=journal
+# quoi qu'il arrive au kiosk, l'utilisateur retrouve un installeur
+ExecStopPost=/usr/local/sbin/pincabos-gui-fallback

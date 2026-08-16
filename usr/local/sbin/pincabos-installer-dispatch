@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Aiguillage GUI/TUI du live installer PinCabOS.
+# GRUB passe pincabos.installer=gui (entree par defaut) ou =tui.
+# Si le GUI ne demarre pas (GPU recalcitrant, cage/webkit KO), repli TUI automatique.
+set -u
+
+MODE="tui"
+grep -qw "pincabos.installer=gui" /proc/cmdline && MODE="gui"
+
+if [ "$MODE" = "gui" ]; then
+    systemctl start pincabos-gui-wizard.service
+    # le wizard Flask doit repondre vite ; sinon on bascule
+    for _ in $(seq 1 20); do
+        curl -fs -o /dev/null http://127.0.0.1:8046/ && OK=1 && break
+        sleep 1
+    done
+    if [ "${OK:-0}" = "1" ] && systemctl start pincabos-gui-kiosk.service; then
+        # le kiosk doit RESTER vivant (un crash immediat "reussit" quand meme)
+        sleep 3
+        if systemctl is-active --quiet pincabos-gui-kiosk.service; then
+            exit 0
+        fi
+        echo "PinCabOS: le kiosk GUI est retombe, repli sur l'installeur texte." >&2
+    fi
+    echo "PinCabOS: GUI indisponible, repli sur l'installeur texte." >&2
+    systemctl stop pincabos-gui-wizard.service 2>/dev/null
+fi
+
+exec /usr/local/sbin/pincabos-live-installer-console

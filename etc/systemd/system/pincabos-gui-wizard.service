@@ -1,0 +1,9 @@
+[Unit]
+Description=PinCabOS GUI installer wizard (Flask)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/pincabos/installer-gui/app.py
+Restart=on-failure
+RestartSec=2
