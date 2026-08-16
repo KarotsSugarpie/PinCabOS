@@ -2088,7 +2088,12 @@ def gpu_page():
         html += '<option value="">-- Aucun --</option>'
 
         for sc in screens:
-            sel = "selected" if str(sc["id"]) == str(selected) else ""
+            sel = (
+                "selected"
+                if str(selected)
+                and str(selected) in (str(sc["name"]), str(sc["id"]))
+                else ""
+            )
             label = f'ID {sc["id"]} — {sc["name"]} — {sc["width"]}x{sc["height"]}+{sc["x"]}+{sc["y"]}'
             if sc.get("is_primary"):
                 label += " — primary X11"
@@ -2479,8 +2484,9 @@ def pincabos_load_screen_roles():
         data = json.loads(cfg.read_text(errors="replace"))
         for role in roles:
             item = data.get(role)
-            if isinstance(item, dict) and "id" in item:
-                roles[role] = str(item.get("id"))
+            if isinstance(item, dict):
+                # le nom de connecteur est stable ; l'id positionnel ne l'est pas
+                roles[role] = str(item.get("name") or item.get("id") or "")
     except Exception:
         pass
 
@@ -2669,6 +2675,12 @@ def gpu_screens_apply():
 
     try:
         layout = pincabos_write_manual_screen_roles(playfield, backglass, fulldmd, cabinet_mode, playfield_orientation, playfield_rotation)
+        # le choix explicite devient la verite durable du moteur de topologie
+        subprocess.run(
+            ["/usr/bin/sudo", "-n", "/usr/bin/python3",
+             "/opt/pincabos/scripts/pincabos-screen-topology.py",
+             "--adopt-current-roles"],
+            timeout=30, check=False)
         output = json.dumps(layout, indent=2, ensure_ascii=False)
         cls = "ok"
         msg = "Assignation écran sauvegardée dans screens.json et VPinFE."
