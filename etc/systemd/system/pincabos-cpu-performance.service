@@ -1,0 +1,11 @@
+[Unit]
+Description=PinCabOS CPU governor performance (jeu temps reel, pas de powersave)
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > "$g"; done'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
