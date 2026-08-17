@@ -5576,19 +5576,19 @@ set menu_color_highlight=black/light-gray
 
 menuentry "Install PinCabOS V8.1G" {
   set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty2 quiet loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
+  linux $KERNEL_REL boot=casper noprompt modprobe.blacklist=nouveau,nova_core,nova_drm pcie_port_pm=off systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty2 quiet loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
   initrd $INITRD_REL
 }
 
 menuentry "Install PinCabOS V8.1G - safe graphics" {
   set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt nomodeset systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty2 quiet loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
+  linux $KERNEL_REL boot=casper noprompt modprobe.blacklist=nouveau,nova_core,nova_drm pcie_port_pm=off nomodeset systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty2 quiet loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
   initrd $INITRD_REL
 }
 
 menuentry "PinCabOS rescue shell" {
   set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty1 loglevel=4 systemd.show_status=true rd.systemd.show_status=true vt.global_cursor_default=1 pincabos.rescue=1 ---
+  linux $KERNEL_REL boot=casper noprompt modprobe.blacklist=nouveau,nova_core,nova_drm pcie_port_pm=off systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty1 loglevel=4 systemd.show_status=true rd.systemd.show_status=true vt.global_cursor_default=1 pincabos.rescue=1 ---
   initrd $INITRD_REL
 }
 
