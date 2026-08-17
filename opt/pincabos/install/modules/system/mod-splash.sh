@@ -367,7 +367,8 @@ configure_root_ssh() {
   cat >> "$sshd_config.pincabos-work" <<'EOF'
 
 # BEGIN PINCABOS ROOT SSH
-PermitRootLogin yes
+# Root: key-based access only (no password login).
+PermitRootLogin prohibit-password
 PasswordAuthentication yes
 KbdInteractiveAuthentication yes
 UsePAM yes
@@ -435,8 +436,8 @@ verify_result() {
     pco_nogo "ERR-MOD-SPLASH-PROMPT-VERIFY-001" "Root prompt block missing"
   fi
 
-  if ! grep -q "^PermitRootLogin yes" /etc/ssh/sshd_config; then
-    pco_nogo "ERR-MOD-SPLASH-SSH-VERIFY-001" "PermitRootLogin yes missing"
+  if ! grep -q "^PermitRootLogin prohibit-password" /etc/ssh/sshd_config; then
+    pco_nogo "ERR-MOD-SPLASH-SSH-VERIFY-001" "PermitRootLogin prohibit-password missing"
   fi
 
   if ! grep -q "^PasswordAuthentication yes" /etc/ssh/sshd_config; then
@@ -456,7 +457,7 @@ show_summary() {
   echo "Hostname target:      $HOSTNAME_TARGET"
   echo "MOTD:                 /etc/motd"
   echo "Root prompt:          root@PinCabOS:#"
-  echo "SSH root login:       enabled"
+  echo "SSH root login:       key only (prohibit-password)"
   echo "SSH password login:   enabled"
   echo "Root password:        ${ROOT_PASSWORD:+set from PINCABOS_ROOT_PASSWORD}${ROOT_PASSWORD:-locked (administration via sudo)}"
   echo "Log:                  $LOG_FILE"

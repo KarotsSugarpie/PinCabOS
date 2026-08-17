@@ -675,9 +675,9 @@ pco_section "Final root SSH policy"
 cat <<'HELP_ROOT_SSH'
 03-install-check.sh must finalize and validate:
 
-  - root password reset to the PinCabOS default
+  - root account locked unless PINCABOS_ROOT_PASSWORD is provided
   - sshd syntax valid
-  - PermitRootLogin yes
+  - PermitRootLogin prohibit-password (key-based root access only)
   - PasswordAuthentication yes
   - ssh.service or sshd.service enabled and active
   - SSH port 22 listening when available

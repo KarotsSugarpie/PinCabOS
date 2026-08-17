@@ -1005,7 +1005,8 @@ pco_ensure_root_ssh_password_access() {
   cat > "$drop" <<'EOF_ROOT_SSH'
 # PinCabOS final root SSH policy
 # Created by Karots Sugarpie
-PermitRootLogin yes
+# Root: key-based access only (no password login).
+PermitRootLogin prohibit-password
 PasswordAuthentication yes
 KbdInteractiveAuthentication yes
 UsePAM yes
@@ -1024,10 +1025,10 @@ EOF_ROOT_SSH
     pco_nogo "ERR-03-SSHD-BIN-001: Missing /usr/sbin/sshd"
   fi
     SSHD_EFFECTIVE="$(/usr/sbin/sshd -T 2>/dev/null || true)"
-    if grep -qx 'permitrootlogin yes' <<<"$SSHD_EFFECTIVE"; then
-      pco_go "sshd effective PermitRootLogin yes"
+    if grep -qxE 'permitrootlogin (prohibit-password|without-password)' <<<"$SSHD_EFFECTIVE"; then
+      pco_go "sshd effective PermitRootLogin prohibit-password"
     else
-      pco_nogo "ERR-03-SSHD-ROOTLOGIN-001: PermitRootLogin is not yes"
+      pco_nogo "ERR-03-SSHD-ROOTLOGIN-001: PermitRootLogin is not prohibit-password"
     fi
 
     if grep -qx 'passwordauthentication yes' <<<"$SSHD_EFFECTIVE"; then
