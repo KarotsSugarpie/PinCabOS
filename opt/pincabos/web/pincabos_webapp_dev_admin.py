@@ -1227,8 +1227,40 @@ def pincabos_admin_action_game_mode():
 
 
 
+def pincabos_credentials_default_notice(user, password, scope, command):
+    """Avertissement affiche tant qu'une page utilise son identifiant par defaut."""
+    notice = (
+        f'<p class="warn">Identifiants par défaut en place pour <code>{esc(scope)}</code> : '
+        f'<code>{esc(str(user))}</code> / <code>{esc(str(password))}</code>. '
+        f'À changer avec <code>sudo {esc(command)}</code>.</p>'
+    )
+    unreadable = globals().get("PINCABOS_ADMIN_UNREADABLE_SECRETS") or []
+    if unreadable:
+        files = ", ".join(esc(str(item)) for item in unreadable)
+        notice += (
+            '<p class="bad">Fichier d\'identifiants présent mais illisible par '
+            f'la WebApp : {files}. Corrige le propriétaire avec '
+            '<code>sudo chown pinball:pinball</code>, ou repose-le avec '
+            '<code>sudo pincabos-admin-password</code>.</p>'
+        )
+    return notice
+
+
+def pincabos_admin_default_credentials_notice():
+    """Page /admin : avertit tant que le mot de passe par defaut est en place."""
+    if not globals().get("PINCABOS_ADMIN_CREDENTIALS_ARE_DEFAULT"):
+        return ""
+    return pincabos_credentials_default_notice(
+        globals().get("ADMIN_LOGIN_USER", "admin"),
+        globals().get("PINCABOS_DEFAULT_ADMIN_PASS", ""),
+        "/admin",
+        "pincabos-admin-password --set",
+    )
+
+
 def pincabos_admin_login_body(error=""):
     err = f'<p class="warn">{esc(error)}</p>' if error else ""
+    err += pincabos_admin_default_credentials_notice()
     body = f"""
 <h1>Admin PinCabOS</h1>
 <div class="card" style="max-width:520px;">
@@ -1839,10 +1871,22 @@ def pincabos_dev_login_page_safe():
         "username": Path("/opt/pincabos/config/dev-login.txt"),
         "password": Path("/opt/pincabos/config/dev-password.txt"),
     }
-    try:
-        expected_user = credentials["username"].read_text(encoding="utf-8").strip()
-        expected_pass = credentials["password"].read_text(encoding="utf-8").strip()
-    except OSError:
+    # Fichiers de secrets absents d'une image fraiche : on retombe sur les
+    # identifiants par defaut documentes plutot que de fermer la page.
+    def _read(path, fallback):
+        try:
+            value = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            value = ""
+        return value or fallback
+
+    dev_default_user = str(globals().get("PINCABOS_DEFAULT_DEV_USER", "PinCabOsDev"))
+    dev_default_pass = str(globals().get("PINCABOS_DEFAULT_DEV_PASS", ""))
+    expected_user = _read(credentials["username"], dev_default_user)
+    expected_pass = _read(credentials["password"], dev_default_pass)
+    dev_uses_default = not credentials["password"].is_file() or expected_pass == dev_default_pass
+
+    if not expected_pass:
         return page("Connexion développeur", """
 <div class="card"><h2>Connexion développeur indisponible</h2>
 <p class="bad">Les identifiants développeur ne sont pas configurés sur ce cabinet.</p>
@@ -1864,6 +1908,11 @@ def pincabos_dev_login_page_safe():
         error = "Login ou mot de passe invalide."
 
     error_html = ("<p class='bad'>" + esc(error) + "</p>") if error else ""
+    if dev_uses_default:
+        error_html += pincabos_credentials_default_notice(
+            expected_user, expected_pass, "/dev",
+            "pincabos-admin-password --set-dev",
+        )
     return page("Connexion développeur", """
 <div class="card"><h1>🔐 Connexion développeur</h1>""" + error_html + """
 <form method="post" action="/dev/login" autocomplete="off">

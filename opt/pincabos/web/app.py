@@ -8543,6 +8543,41 @@ ADMIN_LOGIN_PASS = _pco_read_auth_value(
 # PINCABOS_ADMIN_CREDENTIALS_FAIL_CLOSED_V1_END
 
 
+# PINCABOS_ADMIN_DEFAULT_CREDENTIALS_V1
+# Les fichiers de secrets ne sont pas versionnes : sur une image fraiche ils
+# manquent et les pages /admin et /dev repondaient "identifiants non
+# configures". On retombe sur un identifiant par DEFAUT documente, que
+# `pincabos-admin-password` permet de remplacer, et les pages affichent un
+# avertissement tant qu'il est en place.
+PINCABOS_DEFAULT_ADMIN_USER = "admin"
+PINCABOS_DEFAULT_ADMIN_PASS = "PinCabOS123$"
+
+# La page /dev a ses PROPRES identifiants : deux acces distincts, deux secrets
+# distincts. Les fichiers dev-login.txt / dev-password.txt restent maitres.
+PINCABOS_DEFAULT_DEV_USER = "PinCabOsDev"
+PINCABOS_DEFAULT_DEV_PASS = "PinCabOSDev123$"
+
+PINCABOS_ADMIN_CREDENTIALS_ARE_DEFAULT = not (ADMIN_LOGIN_USER and ADMIN_LOGIN_PASS)
+
+if not ADMIN_LOGIN_USER:
+    ADMIN_LOGIN_USER = PINCABOS_DEFAULT_ADMIN_USER
+if not ADMIN_LOGIN_PASS:
+    ADMIN_LOGIN_PASS = PINCABOS_DEFAULT_ADMIN_PASS
+# Fichier present mais illisible par la WebApp (proprietaire root) : sans ce
+# controle, on retombe sur le defaut sans rien dire et l'ancien mot de passe
+# continue de fonctionner.
+PINCABOS_ADMIN_UNREADABLE_SECRETS = [
+    candidate
+    for candidate in (
+        "/opt/pincabos/config/admin-password.txt",
+        "/opt/pincabos/config/admin-login.txt",
+        "/opt/pincabos/config/dev-password.txt",
+    )
+    if os.path.exists(candidate) and not os.access(candidate, os.R_OK)
+]
+# PINCABOS_ADMIN_DEFAULT_CREDENTIALS_V1_END
+
+
 # Moved to modular route file by PinCabOS refactor (original lines 11637-11641).
 
 # Moved to modular route file by PinCabOS refactor (original lines 11643-11661).
