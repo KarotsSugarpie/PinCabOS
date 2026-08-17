@@ -298,6 +298,33 @@ def process_job(job_id: str) -> None:
             return
 
 
+def cleanup_stale_engine_dirs(min_age_seconds: int = 3600) -> list[str]:
+    """PINCABOS_BATCH_ORPHAN_GC_V1
+
+    Extractions laissees a mi-chemin par un import interrompu : elles font
+    echouer les tentatives suivantes sur la MEME table. On ne prend que celles
+    d'au moins une heure, et seulement si le moteur est libre — jamais un
+    import en cours, y compris lance depuis la page Smart Import.
+    """
+    removed: list[str] = []
+    lock_fd = acquire_engine_lock()
+    if lock_fd is None:
+        return removed
+    try:
+        now = time.time()
+        for path in engine_dirs():
+            try:
+                if now - path.stat().st_mtime < min_age_seconds:
+                    continue
+                shutil.rmtree(path)
+                removed.append(path.name)
+            except OSError:
+                pass
+    finally:
+        release_engine_lock(lock_fd)
+    return removed
+
+
 def acquire_engine_lock() -> int | None:
     queue.SHARED_ENGINE_LOCK.parent.mkdir(parents=True, exist_ok=True, mode=0o750)
     fd = os.open(str(queue.SHARED_ENGINE_LOCK), os.O_CREAT | os.O_RDWR, 0o660)
@@ -327,6 +354,13 @@ def main() -> int:
     signal.signal(signal.SIGINT, stop_signal)
     queue.ensure_dirs()
     queue.recover_after_restart()
+
+    # PINCABOS_BATCH_ORPHAN_GC_V1 : restes des imports interrompus.
+    for name in queue.collect_orphan_uploads():
+        log(f"Menage: archives televersees abandonnees supprimees ({name})")
+    for name in cleanup_stale_engine_dirs():
+        log(f"Menage: extraction inachevee supprimee ({name})")
+
     heartbeat("idle")
     log("GO worker Batch Import V2 actif")
 
