@@ -626,6 +626,68 @@ def register_batch_import_live(app: Any) -> None:
             queue.save_job_unlocked(job)
         return jsonify({"ok": True, "job": queue.public_job(job)}), 202
 
+    # PINCABOS_BATCH_FAILSAFE_ROUTES_V1
+    @app.route("/api/batch-import/live/pause/<job_id>", methods=["POST"])
+    def pincabos_batch_import_v2_pause(job_id: str) -> Any:
+        job = queue.pause_job(job_id)
+        if not job:
+            return jsonify({"ok": False, "error": "Job introuvable."}), 404
+        return jsonify({"ok": True, "job": queue.public_job(job)}), 202
+
+    @app.route("/api/batch-import/live/resume/<job_id>", methods=["POST"])
+    def pincabos_batch_import_v2_resume(job_id: str) -> Any:
+        job = queue.resume_job(job_id)
+        if not job:
+            return jsonify({"ok": False, "error": "Job introuvable."}), 404
+        remaining = sum(
+            1 for item in (job.get("uploads") or [])
+            if isinstance(item, dict) and str(item.get("state")) == "queued"
+        )
+        return jsonify({
+            "ok": True,
+            "remaining": remaining,
+            "job": queue.public_job(job),
+        }), 202
+
+    @app.route("/api/batch-import/live/active", methods=["GET"])
+    def pincabos_batch_import_v2_active() -> Any:
+        """Travail a reprendre en charge quand on (re)vient sur la page.
+
+        Sans cela, quitter la page de transfert faisait perdre le suivi : on
+        revenait sur un ecran vierge alors que l'import continuait.
+        """
+        job_id = queue.active_job_id()
+        job = queue.load_job(job_id) if job_id else None
+
+        if not job:
+            # Rien d'actif : on propose le travail le plus recent qui reste
+            # reprenable (en pause, ou interrompu avec des paquets restants).
+            for candidate in reversed(queue.list_jobs()):
+                state = str(candidate.get("state", ""))
+                remaining = any(
+                    isinstance(item, dict) and str(item.get("state")) in {"queued", "running"}
+                    for item in (candidate.get("uploads") or [])
+                )
+                if state == queue.PAUSED_STATE or (remaining and state not in {"completed", "completed_with_warning"}):
+                    job = candidate
+                    break
+
+        if not job:
+            return jsonify({"ok": True, "job": None})
+
+        state = str(job.get("state", ""))
+        remaining = sum(
+            1 for item in (job.get("uploads") or [])
+            if isinstance(item, dict) and str(item.get("state")) in {"queued", "running"}
+        )
+        return jsonify({
+            "ok": True,
+            "job": queue.public_job(job),
+            "resumable": bool(remaining) and state != "running",
+            "paused": state == queue.PAUSED_STATE,
+            "remaining": remaining,
+        })
+
     @app.route("/api/batch-import/live/status/<job_id>", methods=["GET"])
     def pincabos_batch_import_v2_status(job_id: str) -> Any:
         job = queue.load_job(job_id)

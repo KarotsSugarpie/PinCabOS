@@ -20,6 +20,16 @@ MAX_ARCHIVES = 1200
 ACTIVE_STATES = {"uploading", "queued", "running", "stopping"}
 FINAL_STATES = {"completed", "completed_with_warning", "failed", "stopped", "cancelled"}
 
+# PINCABOS_BATCH_FAILSAFE_V1
+# "paused" n'est ni actif ni final : le travail ne consomme pas le creneau
+# d'execution, mais il reste repris tel quel par resume_job().
+PAUSED_STATE = "paused"
+
+# Au-dela de ce delai sans la moindre mise a jour, un travail actif qui n'a
+# rien a traiter est considere comme abandonne (onglet ferme, televersement
+# interrompu, plantage) : sans cela il gardait le creneau indefiniment.
+STALE_SECONDS = int(os.environ.get("PINCABOS_BATCH_STALE_SECONDS", "900"))
+
 
 def utc_now() -> str:
     return _datetime.datetime.now(_datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -237,6 +247,76 @@ def create_job(total: int, conflict_mode: str) -> dict[str, Any]:
         return job
 
 
+def job_is_stale(job: dict[str, Any]) -> bool:
+    """Travail actif sans la moindre mise a jour depuis STALE_SECONDS."""
+    stamp = str(job.get("updated_at") or job.get("started_at") or job.get("created_at") or "")
+    if not stamp:
+        return True
+    try:
+        moment = _datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=_datetime.timezone.utc)
+    age = (_datetime.datetime.now(_datetime.timezone.utc) - moment).total_seconds()
+    return age > STALE_SECONDS
+
+
+def pause_job(job_id: str) -> dict[str, Any] | None:
+    """Suspend un travail en cours sans perdre ce qui a deja ete traite."""
+    with state_lock(True):
+        job = load_job_unlocked(job_id)
+        if not job:
+            return None
+        state = str(job.get("state", ""))
+        if state in FINAL_STATES or state == PAUSED_STATE:
+            return job
+        job["state"] = PAUSED_STATE
+        job["paused_at"] = utc_now()
+        for item in job.get("uploads", []) or []:
+            if isinstance(item, dict) and str(item.get("state")) == "running":
+                item["state"] = "queued"
+                item["detail"] = "Repris à la reprise du travail"
+        add_event(job, "Travail mis en pause. Reprise possible à tout moment.", "warning")
+        refresh_progress(job, "En pause")
+        save_job_unlocked(job)
+        if active_job_id_unlocked() == job_id:
+            set_active_unlocked(None)
+        return job
+
+
+def resume_job(job_id: str) -> dict[str, Any] | None:
+    """Reprend un travail en pause, ou relance ce qui reste d'un travail
+    interrompu : les elements deja importes ne sont pas refaits."""
+    with state_lock(True):
+        job = load_job_unlocked(job_id)
+        if not job:
+            return None
+        remaining = [
+            item for item in (job.get("uploads") or [])
+            if isinstance(item, dict) and str(item.get("state")) in {"queued", "running", "uploading"}
+        ]
+        if not remaining:
+            return job
+        for item in remaining:
+            if str(item.get("state")) == "running":
+                item["state"] = "queued"
+        job["state"] = "queued"
+        job["stop_requested"] = False
+        job.pop("error", None)
+        job.pop("finished_at", None)
+        add_event(
+            job,
+            f"Reprise du travail : {len(remaining)} paquet(s) restant(s).",
+            "info",
+        )
+        refresh_progress(job, "Reprise en file")
+        save_job_unlocked(job)
+        if not active_job_id_unlocked():
+            set_active_unlocked(job_id)
+        return job
+
+
 def next_queued_job_id() -> str | None:
     ensure_dirs()
     with state_lock(True):
@@ -247,8 +327,27 @@ def next_queued_job_id() -> str | None:
                 pending = any(str(item.get("state", "")) == "queued" for item in (job.get("uploads") or []) if isinstance(item, dict))
                 if pending or bool(job.get("uploads_complete")):
                     return current
-                return None
-            set_active_unlocked(None)
+                # PINCABOS_BATCH_FAILSAFE_V1 : rien a traiter et plus aucune
+                # mise a jour depuis longtemps -> le creneau est libere, sinon
+                # la file entiere reste bloquee derriere ce travail fantome.
+                if job_is_stale(job):
+                    job["state"] = "failed"
+                    job["finished_at"] = utc_now()
+                    job["error"] = "Travail abandonné (téléversement interrompu)."
+                    add_event(
+                        job,
+                        "Travail abandonné : aucune activité depuis "
+                        f"{STALE_SECONDS // 60} minutes. Le créneau est libéré.",
+                        "warning",
+                    )
+                    refresh_progress(job, "Abandonné")
+                    cleanup_uploads(job)
+                    save_job_unlocked(job)
+                    set_active_unlocked(None)
+                else:
+                    return None
+            else:
+                set_active_unlocked(None)
         paths = sorted(RUN_DIR.glob("job-*.json"), key=lambda p: p.stat().st_mtime)
         for path in paths:
             value = read_json(path, None)
