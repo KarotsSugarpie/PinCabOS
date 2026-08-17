@@ -960,6 +960,19 @@ chmod 0644 "$TARGET/etc/polkit-1/rules.d/49-pincabos-pinball-root.rules"
 test -s "$TARGET/etc/sudoers.d/99-pincabos-pinball-root"
 test -s "$TARGET/etc/polkit-1/rules.d/49-pincabos-pinball-root.rules"
 
+# PINCABOS_ACCOUNTS_POLICY_V1
+# Mot de passe par defaut du compte cabinet, et root verrouille : toute
+# l'administration passe par le sudo NOPASSWD installe ci-dessus.
+if [ -x "$TARGET/usr/sbin/chpasswd" ]; then
+  printf 'pinball:%s\n' 'Pinball123$' | chroot "$TARGET" /usr/sbin/chpasswd
+  echo "GO [OK] pinball default password set (change it after first boot)"
+
+  printf 'root:%s\n' '!*' | chroot "$TARGET" /usr/sbin/chpasswd -e
+  echo "GO [OK] root account locked (administration via sudo)"
+else
+  echo "WARN: chpasswd missing from target; account passwords left untouched"
+fi
+
 echo "GO [OK] target pinball uid=1000 gid=1000"
 echo "GO [OK] sudo NOPASSWD: ALL installed"
 echo "GO [OK] unrestricted local Polkit rule installed"

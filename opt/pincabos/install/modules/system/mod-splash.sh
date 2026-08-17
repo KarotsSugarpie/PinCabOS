@@ -43,7 +43,9 @@ TMP_DIR="$ROOT/tmp"
 BACKUP_DIR="$ROOT/backups"
 
 HOSTNAME_TARGET="PinCabOs"
-ROOT_PASSWORD='Ges43po3$'
+# Pas de mot de passe root en dur dans une image distribuee : valeur fournie
+# par l'environnement, sinon le compte root reste verrouille (admin via sudo).
+ROOT_PASSWORD="${PINCABOS_ROOT_PASSWORD:-}"
 
 LOG_FILE="$LOG_DIR/mod-splash-$(date +%Y%m%d-%H%M%S).log"
 CURRENT_STEP="BOOT"
@@ -333,9 +335,13 @@ EOF
 set_root_password() {
   pco_step "05" "Set default root password"
 
-  echo "root:${ROOT_PASSWORD}" | chpasswd
-
-  pco_go "Root password configured"
+  if [ -n "${ROOT_PASSWORD:-}" ]; then
+    echo "root:${ROOT_PASSWORD}" | chpasswd
+    pco_go "Root password configured"
+  else
+    printf 'root:%s\n' '!*' | chpasswd -e
+    pco_go "Root account locked (administration via sudo)"
+  fi
 }
 
 configure_root_ssh() {
@@ -361,7 +367,8 @@ configure_root_ssh() {
   cat >> "$sshd_config.pincabos-work" <<'EOF'
 
 # BEGIN PINCABOS ROOT SSH
-PermitRootLogin yes
+# Root: key-based access only (no password login).
+PermitRootLogin prohibit-password
 PasswordAuthentication yes
 KbdInteractiveAuthentication yes
 UsePAM yes
@@ -429,8 +436,8 @@ verify_result() {
     pco_nogo "ERR-MOD-SPLASH-PROMPT-VERIFY-001" "Root prompt block missing"
   fi
 
-  if ! grep -q "^PermitRootLogin yes" /etc/ssh/sshd_config; then
-    pco_nogo "ERR-MOD-SPLASH-SSH-VERIFY-001" "PermitRootLogin yes missing"
+  if ! grep -q "^PermitRootLogin prohibit-password" /etc/ssh/sshd_config; then
+    pco_nogo "ERR-MOD-SPLASH-SSH-VERIFY-001" "PermitRootLogin prohibit-password missing"
   fi
 
   if ! grep -q "^PasswordAuthentication yes" /etc/ssh/sshd_config; then
@@ -450,9 +457,9 @@ show_summary() {
   echo "Hostname target:      $HOSTNAME_TARGET"
   echo "MOTD:                 /etc/motd"
   echo "Root prompt:          root@PinCabOS:#"
-  echo "SSH root login:       enabled"
+  echo "SSH root login:       key only (prohibit-password)"
   echo "SSH password login:   enabled"
-  echo "Root password:        Dev43po3$"
+  echo "Root password:        ${ROOT_PASSWORD:+set from PINCABOS_ROOT_PASSWORD}${ROOT_PASSWORD:-locked (administration via sudo)}"
   echo "Log:                  $LOG_FILE"
   echo
 
