@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
+# PinCabOS-File created by Karots Sugarpie
+# V2 (PINCABOS_NETWORK_V2) : le mode rapporte est le mode EFFECTIF.
+# La V1 deduisait le mode d'un SEUL fichier netplan (00-pincabos-dhcp4.yaml),
+# qui pouvait etre supplante par un autre fichier ou par un profil
+# NetworkManager : la page annoncait "static" alors que l'interface etait
+# restee en DHCP, en affichant l'adresse DHCP lue en direct.
 set -Eeuo pipefail
 PATH="/usr/sbin:/usr/bin:/sbin:/bin"
 
-CONF="/etc/netplan/00-pincabos-dhcp4.yaml"
+CONF="/etc/netplan/99-pincabos-network.yaml"
+LEGACY="/etc/netplan/00-pincabos-dhcp4.yaml"
 
 find_main_iface() {
   local iface=""
@@ -76,16 +83,46 @@ if [[ -z "$dns" && -r /etc/resolv.conf ]]; then
   )"
 fi
 
-if [[ -f "$CONF" ]]; then
-  if grep -Eqi '^[[:space:]]*dhcp4:[[:space:]]*true' "$CONF"; then
-    mode="dhcp"
-  elif grep -Eqi '^[[:space:]]*dhcp4:[[:space:]]*false' "$CONF"; then
+# 1) NetworkManager gere l'interface sur le systeme installe : sa methode IPv4
+#    est la verite (manual = fixe, auto = DHCP).
+if [[ -n "$iface" ]] && command -v nmcli >/dev/null 2>&1; then
+  connection="$(
+    nmcli -t -f DEVICE,CONNECTION device status 2>/dev/null |
+    awk -F: -v dev="$iface" '$1 == dev {print $2; exit}'
+  )"
+  if [[ -n "$connection" && "$connection" != "--" ]]; then
+    method="$(nmcli -g ipv4.method connection show "$connection" 2>/dev/null || true)"
+    case "$method" in
+      manual) mode="static" ;;
+      auto)   mode="dhcp" ;;
+    esac
+  fi
+fi
+
+# 2) Route par defaut obtenue en DHCP.
+if [[ "$mode" == "inconnu" ]] && ip -4 route show default 2>/dev/null | grep -q 'proto dhcp'; then
+  mode="dhcp"
+fi
+
+# 3) Adresse sans bail = adresse fixe.
+if [[ "$mode" == "inconnu" && -n "$iface" ]]; then
+  if ip -o -4 addr show dev "$iface" scope global 2>/dev/null | grep -q 'valid_lft forever'; then
     mode="static"
   fi
 fi
 
-if [[ "$mode" == "inconnu" ]] && ip -4 route show default 2>/dev/null | grep -q 'proto dhcp'; then
-  mode="dhcp"
+# 4) Dernier recours : la configuration PinCabOS, fichier prioritaire d'abord.
+if [[ "$mode" == "inconnu" ]]; then
+  for candidate in "$CONF" "$LEGACY"; do
+    [[ -f "$candidate" ]] || continue
+    if grep -Eqi '^[[:space:]]*dhcp4:[[:space:]]*true' "$candidate"; then
+      mode="dhcp"
+      break
+    elif grep -Eqi '^[[:space:]]*dhcp4:[[:space:]]*false' "$candidate"; then
+      mode="static"
+      break
+    fi
+  done
 fi
 
 printf 'interface=%s\n' "$iface"
