@@ -10902,6 +10902,28 @@ def tools_import_table_analyze():
         upload.save(dest)
         saved.append(str(dest))
 
+    if request.headers.get("X-PCOS-Async") == "1":
+        return jsonify({
+            "ok": True,
+            "next": "/tools/import-table/analyze-run?batch=" + batch_dir.name,
+        })
+
+    return _pcos_smart_analyze_render(batch_dir, saved)
+
+
+@app.route("/tools/import-table/analyze-run", methods=["GET"])
+def tools_import_table_analyze_run():
+    name = str(request.args.get("batch", "") or "")
+    if not re.fullmatch(r"batch-[A-Za-z0-9-]+", name):
+        return page("Outils", '<div class="card"><h2>Smart Import</h2><p class="bad">R\u00e9f\u00e9rence de batch invalide.</p><p><a class="button" href="/tools/import-table">Retour</a></p></div>')
+    batch_dir = Path("/home/pinball/Downloads") / name
+    if not batch_dir.is_dir():
+        return page("Outils", '<div class="card"><h2>Smart Import</h2><p class="bad">Batch introuvable ou expir\u00e9.</p><p><a class="button" href="/tools/import-table">Retour</a></p></div>')
+    saved = sorted(str(p) for p in batch_dir.iterdir() if p.is_file())
+    return _pcos_smart_analyze_render(batch_dir, saved)
+
+
+def _pcos_smart_analyze_render(batch_dir, saved):
     manifest_response = pincabos_try_manifest_import_from_saved_batch(batch_dir)
     if manifest_response is not None:
         return manifest_response
