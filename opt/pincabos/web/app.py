@@ -2088,11 +2088,18 @@ def gpu_page():
         html += '<option value="">-- Aucun --</option>'
 
         for sc in screens:
-            sel = "selected" if str(sc["id"]) == str(selected) else ""
-            label = f'ID {sc["id"]} — {sc["name"]} — {sc["width"]}x{sc["height"]}+{sc["x"]}+{sc["y"]}'
+            sel = (
+                "selected"
+                if str(selected)
+                and str(selected) in (str(sc["name"]), str(sc["id"]))
+                else ""
+            )
+            label = f'{sc["name"]} — {sc["width"]}x{sc["height"]}+{sc["x"]}+{sc["y"]}'
             if sc.get("is_primary"):
                 label += " — primary X11"
-            html += f'<option value="{esc(sc["id"])}" {sel}>{esc(label)}</option>'
+            # PINCABOS_SCREEN_IDENTITY_V2 : le NOM du connecteur, pas le rang
+            # xrandr, qui se decale des qu'une sortie change d'etat.
+            html += f'<option value="{esc(sc["name"])}" {sel}>{esc(label)}</option>'
 
         html += "</select>"
         return html
@@ -2479,8 +2486,9 @@ def pincabos_load_screen_roles():
         data = json.loads(cfg.read_text(errors="replace"))
         for role in roles:
             item = data.get(role)
-            if isinstance(item, dict) and "id" in item:
-                roles[role] = str(item.get("id"))
+            if isinstance(item, dict):
+                # le nom de connecteur est stable ; l'id positionnel ne l'est pas
+                roles[role] = str(item.get("name") or item.get("id") or "")
     except Exception:
         pass
 
@@ -2507,14 +2515,39 @@ def pincabos_write_manual_screen_roles(playfield_id, backglass_id, fulldmd_id, c
     if playfield_rotation not in ("0", "90", "180", "270"):
         playfield_rotation = "0"
 
-    by_id = {str(s["id"]): s for s in screens}
+    # PINCABOS_SCREEN_IDENTITY_V2 : resolution par NOM de connecteur, avec
+    # tolerance pour les anciennes sauvegardes exprimees en rang xrandr.
+    by_id = {}
+    for screen in screens:
+        by_id[str(screen["name"])] = screen
+        by_id.setdefault(str(screen["id"]), screen)
 
-    if playfield_id not in by_id:
+    if str(playfield_id) not in by_id:
         raise ValueError("Playfield invalide ou non sélectionné.")
 
-    playfield = by_id.get(playfield_id)
-    backglass = by_id.get(backglass_id) if backglass_id in by_id else None
-    fulldmd = by_id.get(fulldmd_id) if fulldmd_id in by_id else None
+    playfield = by_id.get(str(playfield_id))
+    backglass = by_id.get(str(backglass_id)) if str(backglass_id) in by_id else None
+    fulldmd = by_id.get(str(fulldmd_id)) if str(fulldmd_id) in by_id else None
+
+    # Deux roles sur le meme ecran donnent un affichage clone : on refuse
+    # plutot que de le laisser s'installer silencieusement.
+    assigned = [
+        (role, screen["name"])
+        for role, screen in (
+            ("Playfield", playfield),
+            ("Backglass", backglass),
+            ("FullDMD", fulldmd),
+        )
+        if screen
+    ]
+    seen = {}
+    for role, output in assigned:
+        if output in seen:
+            raise ValueError(
+                f"{seen[output]} et {role} sont réglés sur le même écran ({output}). "
+                "Choisissez un écran différent, ou « Aucun »."
+            )
+        seen[output] = role
 
     layout = {
         "mode": "manual",
@@ -2669,6 +2702,12 @@ def gpu_screens_apply():
 
     try:
         layout = pincabos_write_manual_screen_roles(playfield, backglass, fulldmd, cabinet_mode, playfield_orientation, playfield_rotation)
+        # le choix explicite devient la verite durable du moteur de topologie
+        subprocess.run(
+            ["/usr/bin/sudo", "-n", "/usr/bin/python3",
+             "/opt/pincabos/scripts/pincabos-screen-topology.py",
+             "--adopt-current-roles"],
+            timeout=30, check=False)
         output = json.dumps(layout, indent=2, ensure_ascii=False)
         cls = "ok"
         msg = "Assignation écran sauvegardée dans screens.json et VPinFE."

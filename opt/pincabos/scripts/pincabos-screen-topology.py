@@ -31,6 +31,17 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
+def restore_owner(path):
+    """PINCABOS_OWNER_RESTORE_V1 : les fichiers config/appli appartiennent a
+    pinball meme quand le moteur tourne en root (preflight, sudo adopt)."""
+    try:
+        import pwd
+        info = pwd.getpwnam("pinball")
+        os.chown(path, info.pw_uid, info.pw_gid)
+    except Exception:
+        pass
+
+
 def atomic_write(path, content, mode=None):
     old = path.read_text(encoding="utf-8") if path.exists() else None
     if old == content:
@@ -56,6 +67,7 @@ def atomic_write(path, content, mode=None):
             os.chmod(temp_name, mode)
 
         os.replace(temp_name, path)
+        restore_owner(path)
     finally:
         try:
             os.unlink(temp_name)
@@ -243,10 +255,10 @@ def resolve_roles(monitors, bindings):
 
     # Aucun profil, ou migration complète vers une autre machine.
     # Une perte partielle d'écran ne réaffecte jamais un écran au hasard.
-    new_machine = (
-        not known
-        or (match_count == 0 and len(monitors) >= 2)
-    )
+    # match_count == 0 signifie qu AUCUN ecran attendu n est present :
+    # c est une autre machine, quel que soit le nombre d ecrans (y compris 1).
+    # La protection "perte partielle" repose sur match_count >= 1 et reste intacte.
+    new_machine = not known or match_count == 0
 
     if new_machine:
         return infer_roles(monitors), True
@@ -353,10 +365,12 @@ def apply_consumers(roles):
         log("Playfield absent : fichiers applicatifs conservés sans modification.")
         return
 
+    # Un role absent est DESACTIVE (id vide, convention du sanitize installeur),
+    # jamais rabattu sur le playfield : le B2S par-dessus la table coute 10-20 fps.
     backglass = (
         roles["backglass"]
         if roles["backglass"]["available"]
-        else playfield
+        else None
     )
 
     dmd = (
@@ -365,6 +379,9 @@ def apply_consumers(roles):
         else backglass
     )
 
+    bg_id = str(backglass["screen_id"]) if backglass else ""
+    dmd_id = str(dmd["screen_id"]) if dmd else ""
+
     full_enabled = "1" if roles["fulldmd"]["available"] else "0"
 
     if VPINFE.exists():
@@ -372,24 +389,24 @@ def apply_consumers(roles):
 
         config = update_section(config, "Displays", {
             "tablescreenid": str(playfield["screen_id"]),
-            "bgscreenid": str(backglass["screen_id"]),
-            "dmdscreenid": str(dmd["screen_id"]),
-            "fulldmdscreenid": str(dmd["screen_id"]),
+            "bgscreenid": bg_id,
+            "dmdscreenid": dmd_id,
+            "fulldmdscreenid": dmd_id,
         })
 
         config = update_section(config, "PinCabOs.FullDMD", {
             "enabled": full_enabled,
-            "screen_id": str(dmd["screen_id"]),
+            "screen_id": dmd_id,
         })
 
         config = update_section(config, "PinCabOs.Screens", {
-            "fulldmd_id": str(dmd["screen_id"]),
-            "dmd_id": str(dmd["screen_id"]),
+            "fulldmd_id": dmd_id,
+            "dmd_id": dmd_id,
         })
 
         config = update_section(config, "PinCabOs.DMD", {
-            "enabled": "1",
-            "screen_id": str(dmd["screen_id"]),
+            "enabled": full_enabled,
+            "screen_id": dmd_id,
         })
 
         atomic_write(VPINFE, config)
@@ -406,20 +423,31 @@ def apply_consumers(roles):
         config = update_global(
             config,
             "bgscreenid",
-            str(backglass["screen_id"]),
+            bg_id,
         )
 
         config = update_global(
             config,
             "dmdscreenid",
-            str(dmd["screen_id"]),
+            dmd_id,
         )
 
         config = update_global(
             config,
             "fulldmdscreenid",
-            str(dmd["screen_id"]),
+            dmd_id,
         )
+
+        # PINCABOS_VPX_REAL_KEYS_V1 : VPX 10.8.1 ignore les cles *screenid
+        # (vocabulaire VPinFE) et pilote ses fenetres par sections nommees.
+        # Role absent -> Output 0 (Disabled), sinon 1 (Floating).
+        config = update_section(config, "Backglass", {
+            "BackglassOutput": "1" if backglass else "0",
+        })
+
+        config = update_section(config, "ScoreView", {
+            "ScoreViewOutput": "1" if dmd else "0",
+        })
 
         atomic_write(VPX, config)
 
@@ -437,6 +465,42 @@ def refresh(prepare=False):
 
     bindings = load_json(BINDINGS, {})
     selected, new_machine = resolve_roles(monitors, bindings)
+
+    # Un role volontairement laisse vide dans l'interface Ecrans le RESTE.
+    disabled = set()
+    if isinstance(bindings, dict):
+        disabled = {
+            role for role in bindings.get("disabled_roles", [])
+            if role != "playfield"
+        }
+    for role in disabled:
+        selected[role] = None
+
+    # Adoption progressive : un ecran present mais lie a aucun role, alors que
+    # des roles sont vacants (ex: backglass branche apres une installation
+    # mono-ecran) est adopte via l heuristique geometrique, et les bindings
+    # sont etendus. Une perte d ecran ne re-affecte toujours rien.
+    adopted = False
+    if not new_machine and selected.get("playfield") is not None:
+        bound_map = bindings.get("roles", {}) if isinstance(bindings, dict) else {}
+        bound_edids = set(bound_map.values())
+        unmatched = [
+            m for m in monitors
+            if m["edid_sha256"] not in bound_edids
+        ]
+        missing = [
+            r for r in ROLES
+            if selected.get(r) is None and r not in disabled
+        ]
+        if unmatched and missing:
+            guess = infer_roles([selected["playfield"]] + unmatched)
+            for r in missing:
+                cand = guess.get(r)
+                if cand and cand["name"] != selected["playfield"]["name"]:
+                    selected[r] = cand
+                    adopted = True
+                    log(f"Adoption: {cand['name']} -> {r}")
+
 
     app_indexes = {
         monitor["name"]: index
@@ -460,16 +524,21 @@ def refresh(prepare=False):
         log("Aucun Playfield résolu; aucune configuration applicative modifiée.")
         return 0
 
-    if new_machine:
+    if new_machine or adopted:
         bindings = {
             "version": 1,
             "bound_at": now(),
-            "source": "automatic-first-layout",
+            "source": (
+                "automatic-first-layout"
+                if new_machine
+                else "automatic-adopted-screen"
+            ),
             "roles": {
                 role: roles[role]["edid_sha256"]
                 for role in ROLES
                 if roles[role]["available"]
             },
+            "disabled_roles": sorted(disabled),
         }
 
         atomic_write(
@@ -641,6 +710,9 @@ def adopt_current_roles():
                 "bound_at": now(),
                 "source": "PinCabOS Screens explicit selection",
                 "roles": adopted,
+                "disabled_roles": [
+                    role for role in ROLES if role not in adopted
+                ],
             },
             indent=2,
             ensure_ascii=False,

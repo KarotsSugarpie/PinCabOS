@@ -1,0 +1,2 @@
+# PinCabOS WebApp - adoption des roles ecrans (moteur topologie)
+pinball ALL=(root) NOPASSWD: /usr/bin/python3 /opt/pincabos/scripts/pincabos-screen-topology.py --adopt-current-roles
