@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# PinCabOS — touches volume du clavier (XF86AudioRaiseVolume / LowerVolume /
+# Mute), branchees dans la session openbox.
+#
+# Passe par l'API locale du widget volume plutot que par amixer : on reutilise
+# la meme logique (mute logiciel pour les controles sans interrupteur,
+# memorisation de l'intention pour le rejeu au demarrage), donc le clavier et
+# le widget du dashboard restent d'accord, et un reglage fait au clavier
+# survit lui aussi au redemarrage.
+#
+#   pincabos-volume up|down|mute [pas]
+set -u
+
+STEP="${2:-5}"
+API="http://127.0.0.1/api/pincabos/audio-volume"
+ACTION="${1:-}"
+
+case "$ACTION" in
+  up|down|mute) ;;
+  *) echo "Usage: pincabos-volume up|down|mute [pas]" >&2; exit 1 ;;
+esac
+
+python3 - "$ACTION" "$STEP" "$API" <<'PY'
+import json
+import sys
+import urllib.request
+
+action, step, api = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+
+
+def call(path, payload=None):
+    url = f"{api}/{path}"
+    data = json.dumps(payload).encode() if payload is not None else None
+    request = urllib.request.Request(
+        url, data=data,
+        headers={"Content-Type": "application/json"} if data else {},
+        method="POST" if data else "GET",
+    )
+    with urllib.request.urlopen(request, timeout=6) as response:
+        return json.loads(response.read().decode() or "{}")
+
+
+try:
+    state = call("cards")
+except Exception as exc:
+    print(f"WebApp injoignable: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+
+cards = state.get("cards") or []
+selected = set((state.get("config") or {}).get("selected") or [])
+
+# Cibles : les controles choisis dans le widget ; a defaut, le premier
+# controle de la premiere carte (Master en pratique).
+targets = [
+    (card["card_id"], control)
+    for card in cards
+    for control in card.get("controls", [])
+    if control.get("key") in selected
+]
+if not targets and cards and cards[0].get("controls"):
+    targets = [(cards[0]["card_id"], cards[0]["controls"][0])]
+
+if not targets:
+    print("Aucun contrôle audio disponible.", file=sys.stderr)
+    raise SystemExit(1)
+
+for card_id, control in targets:
+    name = control.get("name")
+    if action == "mute":
+        result = call("mute-toggle", {"card_id": card_id, "control": name})
+        print(f"{name}: {'coupé' if result.get('muted') else 'actif'}")
+    else:
+        current = int(control.get("volume", 0))
+        wanted = current + step if action == "up" else current - step
+        wanted = max(0, min(100, wanted))
+        result = call("set", {"card_id": card_id, "control": name, "volume": wanted})
+        print(f"{name}: {result.get('volume', wanted)}%")
+PY

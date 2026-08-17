@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# PinCabOS — reapplique les niveaux audio choisis dans le widget volume.
+#
+# Pourquoi ce script : sur un cabinet, ni ALSA ni WirePlumber ne conservent les
+# niveaux d'un demarrage a l'autre.
+#   - le payload exclut /var/lib/alsa, donc `alsactl store` n'avait meme pas de
+#     repertoire ou ecrire (corrige par le manifeste tmpfiles) ;
+#   - `alsa-restore.service` REECRIT l'etat a l'extinction (ExecStop=store),
+#     donc il memorise ce que la session a laisse, pas ce que l'utilisateur a
+#     choisi ;
+#   - WirePlumber applique ses propres volumes au demarrage de la session,
+#     APRES alsa-restore, et ecrase le tout.
+# La seule position tenable est donc de reappliquer les valeurs voulues APRES
+# le demarrage de la session audio — c'est ce que fait ce script, appele par
+# l'autostart de la session et apres chaque reglage du widget.
+set -u
+
+CONFIG="/home/pinball/.config/pincabos/audio-volume-widget.json"
+[ -r "$CONFIG" ] || exit 0
+
+# Laisse PipeWire/WirePlumber finir de prendre la main (mode session).
+if [ "${1:-}" = "--session" ]; then
+  for _ in $(seq 1 20); do
+    pgrep -u pinball -x wireplumber >/dev/null 2>&1 && break
+    sleep 1
+  done
+  sleep 3
+fi
+
+python3 - "$CONFIG" <<'PY'
+import json
+import re
+import subprocess
+import sys
+
+config_path = sys.argv[1]
+
+try:
+    data = json.loads(open(config_path, encoding="utf-8").read())
+except Exception:
+    raise SystemExit(0)
+
+levels = data.get("levels")
+if not isinstance(levels, dict) or not levels:
+    raise SystemExit(0)
+
+
+def run(args):
+    return subprocess.run(args, capture_output=True, text=True, check=False)
+
+
+# Carte -> numero ALSA courant (le numero change, le nom court est stable).
+cards = {}
+out = run(["aplay", "-l"]).stdout
+for line in out.splitlines():
+    m = re.search(r"^card\s+(\d+):\s*([^\s]+)\s*\[", line.strip())
+    if m:
+        cards[m.group(2).strip()] = int(m.group(1))
+
+applied = []
+for key, wanted in levels.items():
+    if ":" not in key or not isinstance(wanted, dict):
+        continue
+    card_token, control = key.split(":", 1)
+    card_id = cards.get(card_token)
+    if card_id is None:
+        continue
+
+    volume = wanted.get("volume")
+    muted = bool(wanted.get("muted"))
+
+    if isinstance(volume, int):
+        run(["amixer", "-q", "-c", str(card_id), "sset", control, f"{max(0, min(100, volume))}%"])
+    if muted:
+        # Controle sans interrupteur : le volume 0 fait office de coupure.
+        result = run(["amixer", "-q", "-c", str(card_id), "sset", control, "mute"])
+        if result.returncode != 0:
+            run(["amixer", "-q", "-c", str(card_id), "sset", control, "0%"])
+    else:
+        run(["amixer", "-q", "-c", str(card_id), "sset", control, "unmute"])
+    applied.append(f"{card_token}:{control}")
+
+if applied:
+    print("pincabos-audio-restore : " + ", ".join(applied))
+PY

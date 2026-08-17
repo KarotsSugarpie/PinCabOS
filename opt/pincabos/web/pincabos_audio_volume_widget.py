@@ -1,4 +1,21 @@
-# PINCABOS_AUDIO_VOLUME_API_V3_CONFIG
+# PINCABOS_AUDIO_VOLUME_API_V4_PERSIST
+#
+# V3 -> V4, trois corrections :
+#  1. PERSISTANCE : rien n'ecrivait /var/lib/alsa/asound.state, donc volumes et
+#     mute repartaient aux valeurs d'usine a chaque redemarrage (alsa-restore
+#     tourne bien au boot, mais n'avait aucun etat a restaurer). Chaque
+#     modification declenche desormais `alsactl store`.
+#  2. MUTE : les controles sans interrupteur (Capabilities: pvolume seul, cas
+#     de PCM sur la plupart des cartes) acceptaient `amixer sset ... toggle`
+#     avec un code retour 0 SANS rien couper : le bouton repondait "ok" et le
+#     son continuait. Ces controles sont maintenant coupes en logiciel
+#     (volume a 0, valeur precedente memorisee) et l'API annonce
+#     `has_switch: false`. Chaque reponse renvoie l'etat REEL apres action.
+#  3. SELECTION : la liste des controles affiches etait memorisee par NUMERO
+#     de carte ("0:Master"), or la numerotation ALSA depend de l'ordre de
+#     detection : au redemarrage ou apres un changement materiel, la selection
+#     pointait a cote. Elle est desormais memorisee par NOM de carte, avec
+#     migration automatique des anciennes valeurs.
 import json
 import os
 import re
@@ -36,8 +53,22 @@ def _run(args, timeout=4):
     except Exception as exc:
         return "", str(exc), 1
 
-def _key(card_id, control):
-    return f"{int(card_id)}:{str(control)}"
+def _store_alsa_state():
+    """Etat ALSA sur disque (utile des le boot, avant la session audio)."""
+    _run(["/usr/bin/sudo", "-n", "/usr/sbin/alsactl", "store"], timeout=6)
+
+
+# PINCABOS_AUDIO_LEVELS_V1
+def _remember_level(card, control, volume, muted):
+    """Memorise l'intention de l'utilisateur.
+
+    Ni ALSA ni WirePlumber ne la conservent : alsa-restore reecrit son etat a
+    l'extinction, et WirePlumber applique ses propres volumes au demarrage de
+    la session. pincabos-audio-restore rejoue donc ces valeurs APRES elle.
+    """
+    levels = _read_config().get("levels", {})
+    levels[_key(card, control)] = {"volume": int(volume), "muted": bool(muted)}
+    _write_config(levels=levels)
 
 def _discover_cards():
     cards = {}
@@ -69,6 +100,17 @@ def _discover_cards():
 
     return [cards[k] for k in sorted(cards)]
 
+def _card_token(card):
+    """Identifiant STABLE d'une carte (le numero ALSA, lui, peut changer)."""
+    token = str(card.get("short_name") or "").strip()
+    return token or f"card{card.get('card_id', 0)}"
+
+def _key(card, control):
+    return f"{_card_token(card)}:{control}"
+
+def _legacy_key(card_id, control):
+    return f"{int(card_id)}:{control}"
+
 def _simple_controls(card_id):
     out, err, rc = _run(["amixer", "-c", str(card_id), "scontrols"])
     found = []
@@ -88,32 +130,45 @@ def _selected_controls(controls):
         selected = controls[:4]
     return selected[:8]
 
-def _read_control(card_id, control):
+def _read_control(card, control):
+    card_id = card["card_id"]
     out, err, rc = _run(["amixer", "-c", str(card_id), "sget", control])
     values = [int(x) for x in re.findall(r"\[(\d{1,3})%\]", out)]
     if not values:
         return None
-    muted = bool(re.search(r"\[off\]", out))
+
+    states = re.findall(r"\[(on|off)\]", out)
+    has_switch = "pswitch" in out.lower() or bool(states)
+    hardware_muted = bool(states) and all(state == "off" for state in states)
     volume = max(0, min(100, int(round(sum(values) / len(values)))))
+
+    # Controle sans interrupteur : mute logiciel (volume a 0, valeur d'avant
+    # memorisee) — sinon le bouton mute reste decoratif.
+    soft = _read_config().get("soft_mute", {})
+    soft_key = _key(card, control)
+    soft_muted = bool(volume == 0 and soft.get(soft_key) is not None)
+
     return {
-        "key": _key(card_id, control),
+        "key": soft_key,
+        "legacy_key": _legacy_key(card_id, control),
         "name": control,
         "volume": volume,
-        "muted": muted,
+        "muted": hardware_muted or soft_muted,
+        "has_switch": has_switch,
+        "soft_muted": soft_muted,
     }
 
 def _read_cards():
     result = []
     for card in _discover_cards():
-        cid = card["card_id"]
         rows = []
-        for control in _selected_controls(_simple_controls(cid)):
-            info = _read_control(cid, control)
+        for control in _selected_controls(_simple_controls(card["card_id"])):
+            info = _read_control(card, control)
             if info:
                 rows.append(info)
         result.append({
-            "card_id": cid,
-            "name": card.get("name") or f"Carte {cid}",
+            "card_id": card["card_id"],
+            "name": card.get("name") or f"Carte {card['card_id']}",
             "short_name": card.get("short_name") or "",
             "controls": rows,
         })
@@ -124,32 +179,76 @@ def _available_keys(cards=None):
     keys = []
     for card in cards:
         for control in card.get("controls", []):
-            key = str(control.get("key") or _key(card.get("card_id", 0), control.get("name", "")))
-            if key not in keys:
+            key = str(control.get("key") or "")
+            if key and key not in keys:
                 keys.append(key)
     return keys
 
 def _read_config():
     configured = CONFIG_PATH.exists()
     selected = []
+    soft_mute = {}
+    levels = {}
     try:
         data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-        if isinstance(data, dict) and isinstance(data.get("selected"), list):
-            selected = [str(x) for x in data.get("selected", []) if isinstance(x, str)]
+        if isinstance(data, dict):
+            if isinstance(data.get("selected"), list):
+                selected = [str(x) for x in data.get("selected", []) if isinstance(x, str)]
+            if isinstance(data.get("soft_mute"), dict):
+                soft_mute = {str(k): v for k, v in data["soft_mute"].items()}
+            if isinstance(data.get("levels"), dict):
+                levels = {str(k): v for k, v in data["levels"].items()}
     except Exception:
         selected = []
-    return {"configured": configured, "selected": selected}
+        soft_mute = {}
+        levels = {}
+    return {
+        "configured": configured,
+        "selected": selected,
+        "soft_mute": soft_mute,
+        "levels": levels,
+    }
 
-def _write_config(selected):
+def _write_config(selected=None, soft_mute=None, levels=None):
+    current = _read_config()
+    payload = {
+        "selected": current["selected"] if selected is None else selected,
+        "soft_mute": current["soft_mute"] if soft_mute is None else soft_mute,
+        "levels": current["levels"] if levels is None else levels,
+    }
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     tmp = CONFIG_PATH.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps({"selected": selected}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     os.chmod(tmp, 0o640)
     try:
         shutil.chown(tmp, user="pinball", group="pinball")
     except Exception:
         pass
     os.replace(tmp, CONFIG_PATH)
+
+def _migrate_selection(selected, cards):
+    """Ancienne selection par NUMERO de carte -> selection par NOM de carte."""
+    if not selected:
+        return selected, False
+    by_legacy = {}
+    for card in cards:
+        for control in card.get("controls", []):
+            by_legacy[str(control.get("legacy_key"))] = str(control.get("key"))
+    migrated = []
+    changed = False
+    for key in selected:
+        if re.match(r"^\d+:", key) and key in by_legacy:
+            migrated.append(by_legacy[key])
+            changed = True
+        else:
+            migrated.append(key)
+    return migrated, changed
+
+def _find_card(card_id):
+    for card in _discover_cards():
+        if card["card_id"] == int(card_id):
+            return card
+    return None
 
 def _valid_control(card_id, control):
     return control in _simple_controls(card_id)
@@ -164,11 +263,15 @@ def register(app):
         try:
             cards = _read_cards()
             cfg = _read_config()
+            selected, changed = _migrate_selection(cfg.get("selected", []), cards)
+            if changed:
+                _write_config(selected=selected)
+                cfg["selected"] = selected
             return jsonify({
                 "ok": True,
                 "engine": "alsa-amixer",
                 "cards": cards,
-                "config": cfg,
+                "config": {"configured": cfg["configured"], "selected": cfg["selected"]},
             })
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc), "cards": []}), 500
@@ -178,8 +281,11 @@ def register(app):
         try:
             cards = _read_cards()
             cfg = _read_config()
+            selected, changed = _migrate_selection(cfg.get("selected", []), cards)
+            if changed:
+                _write_config(selected=selected)
             allowed = set(_available_keys(cards))
-            selected = [key for key in cfg.get("selected", []) if key in allowed]
+            selected = [key for key in selected if key in allowed]
             return jsonify({
                 "ok": True,
                 "configured": bool(cfg.get("configured")),
@@ -200,10 +306,16 @@ def register(app):
         cards = _read_cards()
         allowed_order = _available_keys(cards)
         wanted = {str(x) for x in raw if isinstance(x, str)}
+        # tolere une selection envoyee a l'ancien format
+        legacy = {}
+        for card in cards:
+            for control in card.get("controls", []):
+                legacy[str(control.get("legacy_key"))] = str(control.get("key"))
+        wanted = {legacy.get(key, key) for key in wanted}
         selected = [key for key in allowed_order if key in wanted]
 
         try:
-            _write_config(selected)
+            _write_config(selected=selected)
         except Exception as exc:
             return jsonify({"ok": False, "error": f"Sauvegarde impossible: {exc}"}), 500
 
@@ -223,15 +335,30 @@ def register(app):
         except Exception:
             return jsonify({"ok": False, "error": "Paramètres invalides"}), 400
 
-        if not control or not _valid_control(card_id, control):
+        card = _find_card(card_id)
+        if not card or not control or not _valid_control(card_id, control):
             return jsonify({"ok": False, "error": "Contrôle ALSA invalide"}), 400
 
         out, err, rc = _run(["amixer", "-q", "-c", str(card_id), "sset", control, f"{volume}%"])
         if rc != 0:
             return jsonify({"ok": False, "error": err or out or "amixer a échoué"}), 500
 
+        # Regler le volume sort du mute (materiel comme logiciel).
         _run(["amixer", "-q", "-c", str(card_id), "sset", control, "unmute"], timeout=2)
-        return jsonify({"ok": True, "card_id": card_id, "control": control, "volume": volume})
+        soft = _read_config().get("soft_mute", {})
+        if soft.pop(_key(card, control), None) is not None:
+            _write_config(soft_mute=soft)
+
+        _store_alsa_state()
+        state = _read_control(card, control) or {}
+        _remember_level(card, control, state.get("volume", volume), state.get("muted", False))
+        return jsonify({
+            "ok": True,
+            "card_id": card_id,
+            "control": control,
+            "volume": state.get("volume", volume),
+            "muted": state.get("muted", False),
+        })
 
     @app.route("/api/pincabos/audio-volume/mute-toggle", methods=["POST"])
     def pincabos_audio_volume_mute_toggle_v3():
@@ -242,10 +369,37 @@ def register(app):
         except Exception:
             return jsonify({"ok": False, "error": "Paramètres invalides"}), 400
 
-        if not control or not _valid_control(card_id, control):
+        card = _find_card(card_id)
+        if not card or not control or not _valid_control(card_id, control):
             return jsonify({"ok": False, "error": "Contrôle ALSA invalide"}), 400
 
-        out, err, rc = _run(["amixer", "-q", "-c", str(card_id), "sset", control, "toggle"])
-        if rc != 0:
-            return jsonify({"ok": False, "error": err or out or "toggle impossible"}), 500
-        return jsonify({"ok": True})
+        before = _read_control(card, control) or {}
+        key = _key(card, control)
+        soft = _read_config().get("soft_mute", {})
+
+        if before.get("has_switch"):
+            out, err, rc = _run(["amixer", "-q", "-c", str(card_id), "sset", control, "toggle"])
+            if rc != 0:
+                return jsonify({"ok": False, "error": err or out or "toggle impossible"}), 500
+        elif before.get("soft_muted"):
+            restore = int(soft.pop(key, 0) or 0)
+            _run(["amixer", "-q", "-c", str(card_id), "sset", control, f"{max(restore, 1)}%"])
+            _write_config(soft_mute=soft)
+        else:
+            # Pas d'interrupteur materiel : on coupe en mettant le volume a 0
+            # apres avoir memorise la valeur courante.
+            soft[key] = int(before.get("volume", 0))
+            _run(["amixer", "-q", "-c", str(card_id), "sset", control, "0%"])
+            _write_config(soft_mute=soft)
+
+        _store_alsa_state()
+        after = _read_control(card, control) or {}
+        _remember_level(card, control, after.get("volume", 0), after.get("muted", False))
+        return jsonify({
+            "ok": True,
+            "card_id": card_id,
+            "control": control,
+            "muted": after.get("muted", False),
+            "volume": after.get("volume", 0),
+            "has_switch": after.get("has_switch", False),
+        })
