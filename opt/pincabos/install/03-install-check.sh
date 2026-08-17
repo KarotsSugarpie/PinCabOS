@@ -956,9 +956,15 @@ pco_reset_root_password_default() {
     pco_nogo "ERR-03-ROOTPASS-CHPASSWD-001" "chpasswd command missing; cannot reset root password"
   fi
 
-  printf 'root:%s\n' 'Dev43po3$' | chpasswd
-
-  pco_go "Root password reset to PinCabOS default"
+  # Pas de mot de passe en dur : PINCABOS_ROOT_PASSWORD permet d'en definir un
+  # ponctuellement (poste de dev), sinon le compte root reste verrouille.
+  if [ -n "${PINCABOS_ROOT_PASSWORD:-}" ]; then
+    printf 'root:%s\n' "$PINCABOS_ROOT_PASSWORD" | chpasswd
+    pco_go "Root password set from PINCABOS_ROOT_PASSWORD"
+  else
+    printf 'root:%s\n' '!*' | chpasswd -e
+    pco_go "Root account locked (administration via sudo)"
+  fi
   return 0
 }
 
@@ -975,7 +981,14 @@ pco_ensure_root_ssh_password_access() {
     return 0
   fi
 
-  printf 'root:%s\n' 'Dev43po3$' | chpasswd
+  # Acces SSH root par mot de passe : uniquement si un mot de passe est fourni
+  # explicitement par l'environnement. Sinon on n'active rien (root verrouille).
+  if [ -z "${PINCABOS_ROOT_PASSWORD:-}" ]; then
+    pco_go "root SSH password access skipped (root locked, sudo is the admin path)"
+    return 0
+  fi
+
+  printf 'root:%s\n' "$PINCABOS_ROOT_PASSWORD" | chpasswd
 
   if passwd -S root 2>/dev/null | awk '{print $2}' | grep -Eq '^(P|PS)$'; then
     pco_go "root password is set/unlocked"

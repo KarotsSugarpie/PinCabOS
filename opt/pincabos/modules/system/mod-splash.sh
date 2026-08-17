@@ -43,7 +43,9 @@ TMP_DIR="$ROOT/tmp"
 BACKUP_DIR="$ROOT/backups"
 
 HOSTNAME_TARGET="PinCabOs"
-ROOT_PASSWORD='Ges43po3$'
+# Pas de mot de passe root en dur dans une image distribuee : valeur fournie
+# par l'environnement, sinon le compte root reste verrouille (admin via sudo).
+ROOT_PASSWORD="${PINCABOS_ROOT_PASSWORD:-}"
 
 LOG_FILE="$LOG_DIR/mod-splash-$(date +%Y%m%d-%H%M%S).log"
 CURRENT_STEP="BOOT"
@@ -333,9 +335,13 @@ EOF
 set_root_password() {
   pco_step "05" "Set default root password"
 
-  echo "root:${ROOT_PASSWORD}" | chpasswd
-
-  pco_go "Root password configured"
+  if [ -n "${ROOT_PASSWORD:-}" ]; then
+    echo "root:${ROOT_PASSWORD}" | chpasswd
+    pco_go "Root password configured"
+  else
+    printf 'root:%s\n' '!*' | chpasswd -e
+    pco_go "Root account locked (administration via sudo)"
+  fi
 }
 
 configure_root_ssh() {
@@ -452,7 +458,7 @@ show_summary() {
   echo "Root prompt:          root@PinCabOS:#"
   echo "SSH root login:       enabled"
   echo "SSH password login:   enabled"
-  echo "Root password:        Dev43po3$"
+  echo "Root password:        ${ROOT_PASSWORD:+set from PINCABOS_ROOT_PASSWORD}${ROOT_PASSWORD:-locked (administration via sudo)}"
   echo "Log:                  $LOG_FILE"
   echo
 
