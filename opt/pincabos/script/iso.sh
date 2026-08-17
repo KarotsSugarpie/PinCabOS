@@ -1207,6 +1207,16 @@ NETPLAN
     chmod 600 /etc/netplan/01-pincabos-dhcp.yaml 2>/dev/null || true
   fi
 
+  # PINCABOS_NETPLAN_SANITIZE_V1
+  # Ecarter la configuration reseau heritee du cab de build (interface et
+  # adresse fixe qui n'existent pas sur cette machine).
+  for stale in /etc/netplan/00-pincabos-dhcp4.yaml; do
+    if [ -f "$stale" ]; then
+      mv -f "$stale" "${stale}.pincabos-disabled" 2>/dev/null || true
+      echo "Neutralise (config du cab de build): $(basename "$stale")"
+    fi
+  done
+
   echo
   echo "=== Enable NetworkManager and DHCP ==="
   systemctl daemon-reload || true
