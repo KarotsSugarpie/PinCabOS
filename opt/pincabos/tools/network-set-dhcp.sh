@@ -21,6 +21,38 @@ iface="${1:-}"
 [[ -n "$iface" ]] || { echo "ERREUR: interface réseau introuvable."; exit 1; }
 [[ -d "/sys/class/net/$iface" ]] || { echo "ERREUR: interface invalide: $iface"; exit 1; }
 
+# Les definitions concurrentes ne se reperent pas au seul nom exact : netplan
+# accepte les motifs (match: name: "en*"), et PinCabOS en livre. On resout donc
+# les motifs pour de vrai.
+conflicting_files() {
+  python3 - "$1" "$2" <<'PY'
+import fnmatch
+import glob
+import os
+import re
+import sys
+
+iface, keep = sys.argv[1], sys.argv[2]
+
+for path in sorted(glob.glob("/etc/netplan/*.yaml")):
+    if os.path.abspath(path) == os.path.abspath(keep):
+        continue
+    try:
+        text = open(path, encoding="utf-8", errors="replace").read()
+    except OSError:
+        continue
+
+    hit = re.search(rf"(?m)^\s*{re.escape(iface)}\s*:", text) is not None
+    if not hit:
+        for pattern in re.findall(r"(?m)^\s*name\s*:\s*[\"']?([^\"'\s]+)", text):
+            if fnmatch.fnmatch(iface, pattern):
+                hit = True
+                break
+    if hit:
+        print(path)
+PY
+}
+
 stamp="$(date +%F-%H%M%S)"
 snapshot="${BACKUP_DIR}/netplan-${stamp}"
 mkdir -p "$snapshot"
@@ -38,14 +70,11 @@ if systemctl is-active --quiet NetworkManager 2>/dev/null; then
   renderer="NetworkManager"
 fi
 
-for other in /etc/netplan/*.yaml; do
-  [[ -e "$other" ]] || continue
-  [[ "$other" == "$CONF" ]] && continue
-  if grep -Eq "(^|[^[:alnum:]_-])${iface}([^[:alnum:]_-]|$)" "$other"; then
-    mv -f "$other" "${other}.pincabos-disabled"
-    echo "Désactivé (conflit sur ${iface}): $(basename "$other")"
-  fi
-done
+while IFS= read -r other; do
+  [[ -n "$other" ]] || continue
+  mv -f "$other" "${other}.pincabos-disabled"
+  echo "Désactivé (conflit sur ${iface}): $(basename "$other")"
+done < <(conflicting_files "$iface" "$CONF")
 [[ -f "$LEGACY" ]] && mv -f "$LEGACY" "${LEGACY}.pincabos-disabled" || true
 
 tmp="$(mktemp /etc/netplan/.pincabos-network-dhcp.XXXXXX)"

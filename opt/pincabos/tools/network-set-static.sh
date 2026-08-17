@@ -67,6 +67,47 @@ except ValueError as exc:
     raise SystemExit(1)
 PY
 
+# Les definitions concurrentes ne se reperent pas au seul nom exact : netplan
+# accepte les motifs (match: name: "en*"), et PinCabOS en livre. On resout donc
+# les motifs pour de vrai.
+conflicting_files() {
+  python3 - "$1" "$2" <<'PY'
+import fnmatch
+import glob
+import os
+import re
+import sys
+
+iface, keep = sys.argv[1], sys.argv[2]
+
+for path in sorted(glob.glob("/etc/netplan/*.yaml")):
+    if os.path.abspath(path) == os.path.abspath(keep):
+        continue
+    try:
+        text = open(path, encoding="utf-8", errors="replace").read()
+    except OSError:
+        continue
+
+    hit = re.search(rf"(?m)^\s*{re.escape(iface)}\s*:", text) is not None
+    if not hit:
+        for pattern in re.findall(r"(?m)^\s*name\s*:\s*[\"']?([^\"'\s]+)", text):
+            if fnmatch.fnmatch(iface, pattern):
+                hit = True
+                break
+    if hit:
+        print(path)
+PY
+}
+
+# Une interface sans fil ne se configure pas dans une section "ethernets" :
+# la page Wi-Fi de la WebApp gere ce cas (SSID, clef), on ne casse pas le
+# reseau du cabinet avec une configuration invalide.
+if [ -d "/sys/class/net/${iface}/wireless" ] || [ -e "/sys/class/net/${iface}/phy80211" ]; then
+  echo "ERREUR: ${iface} est une interface Wi-Fi."
+  echo "Utilisez la page Wi-Fi pour la connexion sans fil, ou branchez le câble."
+  exit 1
+fi
+
 stamp="$(date +%F-%H%M%S)"
 snapshot="${BACKUP_DIR}/netplan-${stamp}"
 mkdir -p "$snapshot"
@@ -88,14 +129,11 @@ fi
 
 # Desactive toute autre definition de CETTE interface (sinon la precedence
 # netplan ou un profil NM concurrent reimpose le DHCP).
-for other in /etc/netplan/*.yaml; do
-  [[ -e "$other" ]] || continue
-  [[ "$other" == "$CONF" ]] && continue
-  if grep -Eq "(^|[^[:alnum:]_-])${iface}([^[:alnum:]_-]|$)" "$other"; then
-    mv -f "$other" "${other}.pincabos-disabled"
-    echo "Désactivé (conflit sur ${iface}): $(basename "$other")"
-  fi
-done
+while IFS= read -r other; do
+  [[ -n "$other" ]] || continue
+  mv -f "$other" "${other}.pincabos-disabled"
+  echo "Désactivé (conflit sur ${iface}): $(basename "$other")"
+done < <(conflicting_files "$iface" "$CONF")
 [[ -f "$LEGACY" ]] && mv -f "$LEGACY" "${LEGACY}.pincabos-disabled" || true
 
 tmp="$(mktemp /etc/netplan/.pincabos-network-static.XXXXXX)"
