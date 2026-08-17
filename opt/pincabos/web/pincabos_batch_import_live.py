@@ -242,17 +242,22 @@ _PAGE_UI = r'''
 
 <!-- PINCABOS_BATCH_RESUME_PANEL_V1 -->
 <style>
-#pco-bi-resume{margin:10px 0;padding:10px 12px;border:1px solid #4a3a12;border-radius:8px;background:#1d1a10;font-size:13px}
-#pco-bi-resume h3{margin:0 0 6px;font-size:14px;color:#ffb347}
-#pco-bi-resume .pco-r-detail{color:#ddd;margin-bottom:8px}
-#pco-bi-resume .pco-r-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:8px}
-#pco-bi-resume .pco-r-fill{height:100%;width:0;background:linear-gradient(90deg,#ffb000,#ff7a00);transition:width .3s ease}
-#pco-bi-resume .pco-r-actions{display:flex;gap:8px;flex-wrap:wrap}
-#pco-bi-resume button{border:0;border-radius:7px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer;color:#fff}
-#pco-bi-resume .pco-r-pause{background:rgba(255,176,0,.25);color:#ffdb9b}
-#pco-bi-resume .pco-r-resume{background:rgba(88,214,141,.25);color:#b9f5d0}
-#pco-bi-resume .pco-r-stop{background:rgba(215,55,70,.25);color:#ffbec5}
-#pco-bi-resume .pco-r-log{margin-top:8px;max-height:140px;overflow:auto;border-top:1px solid #33301f;padding-top:6px;color:#bdb6a4;font-size:12px}
+/* PINCABOS_BATCH_RESUME_PANEL_V3 : le panneau reprend le langage visuel des
+   cartes de la page (fond translucide, grands arrondis, marges aerees) au
+   lieu du rectangle opaque qui detonnait. */
+#pco-bi-resume{margin:16px 0;padding:16px 18px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(255,255,255,.035);font-size:13px}
+#pco-bi-resume[data-floating="1"]{position:fixed;right:16px;bottom:16px;z-index:9998;width:min(340px,calc(100vw - 32px));background:rgba(24,20,32,.96);box-shadow:0 12px 34px rgba(0,0,0,.5)}
+#pco-bi-resume h3{margin:0 0 10px;font-size:14px;font-weight:700;color:rgb(255,143,28);letter-spacing:.2px}
+#pco-bi-resume .pco-r-detail{color:rgba(255,255,255,.72);margin-bottom:12px;line-height:1.45}
+#pco-bi-resume .pco-r-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden;margin-bottom:14px}
+#pco-bi-resume .pco-r-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#ffb000,#ff7a00);transition:width .3s ease}
+#pco-bi-resume .pco-r-actions{display:flex;gap:10px;flex-wrap:wrap}
+#pco-bi-resume button{border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:8px 16px;font:inherit;font-weight:700;cursor:pointer;background:rgba(255,255,255,.05);color:rgba(255,255,255,.9);transition:background .15s ease}
+#pco-bi-resume button:hover{background:rgba(255,255,255,.11)}
+#pco-bi-resume .pco-r-pause{border-color:rgba(255,176,0,.4);color:#ffd79b}
+#pco-bi-resume .pco-r-resume{border-color:rgba(88,214,141,.42);color:#b9f5d0}
+#pco-bi-resume .pco-r-stop{border-color:rgba(215,55,70,.42);color:#ffbec5}
+#pco-bi-resume .pco-r-log{margin-top:14px;max-height:104px;overflow:auto;border-top:1px solid rgba(255,255,255,.09);padding-top:10px;color:rgba(255,255,255,.5);font-size:11.5px;line-height:1.6}
 #pco-bi-resume .pco-r-log div{padding:1px 0}
 #pco-bi-resume button[hidden]{display:none}
 </style>
@@ -271,10 +276,11 @@ _PAGE_UI = r'''
     return response.json();
   }
 
-  function host() {
-    return document.getElementById("pco-bi-upwrap")?.parentNode
-        || document.querySelector("form[enctype], form")
-        || document.body;
+  // Le suivi doit vivre AVEC la zone d'import, pas en tete de page.
+  function anchor() {
+    return document.getElementById("pco-bi-queue")
+        || document.getElementById("pco-bi-upwrap")
+        || document.querySelector("form[enctype]");
   }
 
   function panel() {
@@ -292,8 +298,15 @@ _PAGE_UI = r'''
       + '<button class="pco-r-stop" type="button">Arrêter</button>'
       + '</div>'
       + '<div class="pco-r-log"></div>';
-    const target = host();
-    target.insertBefore(node, target.firstChild);
+    const ref = anchor();
+    if (ref && ref.parentNode) {
+      ref.parentNode.insertBefore(node, ref.nextSibling);
+    } else {
+      // Aucune zone d'import sur cette page : vignette discrete en bas a
+      // droite, jamais un bloc pose en haut du document.
+      node.dataset.floating = "1";
+      document.body.appendChild(node);
+    }
     node.querySelector(".pco-r-pause").addEventListener("click", () => act("pause"));
     node.querySelector(".pco-r-resume").addEventListener("click", () => act("resume"));
     node.querySelector(".pco-r-stop").addEventListener("click", () => act("stop"));
@@ -357,8 +370,21 @@ _PAGE_UI = r'''
     });
   }
 
+  function reseat() {
+    const node = document.getElementById("pco-bi-resume");
+    const ref = anchor();
+    if (!node || !ref || !ref.parentNode) return;
+    if (node.dataset.floating === "1" || node.previousElementSibling !== ref) {
+      delete node.dataset.floating;
+      ref.parentNode.insertBefore(node, ref.nextSibling);
+    }
+  }
+
   async function refresh() {
-    try { render(await api("/api/batch-import/live/active")); } catch (_) {}
+    try {
+      render(await api("/api/batch-import/live/active"));
+      reseat();
+    } catch (_) {}
   }
 
   if (document.readyState === "loading") {
