@@ -1,0 +1,3 @@
+# PinCabOS WebApp - persistance des niveaux audio ALSA
+pinball ALL=(root) NOPASSWD: /usr/sbin/alsactl store
+pinball ALL=(root) NOPASSWD: /usr/sbin/alsactl restore

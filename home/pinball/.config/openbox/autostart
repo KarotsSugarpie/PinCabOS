@@ -3,3 +3,7 @@ xset -dpms
 xset s off
 xset s noblank
 unclutter -idle 1 -root &
+
+# Niveaux audio choisis dans le widget volume : ni ALSA ni WirePlumber ne les
+# conservent, on les rejoue une fois la session audio demarree.
+/usr/local/bin/pincabos-audio-restore --session &

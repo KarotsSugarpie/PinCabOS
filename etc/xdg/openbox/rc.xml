@@ -192,6 +192,19 @@
 <keyboard>
   <chainQuitKey>C-g</chainQuitKey>
 
+  <!-- PinCabOS : touches volume du clavier physique. Elles passent par le
+       widget volume (memes controles, meme memorisation) pour que clavier et
+       dashboard restent d'accord et que le reglage survive au redemarrage. -->
+  <keybind key="XF86AudioRaiseVolume">
+    <action name="Execute"><command>/usr/local/bin/pincabos-volume up</command></action>
+  </keybind>
+  <keybind key="XF86AudioLowerVolume">
+    <action name="Execute"><command>/usr/local/bin/pincabos-volume down</command></action>
+  </keybind>
+  <keybind key="XF86AudioMute">
+    <action name="Execute"><command>/usr/local/bin/pincabos-volume mute</command></action>
+  </keybind>
+
   <!-- Keybindings for desktop switching -->
   <keybind key="C-A-Left">
     <action name="GoToDesktop"><to>left</to><wrap>no</wrap></action>
