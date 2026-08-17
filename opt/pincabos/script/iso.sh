@@ -4071,11 +4071,11 @@ pco_choose_list() {
         echo " $title"
         pco_hr
         echo
-        echo " Entries : $TOTAL"
-        echo " Page    : $((PAGE + 1)) / $PAGES"
+        echo " $(t entries) : $TOTAL"
+        echo " $(t page)    : $((PAGE + 1)) / $PAGES"
 
         if [ -n "$FILTER" ]; then
-            echo " Filter  : $FILTER"
+            echo " $(t filter)  : $FILTER"
         fi
 
         echo
@@ -4097,13 +4097,13 @@ pco_choose_list() {
         done
 
         echo
-        echo "  n = next page"
-        echo "  p = previous page"
-        echo "  s = search/filter"
-        echo "  c = clear search"
+        echo "  $(t next_page)"
+        echo "  $(t prev_page)"
+        echo "  $(t search_filter)"
+        echo "  $(t clear_search)"
         echo
 
-        pco_prompt "Choice: "
+        pco_prompt "$(t choice): "
         read -r CHOICE
 
         case "$CHOICE" in
@@ -4121,7 +4121,7 @@ pco_choose_list() {
 
             s|S)
                 echo
-                pco_prompt "Search: "
+                pco_prompt "$(t search): "
                 read -r SEARCH
                 FILTER="$SEARCH"
                 PAGE=0
@@ -4416,6 +4416,201 @@ regional_setup() {
     local LANG_CODE
     local CHOICE
 
+
+    # ------------------------------------------------------------------
+    # i18n : catalogue de messages + choix de langue (premier ecran)
+    # ------------------------------------------------------------------
+    declare -gA MSG_en MSG_fr MSG_de MSG_it MSG_es
+
+    MSG_en=( [installer]="PinCabOS Installer"
+        [choice]="Choice" [search]="Search"
+        [regional_title]="PinCabOS Regional Setup"
+        [regional_intro1]="All available UTF-8 locales, XKB keyboard layouts"
+        [regional_intro2]="and timezones can be selected."
+        [tip_search]="TIP: use 's' in a list to search."
+        [next_page]="n = next page" [prev_page]="p = previous page"
+        [search_filter]="s = search/filter" [clear_search]="c = clear search"
+        [entries]="Entries" [page]="Page" [filter]="Filter"
+        [menu_locale]="Language / Region — all UTF-8 locales"
+        [menu_keyboard]="Keyboard layout — all XKB layouts"
+        [menu_variant]="Keyboard variant" [menu_timezone]="Timezone — all regions"
+        [orient_title]="Screen orientation"
+        [orient_1]="Landscape (no rotation)" [orient_2]="Portrait — 90 degrees clockwise"
+        [orient_3]="Portrait — 90 degrees counter-clockwise" [orient_4]="Upside down — 180 degrees"
+        [recap_title]="Regional configuration"
+        [recap_continue]="Continue" [recap_change]="Change"
+        [mode_title]="PinCabOS install mode"
+        [mode_1]="Erase a full disk and install PinCabOS" [mode_1b]="Recommended for a dedicated pincab."
+        [mode_2]="Install PinCabOS into existing unallocated space" [mode_2b]="Dualboot mode. Does NOT resize existing partitions."
+        [mode_3]="Rescue shell" [mode_4]="Reboot"
+        [disks_full]="Available target disks — FULL ERASE MODE"
+        [disks_dual]="Available target disks — DUALBOOT FREE SPACE MODE"
+        [disk_selected]="Selected disk:" [disk_options]="Options: number = select disk, s = shell, r = refresh, q = reboot"
+        [erase_warn]="ALL DATA WILL BE ERASED ON:" [confirm_prompt]="Type INSTALL PINCABOS to continue:"
+        [invalid]="Invalid choice." [cancelled]="Cancelled." [out_of_range]="Selection out of range."
+        [no_disk]="No installable disk found."
+        [done_ok]="PinCabOS installation completed successfully."
+        [done_remove]="Remove the ISO/USB media, then reboot."
+        [done_reboot]="Press ENTER to reboot now, or CTRL+C to stay in live session..." )
+
+    MSG_fr=( [installer]="Installateur PinCabOS"
+        [choice]="Choix" [search]="Recherche"
+        [regional_title]="Configuration régionale PinCabOS"
+        [regional_intro1]="Toutes les locales UTF-8, dispositions clavier XKB"
+        [regional_intro2]="et fuseaux horaires sont disponibles."
+        [tip_search]="ASTUCE : tapez 's' dans une liste pour rechercher."
+        [next_page]="n = page suivante" [prev_page]="p = page précédente"
+        [search_filter]="s = rechercher/filtrer" [clear_search]="c = effacer la recherche"
+        [entries]="Entrées" [page]="Page" [filter]="Filtre"
+        [menu_locale]="Langue / Région — locales UTF-8"
+        [menu_keyboard]="Disposition clavier — XKB"
+        [menu_variant]="Variante clavier" [menu_timezone]="Fuseau horaire"
+        [orient_title]="Orientation de l'écran"
+        [orient_1]="Paysage (aucune rotation)" [orient_2]="Portrait — 90 degrés horaire"
+        [orient_3]="Portrait — 90 degrés antihoraire" [orient_4]="Retourné — 180 degrés"
+        [recap_title]="Configuration régionale"
+        [recap_continue]="Continuer" [recap_change]="Modifier"
+        [mode_title]="Mode d'installation PinCabOS"
+        [mode_1]="Effacer un disque entier et installer PinCabOS" [mode_1b]="Recommandé pour un pincab dédié."
+        [mode_2]="Installer dans l'espace non alloué existant" [mode_2b]="Mode dualboot. Ne redimensionne AUCUNE partition."
+        [mode_3]="Console de secours" [mode_4]="Redémarrer"
+        [disks_full]="Disques cibles disponibles — EFFACEMENT TOTAL"
+        [disks_dual]="Disques cibles disponibles — MODE DUALBOOT"
+        [disk_selected]="Disque sélectionné :" [disk_options]="Options : numéro = choisir, s = shell, r = actualiser, q = redémarrer"
+        [erase_warn]="TOUTES LES DONNÉES SERONT EFFACÉES SUR :" [confirm_prompt]="Tapez INSTALL PINCABOS pour continuer :"
+        [invalid]="Choix invalide." [cancelled]="Annulé." [out_of_range]="Sélection hors limites."
+        [no_disk]="Aucun disque installable trouvé."
+        [done_ok]="Installation de PinCabOS terminée avec succès."
+        [done_remove]="Retirez le média ISO/USB, puis redémarrez."
+        [done_reboot]="Appuyez sur ENTRÉE pour redémarrer, ou CTRL+C pour rester en session live..." )
+
+    MSG_de=( [installer]="PinCabOS-Installer"
+        [choice]="Auswahl" [search]="Suche"
+        [regional_title]="PinCabOS Regionale Einrichtung"
+        [regional_intro1]="Alle UTF-8-Locales, XKB-Tastaturlayouts"
+        [regional_intro2]="und Zeitzonen stehen zur Auswahl."
+        [tip_search]="TIPP: 's' in einer Liste tippen, um zu suchen."
+        [next_page]="n = nächste Seite" [prev_page]="p = vorherige Seite"
+        [search_filter]="s = suchen/filtern" [clear_search]="c = Suche löschen"
+        [entries]="Einträge" [page]="Seite" [filter]="Filter"
+        [menu_locale]="Sprache / Region — UTF-8-Locales"
+        [menu_keyboard]="Tastaturlayout — XKB"
+        [menu_variant]="Tastaturvariante" [menu_timezone]="Zeitzone"
+        [orient_title]="Bildschirmausrichtung"
+        [orient_1]="Querformat (keine Drehung)" [orient_2]="Hochformat — 90 Grad im Uhrzeigersinn"
+        [orient_3]="Hochformat — 90 Grad gegen Uhrzeigersinn" [orient_4]="Umgedreht — 180 Grad"
+        [recap_title]="Regionale Konfiguration"
+        [recap_continue]="Weiter" [recap_change]="Ändern"
+        [mode_title]="PinCabOS-Installationsmodus"
+        [mode_1]="Gesamte Festplatte löschen und PinCabOS installieren" [mode_1b]="Empfohlen für einen dedizierten Pincab."
+        [mode_2]="In vorhandenen unpartitionierten Bereich installieren" [mode_2b]="Dualboot-Modus. Partitionen werden NICHT verkleinert."
+        [mode_3]="Rettungskonsole" [mode_4]="Neu starten"
+        [disks_full]="Verfügbare Ziellaufwerke — VOLLSTÄNDIGES LÖSCHEN"
+        [disks_dual]="Verfügbare Ziellaufwerke — DUALBOOT-MODUS"
+        [disk_selected]="Gewähltes Laufwerk:" [disk_options]="Optionen: Nummer = wählen, s = Shell, r = aktualisieren, q = Neustart"
+        [erase_warn]="ALLE DATEN WERDEN GELÖSCHT AUF:" [confirm_prompt]="INSTALL PINCABOS eingeben, um fortzufahren:"
+        [invalid]="Ungültige Auswahl." [cancelled]="Abgebrochen." [out_of_range]="Auswahl außerhalb des Bereichs."
+        [no_disk]="Kein installierbares Laufwerk gefunden."
+        [done_ok]="PinCabOS-Installation erfolgreich abgeschlossen."
+        [done_remove]="ISO/USB-Medium entfernen, dann neu starten."
+        [done_reboot]="ENTER zum Neustart, oder CTRL+C für die Live-Sitzung..." )
+
+    MSG_it=( [installer]="Installatore PinCabOS"
+        [choice]="Scelta" [search]="Ricerca"
+        [regional_title]="Configurazione regionale PinCabOS"
+        [regional_intro1]="Tutte le locale UTF-8, le tastiere XKB"
+        [regional_intro2]="e i fusi orari sono disponibili."
+        [tip_search]="SUGGERIMENTO: digita 's' in un elenco per cercare."
+        [next_page]="n = pagina successiva" [prev_page]="p = pagina precedente"
+        [search_filter]="s = cerca/filtra" [clear_search]="c = cancella ricerca"
+        [entries]="Voci" [page]="Pagina" [filter]="Filtro"
+        [menu_locale]="Lingua / Regione — locale UTF-8"
+        [menu_keyboard]="Layout tastiera — XKB"
+        [menu_variant]="Variante tastiera" [menu_timezone]="Fuso orario"
+        [orient_title]="Orientamento dello schermo"
+        [orient_1]="Orizzontale (nessuna rotazione)" [orient_2]="Verticale — 90 gradi orario"
+        [orient_3]="Verticale — 90 gradi antiorario" [orient_4]="Capovolto — 180 gradi"
+        [recap_title]="Configurazione regionale"
+        [recap_continue]="Continua" [recap_change]="Modifica"
+        [mode_title]="Modalità di installazione PinCabOS"
+        [mode_1]="Cancella un intero disco e installa PinCabOS" [mode_1b]="Consigliato per un pincab dedicato."
+        [mode_2]="Installa nello spazio non allocato esistente" [mode_2b]="Modalità dualboot. NON ridimensiona le partizioni."
+        [mode_3]="Console di ripristino" [mode_4]="Riavvia"
+        [disks_full]="Dischi di destinazione — CANCELLAZIONE TOTALE"
+        [disks_dual]="Dischi di destinazione — MODALITÀ DUALBOOT"
+        [disk_selected]="Disco selezionato:" [disk_options]="Opzioni: numero = seleziona, s = shell, r = aggiorna, q = riavvia"
+        [erase_warn]="TUTTI I DATI SARANNO CANCELLATI SU:" [confirm_prompt]="Digita INSTALL PINCABOS per continuare:"
+        [invalid]="Scelta non valida." [cancelled]="Annullato." [out_of_range]="Selezione fuori intervallo."
+        [no_disk]="Nessun disco installabile trovato."
+        [done_ok]="Installazione di PinCabOS completata con successo."
+        [done_remove]="Rimuovi il supporto ISO/USB, poi riavvia."
+        [done_reboot]="Premi INVIO per riavviare, o CTRL+C per restare in sessione live..." )
+
+    MSG_es=( [installer]="Instalador PinCabOS"
+        [choice]="Opción" [search]="Búsqueda"
+        [regional_title]="Configuración regional PinCabOS"
+        [regional_intro1]="Todas las locales UTF-8, teclados XKB"
+        [regional_intro2]="y zonas horarias están disponibles."
+        [tip_search]="CONSEJO: escribe 's' en una lista para buscar."
+        [next_page]="n = página siguiente" [prev_page]="p = página anterior"
+        [search_filter]="s = buscar/filtrar" [clear_search]="c = borrar búsqueda"
+        [entries]="Entradas" [page]="Página" [filter]="Filtro"
+        [menu_locale]="Idioma / Región — locales UTF-8"
+        [menu_keyboard]="Distribución de teclado — XKB"
+        [menu_variant]="Variante de teclado" [menu_timezone]="Zona horaria"
+        [orient_title]="Orientación de la pantalla"
+        [orient_1]="Horizontal (sin rotación)" [orient_2]="Vertical — 90 grados horario"
+        [orient_3]="Vertical — 90 grados antihorario" [orient_4]="Invertido — 180 grados"
+        [recap_title]="Configuración regional"
+        [recap_continue]="Continuar" [recap_change]="Cambiar"
+        [mode_title]="Modo de instalación PinCabOS"
+        [mode_1]="Borrar un disco completo e instalar PinCabOS" [mode_1b]="Recomendado para un pincab dedicado."
+        [mode_2]="Instalar en el espacio no asignado existente" [mode_2b]="Modo dualboot. NO redimensiona particiones."
+        [mode_3]="Consola de rescate" [mode_4]="Reiniciar"
+        [disks_full]="Discos de destino — BORRADO TOTAL"
+        [disks_dual]="Discos de destino — MODO DUALBOOT"
+        [disk_selected]="Disco seleccionado:" [disk_options]="Opciones: número = elegir, s = shell, r = actualizar, q = reiniciar"
+        [erase_warn]="TODOS LOS DATOS SERÁN BORRADOS EN:" [confirm_prompt]="Escribe INSTALL PINCABOS para continuar:"
+        [invalid]="Opción no válida." [cancelled]="Cancelado." [out_of_range]="Selección fuera de rango."
+        [no_disk]="No se encontró ningún disco instalable."
+        [done_ok]="Instalación de PinCabOS completada con éxito."
+        [done_remove]="Retira el medio ISO/USB y reinicia."
+        [done_reboot]="Pulsa INTRO para reiniciar, o CTRL+C para la sesión live..." )
+
+    PCO_LANG="en"
+    PCO_LOC_PREFIX=""
+    PCO_TZ_HINT=""
+
+    t() {
+        local -n _cat="MSG_${PCO_LANG}"
+        local _v="${_cat[$1]:-}"
+        if [ -n "$_v" ]; then printf '%s' "$_v"; else printf '%s' "${MSG_en[$1]:-$1}"; fi
+    }
+
+    pco_choose_language() {
+        while true; do
+            echo
+            pco_hr
+            echo " PinCabOS Installer"
+            pco_hr
+            echo
+            echo "  [1] Français    [2] English    [3] Deutsch"
+            echo "  [4] Italiano    [5] Español"
+            echo
+            pco_prompt "Choice / Choix: "
+            read -r _PCO_L
+            case "$_PCO_L" in
+                1) PCO_LANG=fr; PCO_LOC_PREFIX=fr; PCO_TZ_HINT=Paris ;;
+                2) PCO_LANG=en; PCO_LOC_PREFIX=en; PCO_TZ_HINT=New_York ;;
+                3) PCO_LANG=de; PCO_LOC_PREFIX=de; PCO_TZ_HINT=Berlin ;;
+                4) PCO_LANG=it; PCO_LOC_PREFIX=it; PCO_TZ_HINT=Rome ;;
+                5) PCO_LANG=es; PCO_LOC_PREFIX=es; PCO_TZ_HINT=Madrid ;;
+                *) continue ;;
+            esac
+            break
+        done
+    }
+
     LOCALES="$(mktemp)"
     KEYBOARDS="$(mktemp)"
     VARIANTS="$(mktemp)"
@@ -4425,17 +4620,19 @@ regional_setup() {
     pco_build_keyboard_catalog "$KEYBOARDS"
     pco_build_timezone_catalog "$TIMEZONES"
 
+    pco_choose_language
+
     while true; do
 
         echo
         pco_hr
-        echo " PinCabOS Regional Setup — ALL REGIONS"
+        echo " $(t regional_title)"
         pco_hr
         echo
-        echo "All available UTF-8 locales, XKB keyboard layouts"
-        echo "and timezones can be selected."
+        echo "$(t regional_intro1)"
+        echo "$(t regional_intro2)"
         echo
-        echo "TIP: use 's' in a list to search."
+        echo "$(t tip_search)"
         echo
         echo "Examples:"
         echo "  Locale   search: fr_CA"
@@ -4447,8 +4644,9 @@ regional_setup() {
         # Locale / Region
         #
         pco_choose_list \
-            "Language / Region — all UTF-8 locales" \
-            "$LOCALES"
+            "$(t menu_locale)" \
+            "$LOCALES" \
+            "$PCO_LOC_PREFIX"
 
         REG_LOCALE="$PCO_SELECTED"
         REG_LOCALE_LABEL="$PCO_SELECTED_LABEL"
@@ -4462,7 +4660,7 @@ regional_setup() {
         # Keyboard layout
         #
         pco_choose_list \
-            "Keyboard layout — all XKB layouts" \
+            "$(t menu_keyboard)" \
             "$KEYBOARDS" \
             "$LANG_CODE"
 
@@ -4477,7 +4675,7 @@ regional_setup() {
             "$VARIANTS"
 
         pco_choose_list \
-            "Keyboard variant — $REG_XKB_LAYOUT" \
+            "$(t menu_variant) — $REG_XKB_LAYOUT" \
             "$VARIANTS"
 
         REG_XKB_VARIANT="$PCO_SELECTED"
@@ -4497,25 +4695,26 @@ regional_setup() {
         # Timezone — all regions.
         #
         pco_choose_list \
-            "Timezone — all regions" \
-            "$TIMEZONES"
+            "$(t menu_timezone)" \
+            "$TIMEZONES" \
+            "$PCO_TZ_HINT"
 
         REG_TIMEZONE="$PCO_SELECTED"
 
         # Screen orientation for cabinet display / boot splash.
         echo
         pco_hr
-        echo " Screen orientation"
+        echo " $(t orient_title)"
         pco_hr
         echo
-        echo "  [1] Landscape (no rotation)"
-        echo "  [2] Portrait — 90 degrees clockwise"
-        echo "  [3] Portrait — 90 degrees counter-clockwise"
-        echo "  [4] Upside down — 180 degrees"
+        echo "  [1] $(t orient_1)"
+        echo "  [2] $(t orient_2)"
+        echo "  [3] $(t orient_3)"
+        echo "  [4] $(t orient_4)"
         echo
 
         while true; do
-            pco_prompt "Choice: "
+            pco_prompt "$(t choice): "
             read -r CHOICE
             case "$CHOICE" in
                 1) REG_FBROTATE=0; REG_ORIENT_LABEL="Landscape"; break ;;
@@ -4528,7 +4727,7 @@ regional_setup() {
 
         echo
         pco_hr
-        echo " Regional configuration"
+        echo " $(t recap_title)"
         pco_hr
         echo
         echo " Language : $REG_LOCALE_LABEL"
@@ -4538,11 +4737,11 @@ regional_setup() {
         echo " Timezone : $REG_TIMEZONE"
         echo " Screen   : $REG_ORIENT_LABEL"
         echo
-        echo "  [1] Continue"
-        echo "  [2] Change"
+        echo "  [1] $(t recap_continue)"
+        echo "  [2] $(t recap_change)"
         echo
 
-        pco_prompt "Choice: "
+        pco_prompt "$(t choice): "
         read -r CHOICE
 
         case "$CHOICE" in
@@ -4838,7 +5037,7 @@ choose_disk() {
     mapfile -t DISKS < <(lsblk -dpno NAME,TYPE | awk '$2=="disk"{print $1}' | grep -Ev '/dev/loop|/dev/sr|/dev/ram' || true)
 
     if [ "${#DISKS[@]}" -eq 0 ]; then
-      echo "No installable disk found."
+      echo "$(t no_disk)"
       echo "Options: r = retry, s = shell, q = reboot"
       pco_prompt "> "
       read -r CHOICE
@@ -4857,8 +5056,8 @@ choose_disk() {
     done
 
     echo
-    echo "Options: number = select disk, s = shell, r = refresh, q = reboot"
-    pco_prompt "Choice: "
+    echo "$(t disk_options)"
+    pco_prompt "$(t choice): "
     read -r CHOICE
 
     case "$CHOICE" in
@@ -4868,13 +5067,13 @@ choose_disk() {
     esac
 
     [[ "$CHOICE" =~ ^[0-9]+$ ]] || {
-      echo "Invalid choice."
+      echo "$(t invalid)"
       continue
     }
 
     IDX=$((CHOICE-1))
     if [ "$IDX" -lt 0 ] || [ "$IDX" -ge "${#DISKS[@]}" ]; then
-      echo "Selection out of range."
+      echo "$(t out_of_range)"
       continue
     fi
 
@@ -5017,19 +5216,19 @@ final_boot_refresh() {
 }
 
 full_disk_install() {
-  choose_disk "Available target disks — FULL ERASE MODE"
+  choose_disk "$(t disks_full)"
 
   echo
-  echo "Selected disk:"
+  echo "$(t disk_selected)"
   lsblk -dpno NAME,SIZE,MODEL "$DISK"
   echo
-  pco_warn "ALL DATA ON $DISK WILL BE ERASED."
+  pco_warn "$(t erase_warn) $DISK"
   echo
-  pco_prompt "Type INSTALL PINCABOS to continue: "
+  pco_prompt "$(t confirm_prompt) "
   read -r CONFIRM
 
   [ "$CONFIRM" = "INSTALL PINCABOS" ] || {
-    echo "Cancelled."
+    echo "$(t cancelled)"
     exit 1
   }
 
@@ -5117,10 +5316,10 @@ list_free_spaces() {
 }
 
 dualboot_install() {
-  choose_disk "Available target disks — DUALBOOT FREE SPACE MODE"
+  choose_disk "$(t disks_dual)"
 
   echo
-  echo "Selected disk:"
+  echo "$(t disk_selected)"
   lsblk -dpno NAME,SIZE,MODEL "$DISK"
   echo
   echo "Dualboot mode will NOT resize partitions."
@@ -5163,13 +5362,13 @@ dualboot_install() {
   read -r FREE_CHOICE
 
   [[ "$FREE_CHOICE" =~ ^[0-9]+$ ]] || {
-    echo "Invalid choice."
+    echo "$(t invalid)"
     exit 1
   }
 
   FREE_IDX=$((FREE_CHOICE-1))
   if [ "$FREE_IDX" -lt 0 ] || [ "$FREE_IDX" -ge "${#FREE_SPACES[@]}" ]; then
-    echo "Selection out of range."
+    echo "$(t out_of_range)"
     exit 1
   fi
 
@@ -5188,7 +5387,7 @@ dualboot_install() {
   read -r CONFIRM
 
   [ "$CONFIRM" = "INSTALL PINCABOS DUALBOOT" ] || {
-    echo "Cancelled."
+    echo "$(t cancelled)"
     exit 1
   }
 
@@ -5245,20 +5444,20 @@ regional_setup
 while true; do
   echo
   pco_hr
-  echo " PinCabOS install mode"
+  echo " $(t mode_title)"
   pco_hr
   echo
-  echo "  [1] Erase a full disk and install PinCabOS"
-  echo "      Recommended for a dedicated pincab."
+  echo "  [1] $(t mode_1)"
+  echo "      $(t mode_1b)"
   echo
-  echo "  [2] Install PinCabOS into existing unallocated space"
-  echo "      Dualboot mode. Does NOT resize existing partitions."
+  echo "  [2] $(t mode_2)"
+  echo "      $(t mode_2b)"
   echo
-  echo "  [3] Rescue shell"
+  echo "  [3] $(t mode_3)"
   echo
-  echo "  [4] Reboot"
+  echo "  [4] $(t mode_4)"
   echo
-  pco_prompt "Choice: "
+  pco_prompt "$(t choice): "
   read -r MODE
 
   case "$MODE" in
@@ -5266,7 +5465,7 @@ while true; do
     2) dualboot_install; break ;;
     3) bash ;;
     4) reboot ;;
-    *) echo "Invalid choice." ;;
+    *) echo "$(t invalid)" ;;
   esac
 done
 
@@ -5291,10 +5490,10 @@ pco_go "Validation finale du système installé réussie"
 
 echo
 pco_hr
-pco_go "PinCabOS installation completed successfully."
-pco_warn "Remove the ISO/USB media, then reboot."
+pco_go "$(t done_ok)"
+pco_warn "$(t done_remove)"
 pco_hr
-pco_prompt "Press ENTER to reboot now, or CTRL+C to stay in live session..."
+pco_prompt "$(t done_reboot)"
 read -r
 reboot
 PINCBOS_LIVE_INSTALLER
