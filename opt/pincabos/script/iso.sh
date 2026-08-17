@@ -15,11 +15,11 @@ fi
 VERSION="v8.1g"
 VERSION_UPPER="V8.1G"
 
-BASE_ISO_URL="https://releases.ubuntu.com/26.04/ubuntu-26.04-desktop-amd64.iso"
+BASE_ISO_URL="https://releases.ubuntu.com/26.04/ubuntu-26.04-live-server-amd64.iso"
 BASE_SHA_URL="https://releases.ubuntu.com/26.04/SHA256SUMS"
 
 CACHE_DIR="/opt/pincabos/cache/iso-base"
-BASE_ISO="$CACHE_DIR/ubuntu-26.04-desktop-amd64.iso"
+BASE_ISO="$CACHE_DIR/ubuntu-26.04-live-server-amd64.iso"
 
 BUILD_BASE="/opt/pincabos/build"
 WORK="$BUILD_BASE/live-v8.1g-english"
@@ -419,6 +419,7 @@ tar \
   --exclude='./opt/pincabos/config/screens/screens.json' \
   --exclude='./opt/pincabos/config/screens/bindings.json' \
   --exclude='./opt/pincabos/config/screens/display-bindings.json' \
+  --exclude='./opt/pincabos/config/screens/display-role-bindings.json' \
   --exclude='./home/pinball/.config/monitors.xml' \
   --exclude='./var/log/journal/*' \
   --exclude='./var/cache/apt/archives/*.deb' \
@@ -3666,7 +3667,7 @@ fi
 
 wget -O "$CACHE_DIR/SHA256SUMS" "$BASE_SHA_URL"
 
-EXPECTED="$(grep 'ubuntu-26.04-desktop-amd64.iso$' "$CACHE_DIR/SHA256SUMS" | awk '{print $1}')"
+EXPECTED="$(grep "$(basename "$BASE_ISO")\$" "$CACHE_DIR/SHA256SUMS" | awk '{print $1}')"
 ACTUAL="$(sha256sum "$BASE_ISO" | awk '{print $1}')"
 
 echo "Expected: $EXPECTED"
@@ -3734,6 +3735,10 @@ find "$ISO_DIR/casper" -maxdepth 3 -type f -name '*.squashfs' \
   -printf '%12s  %p\n' 2>/dev/null | sort -n || true
 
 SQUASHFS="$(find "$ISO_DIR/casper" -maxdepth 3 -type f -name '*.squashfs' -printf '%s %p\n' 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)"
+# Base server : la couche minimale est LA racine auto-suffisante de la pile casper.
+if [ -f "$ISO_DIR/casper/ubuntu-server-minimal.squashfs" ]; then
+  SQUASHFS="$ISO_DIR/casper/ubuntu-server-minimal.squashfs"
+fi
 
 [ -n "$SQUASHFS" ] || die "No squashfs found under $ISO_DIR/casper"
 [ -f "$SQUASHFS" ] || die "Squashfs path invalid: $SQUASHFS"
@@ -3796,7 +3801,9 @@ APT_FORCE_OPTS=(
   -o APT::Get::List-Cleanup=0
 )
 
-chroot "$ROOTFS_DIR" apt-get "${APT_FORCE_OPTS[@]}" clean || true
+# cache apt persistant entre les builds (les .deb survivent au menage)
+mkdir -p "$CACHE_DIR/apt-archives"
+mount --bind "$CACHE_DIR/apt-archives" "$ROOTFS_DIR/var/cache/apt/archives"
 chroot "$ROOTFS_DIR" apt-get "${APT_FORCE_OPTS[@]}" update
 DEBIAN_FRONTEND=noninteractive chroot "$ROOTFS_DIR" apt-get "${APT_FORCE_OPTS[@]}" install -y \
   zstd \
@@ -3808,7 +3815,115 @@ DEBIAN_FRONTEND=noninteractive chroot "$ROOTFS_DIR" apt-get "${APT_FORCE_OPTS[@]
   coreutils \
   sudo \
   grub-efi-amd64-bin \
-  ca-certificates
+  ca-certificates \
+  plymouth \
+  plymouth-label \
+  fontconfig \
+  casper \
+  kbd \
+  console-setup \
+  xserver-xorg-core \
+  xserver-xorg-video-all \
+  xinit \
+  x11-xserver-utils \
+  openbox \
+  python3-gi \
+  gir1.2-webkit-6.0 \
+  python3-flask \
+  curl \
+  fonts-dejavu-core \
+  libgl1-mesa-dri
+
+echo
+echo "--- PinCabOS: dist-upgrade du live (kernel tenu) + menage apt du live ---"
+chroot "$ROOTFS_DIR" bash -c "
+  export DEBIAN_FRONTEND=noninteractive
+  apt-mark hold linux-generic linux-image-generic linux-headers-generic 2>/dev/null || true
+  apt-get -y -qq -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold dist-upgrade 2>&1 | tail -3
+  apt-get -y -qq purge mdadm 2>&1 | tail -1
+  apt-get -y -qq autoremove --purge 2>&1 | tail -2
+"
+umount "$ROOTFS_DIR/var/cache/apt/archives"
+rm -rf "$ROOTFS_DIR/var/lib/apt/lists"/* "$ROOTFS_DIR/var/cache/apt/archives"/*.deb
+
+echo
+echo "--- PinCabOS: theme Plymouth + regeneration initrd live (base server) ---"
+mkdir -p "$ROOTFS_DIR/usr/share/plymouth/themes" "$ROOTFS_DIR/etc/plymouth"
+cp -a /usr/share/plymouth/themes/pincabos "$ROOTFS_DIR/usr/share/plymouth/themes/"
+# Splash du LIVE : la mascotte "Tux au flipper" (theme install de Karots),
+# le systeme installe garde le logo classique.
+cp /usr/share/plymouth/themes/pincabos-install/PCOSLinuxWP.png \
+   "$ROOTFS_DIR/usr/share/plymouth/themes/pincabos/pincabos.png"
+printf '[Daemon]\nTheme=pincabos\nShowDelay=0\n' > "$ROOTFS_DIR/etc/plymouth/plymouthd.conf"
+# Le plugin "script" n est pas dans le paquet plymouth de base : on le garantit.
+DEBIAN_FRONTEND=noninteractive chroot "$ROOTFS_DIR" apt-get install -y -qq plymouth-themes 2>/dev/null || true
+PLY_LIB="usr/lib/x86_64-linux-gnu/plymouth"
+if [ ! -f "$ROOTFS_DIR/$PLY_LIB/script.so" ]; then
+  cp "/$PLY_LIB/script.so" "$ROOTFS_DIR/$PLY_LIB/script.so"
+fi
+[ ! -f "/$PLY_LIB/label.so" ] || cp -n "/$PLY_LIB/label.so" "$ROOTFS_DIR/$PLY_LIB/" || true
+chroot "$ROOTFS_DIR" update-alternatives --install \
+  /usr/share/plymouth/themes/default.plymouth default.plymouth \
+  /usr/share/plymouth/themes/pincabos/pincabos.plymouth 200
+chroot "$ROOTFS_DIR" update-alternatives --set default.plymouth \
+  /usr/share/plymouth/themes/pincabos/pincabos.plymouth
+[ ! -x "$ROOTFS_DIR/usr/sbin/plymouth-set-default-theme" ] \
+  || chroot "$ROOTFS_DIR" /usr/sbin/plymouth-set-default-theme pincabos
+echo "--- PinCabOS: reseau DHCP du live ---"
+mkdir -p "$ROOTFS_DIR/etc/netplan"
+cat > "$ROOTFS_DIR/etc/netplan/01-pincabos-live-dhcp.yaml" <<'PCO_NET'
+# pincabos-live-dhcp : DHCP simple sur toute interface ethernet du live
+network:
+  version: 2
+  ethernets:
+    all-en:
+      match: {name: "en*"}
+      dhcp4: true
+      optional: true
+PCO_NET
+chmod 600 "$ROOTFS_DIR/etc/netplan/01-pincabos-live-dhcp.yaml"
+
+echo "--- PinCabOS: hostname du live ---"
+echo pincabos-installer > "$ROOTFS_DIR/etc/hostname"
+printf '127.0.0.1 localhost\n127.0.1.1 pincabos-installer\n' > "$ROOTFS_DIR/etc/hosts"
+
+echo "--- PinCabOS: installeur GUI (wizard + kiosk + dispatch) ---"
+mkdir -p "$ROOTFS_DIR/opt/pincabos/installer-gui"
+cp -a /opt/pincabos/installer-gui/. "$ROOTFS_DIR/opt/pincabos/installer-gui/"
+install -m 755 /usr/local/sbin/pincabos-installer-dispatch \
+  "$ROOTFS_DIR/usr/local/sbin/pincabos-installer-dispatch"
+install -m 755 /usr/local/bin/pincabos-kiosk.py \
+  "$ROOTFS_DIR/usr/local/bin/pincabos-kiosk.py"
+install -m 755 /usr/local/bin/pincabos-kiosk-session \
+  "$ROOTFS_DIR/usr/local/bin/pincabos-kiosk-session"
+install -m 755 /usr/local/sbin/pincabos-gui-fallback \
+  "$ROOTFS_DIR/usr/local/sbin/pincabos-gui-fallback"
+cp /etc/systemd/system/pincabos-tui-fallback.service \
+   "$ROOTFS_DIR/etc/systemd/system/"
+cp /etc/systemd/system/pincabos-gui-wizard.service \
+   /etc/systemd/system/pincabos-gui-kiosk.service \
+   "$ROOTFS_DIR/etc/systemd/system/"
+mkdir -p "$ROOTFS_DIR/etc/X11/xorg.conf.d"
+cat > "$ROOTFS_DIR/etc/X11/xorg.conf.d/10-pincabos-kiosk.conf" <<'PCO_XORG'
+Section "Device"
+  Identifier "PinCabOS Kiosk"
+  Driver "modesetting"
+EndSection
+PCO_XORG
+echo "OK: installeur GUI embarque dans le live"
+
+LIVE_KVER="$(ls "$ROOTFS_DIR/lib/modules" | sort -V | tail -1)"
+DEBIAN_FRONTEND=noninteractive chroot "$ROOTFS_DIR" update-initramfs -c -k "$LIVE_KVER" \
+  || DEBIAN_FRONTEND=noninteractive chroot "$ROOTFS_DIR" update-initramfs -u -k "$LIVE_KVER"
+cp "$ROOTFS_DIR/boot/initrd.img-$LIVE_KVER" "$ISO_DIR/casper/initrd"
+if [ -f "$ROOTFS_DIR/boot/vmlinuz-$LIVE_KVER" ]; then
+  cp "$ROOTFS_DIR/boot/vmlinuz-$LIVE_KVER" "$ISO_DIR/casper/vmlinuz"
+fi
+lsinitramfs "$ISO_DIR/casper/initrd" | grep -q "themes/pincabos/pincabos.script" \
+  || die "Theme pincabos absent de l initrd live"
+lsinitramfs "$ISO_DIR/casper/initrd" | grep -q "plymouth/script.so" \
+  || die "Plugin script.so absent de l initrd live"
+echo "OK: initrd live regenere avec plymouth+casper ($LIVE_KVER), theme pincabos verifie"
 
 cleanup_mounts
 
@@ -3859,6 +3974,13 @@ mkdir -p "$ROOTFS_DIR/usr/local/sbin"
 cat >"$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer" <<'PINCBOS_LIVE_INSTALLER'
 #!/usr/bin/env bash
 set -Eeuo pipefail
+
+# Mode reponses (GUI ou install automatisee) : les variables PCO_ANS_*
+# court-circuitent les prompts ; le moteur reste identique ensuite.
+if [ -n "${PCO_ANSWERS:-}" ] && [ -f "$PCO_ANSWERS" ]; then
+  . "$PCO_ANSWERS"
+  echo "TRACE gui-answers charges (lang=${PCO_ANS_LANG:-?})"
+fi
 
 # === PINCABOS_LIVE_INSTALLER_TTY_THEME_V1 ===
 
@@ -4588,6 +4710,16 @@ regional_setup() {
     }
 
     pco_choose_language() {
+        if [ -n "${PCO_ANS_LANG:-}" ]; then
+            case "$PCO_ANS_LANG" in
+                fr) PCO_LANG=fr; PCO_LOC_PREFIX=fr; PCO_TZ_HINT=Paris ;;
+                de) PCO_LANG=de; PCO_LOC_PREFIX=de; PCO_TZ_HINT=Berlin ;;
+                it) PCO_LANG=it; PCO_LOC_PREFIX=it; PCO_TZ_HINT=Rome ;;
+                es) PCO_LANG=es; PCO_LOC_PREFIX=es; PCO_TZ_HINT=Madrid ;;
+                *)  PCO_LANG=en; PCO_LOC_PREFIX=en; PCO_TZ_HINT=New_York ;;
+            esac
+            return
+        fi
         while true; do
             echo
             pco_hr
@@ -4616,13 +4748,37 @@ regional_setup() {
     VARIANTS="$(mktemp)"
     TIMEZONES="$(mktemp)"
 
+    echo "TRACE catalogues: locales..."
     pco_build_locale_catalog "$LOCALES"
+    echo "TRACE catalogues: claviers..."
     pco_build_keyboard_catalog "$KEYBOARDS"
+    echo "TRACE catalogues: fuseaux..."
     pco_build_timezone_catalog "$TIMEZONES"
+    echo "TRACE catalogues: OK"
+
+    pco_choose_language
 
     pco_choose_language
 
     while true; do
+
+        if [ -n "${PCO_ANS_LOCALE:-}" ]; then
+            REG_LOCALE="$PCO_ANS_LOCALE"
+            REG_LOCALE_LABEL="$PCO_ANS_LOCALE"
+            BASE_LOCALE="${REG_LOCALE%%.*}"
+            REG_XKB_LAYOUT="${PCO_ANS_XKB:-us}"
+            REG_XKB_VARIANT="${PCO_ANS_XKB_VARIANT:-}"
+            REG_KEYBOARD_LABEL="$REG_XKB_LAYOUT ${REG_XKB_VARIANT:-}"
+            REG_TIMEZONE="${PCO_ANS_TZ:-UTC}"
+            case "${PCO_ANS_ORIENT:-1}" in
+                2) REG_FBROTATE=1; REG_ORIENT_LABEL="Portrait 90 clockwise" ;;
+                3) REG_FBROTATE=3; REG_ORIENT_LABEL="Portrait 90 counter-clockwise" ;;
+                4) REG_FBROTATE=2; REG_ORIENT_LABEL="Upside down 180" ;;
+                *) REG_FBROTATE=0; REG_ORIENT_LABEL="Landscape" ;;
+            esac
+            pco_go "Regional configuration accepted"
+            break
+        fi
 
         echo
         pco_hr
@@ -4924,7 +5080,8 @@ fun boot_progress_callback(duration, progress) {
 }
 
 Plymouth.SetBootProgressFunction(boot_progress_callback);
-Plymouth.SetRefreshFunction(refresh_callback);PLYSCRIPT
+Plymouth.SetRefreshFunction(refresh_callback);
+PLYSCRIPT
         sed -i "s/__ROT_DEG__/$DEG/" "$THEME"
         pco_go "Plymouth splash rotated: $DEG degrees"
     fi
@@ -5094,6 +5251,11 @@ check_payload() {
 choose_disk() {
   local title="$1"
   local CHOICE IDX
+
+  if [ -n "${PCO_ANS_DISK:-}" ] && [ -b "$PCO_ANS_DISK" ]; then
+    DISK="$PCO_ANS_DISK"
+    return
+  fi
 
   while true; do
     echo
@@ -5292,7 +5454,7 @@ full_disk_install() {
   pco_warn "$(t erase_warn) $DISK"
   echo
   pco_prompt "$(t confirm_prompt) "
-  read -r CONFIRM
+  if [ -n "${PCO_ANS_DISK:-}" ]; then CONFIRM="INSTALL PINCABOS"; echo "$CONFIRM"; else read -r CONFIRM; fi
 
   [ "$CONFIRM" = "INSTALL PINCABOS" ] || {
     echo "$(t cancelled)"
@@ -5451,7 +5613,7 @@ dualboot_install() {
   echo "  EFI:   $EFI_PART will be reused, NOT formatted"
   echo
   pco_prompt "Type INSTALL PINCABOS DUALBOOT to continue: "
-  read -r CONFIRM
+  if [ -n "${PCO_ANS_DISK:-}" ]; then CONFIRM="INSTALL PINCABOS DUALBOOT"; echo "$CONFIRM"; else read -r CONFIRM; fi
 
   [ "$CONFIRM" = "INSTALL PINCABOS DUALBOOT" ] || {
     echo "$(t cancelled)"
@@ -5525,7 +5687,7 @@ while true; do
   echo "  [4] $(t mode_4)"
   echo
   pco_prompt "$(t choice): "
-  read -r MODE
+  if [ -n "${PCO_ANS_MODE:-}" ]; then MODE="$PCO_ANS_MODE"; echo "$MODE"; else read -r MODE; fi
 
   case "$MODE" in
     1) full_disk_install; break ;;
@@ -5560,6 +5722,10 @@ pco_hr
 pco_go "$(t done_ok)"
 pco_warn "$(t done_remove)"
 pco_hr
+if [ -n "${PCO_ANSWERS:-}" ]; then
+  pco_go "PINCABOS_INSTALL_COMPLETE"
+  exit 0
+fi
 pco_prompt "$(t done_reboot)"
 read -r
 reboot
@@ -5613,16 +5779,14 @@ LIVE_MASK_UNITS=(
   unattended-upgrades.service
   packagekit.service
   NetworkManager-wait-online.service
+  systemd-networkd-wait-online.service
   fwupd.service
   fwupd-refresh.service
   fwupd-refresh.timer
   whoopsie.service
   apport.service
-  plymouth-start.service
-  plymouth-quit.service
-  plymouth-quit-wait.service
-  plymouth-read-write.service
 )
+# plymouth n est plus masque : le live affiche le splash PinCabOS (theme via 17b)
 
 for unit in "${LIVE_MASK_UNITS[@]}"; do
   echo "Masking live-only unit: $unit"
@@ -5725,7 +5889,7 @@ ConditionPathExists=/usr/local/sbin/pincabos-live-installer-console
 Type=simple
 Environment=TERM=linux
 ExecStartPre=-/usr/bin/chvt 1
-ExecStart=/usr/local/sbin/pincabos-live-installer-console
+ExecStart=/usr/local/sbin/pincabos-installer-dispatch
 StandardInput=tty-force
 StandardOutput=tty
 StandardError=tty
@@ -5883,21 +6047,27 @@ fi
 set menu_color_normal=white/black
 set menu_color_highlight=black/light-gray
 
-menuentry "Install PinCabOS V8.1G" {
+menuentry "Install PinCabOS V8.1G (graphical)" {
   set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt modprobe.blacklist=nouveau,nova_core,nova_drm pcie_port_pm=off systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty2 quiet loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
+  linux $KERNEL_REL boot=casper noprompt pincabos.installer=gui modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off nouveau.modeset=0 systemd.unit=multi-user.target cloud-init=disabled quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
+  initrd $INITRD_REL
+}
+
+menuentry "Install PinCabOS V8.1G (text mode)" {
+  set gfxpayload=keep
+  linux $KERNEL_REL boot=casper noprompt pincabos.installer=tui modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off nouveau.modeset=0 systemd.unit=multi-user.target cloud-init=disabled quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
   initrd $INITRD_REL
 }
 
 menuentry "Install PinCabOS V8.1G - safe graphics" {
   set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt modprobe.blacklist=nouveau,nova_core,nova_drm pcie_port_pm=off nomodeset systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty2 quiet loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
+  linux $KERNEL_REL boot=casper noprompt nomodeset modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off systemd.unit=multi-user.target cloud-init=disabled quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
   initrd $INITRD_REL
 }
 
 menuentry "PinCabOS rescue shell" {
   set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt modprobe.blacklist=nouveau,nova_core,nova_drm pcie_port_pm=off systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty1 loglevel=4 systemd.show_status=true rd.systemd.show_status=true vt.global_cursor_default=1 pincabos.rescue=1 ---
+  linux $KERNEL_REL boot=casper noprompt systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty1 modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off nouveau.modeset=0 loglevel=4 systemd.show_status=true rd.systemd.show_status=true vt.global_cursor_default=1 pincabos.rescue=1 ---
   initrd $INITRD_REL
 }
 
@@ -6118,11 +6288,8 @@ for path in sorted(iso_root.rglob("*")):
             additions = [
                 "systemd.unit=multi-user.target",
                 "cloud-init=disabled",
-                "plymouth.enable=0",
-                "rd.plymouth=0",
-                "noplymouth",
-                "console=tty2",
                 "quiet",
+                "splash",
                 "loglevel=3",
                 "rd.udev.log_level=3",
                 "systemd.show_status=false",
@@ -6172,10 +6339,12 @@ LIVE_BOOT_LINES="$(
 [ -n "$LIVE_BOOT_LINES" ] \
   || die "No live boot=casper lines found after TTY policy"
 
-if grep -Eq '(^|[[:space:]])splash([[:space:]]|$)' \
+# Politique inversee : le splash PinCabOS est desormais VOULU sur le live
+# (theme + plugin script dans l initrd via 17b, services plymouth demasques).
+if ! grep -Eq '(^|[[:space:]])splash([[:space:]]|$)' \
     <<<"$LIVE_BOOT_LINES"; then
   echo "$LIVE_BOOT_LINES"
-  die "A live boot entry still contains splash"
+  die "Live boot entries are missing splash (PinCabOS live theme expected)"
 fi
 
 if grep -v 'systemd.unit=multi-user.target' \
@@ -6185,15 +6354,39 @@ if grep -v 'systemd.unit=multi-user.target' \
   die "A live boot entry does not force multi-user.target"
 fi
 
-if grep -v 'plymouth.enable=0' \
-    <<<"$LIVE_BOOT_LINES" \
-    | grep -q .; then
+# Nouvelle politique : les entrees d installation affichent le splash PinCabOS ;
+# une entree qui a 'splash' ne doit donc PAS transporter les anti-plymouth.
+# (le rescue, sans 'splash', conserve son demarrage verbeux.)
+if grep 'splash' <<<"$LIVE_BOOT_LINES" \
+    | grep -Eq 'plymouth.enable=0|noplymouth|rd.plymouth=0'; then
   echo "$LIVE_BOOT_LINES"
-  die "A live boot entry does not disable Plymouth"
+  die "A splash boot entry still disables Plymouth"
 fi
 
 echo "$LIVE_BOOT_LINES"
-echo "GO [√] Live boot is text-only and forces multi-user.target"
+echo "GO [√] Live boot policy OK (splash install entries, verbose rescue)"
+
+echo
+echo "=== 17c) Trim casper: couches inutiles et langues hors FR/EN/DE/IT/ES ==="
+# Le live PinCabOS (TUI) ne monte que minimal.squashfs : les couches desktop
+# "standard" et les langues non proposees par l installateur sont du lest.
+CASPER_BEFORE=$(du -sm "$ISO_DIR/casper" | cut -f1)
+# couches standard CONSERVEES : standard.live contient l outillage casper du boot live
+for f in "$ISO_DIR/casper"/minimal.??.*; do
+  base=$(basename "$f")
+  lang=${base#minimal.}; lang=${lang%%.*}
+  case "$lang" in fr|en|de|it|es) ;; *) rm -f "$f" ;; esac
+done
+# une seule couche : casper empile TOUT squashfs present dans casper/
+for f in "$ISO_DIR/casper"/*.squashfs; do
+  [ "$f" = "$SQUASHFS" ] || rm -f "$f"
+done
+CASPER_AFTER=$(du -sm "$ISO_DIR/casper" | cut -f1)
+echo "casper: ${CASPER_BEFORE}M -> ${CASPER_AFTER}M"
+
+echo "=== 17b) Theme Plymouth live : deja embarque nativement ==="
+# obsolete depuis la regeneration native de l initrd (base server, etape 12) :
+# le theme y est verifie par le build ; un append cpio ici l ecraserait.
 
 echo "=== 18) Update casper metadata and md5sum ==="
 du -sx --block-size=1 "$ROOTFS_DIR" | cut -f1 > "$ISO_DIR/casper/filesystem.size"

@@ -1,0 +1,326 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PinCabOS Installer</title>
+<style>
+:root{
+  --bg:#050007; --bg2:#160020; --card:#1d0a2e; --border:#5f2a91;
+  --accent:#ffb000; --accent2:#ff7a00; --text:#f5f7fa; --muted:#d8b8ff;
+  --good:#22c55e; --danger:#ef4444; --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:system-ui,'Segoe UI',Roboto,sans-serif;color:var(--text);
+  background:radial-gradient(1200px 700px at 50% -10%, var(--bg2) 0%, var(--bg) 70%);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center
+}
+header{padding:18px 0 4px;text-align:center}
+.logo-img{height:210px;filter:drop-shadow(0 8px 30px rgba(255,122,0,.35))}
+header .sub{color:var(--muted);margin-top:6px;font-size:1.05rem}
+main{width:min(880px,94vw);padding:22px 0 40px}
+.step{display:none;animation:fade .25s ease}
+.step.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+h2{font-size:1.35rem;margin-bottom:18px;color:var(--accent)}
+.card{
+  background:linear-gradient(180deg,var(--card),#12061f);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;box-shadow:0 8px 28px rgba(0,0,0,.45)
+}
+.grid{display:grid;gap:14px}
+.langs{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.lang,.opt{
+  cursor:pointer;text-align:center;padding:22px 10px;border-radius:var(--radius);
+  background:var(--card);border:2px solid var(--border);transition:.15s;user-select:none
+}
+.lang:hover,.opt:hover{border-color:var(--accent);transform:translateY(-2px)}
+.lang .code{display:block;margin:0 auto 10px;width:56px;line-height:38px;border-radius:8px;
+  font-weight:900;font-size:1.15rem;letter-spacing:.06em;color:#160020;
+  background:linear-gradient(135deg,var(--accent2),var(--accent))}
+/* petits ecrans / resolutions GOP (cab) : tout doit tenir sans scroll */
+@media (max-height:860px){
+  .logo-img{height:110px}
+  header{padding:8px 0 2px}
+  main{padding:8px 0 16px}
+  h2{font-size:1.1rem;margin-bottom:10px}
+  .lang,.opt{padding:12px 8px}
+  .mon{width:56px;height:38px;margin-bottom:6px}
+  .card{padding:12px}
+  button{padding:9px 20px;font-size:.95rem}
+  .grid{gap:9px}
+  .sub{font-size:.9rem}
+}
+.opt.sel{border-color:var(--accent);background:#2a0f45;box-shadow:0 0 0 2px var(--accent) inset,0 0 18px rgba(255,176,0,.35);position:relative}
+.opt.sel::after{content:"✓";position:absolute;top:6px;right:10px;color:var(--accent);font-weight:900;font-size:1.15rem}
+button:disabled,.primary:disabled{opacity:.32;filter:grayscale(.9);cursor:not-allowed}
+.hint{color:var(--muted);font-size:.92rem;margin-top:10px;min-height:1.2em}
+.mon::before{content:"";position:absolute;left:6px;right:6px;bottom:2px;height:6px;border-radius:3px;background:var(--accent);box-shadow:0 0 8px rgba(255,176,0,.8);z-index:1}
+.mon-bas{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:.62rem;
+  font-weight:900;letter-spacing:.08em;color:#160020;background:var(--accent);
+  margin:0 14px;border-radius:3px;line-height:1.35;z-index:2}
+.orients{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.mon{width:74px;height:48px;border:3px solid var(--accent);border-radius:6px;margin:0 auto 10px;position:relative;transition:.2s}
+.mon::after{content:"";position:absolute;inset:6px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:3px;opacity:.7}
+.rot90{transform:rotate(90deg)}.rot270{transform:rotate(-90deg)}.rot180{transform:rotate(180deg)}
+.o-label{font-weight:700}.o-desc{color:var(--muted);font-size:.9rem}
+.row{display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.row label{min-width:170px;color:var(--muted)}
+select,input[type=text]{
+  background:#0d0318;border:1px solid var(--border);color:var(--text);
+  padding:10px 12px;border-radius:10px;font-size:1rem;flex:1;min-width:220px;
+  color-scheme:dark;accent-color:var(--accent);font-weight:600
+}
+select option{background:#0d0318;color:var(--text)}
+select:not(:focus){border-color:var(--accent);color:var(--accent)}
+input:focus,select:focus{outline:2px solid var(--accent)}
+.btns{display:flex;justify-content:space-between;margin-top:22px}
+button{
+  cursor:pointer;font-size:1.05rem;font-weight:700;border:none;border-radius:12px;
+  padding:13px 30px;transition:.15s
+}
+.primary{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#160020}
+.primary:hover{filter:brightness(1.12)}
+.primary:disabled{filter:grayscale(.8);cursor:not-allowed}
+.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.danger-box{border:1px solid var(--danger);background:#2a0a12;border-radius:10px;padding:14px;margin:14px 0;color:#ffb4b4;font-weight:700}
+.disk{display:flex;justify-content:space-between;align-items:center;padding:16px}
+.disk .dev{font-weight:800;color:var(--accent)}
+.disk .model{color:var(--muted)}
+.sumline{display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px dashed #3a1a5e}
+.sumline b{color:var(--accent)}
+.pbar-wrap{margin:26px 0 8px}
+.pbar{height:16px;border-radius:10px;background:#0d0318;border:1px solid var(--border);overflow:hidden}
+.pbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent),#ffd64a);transition:width .8s ease;border-radius:10px}
+.plabel{margin-top:10px;color:var(--muted);text-align:center;min-height:1.4em}
+.loglines{font-family:ui-monospace,monospace;font-size:.8rem;line-height:1.65;color:#b9a3d6;
+  max-height:230px;overflow:auto;margin-top:14px;background:#0a0212;border-radius:8px;
+  padding:12px 14px;border:1px solid #2a1245}
+.loglines div{padding:1px 0;white-space:pre-wrap;word-break:break-word}
+.lg-ok{color:#22c55e}
+.lg-ok::before{content:"✔ ";font-weight:900}
+.lg-warn{color:var(--accent)}
+.lg-warn::before{content:"⚠ "}
+.lg-err{color:#ef4444;font-weight:700}
+.lg-err::before{content:"✖ "}
+.lg-step{color:#ffd64a;font-weight:700;margin-top:6px;border-top:1px dashed #2a1245;padding-top:5px}
+.lg-trace{color:#6b5490;font-size:.72rem}
+.lang:focus-visible,.opt:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
+  outline:3px solid var(--accent);outline-offset:2px}
+.done-check{display:block;margin:14px auto 22px;width:130px;height:130px;
+  filter:drop-shadow(0 0 18px rgba(255,176,0,.55)) drop-shadow(0 8px 22px rgba(0,0,0,.5))}
+.done-check .ring{fill:none;stroke:url(#pcoGrad);stroke-width:7;stroke-linecap:round;
+  stroke-dasharray:302;stroke-dashoffset:302;animation:draw .9s ease-out forwards}
+.done-check .tick{fill:none;stroke:url(#pcoGrad);stroke-width:9;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:75;stroke-dashoffset:75;animation:draw .55s ease-out .75s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.demo-tag{position:fixed;top:10px;right:12px;background:var(--danger);color:#fff;font-weight:800;padding:4px 12px;border-radius:8px;font-size:.8rem}
+</style>
+</head>
+<body>
+{% if demo %}<div class="demo-tag">DEMO</div>{% endif %}
+<header>
+  <img class="logo-img" src="/static/pincabos-logo-alpha.png" alt="PinCabOS">
+  <div class="sub" id="subtitle">Installer</div>
+</header>
+<main>
+
+<section class="step active" id="st-lang">
+  <h2 data-i18n="choose_lang">Choose your language</h2>
+  <div class="grid langs">
+    <div class="lang" role="button" tabindex="0" data-lang="fr"><span class="code">FR</span>Français</div>
+    <div class="lang" role="button" tabindex="0" data-lang="en"><span class="code">EN</span>English</div>
+    <div class="lang" role="button" tabindex="0" data-lang="de"><span class="code">DE</span>Deutsch</div>
+    <div class="lang" role="button" tabindex="0" data-lang="it"><span class="code">IT</span>Italiano</div>
+    <div class="lang" role="button" tabindex="0" data-lang="es"><span class="code">ES</span>Español</div>
+  </div>
+</section>
+
+<section class="step" id="st-regional">
+  <h2 data-i18n="regional"></h2>
+  <div class="card">
+    <div class="row"><label data-i18n="locale"></label><select id="f-locale"></select></div>
+    <div class="row"><label data-i18n="keyboard"></label><select id="f-xkb"></select></div>
+    <div class="row"><label data-i18n="timezone"></label><select id="f-tz"></select></div>
+  </div>
+  <div class="btns"><button class="ghost" onclick="go('st-lang')" data-i18n="back"></button>
+  <button class="primary" onclick="go('st-orient')" data-i18n="next"></button></div>
+</section>
+
+<section class="step" id="st-orient">
+  <h2 data-i18n="orientation"></h2>
+  <p style="color:var(--muted);margin-bottom:6px" data-i18n="orient_hint"></p>
+  <p style="color:var(--accent);margin-bottom:14px;font-size:.95rem" data-i18n="orient_bottom"></p>
+  <div class="grid orients">
+    <div class="opt" role="button" tabindex="0" data-orient="1"><div class="mon"><b class="mon-bas" data-i18n="obot"></b></div><div class="o-label" data-i18n="o1"></div><div class="o-desc" data-i18n="o1d"></div></div>
+    <div class="opt" role="button" tabindex="0" data-orient="2"><div class="mon rot270"><b class="mon-bas" data-i18n="obot"></b></div><div class="o-label" data-i18n="o2"></div><div class="o-desc" data-i18n="o2d"></div></div>
+    <div class="opt" role="button" tabindex="0" data-orient="3"><div class="mon rot90"><b class="mon-bas" data-i18n="obot"></b></div><div class="o-label" data-i18n="o3"></div><div class="o-desc" data-i18n="o3d"></div></div>
+    <div class="opt" role="button" tabindex="0" data-orient="4"><div class="mon rot180"><b class="mon-bas" data-i18n="obot"></b></div><div class="o-label" data-i18n="o4"></div><div class="o-desc" data-i18n="o4d"></div></div>
+  </div>
+  <div class="btns"><button class="ghost" onclick="go('st-regional')" data-i18n="back"></button>
+  <button class="primary" id="orient-next" disabled onclick="go('st-disk')" data-i18n="next"></button></div>
+</section>
+
+<section class="step" id="st-disk">
+  <h2 data-i18n="disk"></h2>
+  <div class="grid" id="disk-list"></div>
+  <div class="grid" style="margin-top:16px">
+    <div class="opt" data-mode="1" style="text-align:left;padding:16px">
+      <b data-i18n="mode_erase"></b><div class="o-desc" data-i18n="mode_erase_d"></div></div>
+    <div class="opt" data-mode="2" style="text-align:left;padding:16px">
+      <b data-i18n="mode_dual"></b><div class="o-desc" data-i18n="mode_dual_d"></div></div>
+  </div>
+  <div class="hint" id="disk-hint" data-i18n="disk_hint"></div>
+  <div class="btns"><button class="ghost" onclick="go('st-orient')" data-i18n="back"></button>
+  <button class="primary" id="disk-next" disabled onclick="fillSummary();go('st-confirm')" data-i18n="next"></button></div>
+</section>
+
+<section class="step" id="st-confirm">
+  <h2 data-i18n="confirm_title"></h2>
+  <div class="card" id="summary"></div>
+  <div class="danger-box"><span data-i18n="confirm_warn"></span> <span id="confirm-dev"></span></div>
+  <div class="row"><label data-i18n="confirm_hint" style="min-width:100%"></label>
+    <input type="text" id="confirm-input" autocomplete="off" spellcheck="false"></div>
+  <div class="btns"><button class="ghost" onclick="go('st-disk')" data-i18n="back"></button>
+  <button class="primary" id="btn-install" disabled onclick="launch()" data-i18n="start"></button></div>
+</section>
+
+<section class="step" id="st-progress">
+  <h2 data-i18n="installing"></h2>
+  <div class="card">
+    <div class="pbar-wrap"><div class="pbar"><i id="pfill"></i></div></div>
+    <div class="plabel" id="plabel"></div>
+    <div style="text-align:center;margin-top:12px">
+      <button class="ghost" id="log-toggle" onclick="toggleLogs()" data-i18n="show_logs"></button>
+    </div>
+    <div class="loglines" id="plog" style="display:none"></div>
+  </div>
+</section>
+
+<section class="step" id="st-done">
+  <svg class="done-check" viewBox="0 0 120 120">
+    <defs><linearGradient id="pcoGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd64a"/><stop offset=".55" stop-color="#ffb000"/>
+      <stop offset="1" stop-color="#ff7a00"/></linearGradient></defs>
+    <circle class="ring" cx="60" cy="60" r="48"/>
+    <path class="tick" d="M38 62 L54 78 L84 44"/>
+  </svg>
+  <h2 style="text-align:center" data-i18n="install_done"></h2>
+  <div style="text-align:center;margin-top:20px">
+    <button class="primary" onclick="fetch('/api/reboot',{method:'POST'})" data-i18n="reboot"></button>
+  </div>
+</section>
+
+</main>
+<script>
+const I18N={{ i18n|safe }}, DEFAULTS={{ defaults|safe }};
+const S={lang:null,locale:null,xkb:null,xkb_variant:"",tz:null,orient:null,mode:null,disk:null};
+
+const LOCALES=["fr_FR.UTF-8","fr_CA.UTF-8","fr_BE.UTF-8","fr_CH.UTF-8","en_US.UTF-8","en_GB.UTF-8","de_DE.UTF-8","de_AT.UTF-8","de_CH.UTF-8","it_IT.UTF-8","it_CH.UTF-8","es_ES.UTF-8","es_MX.UTF-8","es_AR.UTF-8"];
+const XKBS=[["fr","Français (AZERTY)"],["us","English (US)"],["gb","English (UK)"],["de","Deutsch (QWERTZ)"],["it","Italiano"],["es","Español"],["ch","Suisse"],["be","Belge"],["ca","Français (Canada)"]];
+const TZS=["Europe/Paris","Europe/Brussels","Europe/Zurich","Europe/Berlin","Europe/Vienna","Europe/Rome","Europe/Madrid","Europe/London","America/New_York","America/Montreal","America/Los_Angeles","America/Mexico_City","America/Argentina/Buenos_Aires"];
+
+function t(k){return (I18N[S.lang||"en"]||{})[k]||k}
+function applyI18n(){document.querySelectorAll("[data-i18n]").forEach(e=>e.textContent=t(e.dataset.i18n));
+  document.getElementById("subtitle").textContent=t("welcome")}
+function go(id){document.querySelectorAll(".step").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active")}
+function fillSelect(id,items,val){const s=document.getElementById(id);s.innerHTML="";
+  items.forEach(it=>{const [v,l]=Array.isArray(it)?it:[it,it];
+    const o=new Option(l,v,false,v===val);s.add(o)})}
+
+document.querySelectorAll(".lang").forEach(el=>el.onclick=()=>{
+  S.lang=el.dataset.lang;const d=DEFAULTS[S.lang];
+  S.locale=d.locale;S.xkb=d.xkb;S.tz=d.tz;
+  fillSelect("f-locale",LOCALES,d.locale);fillSelect("f-xkb",XKBS,d.xkb);fillSelect("f-tz",TZS,d.tz);
+  applyKbd();
+  applyI18n();go("st-regional")});
+function applyKbd(){fetch("/api/keyboard",{method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({xkb:S.xkb,variant:S.xkb_variant||""})}).catch(()=>{})}
+["f-locale","f-xkb","f-tz"].forEach(id=>document.getElementById(id).onchange=e=>{
+  S[{ "f-locale":"locale","f-xkb":"xkb","f-tz":"tz" }[id]]=e.target.value;
+  if(id==="f-xkb")applyKbd()});
+
+document.querySelectorAll("[data-orient]").forEach(el=>el.onclick=()=>{
+  document.querySelectorAll("[data-orient]").forEach(o=>o.classList.remove("sel"));
+  el.classList.add("sel");S.orient=el.dataset.orient;
+  document.getElementById("orient-next").disabled=false});
+
+fetch("/api/disks").then(r=>r.json()).then(disks=>{
+  const box=document.getElementById("disk-list");
+  disks.forEach(d=>{const el=document.createElement("div");
+    el.className="opt disk";el.dataset.disk=d.dev;
+    el.setAttribute("role","button");el.tabIndex=0;
+    el.innerHTML=`<span class="dev">${d.dev}</span><span class="model">${d.model}</span><b>${d.size}</b>`;
+    el.onclick=()=>{document.querySelectorAll("[data-disk]").forEach(o=>o.classList.remove("sel"));
+      el.classList.add("sel");S.disk=d.dev;checkDisk()};
+    box.appendChild(el)});
+  if(disks.length===1){box.firstChild.click()}});
+document.querySelectorAll("[data-mode]").forEach(el=>el.onclick=()=>{
+  document.querySelectorAll("[data-mode]").forEach(o=>o.classList.remove("sel"));
+  el.classList.add("sel");S.mode=el.dataset.mode;checkDisk()});
+function checkDisk(){const ok=!!(S.disk&&S.mode);
+  document.getElementById("disk-next").disabled=!ok;
+  document.getElementById("disk-hint").style.visibility=ok?"hidden":"visible"}
+
+function fillSummary(){
+  const rows=[[t("locale"),S.locale],[t("keyboard"),S.xkb],[t("timezone"),S.tz],
+    [t("orientation"),t("o"+S.orient)+" — "+t("o"+S.orient+"d")],
+    [t("disk"),S.disk+" ("+(S.mode==1?t("mode_erase"):t("mode_dual"))+")"]];
+  document.getElementById("summary").innerHTML=rows.map(([k,v])=>
+    `<div class="sumline"><span>${k}</span><b>${v}</b></div>`).join("");
+  document.getElementById("confirm-dev").textContent=S.disk}
+document.getElementById("confirm-input").oninput=e=>{
+  document.getElementById("btn-install").disabled=
+    e.target.value.trim().toUpperCase()!=="INSTALL PINCABOS"};
+
+function toggleLogs(){const pl=document.getElementById("plog"),b=document.getElementById("log-toggle");
+  const shown=pl.style.display!=="none";
+  pl.style.display=shown?"none":"block";
+  b.textContent=t(shown?"show_logs":"hide_logs")}
+
+// jalons serveur = plancher ; entre deux jalons la barre "respire" (creep)
+let floorPct=0, shownPct=0, creepTimer=null;
+function drawPct(p){document.getElementById("pfill").style.width=p+"%"}
+function startCreep(){creepTimer=setInterval(()=>{
+  if(shownPct<Math.min(floorPct+7,97)){shownPct+=0.15;drawPct(shownPct)}},1000)}
+
+let t0=null;
+setInterval(()=>{  // le temps ecoule prouve que ca vit, meme quand le moteur se tait
+  if(!t0||!document.getElementById("st-progress").classList.contains("active"))return;
+  const s=Math.floor((Date.now()-t0)/1000),base=document.getElementById("plabel").dataset.base||"";
+  document.getElementById("plabel").textContent=
+    base+" — "+String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")},1000);
+
+function launch(){
+  fetch("/api/install",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({...S,confirm:document.getElementById("confirm-input").value})})
+  .then(r=>{if(!r.ok)throw 0;go("st-progress");startCreep();t0=Date.now();
+    const es=new EventSource("/api/progress");
+    es.onmessage=ev=>{const d=JSON.parse(ev.data);
+      floorPct=Math.max(floorPct,d.pct);
+      if(floorPct>shownPct){shownPct=floorPct;drawPct(shownPct)}
+      if(d.label)document.getElementById("plabel").dataset.base=d.label;
+      if(d.log){const pl=document.getElementById("plog"),ln=document.createElement("div");
+        let txt=d.log,cls="";
+        if(/^GO(\s|\[)/.test(txt)){cls="lg-ok";txt=txt.replace(/^GO\s*\[[^\]]*\]\s*/,"")}
+        else if(/^WARN/.test(txt)){cls="lg-warn";txt=txt.replace(/^WARN\s*\[[^\]]*\]\s*/,"")}
+        else if(/^(NOGO|ERROR|ERREUR|FAIL)/i.test(txt)){cls="lg-err"}
+        else if(/^TRACE/.test(txt)){cls="lg-trace"}
+        else if(/^(Etape|Step|Partition|Extract|Final|Install|Creating|Unmount)/i.test(txt)){cls="lg-step"}
+        if(cls)ln.className=cls;
+        ln.textContent=txt;pl.appendChild(ln);
+        while(pl.childElementCount>400)pl.removeChild(pl.firstChild);
+        pl.scrollTop=pl.scrollHeight}
+      if(d.pct>=100){clearInterval(creepTimer);drawPct(100);es.close();applyI18n();go("st-done")}}})}
+// navigation clavier : Entree/Espace activent les cartes focusees (Tab)
+document.addEventListener("keydown",e=>{
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches(".lang,.opt")){
+    e.preventDefault();e.target.click()}});
+document.querySelectorAll("[data-mode]").forEach(el=>{el.setAttribute("role","button");el.tabIndex=0});
+applyI18n();
+</script>
+</body>
+</html>
