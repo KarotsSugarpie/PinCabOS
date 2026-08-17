@@ -4674,6 +4674,25 @@ XKBOPTIONS=""
 BACKSPACE="guess"
 EOF
 
+    # PINCABOS_X11_KEYBOARD_V1
+    # Le serveur X ignore /etc/default/keyboard des qu'un InputClass existe :
+    # le payload en embarque un, fige sur la disposition du cabinet de BUILD.
+    # Sans cette ecriture, l'installation se fait dans la bonne disposition
+    # puis la session graphique repasse en QWERTY.
+    mkdir -p "$TARGET/etc/X11/xorg.conf.d"
+    cat > "$TARGET/etc/X11/xorg.conf.d/00-pincabos-keyboard.conf" <<EOF
+# Managed by PinCabOS Keyboard widget.
+Section "InputClass"
+    Identifier "pincabos-keyboard-layout"
+    MatchIsKeyboard "on"
+    Option "XkbModel" "pc105"
+    Option "XkbLayout" "$REG_XKB_LAYOUT"
+    Option "XkbVariant" "$REG_XKB_VARIANT"
+    Option "XkbOptions" ""
+EndSection
+EOF
+    chmod 0644 "$TARGET/etc/X11/xorg.conf.d/00-pincabos-keyboard.conf"
+
     #
     # Locale
     #
