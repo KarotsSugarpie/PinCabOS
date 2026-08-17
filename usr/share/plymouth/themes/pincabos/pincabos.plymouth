@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=PinCabOs
+Description=PinCabOs Boot Splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/pincabos
+ScriptFile=/usr/share/plymouth/themes/pincabos/pincabos.script
