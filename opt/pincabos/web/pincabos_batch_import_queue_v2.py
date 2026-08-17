@@ -317,6 +317,35 @@ def resume_job(job_id: str) -> dict[str, Any] | None:
         return job
 
 
+def collect_orphan_uploads() -> list[str]:
+    """PINCABOS_BATCH_ORPHAN_GC_V1
+
+    Archives televersees dont le travail est termine ou n'existe plus : sans
+    ce menage, une interruption laissait plusieurs Go sur le disque pour
+    toujours.
+    """
+    ensure_dirs()
+    removed: list[str] = []
+    try:
+        entries = sorted(UPLOAD_ROOT.iterdir())
+    except FileNotFoundError:
+        return removed
+
+    with state_lock(True):
+        for entry in entries:
+            if not entry.is_dir():
+                continue
+            job = load_job_unlocked(entry.name)
+            if job is not None and str(job.get("state")) not in FINAL_STATES:
+                continue
+            try:
+                shutil.rmtree(entry)
+                removed.append(entry.name)
+            except OSError:
+                pass
+    return removed
+
+
 def next_queued_job_id() -> str | None:
     ensure_dirs()
     with state_lock(True):
