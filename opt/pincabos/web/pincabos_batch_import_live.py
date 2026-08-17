@@ -413,6 +413,163 @@ _PAGE_UI = r'''
   else wire();
 })();
 </script>
+
+<!-- PINCABOS_BATCH_RESUME_PANEL_V1 -->
+<style>
+/* PINCABOS_BATCH_RESUME_PANEL_V3 : le panneau reprend le langage visuel des
+   cartes de la page (fond translucide, grands arrondis, marges aerees) au
+   lieu du rectangle opaque qui detonnait. */
+#pco-bi-resume{margin:16px 0;padding:16px 18px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(255,255,255,.035);font-size:13px}
+#pco-bi-resume[data-floating="1"]{position:fixed;right:16px;bottom:16px;z-index:9998;width:min(340px,calc(100vw - 32px));background:rgba(24,20,32,.96);box-shadow:0 12px 34px rgba(0,0,0,.5)}
+#pco-bi-resume h3{margin:0 0 10px;font-size:14px;font-weight:700;color:rgb(255,143,28);letter-spacing:.2px}
+#pco-bi-resume .pco-r-detail{color:rgba(255,255,255,.72);margin-bottom:12px;line-height:1.45}
+#pco-bi-resume .pco-r-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden;margin-bottom:14px}
+#pco-bi-resume .pco-r-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#ffb000,#ff7a00);transition:width .3s ease}
+#pco-bi-resume .pco-r-actions{display:flex;gap:10px;flex-wrap:wrap}
+#pco-bi-resume button{border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:8px 16px;font:inherit;font-weight:700;cursor:pointer;background:rgba(255,255,255,.05);color:rgba(255,255,255,.9);transition:background .15s ease}
+#pco-bi-resume button:hover{background:rgba(255,255,255,.11)}
+#pco-bi-resume .pco-r-pause{border-color:rgba(255,176,0,.4);color:#ffd79b}
+#pco-bi-resume .pco-r-resume{border-color:rgba(88,214,141,.42);color:#b9f5d0}
+#pco-bi-resume .pco-r-stop{border-color:rgba(215,55,70,.42);color:#ffbec5}
+#pco-bi-resume .pco-r-log{margin-top:14px;max-height:104px;overflow:auto;border-top:1px solid rgba(255,255,255,.09);padding-top:10px;color:rgba(255,255,255,.5);font-size:11.5px;line-height:1.6}
+#pco-bi-resume .pco-r-log div{padding:1px 0}
+#pco-bi-resume button[hidden]{display:none}
+</style>
+<script>
+(() => {
+  "use strict";
+  if (window.__pcosBatchResumePanelV1) return;
+  window.__pcosBatchResumePanelV1 = true;
+
+  let current = null;
+
+  async function api(url, options = {}) {
+    const response = await fetch(url, {cache: "no-store", credentials: "same-origin",
+      headers: {"Accept": "application/json"}, ...options});
+    if (!response.ok && response.status !== 202) throw new Error(response.status);
+    return response.json();
+  }
+
+  // Le suivi doit vivre AVEC la zone d'import, pas en tete de page.
+  function anchor() {
+    return document.getElementById("pco-bi-queue")
+        || document.getElementById("pco-bi-upwrap")
+        || document.querySelector("form[enctype]");
+  }
+
+  function panel() {
+    let node = document.getElementById("pco-bi-resume");
+    if (node) return node;
+    node = document.createElement("div");
+    node.id = "pco-bi-resume";
+    node.hidden = true;
+    node.innerHTML = '<h3>Transfert en cours</h3>'
+      + '<div class="pco-r-detail">—</div>'
+      + '<div class="pco-r-bar"><div class="pco-r-fill"></div></div>'
+      + '<div class="pco-r-actions">'
+      + '<button class="pco-r-pause" type="button">Pause</button>'
+      + '<button class="pco-r-resume" type="button">Reprendre</button>'
+      + '<button class="pco-r-stop" type="button">Arrêter</button>'
+      + '</div>'
+      + '<div class="pco-r-log"></div>';
+    const ref = anchor();
+    if (ref && ref.parentNode) {
+      ref.parentNode.insertBefore(node, ref.nextSibling);
+    } else {
+      // Aucune zone d'import sur cette page : vignette discrete en bas a
+      // droite, jamais un bloc pose en haut du document.
+      node.dataset.floating = "1";
+      document.body.appendChild(node);
+    }
+    node.querySelector(".pco-r-pause").addEventListener("click", () => act("pause"));
+    node.querySelector(".pco-r-resume").addEventListener("click", () => act("resume"));
+    node.querySelector(".pco-r-stop").addEventListener("click", () => act("stop"));
+    return node;
+  }
+
+  const LABELS = {uploading:"Téléversement", queued:"En file", running:"Import actif",
+    stopping:"Arrêt demandé", paused:"En pause", completed:"Terminé",
+    completed_with_warning:"Terminé avec avertissement", failed:"Interrompu",
+    stopped:"Arrêté", cancelled:"Annulé"};
+
+  async function act(action) {
+    if (!current?.id) return;
+    try {
+      await api(`/api/batch-import/live/${action}/${encodeURIComponent(current.id)}`, {method: "POST"});
+    } catch (_) {}
+    refresh();
+  }
+
+  function render(data) {
+    const job = data?.job || null;
+    const node = panel();
+    current = job;
+    if (!job) { node.hidden = true; return; }
+
+    const state = String(job.state || "").toLowerCase();
+    const progress = job.progress || {};
+    const total = Number(progress.total ?? job.total_archives ?? 0);
+    const done = Number(progress.completed ?? job.processed_archives ?? 0);
+    const remaining = Number(data.remaining || 0);
+    const finished = ["completed", "completed_with_warning", "stopped", "cancelled"].includes(state);
+
+    // Un travail termine sans reste n'a rien a reprendre : on n'encombre pas la page.
+    if (finished && !remaining) { node.hidden = true; return; }
+
+    node.hidden = false;
+    node.querySelector("h3").textContent = `Transfert — ${LABELS[state] || state}`;
+    node.querySelector(".pco-r-detail").textContent =
+      [`${done}/${total} paquet(s) traité(s)`,
+       remaining ? `${remaining} restant(s)` : "",
+       String(progress.current_item || job.current_item || ""),
+       String(job.error || "")].filter(Boolean).join(" · ");
+    node.querySelector(".pco-r-fill").style.width =
+      `${Math.max(0, Math.min(100, Number(progress.percent || 0)))}%`;
+
+    const active = ["uploading", "queued", "running"].includes(state);
+    node.querySelector(".pco-r-pause").hidden = !active;
+    const resumeButton = node.querySelector(".pco-r-resume");
+    resumeButton.hidden = !(data.resumable || state === "paused");
+    resumeButton.textContent = remaining ? `Reprendre (${remaining})` : "Reprendre";
+    node.querySelector(".pco-r-stop").hidden = !(active || state === "paused");
+
+    const log = node.querySelector(".pco-r-log");
+    log.innerHTML = "";
+    (job.events || []).slice(-8).forEach(event => {
+      const line = document.createElement("div");
+      line.textContent = `${String(event.at || "").slice(11, 19)} — ${event.message || ""}`;
+      if (event.level === "warning") line.style.color = "#ffd27e";
+      if (event.level === "error") line.style.color = "#f08080";
+      log.appendChild(line);
+    });
+  }
+
+  function reseat() {
+    const node = document.getElementById("pco-bi-resume");
+    const ref = anchor();
+    if (!node || !ref || !ref.parentNode) return;
+    if (node.dataset.floating === "1" || node.previousElementSibling !== ref) {
+      delete node.dataset.floating;
+      ref.parentNode.insertBefore(node, ref.nextSibling);
+    }
+  }
+
+  async function refresh() {
+    try {
+      render(await api("/api/batch-import/live/active"));
+      reseat();
+    } catch (_) {}
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", refresh, {once: true});
+  } else {
+    refresh();
+  }
+  window.setInterval(refresh, 2500);
+})();
+</script>
+
 '''
 
 _GLOBAL_UI = r'''
@@ -431,6 +588,9 @@ _GLOBAL_UI = r'''
 #pcos-biq-v2-card .pcos-biq-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:7px}
 #pcos-biq-v2-card button{border:0;border-radius:7px;padding:4px 8px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;font:inherit;font-weight:800}
 #pcos-biq-v2-card .pcos-biq-stop{background:rgba(215,55,70,.25);color:#ffbec5}
+#pcos-biq-v2-card .pcos-biq-pause{background:rgba(255,176,0,.22);color:#ffdb9b}
+#pcos-biq-v2-card .pcos-biq-resume{background:rgba(88,214,141,.22);color:#b9f5d0}
+#pcos-biq-v2-card button[hidden]{display:none}
 @keyframes pcos-biq-pulse{50%{transform:scale(.65);opacity:.45}}
 </style>
 <script>
@@ -464,8 +624,10 @@ _GLOBAL_UI = r'''
     node = document.createElement("section");
     node.id = "pcos-biq-v2-card";
     node.setAttribute("aria-live", "polite");
-    node.innerHTML = '<div class="pcos-biq-head"><i class="pcos-biq-dot"></i><strong>Batch Import</strong><span class="pcos-biq-state">—</span></div><div class="pcos-biq-detail">Aucun job.</div><div class="pcos-biq-bar"><div class="pcos-biq-fill"></div></div><div class="pcos-biq-actions"><button class="pcos-biq-stop" type="button">Stop</button><button class="pcos-biq-close" type="button">Fermer</button></div>';
+    node.innerHTML = '<div class="pcos-biq-head"><i class="pcos-biq-dot"></i><strong>Batch Import</strong><span class="pcos-biq-state">—</span></div><div class="pcos-biq-detail">Aucun job.</div><div class="pcos-biq-bar"><div class="pcos-biq-fill"></div></div><div class="pcos-biq-actions"><button class="pcos-biq-pause" type="button">Pause</button><button class="pcos-biq-resume" type="button">Reprendre</button><button class="pcos-biq-stop" type="button">Stop</button><button class="pcos-biq-close" type="button">Fermer</button></div>';
     target.appendChild(node);
+    node.querySelector(".pcos-biq-pause").addEventListener("click", pause);
+    node.querySelector(".pcos-biq-resume").addEventListener("click", resume);
     node.querySelector(".pcos-biq-stop").addEventListener("click", stop);
     node.querySelector(".pcos-biq-close").addEventListener("click", dismiss);
     return node;
@@ -476,7 +638,7 @@ _GLOBAL_UI = r'''
   }
 
   function labelFor(state) {
-    return ({uploading:"Téléversement",queued:"En file",running:"Import actif",stopping:"Arrêt demandé",completed:"Terminé",completed_with_warning:"Terminé avec avertissement",failed:"Erreur",stopped:"Arrêté",cancelled:"Annulé"})[state] || state || "—";
+    return ({uploading:"Téléversement",queued:"En file",running:"Import actif",stopping:"Arrêt demandé",paused:"En pause",completed:"Terminé",completed_with_warning:"Terminé avec avertissement",failed:"Erreur",stopped:"Arrêté",cancelled:"Annulé"})[state] || state || "—";
   }
 
   function render(job) {
@@ -504,20 +666,56 @@ _GLOBAL_UI = r'''
     stopButton.hidden = !active;
     stopButton.disabled = state === "stopping";
     stopButton.textContent = state === "stopping" ? "Arrêt…" : "Stop";
-    node.querySelector(".pcos-biq-close").hidden = active;
+
+    // PINCABOS_BATCH_PAUSE_UI_V1
+    // Pause tant que le travail avance ; Reprendre des qu'il est en pause ou
+    // interrompu avec des paquets restants (ceux deja importes ne sont pas
+    // refaits).
+    const pauseButton = node.querySelector(".pcos-biq-pause");
+    const resumeButton = node.querySelector(".pcos-biq-resume");
+    const paused = state === "paused";
+    const resumable = paused || Boolean(job.resumable);
+    pauseButton.hidden = !active || state === "stopping";
+    resumeButton.hidden = !resumable;
+    if (resumable && Number(job.remaining || 0) > 0) {
+      resumeButton.textContent = `Reprendre (${Number(job.remaining)})`;
+    } else {
+      resumeButton.textContent = "Reprendre";
+    }
+    node.querySelector(".pcos-biq-close").hidden = active && !paused;
   }
 
   async function poll() {
     try {
-      const history = await json("/api/batch-import/live/history");
-      let job = null;
-      if (history.active_job_id) {
-        const status = await json(`/api/batch-import/live/status/${encodeURIComponent(history.active_job_id)}`);
-        job = status.job || null;
+      // PINCABOS_BATCH_PAUSE_UI_V1 : /active rattache la carte au travail en
+      // cours OU en pause OU interrompu — sans lui, revenir sur la page de
+      // transfert affichait un ecran vierge alors que l'import continuait.
+      const active = await json("/api/batch-import/live/active");
+      let job = active.job || null;
+      if (job) {
+        job.resumable = Boolean(active.resumable);
+        job.remaining = Number(active.remaining || 0);
       } else {
+        const history = await json("/api/batch-import/live/history");
         job = (history.jobs || [])[0] || null;
       }
       render(job);
+    } catch (_) {}
+  }
+
+  async function pause() {
+    if (!current?.id) return;
+    try {
+      const data = await json(`/api/batch-import/live/pause/${encodeURIComponent(current.id)}`, {method:"POST"});
+      render(data.job || current);
+    } catch (_) {}
+  }
+
+  async function resume() {
+    if (!current?.id) return;
+    try {
+      const data = await json(`/api/batch-import/live/resume/${encodeURIComponent(current.id)}`, {method:"POST"});
+      render(data.job || current);
     } catch (_) {}
   }
 
@@ -799,6 +997,68 @@ def register_batch_import_live(app: Any) -> None:
                 queue.add_event(job, "Arrêt demandé; le package actuel se termine proprement.", "warning")
             queue.save_job_unlocked(job)
         return jsonify({"ok": True, "job": queue.public_job(job)}), 202
+
+    # PINCABOS_BATCH_FAILSAFE_ROUTES_V1
+    @app.route("/api/batch-import/live/pause/<job_id>", methods=["POST"])
+    def pincabos_batch_import_v2_pause(job_id: str) -> Any:
+        job = queue.pause_job(job_id)
+        if not job:
+            return jsonify({"ok": False, "error": "Job introuvable."}), 404
+        return jsonify({"ok": True, "job": queue.public_job(job)}), 202
+
+    @app.route("/api/batch-import/live/resume/<job_id>", methods=["POST"])
+    def pincabos_batch_import_v2_resume(job_id: str) -> Any:
+        job = queue.resume_job(job_id)
+        if not job:
+            return jsonify({"ok": False, "error": "Job introuvable."}), 404
+        remaining = sum(
+            1 for item in (job.get("uploads") or [])
+            if isinstance(item, dict) and str(item.get("state")) == "queued"
+        )
+        return jsonify({
+            "ok": True,
+            "remaining": remaining,
+            "job": queue.public_job(job),
+        }), 202
+
+    @app.route("/api/batch-import/live/active", methods=["GET"])
+    def pincabos_batch_import_v2_active() -> Any:
+        """Travail a reprendre en charge quand on (re)vient sur la page.
+
+        Sans cela, quitter la page de transfert faisait perdre le suivi : on
+        revenait sur un ecran vierge alors que l'import continuait.
+        """
+        job_id = queue.active_job_id()
+        job = queue.load_job(job_id) if job_id else None
+
+        if not job:
+            # Rien d'actif : on propose le travail le plus recent qui reste
+            # reprenable (en pause, ou interrompu avec des paquets restants).
+            for candidate in reversed(queue.list_jobs()):
+                state = str(candidate.get("state", ""))
+                remaining = any(
+                    isinstance(item, dict) and str(item.get("state")) in {"queued", "running"}
+                    for item in (candidate.get("uploads") or [])
+                )
+                if state == queue.PAUSED_STATE or (remaining and state not in {"completed", "completed_with_warning"}):
+                    job = candidate
+                    break
+
+        if not job:
+            return jsonify({"ok": True, "job": None})
+
+        state = str(job.get("state", ""))
+        remaining = sum(
+            1 for item in (job.get("uploads") or [])
+            if isinstance(item, dict) and str(item.get("state")) in {"queued", "running"}
+        )
+        return jsonify({
+            "ok": True,
+            "job": queue.public_job(job),
+            "resumable": bool(remaining) and state != "running",
+            "paused": state == queue.PAUSED_STATE,
+            "remaining": remaining,
+        })
 
     @app.route("/api/batch-import/live/status/<job_id>", methods=["GET"])
     def pincabos_batch_import_v2_status(job_id: str) -> Any:
