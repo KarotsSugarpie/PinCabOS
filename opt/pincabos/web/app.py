@@ -2563,6 +2563,22 @@ def pincabos_write_manual_screen_roles(playfield_id, backglass_id, fulldmd_id, c
 
     cfg = Path("/opt/pincabos/config/screens/screens.json")
     cfg.parent.mkdir(parents=True, exist_ok=True)
+    # PINCABOS_SCREENS_MERGE_V1
+    # Les resolutions choisies sont enregistrees dans screens.json AVANT cette
+    # ecriture (section "roles"). En reecrivant le fichier a partir d'un
+    # dictionnaire neuf, on les effacait a chaque application : le menu
+    # revenait donc toujours a "Auto / inchange". On conserve les sections
+    # existantes que cette fonction ne gere pas.
+    try:
+        if cfg.exists():
+            previous = json.loads(cfg.read_text(errors="replace") or "{}")
+            if isinstance(previous, dict):
+                for key, value in previous.items():
+                    if key not in layout:
+                        layout[key] = value
+    except Exception:
+        pass
+
     cfg.write_text(json.dumps(layout, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # Mettre à jour VPinFE [Displays] sans toucher au reste.
@@ -2710,7 +2726,31 @@ def gpu_screens_apply():
             timeout=30, check=False)
         output = json.dumps(layout, indent=2, ensure_ascii=False)
         cls = "ok"
-        msg = "Assignation écran sauvegardée dans screens.json et VPinFE."
+
+        # PINCABOS_VPINFE_AUTORESTART_V1
+        # VPinFE lit sa configuration au demarrage : sans redemarrage, le menu
+        # continue d'afficher l'ancienne disposition. On ne le redemarre que
+        # si aucune table ne tourne, pour ne jamais couper une partie.
+        table_running = subprocess.run(
+            ["/usr/bin/pgrep", "-u", "pinball", "-f", "VPinballX"],
+            capture_output=True, timeout=5, check=False).returncode == 0
+
+        if table_running:
+            msg = ("Assignation écran enregistrée. Une table est en cours : "
+                   "elle sera appliquée au prochain démarrage du frontend.")
+        else:
+            restart = subprocess.run(
+                ["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "restart",
+                 "pincabos-vpinfe.service"],
+                capture_output=True, text=True, timeout=60, check=False)
+            if restart.returncode == 0:
+                msg = "Assignation écran appliquée (frontend redémarré)."
+            else:
+                msg = ("Assignation écran enregistrée, mais le redémarrage du "
+                       "frontend a échoué : elle sera appliquée au prochain "
+                       "démarrage.")
+                output += "\n\nRedémarrage VPinFE: " + (
+                    (restart.stderr or restart.stdout or "").strip() or "échec")
     except Exception as e:
         output = str(e)
         cls = "bad"
