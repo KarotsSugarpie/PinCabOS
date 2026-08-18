@@ -193,10 +193,6 @@
 /home/pinball/.ssh/
 /home/pinball/Imports/
 /opt/pincabos/imports/
-/opt/pincabos/script/*.bak-*
-/opt/pincabos/script/*.before-*
-/opt/pincabos/web/*.bak-*
-/opt/pincabos/web/*.before-*
 /home/pinball/.cache/
 /home/pinball/.local/share/Trash/
 /home/pinball/.local/share/VPinballX/10.8/vpinball.log
@@ -218,3 +214,25 @@
 
 # Cache UCF Linux - genere automatiquement, noms incompatibles Windows
 /var/lib/ucf/cache/
+
+# ------------------------------------------------------------
+# Copies de sauvegarde - jamais versionnees
+# Remplace les anciennes regles, limitees a /opt/pincabos/{script,web}/
+# et au seul motif ".bak-" : elles laissaient passer ".bak." ainsi que
+# tout le reste de l'arborescence.
+# ------------------------------------------------------------
+**/*.bak
+**/*.bak.*
+**/*.bak-*
+**/*.before-*
+**/*.orig
+**/*.old
+/opt/pincabos/web/backups/
+/home/pinball/.local/share/pincabos/editor-backups/
+/home/pinball/.local/share/VPinballX/*/backups/
+
+
+# Sauvegardes de metadonnees LVM : regenerees par LVM a chaque modification,
+# et propres a la machine qui les a ecrites (UUID de disque, taille du SSD).
+/etc/lvm/backup/
+/etc/lvm/archive/
