@@ -330,6 +330,24 @@ _PAGE_UI = r'''
     }, 2500);
   }
 
+  /*
+   * PINCABOS_BATCH_STAGING_GUARD_V35B
+   *
+   * Les File du navigateur n'existent que dans cette page.
+   * Tant que N/N n'est pas televerse sur le cab, on avertit
+   * avant navigation/reload/fermeture.
+   */
+  let pcosStagingTransfer = null;
+
+  window.addEventListener(
+    "beforeunload",
+    event => {
+      if (!pcosStagingTransfer) return;
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  );
+
   async function submitQueue(target) {
     /* PINCABOS_BATCH_STAGE_ALL_V33 */
 
@@ -378,6 +396,11 @@ _PAGE_UI = r'''
     );
 
     const jobId = created.job.id;
+
+    pcosStagingTransfer = {
+      jobId: jobId,
+      total: files.length
+    };
 
     emit(
       "pcos-batch-import-started",
@@ -503,6 +526,7 @@ _PAGE_UI = r'''
       throw error;
 
     } finally {
+      pcosStagingTransfer = null;
       disable(target, false);
     }
   }

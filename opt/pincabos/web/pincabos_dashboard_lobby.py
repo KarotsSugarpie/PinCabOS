@@ -1037,8 +1037,10 @@ def widget_content(widget_id, meta, data, csrf):
   color:#fff;
 }
 #pco-dashboard-batch-controls button[disabled]{
-  opacity:.55;
-  cursor:wait;
+  opacity:.28;
+  cursor:not-allowed;
+  filter:grayscale(1);
+  box-shadow:none;
 }
 @keyframes pco-batch-pulse{50%{opacity:.5;}}
 @media(max-width:620px){
@@ -1272,12 +1274,48 @@ def widget_content(widget_id, meta, data, csrf):
   }
 
   function render(kind, packet, error = "") {
+    /* PINCABOS_DASHBOARD_STAGING_V35D */
+
     const target = row(kind);
     if (!target) return;
 
     const job = packet?.job || null;
-    const state = String(job?.state || "").toLowerCase();
+
+    const state = String(
+      job?.state || ""
+    ).toLowerCase();
+
     const progress = job?.progress || {};
+
+    const totalUploads = Number(
+      job?.total_archives
+      ?? progress.total
+      ?? 0
+    );
+
+    const uploaded = Number(
+      job?.uploaded_archives
+      ?? progress.uploaded
+      ?? 0
+    );
+
+    /*
+     * Staging = tous les fichiers locaux ne sont pas encore
+     * confirmes physiquement sur le cab.
+     */
+    const staging = Boolean(
+      kind === "import"
+      && job
+      && job.uploads_complete === false
+      && totalUploads > 0
+      && ![
+        "stopped",
+        "failed",
+        "cancelled",
+        "completed",
+        "completed_with_warning"
+      ].includes(state)
+    );
 
     const working = [
       "uploading",
@@ -1296,9 +1334,11 @@ def widget_content(widget_id, meta, data, csrf):
     const status = target.querySelector(
       "[data-pco-batch-state]"
     );
+
     const detail = target.querySelector(
       "[data-pco-batch-detail]"
     );
+
     const open = target.querySelector(
       "[data-pco-batch-open]"
     );
@@ -1306,12 +1346,15 @@ def widget_content(widget_id, meta, data, csrf):
     const pause = target.querySelector(
       "[data-pco-batch-pause]"
     );
+
     const resume = target.querySelector(
       "[data-pco-batch-resume]"
     );
+
     const skip = target.querySelector(
       "[data-pco-batch-skip]"
     );
+
     const stop = target.querySelector(
       "[data-pco-batch-stop]"
     );
@@ -1319,25 +1362,42 @@ def widget_content(widget_id, meta, data, csrf):
     if (status) {
       status.textContent = error
         ? "API indisponible"
-        : label(state);
+        : staging
+          ? "Téléversement"
+          : label(state);
     }
 
     if (detail) {
+
       if (error) {
+
         detail.textContent = error;
+
       } else if (!job) {
+
         detail.textContent = kind === "import"
           ? "Worker prêt · aucun job."
           : "Aucun job en cours.";
+
+      } else if (staging) {
+
+        detail.textContent =
+          `Téléversement vers le cab `
+          + `${uploaded}/${totalUploads} · `
+          + `garde la page Import ouverte jusqu'à `
+          + `${totalUploads}/${totalUploads}`;
+
       } else {
+
         const count = total(job);
         const completed = done(job);
         const name = currentName(job);
+
         const skipped = Number(
-          progress.skipped ??
-          job.skipped_archives ??
-          job.skipped_tables ??
-          0
+          progress.skipped
+          ?? job.skipped_archives
+          ?? job.skipped_tables
+          ?? 0
         );
 
         detail.textContent = [
@@ -1353,57 +1413,81 @@ def widget_content(widget_id, meta, data, csrf):
     }
 
     if (open) {
-      open.textContent = working ? "Voir tâche" : "Ouvrir";
+      open.textContent = staging
+        ? "Voir transfert"
+        : working
+          ? "Voir tâche"
+          : "Ouvrir";
     }
 
-    /* PINCABOS_BATCH_PAUSE_UPLOAD_V31 */
-    const canPause = ["uploading", "queued", "running"].includes(state);
+    /*
+     * Pendant staging :
+     * seul STOP est autorise.
+     */
+    const canPause =
+      !staging
+      && ["queued", "running"].includes(state);
 
-    /* PINCABOS_DASHBOARD_PAUSING_RESUME_V32 */
     const canResume =
-      ["paused", "pausing"].includes(state) &&
-      (
+      !staging
+      && ["paused", "pausing"].includes(state)
+      && (
         kind === "import"
           ? Boolean(packet?.resumable)
           : Boolean(job?.resumable)
       );
 
     const canSkip =
-      state === "paused" &&
-      Boolean(job?.error) &&
-      (
-        kind === "import" ||
-        Boolean(job?.skippable)
+      !staging
+      && state === "paused"
+      && Boolean(job?.error)
+      && (
+        kind === "import"
+        || Boolean(job?.skippable)
       );
+
+    /* PINCABOS_BATCH_BUTTON_LABELS_V35D */
 
     if (pause) {
       pause.hidden = false;
       pause.disabled = !canPause;
+      pause.textContent =
+        state === "pausing"
+          ? "Pause…"
+          : "Pause";
     }
 
     if (resume) {
       resume.hidden = false;
       resume.disabled = !canResume;
+      resume.textContent = "Reprendre";
     }
 
     if (skip) {
       skip.hidden = false;
       skip.disabled = !canSkip;
+      skip.textContent = "Skip";
     }
 
     if (stop) {
-      const canStop = [
-        "uploading",
-        "queued",
-        "running",
-        "pausing",
-        "stopping"
-      ].includes(state);
+
+      const canStop =
+        staging
+        || [
+          "uploading",
+          "queued",
+          "running",
+          "pausing",
+          "stopping"
+        ].includes(state);
 
       stop.hidden = !canStop;
       stop.disabled = state === "stopping";
+
       stop.textContent =
-        state === "stopping" ? "Arrêt…" : "Stop";
+        state === "stopping"
+          ? "Arrêt…"
+          : "Stop";
     }
   }
 
