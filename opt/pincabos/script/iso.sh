@@ -5216,6 +5216,20 @@ EOF
         "$TARGET/etc/timezone" \
         "$TARGET/etc/pincabos/regional.conf"
 
+    # PINCABOS_COLLECTION_I18N_V1
+    # Collection livree par l'image, renommee dans la langue choisie.
+    PCO_FAV_NAME="Favorites"
+    case "${REG_LOCALE%%_*}" in
+        fr) PCO_FAV_NAME="Favoris" ;;
+        de) PCO_FAV_NAME="Favoriten" ;;
+        it) PCO_FAV_NAME="Preferiti" ;;
+        es) PCO_FAV_NAME="Favoritos" ;;
+    esac
+    PCO_COLLECTIONS="$TARGET/home/pinball/.config/vpinfe/collections.ini"
+    if [ "$PCO_FAV_NAME" != "Favorites" ] && [ -f "$PCO_COLLECTIONS" ]; then
+        sed -i "s|^\[Favorites\]$|[$PCO_FAV_NAME]|" "$PCO_COLLECTIONS"
+    fi
+
     echo
     pco_go "Regional settings installed"
     echo " Locale   : $REG_LOCALE"

@@ -1,0 +1,6 @@
+# La webapp pilote la presence des tables de demonstration. Les arguments sont
+# enumeres un a un : aucun caractere libre ne passe par sudo.
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-sample-tables reconcile, \
+    /usr/local/sbin/pincabos-sample-tables set-mode auto, \
+    /usr/local/sbin/pincabos-sample-tables set-mode always, \
+    /usr/local/sbin/pincabos-sample-tables set-mode never
