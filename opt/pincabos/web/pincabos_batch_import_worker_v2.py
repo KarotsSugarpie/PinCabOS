@@ -143,63 +143,150 @@ def mark_running(job_id: str) -> dict[str, Any] | None:
         return job
 
 
+
 def set_item_phase(job_id: str, item: dict[str, Any], label: str) -> dict[str, Any] | None:
     index = int(item.get("index", 0) or 0)
     name = str(item.get("name", "Package"))
+
     with queue.state_lock(True):
         job = queue.load_job_unlocked(job_id)
         if not job:
             return None
+
+        if str(job.get("state", "")) in {
+            queue.PAUSED_STATE,
+            queue.PAUSING_STATE,
+        }:
+            return None
+
         job["current_index"] = index
         job["current_item"] = name
+
         for saved in job.get("uploads", []) or []:
             if int(saved.get("index", 0) or 0) == index:
                 saved["state"] = "running"
                 saved["detail"] = label
                 break
+
         queue.refresh_progress(job, label, name)
-        queue.add_event(job, f"Package {index}/{job.get('total_archives', 0)} : {name} — {label}")
+        queue.add_event(
+            job,
+            f"Package {index}/{job.get('total_archives', 0)} : "
+            f"{name} — {label}",
+        )
         queue.save_job_unlocked(job)
         return job
 
 
-def finish_item(job_id: str, item: dict[str, Any], outcome: str, detail: str, excerpt: str, removed: list[str]) -> dict[str, Any] | None:
+def finish_item(
+    job_id: str,
+    item: dict[str, Any],
+    outcome: str,
+    detail: str,
+    excerpt: str,
+    removed: list[str],
+) -> dict[str, Any] | None:
+    # PINCABOS_BATCH_CONTROLS_V3
     index = int(item.get("index", 0) or 0)
     name = str(item.get("name", "Package"))
     source = Path(str(item.get("path", "")))
+
+    # Une erreur est maintenant REPRENABLE.
+    # L'archive source reste sur disque afin que Reprendre puisse retenter
+    # exactement le meme package.
+    if outcome == "failed":
+        with queue.state_lock(True):
+            job = queue.load_job_unlocked(job_id)
+            if not job:
+                return None
+
+            for saved in job.get("uploads", []) or []:
+                if int(saved.get("index", 0) or 0) == index:
+                    saved["state"] = "error"
+                    saved["detail"] = detail
+                    break
+
+            job["state"] = queue.PAUSED_STATE
+            job["pause_requested"] = False
+            job["paused_at"] = queue.utc_now()
+            job["current_index"] = index
+            job["current_item"] = name
+            job["error"] = detail
+            job["error_attempts"] = int(job.get("error_attempts", 0) or 0) + 1
+            job["result_excerpt"] = excerpt
+
+            cleanup_text = (
+                f"; temporaires moteur supprimés: {', '.join(removed)}"
+                if removed else ""
+            )
+
+            queue.add_event(
+                job,
+                f"{name} : {detail}{cleanup_text} — "
+                "Batch mis automatiquement en pause. "
+                "Utilise Reprendre pour retenter ou Skip pour ignorer.",
+                "error",
+            )
+            queue.refresh_progress(job, "Erreur — en pause", name)
+            queue.save_job_unlocked(job)
+
+            if queue.active_job_id_unlocked() == job_id:
+                queue.set_active_unlocked(None)
+
+            return job
+
+    # Succes / warning : le package a ete consomme et peut etre supprime.
     try:
         source.unlink()
     except FileNotFoundError:
         pass
     except Exception as exc:
         detail += f"; nettoyage archive impossible: {exc}"
+
     with queue.state_lock(True):
         job = queue.load_job_unlocked(job_id)
         if not job:
             return None
+
         for saved in job.get("uploads", []) or []:
             if int(saved.get("index", 0) or 0) == index:
                 saved["state"] = outcome
                 saved["detail"] = detail
                 saved["path"] = ""
                 break
-        job["processed_archives"] = max(int(job.get("processed_archives", 0) or 0), index)
+
+        job["processed_archives"] = max(
+            int(job.get("processed_archives", 0) or 0),
+            index,
+        )
+
         if outcome == "success":
-            job["successful_archives"] = int(job.get("successful_archives", 0) or 0) + 1
+            job["successful_archives"] = (
+                int(job.get("successful_archives", 0) or 0) + 1
+            )
             level = "info"
-        elif outcome == "warning":
-            job["warning_archives"] = int(job.get("warning_archives", 0) or 0) + 1
-            level = "warning"
         else:
-            job["failed_archives"] = int(job.get("failed_archives", 0) or 0) + 1
-            level = "error"
+            job["warning_archives"] = (
+                int(job.get("warning_archives", 0) or 0) + 1
+            )
+            level = "warning"
+
+        job["error"] = ""
         job["result_excerpt"] = excerpt
-        cleanup_text = f"; temporaires supprimés: {', '.join(removed)}" if removed else ""
-        queue.add_event(job, f"{name} : {detail}{cleanup_text}", level)
+
+        cleanup_text = (
+            f"; temporaires supprimés: {', '.join(removed)}"
+            if removed else ""
+        )
+
+        queue.add_event(
+            job,
+            f"{name} : {detail}{cleanup_text}",
+            level,
+        )
         queue.refresh_progress(job, detail, name)
         queue.save_job_unlocked(job)
         return job
-
 
 def finalize_job(job_id: str, stopped: bool = False) -> None:
     with queue.state_lock(True):
@@ -213,7 +300,11 @@ def finalize_job(job_id: str, stopped: bool = False) -> None:
             job["state"] = "stopped"
             label = "Arrêté proprement"
             queue.add_event(job, "Import arrêté; les packages non traités ont été supprimés.", "warning")
-        elif int(job.get("failed_archives", 0) or 0) or int(job.get("warning_archives", 0) or 0):
+        elif (
+            int(job.get("failed_archives", 0) or 0)
+            or int(job.get("warning_archives", 0) or 0)
+            or int(job.get("skipped_archives", 0) or 0)
+        ):
             job["state"] = "completed_with_warning"
             label = "Terminé avec avertissement"
             queue.add_event(job, "File terminée; consulte les compteurs et le journal.", "warning")
@@ -245,58 +336,132 @@ def fail_job(job_id: str, error: str) -> None:
             queue.set_active_unlocked(None)
 
 
+
 def process_job(job_id: str) -> None:
     job = mark_running(job_id)
     if not job:
         return
+
     conflict_mode = str(job.get("conflict_mode", "skip") or "skip")
 
     while RUNNING:
         current = queue.load_job(job_id)
         if not current:
             return
+
+        if str(current.get("state", "")) == queue.PAUSED_STATE:
+            return
+
         if current.get("stop_requested"):
             finalize_job(job_id, stopped=True)
             return
 
         items = sorted(
-            [item for item in (current.get("uploads") or []) if isinstance(item, dict)],
+            [
+                item
+                for item in (current.get("uploads") or [])
+                if isinstance(item, dict)
+            ],
             key=lambda item: int(item.get("index", 0) or 0),
         )
-        pending = next((item for item in items if str(item.get("state", "")) == "queued"), None)
+
+        pending = next(
+            (
+                item for item in items
+                if str(item.get("state", "")) == "queued"
+            ),
+            None,
+        )
 
         if pending is None:
             total = int(current.get("total_archives", 0) or 0)
             done = int(current.get("processed_archives", 0) or 0)
+
             if current.get("uploads_complete"):
                 if done >= total:
                     finalize_job(job_id)
                 else:
-                    fail_job(job_id, f"File incomplète : {done}/{total} package(s) traités.")
+                    fail_job(
+                        job_id,
+                        f"File incomplète : {done}/{total} package(s) traités.",
+                    )
                 return
 
             def waiting(job: dict[str, Any]) -> None:
                 job["current_item"] = ""
-                queue.refresh_progress(job, "En attente du package suivant", "")
+                queue.refresh_progress(
+                    job,
+                    "En attente du package suivant",
+                    "",
+                )
+
             queue.update_job(job_id, waiting)
             heartbeat("waiting-upload", job_id, f"{done}/{total}")
             return
 
         item = pending
-        set_item_phase(job_id, item, "Validation, extraction, manifest et installation")
-        heartbeat("running", job_id, str(item.get("name", "")))
+
+        phase = set_item_phase(
+            job_id,
+            item,
+            "Validation, extraction, manifest et installation",
+        )
+
+        if not phase:
+            return
+
+        heartbeat(
+            "running",
+            job_id,
+            str(item.get("name", "")),
+        )
+
         before = engine_dirs()
-        curl_code, status, body = call_engine(job_id, conflict_mode, item)
+        curl_code, status, body = call_engine(
+            job_id,
+            conflict_mode,
+            item,
+        )
         removed = cleanup_new_engine_dirs(before)
-        outcome, detail, excerpt = classify_response(status, body, curl_code)
-        finish_item(job_id, item, outcome, detail, excerpt, removed)
-        log(f"{outcome.upper()} {item.get('index')}/{current.get('total_archives')} {item.get('name')}: {detail}")
+        outcome, detail, excerpt = classify_response(
+            status,
+            body,
+            curl_code,
+        )
+
+        finish_item(
+            job_id,
+            item,
+            outcome,
+            detail,
+            excerpt,
+            removed,
+        )
+
+        log(
+            f"{outcome.upper()} "
+            f"{item.get('index')}/{current.get('total_archives')} "
+            f"{item.get('name')}: {detail}"
+        )
+
+        # Une erreur est maintenant une pause automatique.
+        if outcome == "failed":
+            return
 
         current = queue.load_job(job_id)
-        if current and current.get("stop_requested"):
+        if not current:
+            return
+
+        if current.get("stop_requested"):
             finalize_job(job_id, stopped=True)
             return
 
+        if (
+            current.get("pause_requested")
+            or str(current.get("state", "")) == queue.PAUSING_STATE
+        ):
+            queue.complete_pause(job_id)
+            return
 
 def cleanup_stale_engine_dirs(min_age_seconds: int = 3600) -> list[str]:
     """PINCABOS_BATCH_ORPHAN_GC_V1

@@ -53,14 +53,47 @@ def _stop_requested(job_id: str) -> bool:
     return bool(job and job.get("stop_requested"))
 
 
-def _mark_stopped(job: dict[str, Any], message: str = "Export arrêté par l’utilisateur.") -> None:
+
+def _mark_stopped(
+    job: dict[str, Any],
+    message: str = "Export arrêté par l’utilisateur.",
+) -> None:
     job["state"] = "stopped"
     job["finished_at"] = _utc_now()
+    job["pause_requested"] = False
     job["error"] = ""
-    _progress(job, "Arrêté", current=str(job.get("current_table", "") or ""), percent=100)
+    _progress(
+        job,
+        "Arrêté",
+        current=str(job.get("current_table", "") or ""),
+    )
     _event(job, message, "warning")
     _save_job(job)
 
+
+def _mark_paused(
+    job: dict[str, Any],
+    message: str,
+    error_message: str = "",
+) -> None:
+    # PINCABOS_BATCH_CONTROLS_V3
+    job["state"] = "paused"
+    job["pause_requested"] = False
+    job["finished_at"] = None
+    job["paused_at"] = _utc_now()
+    job["error"] = error_message
+
+    remaining = _remaining_tables(job)
+    job["current_table"] = remaining[0] if remaining else ""
+
+    _progress(
+        job,
+        "Erreur — en pause" if error_message else "En pause",
+        current=job["current_table"],
+    )
+    _event(job, message, "error" if error_message else "warning")
+    _save_job(job)
+    _set_active(str(job["id"]))
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -146,26 +179,47 @@ def _selected_tables(fields: list[tuple[str, str]]) -> list[str]:
     return values
 
 
-def _progress(job: dict[str, Any], label: str, *, current: str | None = None, percent: int | None = None) -> None:
+
+def _progress(
+    job: dict[str, Any],
+    label: str,
+    *,
+    current: str | None = None,
+    percent: int | None = None,
+) -> None:
     total = max(1, int(job.get("total_tables", 0) or 0))
-    completed = max(0, min(total, int(job.get("completed_tables", 0) or 0)))
+    successful = max(0, int(job.get("completed_tables", 0) or 0))
+    skipped = max(0, int(job.get("skipped_tables", 0) or 0))
+    done = min(total, successful + skipped)
+
     if percent is None:
-        # 4% queue/start, then progress advances exactly as each package copy completes.
-        percent = 4 + int((completed / total) * 92)
+        percent = 4 + int((done / total) * 92)
+
+    current_value = (
+        str(job.get("current_table", "") or "")
+        if current is None
+        else str(current)
+    )
+
     job["progress"] = {
         "percent": max(0, min(100, int(percent))),
         "label": label,
-        "current_table": current or job.get("current_table") or "",
-        "completed": completed,
+        "current_table": current_value,
+        "completed": done,
+        "successful": successful,
+        "skipped": skipped,
         "total": total,
         "mode": "packages",
     }
 
 
 def _public_job(job: dict[str, Any]) -> dict[str, Any]:
+    remaining = _remaining_tables(job)
+    state = str(job.get("state", "") or "")
+
     return {
         "id": job.get("id"),
-        "state": job.get("state"),
+        "state": state,
         "created_at": job.get("created_at"),
         "started_at": job.get("started_at"),
         "finished_at": job.get("finished_at"),
@@ -176,68 +230,206 @@ def _public_job(job: dict[str, Any]) -> dict[str, Any]:
         "error": job.get("error", ""),
         "total_tables": job.get("total_tables", 0),
         "completed_tables": job.get("completed_tables", 0),
-        "current_table": job.get("current_table", ""),
         "completed_names": job.get("completed_names", []),
+        "skipped_tables": job.get("skipped_tables", 0),
+        "skipped_names": job.get("skipped_names", []),
+        "current_table": job.get("current_table", ""),
+        "remaining": len(remaining),
+        "resumable": (
+            state == "paused"
+            and bool(remaining)
+            and bool(job.get("fields"))
+        ),
+        "skippable": (
+            state == "paused"
+            and bool(remaining)
+            and bool(job.get("error"))
+        ),
     }
 
 
 def _recover_stale_active() -> None:
+    """Un restart WebApp devient une pause recuperable, jamais un dead-end."""
     active_id = _active_job_id()
     if not active_id:
         return
+
     job = _load_job(active_id)
-    if job and job.get("state") in {"queued", "running"}:
-        job["state"] = "failed"
-        job["finished_at"] = _utc_now()
-        job["error"] = "Job interrompu par un redémarrage ou arrêt du WebApp."
-        _progress(job, "Interrompu", percent=100)
-        _event(job, job["error"], "error")
+    if not job:
+        _set_active(None)
+        return
+
+    state = str(job.get("state", "") or "")
+
+    if state in {"queued", "running", "pausing"}:
+        job["state"] = "paused"
+        job["pause_requested"] = False
+        job["finished_at"] = None
+        job["error"] = (
+            "Export interrompu par un redémarrage du WebApp. "
+            "Clique Reprendre pour continuer à la prochaine table."
+        )
+
+        remaining = _remaining_tables(job)
+        job["current_table"] = remaining[0] if remaining else ""
+
+        _progress(
+            job,
+            "En pause après redémarrage",
+            current=job["current_table"],
+        )
+        _event(job, job["error"], "warning")
         _save_job(job)
+        _set_active(active_id)
+        return
+
+    if state == "paused":
+        _set_active(active_id)
+        return
+
     _set_active(None)
 
 
+def _remaining_tables(job: dict[str, Any]) -> list[str]:
+    selected = [
+        str(value)
+        for value in (job.get("selected_tables") or [])
+        if str(value)
+    ]
+    finished = {
+        str(value)
+        for value in (job.get("completed_names") or [])
+    }
+    finished.update(
+        str(value)
+        for value in (job.get("skipped_names") or [])
+    )
+    return [value for value in selected if value not in finished]
+
+
+def _stored_fields(job: dict[str, Any]) -> list[tuple[str, str]]:
+    raw = job.get("fields")
+    if not isinstance(raw, list):
+        return []
+
+    result: list[tuple[str, str]] = []
+
+    for item in raw:
+        if not isinstance(item, (list, tuple)) or len(item) != 2:
+            continue
+        key, value = item
+        if isinstance(key, str) and isinstance(value, str):
+            result.append((key, value))
+
+    return result
+
+
+def _fields_for_table(
+    job: dict[str, Any],
+    table_name: str,
+) -> list[tuple[str, str]]:
+    base = _stored_fields(job)
+    if not base:
+        return []
+
+    fields = [
+        (key, value)
+        for key, value in base
+        if key != "table_folder"
+    ]
+    fields.append(("table_folder", table_name))
+    return fields
+
+
 def _safe_table_name(job: dict[str, Any], completed: int) -> str:
-    tables = job.get("selected_tables", [])
-    if isinstance(tables, list) and 0 <= completed < len(tables):
-        return str(tables[completed])
-    return f"Table {completed + 1}"
+    del completed
+    remaining = _remaining_tables(job)
+    if remaining:
+        return remaining[0]
+    return ""
 
 
 def _copy_started(job_id: str, source: Any, destination: Any) -> None:
     job = _load_job(job_id)
-    if not job or job.get("state") not in {"queued", "running"}:
+    if not job or job.get("state") not in {
+        "queued",
+        "running",
+        "pausing",
+        "stopping",
+    }:
         return
-    completed = int(job.get("completed_tables", 0) or 0)
-    current = _safe_table_name(job, completed)
+
+    successful = int(job.get("completed_tables", 0) or 0)
+    skipped = int(job.get("skipped_tables", 0) or 0)
+    current = _safe_table_name(job, successful + skipped)
+
+    if not current:
+        return
+
     job["current_table"] = current
     job["current_package"] = Path(str(source)).name
+
     _progress(job, "Création/copie du package", current=current)
-    _event(job, f"Table {completed + 1}/{job.get('total_tables', 0)} en cours : {current}")
+    _event(
+        job,
+        f"Table {successful + skipped + 1}/"
+        f"{job.get('total_tables', 0)} en cours : {current}",
+    )
     _save_job(job)
 
 
 def _copy_finished(job_id: str, source: Any, destination: Any) -> None:
     job = _load_job(job_id)
-    if not job or job.get("state") not in {"queued", "running"}:
+    if not job or job.get("state") not in {
+        "queued",
+        "running",
+        "pausing",
+        "stopping",
+    }:
         return
-    completed = int(job.get("completed_tables", 0) or 0)
+
     total = int(job.get("total_tables", 0) or 0)
-    current = job.get("current_table") or _safe_table_name(job, completed)
-    completed = min(total, completed + 1)
-    job["completed_tables"] = completed
+    current = str(job.get("current_table", "") or "")
+
+    if not current:
+        current = _safe_table_name(
+            job,
+            int(job.get("completed_tables", 0) or 0)
+            + int(job.get("skipped_tables", 0) or 0),
+        )
+
     names = job.setdefault("completed_names", [])
-    if isinstance(names, list) and len(names) < total:
+
+    if current and isinstance(names, list) and current not in names:
         names.append(current)
-    next_name = _safe_table_name(job, completed) if completed < total else ""
+        job["completed_tables"] = int(
+            job.get("completed_tables", 0) or 0
+        ) + 1
+
+    remaining = _remaining_tables(job)
+    next_name = remaining[0] if remaining else ""
     job["current_table"] = next_name
-    if completed < total:
+
+    done = (
+        int(job.get("completed_tables", 0) or 0)
+        + int(job.get("skipped_tables", 0) or 0)
+    )
+
+    if remaining:
         _progress(job, "Package copié", current=next_name)
-        _event(job, f"Package terminé : {current} ({completed}/{total}). Prochaine table : {next_name}")
+        _event(
+            job,
+            f"Package terminé : {current} ({done}/{total}). "
+            f"Prochaine table : {next_name}",
+        )
     else:
         _progress(job, "Dernier package copié", current="")
-        _event(job, f"Package terminé : {current} ({completed}/{total}).")
-    _save_job(job)
+        _event(
+            job,
+            f"Package terminé : {current} ({done}/{total}).",
+        )
 
+    _save_job(job)
 
 def _copy_failed(job_id: str, source: Any, exc: Exception) -> None:
     job = _load_job(job_id)
@@ -257,12 +449,18 @@ def _install_copy_observer() -> None:
         def observed_copy2(source: Any, destination: Any, *args: Any, **kwargs: Any) -> Any:
             job_id = _COPY_JOB.get()
             observe = bool(job_id) and Path(str(source)).suffix.lower() == ".pincabos"
-            if observe and _stop_requested(str(job_id)):
-                raise BatchStopRequested("Arrêt demandé par l’utilisateur avant la copie du prochain package.")
+            # PINCABOS_BATCH_CONTROLS_V3
+            # Le runner appelle V1 une table a la fois. Le package courant
+            # se termine donc proprement avant Pause ou Stop.
             if observe:
                 _copy_started(str(job_id), source, destination)
             try:
-                result = _ORIGINAL_COPY2(source, destination, *args, **kwargs)
+                result = _ORIGINAL_COPY2(
+                    source,
+                    destination,
+                    *args,
+                    **kwargs,
+                )
             except Exception as exc:
                 if observe:
                     _copy_failed(str(job_id), source, exc)
@@ -292,94 +490,368 @@ def _validate_fields(raw_fields: Any) -> list[tuple[str, str]]:
     return fields
 
 
-def _run_v1(job_id: str, fields: list[tuple[str, str]], lock_fd: int) -> None:
-    job = _load_job(job_id)
+
+def _run_v1(
+    job_id: str,
+    fields: list[tuple[str, str]],
+    lock_fd: int,
+) -> None:
+    """PINCABOS_BATCH_CONTROLS_V3
+
+    Le moteur V1 est appele UNE TABLE A LA FOIS.
+    C'est la frontiere qui rend Pause / Resume / Skip deterministes.
+    """
     try:
+        job = _load_job(job_id)
         if not job:
             return
-        job["state"] = "running"
-        job["started_at"] = _utc_now()
-        first = _safe_table_name(job, 0)
-        job["current_table"] = first
-        _progress(job, "Préparation du moteur V1", current=first, percent=8)
-        _event(job, f"Export V1 démarré en arrière-plan : {job.get('total_tables', 0)} table(s).")
-        _event(job, f"Première table planifiée : {first}")
-        _save_job(job)
 
-        encoded = urlparse.urlencode(fields, doseq=True).encode("utf-8")
-        outbound = urlrequest.Request(
-            f"{INTERNAL_BASE_URL}{INTERNAL_TARGET}",
-            data=encoded,
-            method="POST",
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-                "Accept": "text/html,application/xhtml+xml",
-                INTERNAL_HEADER: job_id,
-            },
-        )
-        _progress(job, "Moteur V1 en cours", current=first, percent=10)
-        _event(job, "Requête interne envoyée au moteur V1. La page reste utilisable.")
-        _save_job(job)
-        with urlrequest.urlopen(outbound, timeout=6 * 60 * 60) as response:
-            status = int(getattr(response, "status", response.getcode()))
-            body = response.read().decode("utf-8", errors="replace")
-        if status < 200 or status >= 300:
-            raise RuntimeError(f"Le moteur V1 a retourné HTTP {status}.")
+        if not job.get("fields") and fields:
+            job["fields"] = [[key, value] for key, value in fields]
+            _save_job(job)
 
-        job = _load_job(job_id) or job
-        if job.get("stop_requested"):
-            _mark_stopped(job)
-            return
-        job["result_excerpt"] = _compact_html(body)
-        completed = int(job.get("completed_tables", 0) or 0)
-        total = int(job.get("total_tables", 0) or 0)
-        if completed == total:
-            job["state"] = "completed"
-            job["current_table"] = ""
-            _progress(job, "Terminé", current="", percent=100)
-            _event(job, f"Export terminé : {completed}/{total} fichier(s) .PinCabOS copiés.")
-        else:
-            job["state"] = "completed_with_warning"
-            job["current_table"] = _safe_table_name(job, completed) if completed < total else ""
-            _progress(job, "Terminé avec vérification requise", percent=100)
-            _event(job, f"V1 a répondu HTTP 200, mais seulement {completed}/{total} copies .PinCabOS ont été observées.", "warning")
-        job["finished_at"] = _utc_now()
-        _save_job(job)
-    except urlerror.HTTPError as exc:
-        text = exc.read().decode("utf-8", errors="replace") if hasattr(exc, "read") else ""
-        job = _load_job(job_id) or job
-        if job and job.get("stop_requested"):
-            _mark_stopped(job)
-        elif job:
-            job["state"] = "failed"
-            job["finished_at"] = _utc_now()
-            job["error"] = f"HTTP {exc.code} depuis le moteur V1."
-            job["result_excerpt"] = _compact_html(text) if text else "Aucun détail HTML disponible."
-            _progress(job, "Erreur", percent=100)
-            _event(job, job["error"], "error")
+        while True:
+            job = _load_job(job_id)
+            if not job:
+                return
+
+            if job.get("stop_requested"):
+                _mark_stopped(job)
+                return
+
+            if (
+                job.get("pause_requested")
+                or str(job.get("state", "")) in {"paused", "pausing"}
+            ):
+                _mark_paused(
+                    job,
+                    "Export mis en pause à la frontière sécurisée.",
+                )
+                return
+
+            remaining = _remaining_tables(job)
+
+            if not remaining:
+                skipped = int(job.get("skipped_tables", 0) or 0)
+
+                job["state"] = (
+                    "completed_with_warning"
+                    if skipped
+                    else "completed"
+                )
+                job["finished_at"] = _utc_now()
+                job["current_table"] = ""
+                job["error"] = ""
+
+                _progress(
+                    job,
+                    (
+                        "Terminé avec table(s) ignorée(s)"
+                        if skipped
+                        else "Terminé"
+                    ),
+                    current="",
+                    percent=100,
+                )
+
+                _event(
+                    job,
+                    (
+                        f"Export terminé : "
+                        f"{job.get('completed_tables', 0)} succès, "
+                        f"{skipped} ignorée(s), "
+                        f"{job.get('total_tables', 0)} total."
+                    ),
+                    "warning" if skipped else "info",
+                )
+                _save_job(job)
+                return
+
+            current = remaining[0]
+            first_start = not bool(job.get("started_at"))
+
+            job["state"] = "running"
+            job["started_at"] = job.get("started_at") or _utc_now()
+            job["current_table"] = current
+            job["error"] = ""
+
+            _progress(
+                job,
+                "Préparation du moteur V1",
+                current=current,
+            )
+
+            if first_start:
+                _event(
+                    job,
+                    f"Export V3 démarré : "
+                    f"{job.get('total_tables', 0)} table(s), "
+                    "traitement une table à la fois.",
+                )
+            else:
+                _event(
+                    job,
+                    f"Traitement de la prochaine table : {current}",
+                )
+
             _save_job(job)
-    except Exception as exc:  # diagnostic for a running job
-        job = _load_job(job_id) or job
-        if job and job.get("stop_requested"):
-            _mark_stopped(job)
-        elif job:
-            job["state"] = "failed"
-            job["finished_at"] = _utc_now()
-            job["error"] = str(exc)
-            _progress(job, "Erreur", percent=100)
-            _event(job, f"Échec : {exc}", "error")
-            _event(job, traceback.format_exc(limit=5), "debug")
+
+            table_fields = _fields_for_table(job, current)
+
+            if not table_fields:
+                _mark_paused(
+                    job,
+                    (
+                        "Impossible de reconstruire la requête Export. "
+                        "Le job reste en pause."
+                    ),
+                    "Informations de reprise absentes.",
+                )
+                return
+
+            encoded = urlparse.urlencode(
+                table_fields,
+                doseq=True,
+            ).encode("utf-8")
+
+            outbound = urlrequest.Request(
+                f"{INTERNAL_BASE_URL}{INTERNAL_TARGET}",
+                data=encoded,
+                method="POST",
+                headers={
+                    "Content-Type":
+                        "application/x-www-form-urlencoded; charset=utf-8",
+                    "Accept": "text/html,application/xhtml+xml",
+                    INTERNAL_HEADER: job_id,
+                },
+            )
+
+            _progress(
+                job,
+                "Moteur V1 en cours",
+                current=current,
+            )
+            _event(
+                job,
+                f"Requête V1 envoyée pour : {current}",
+            )
             _save_job(job)
+
+            try:
+                with urlrequest.urlopen(
+                    outbound,
+                    timeout=6 * 60 * 60,
+                ) as response:
+                    status = int(
+                        getattr(
+                            response,
+                            "status",
+                            response.getcode(),
+                        )
+                    )
+                    body = response.read().decode(
+                        "utf-8",
+                        errors="replace",
+                    )
+
+            except urlerror.HTTPError as exc:
+                text = (
+                    exc.read().decode("utf-8", errors="replace")
+                    if hasattr(exc, "read")
+                    else ""
+                )
+
+                job = _load_job(job_id) or job
+
+                if job.get("stop_requested"):
+                    _mark_stopped(job)
+                    return
+
+                if (
+                    job.get("pause_requested")
+                    or str(job.get("state", "")) in {
+                        "paused",
+                        "pausing",
+                    }
+                ):
+                    _mark_paused(
+                        job,
+                        "Export mis en pause après le package courant.",
+                    )
+                    return
+
+                # Si la copie a quand meme ete observee, cette table est
+                # terminee malgré l'erreur HTTP de rendu. On journalise et
+                # continue.
+                if current in set(job.get("completed_names") or []):
+                    _event(
+                        job,
+                        f"{current} : package copié malgré HTTP {exc.code}. "
+                        "Continuation.",
+                        "warning",
+                    )
+                    _save_job(job)
+                    continue
+
+                job["result_excerpt"] = (
+                    _compact_html(text)
+                    if text
+                    else "Aucun détail HTML disponible."
+                )
+
+                _mark_paused(
+                    job,
+                    (
+                        f"Erreur sur {current}. "
+                        "Utilise Reprendre pour retenter ou Skip pour ignorer."
+                    ),
+                    f"HTTP {exc.code} depuis le moteur V1.",
+                )
+                return
+
+            except Exception as exc:
+                job = _load_job(job_id) or job
+
+                if job.get("stop_requested"):
+                    _mark_stopped(job)
+                    return
+
+                if (
+                    job.get("pause_requested")
+                    or str(job.get("state", "")) in {
+                        "paused",
+                        "pausing",
+                    }
+                ):
+                    _mark_paused(
+                        job,
+                        "Export mis en pause après le package courant.",
+                    )
+                    return
+
+                if current in set(job.get("completed_names") or []):
+                    _event(
+                        job,
+                        f"{current} : package copié malgré l'exception "
+                        f"{exc}. Continuation.",
+                        "warning",
+                    )
+                    _save_job(job)
+                    continue
+
+                _event(
+                    job,
+                    traceback.format_exc(limit=5),
+                    "debug",
+                )
+
+                _mark_paused(
+                    job,
+                    (
+                        f"Erreur sur {current}. "
+                        "Utilise Reprendre pour retenter ou Skip pour ignorer."
+                    ),
+                    str(exc),
+                )
+                return
+
+            if status < 200 or status >= 300:
+                job = _load_job(job_id) or job
+                _mark_paused(
+                    job,
+                    f"Erreur V1 sur {current}.",
+                    f"HTTP {status} depuis le moteur V1.",
+                )
+                return
+
+            job = _load_job(job_id) or job
+            job["result_excerpt"] = _compact_html(body)
+            _save_job(job)
+
+            # Une table est valide seulement si le copy observer a vu son
+            # .PinCabOS.
+            if current not in set(job.get("completed_names") or []):
+                _mark_paused(
+                    job,
+                    (
+                        f"{current} n'a produit aucun fichier .PinCabOS. "
+                        "Le Batch est en pause : Reprendre ou Skip."
+                    ),
+                    "Aucun package .PinCabOS produit par V1.",
+                )
+                return
+
+            if job.get("stop_requested"):
+                _mark_stopped(job)
+                return
+
+            if (
+                job.get("pause_requested")
+                or str(job.get("state", "")) == "pausing"
+            ):
+                _mark_paused(
+                    job,
+                    "Pause effective après le package courant.",
+                )
+                return
+
+            # La boucle repart avec la prochaine table.
+
     finally:
         try:
-            if _active_job_id() == job_id:
+            final_job = _load_job(job_id)
+
+            if (
+                final_job
+                and str(final_job.get("state", "")) in {
+                    "completed",
+                    "completed_with_warning",
+                    "stopped",
+                    "cancelled",
+                    "failed",
+                }
+                and _active_job_id() == job_id
+            ):
                 _set_active(None)
+
         finally:
             try:
                 fcntl.flock(lock_fd, fcntl.LOCK_UN)
             finally:
                 os.close(lock_fd)
 
+
+def _acquire_export_lock() -> int | None:
+    LOCK_PATH.parent.mkdir(parents=True, exist_ok=True, mode=0o750)
+    lock_fd = os.open(
+        str(LOCK_PATH),
+        os.O_CREAT | os.O_RDWR,
+        0o660,
+    )
+
+    try:
+        fcntl.flock(
+            lock_fd,
+            fcntl.LOCK_EX | fcntl.LOCK_NB,
+        )
+        return lock_fd
+    except BlockingIOError:
+        os.close(lock_fd)
+        return None
+
+
+def _spawn_export_worker(
+    job_id: str,
+    fields: list[tuple[str, str]],
+    lock_fd: int,
+) -> None:
+    worker = threading.Thread(
+        target=_run_v1,
+        args=(job_id, fields, lock_fd),
+        name=f"pincabos-batch-v3-{job_id[:8]}",
+        daemon=True,
+    )
+    worker.start()
 
 def register_batch_live(app: Any) -> None:
     if app.config.get("PINCABOS_BATCH_LIVE_V6_REGISTERED"):
@@ -412,70 +884,397 @@ def register_batch_live(app: Any) -> None:
                 pass
 
     @app.route("/api/batch-export/live/start", methods=["POST"])
-    def pincabos_batch_live_v4_start() -> Any:
+    def pincabos_batch_live_v3_start() -> Any:
         payload = request.get_json(silent=True) or {}
+
         try:
             fields = _validate_fields(payload.get("fields"))
             tables = _selected_tables(fields)
         except ValueError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 400
 
-        _ensure_run_dir()
-        LOCK_PATH.parent.mkdir(parents=True, exist_ok=True, mode=0o750)
-        lock_fd = os.open(str(LOCK_PATH), os.O_CREAT | os.O_RDWR, 0o660)
-        try:
-            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            os.close(lock_fd)
-            return jsonify({"ok": False, "error": "Un export est déjà actif.", "active_job_id": _active_job_id()}), 409
+        active_id = _active_job_id()
+
+        if active_id:
+            active_job = _load_job(active_id)
+            active_state = str(
+                (active_job or {}).get("state", "")
+            )
+
+            if active_job and active_state not in {
+                "completed",
+                "completed_with_warning",
+                "stopped",
+                "cancelled",
+                "failed",
+            }:
+                return jsonify({
+                    "ok": False,
+                    "error": "Un export est déjà actif ou en pause.",
+                    "active_job_id": active_id,
+                }), 409
+
+            _set_active(None)
+
+        lock_fd = _acquire_export_lock()
+        if lock_fd is None:
+            return jsonify({
+                "ok": False,
+                "error": "Un Batch Import ou Batch Export utilise déjà le moteur.",
+            }), 409
 
         job_id = uuid.uuid4().hex
+
         job = {
             "id": job_id,
+            "version": 3,
             "state": "queued",
             "created_at": _utc_now(),
             "updated_at": _utc_now(),
             "started_at": None,
             "finished_at": None,
             "selected_tables": tables,
+            "fields": [[key, value] for key, value in fields],
             "total_tables": len(tables),
             "completed_tables": 0,
             "completed_names": [],
+            "skipped_tables": 0,
+            "skipped_names": [],
             "current_table": tables[0],
             "current_package": "",
+            "pause_requested": False,
+            "stop_requested": False,
             "events": [],
             "result_excerpt": "",
             "error": "",
         }
-        _progress(job, "En file", current=tables[0], percent=2)
-        _event(job, f"Job créé : {len(tables)} table(s) sélectionnée(s).")
-        _event(job, "Le moteur V1 créera un fichier .PinCabOS individuel pour chaque table.")
+
+        _progress(
+            job,
+            "En file",
+            current=tables[0],
+            percent=2,
+        )
+        _event(
+            job,
+            f"Job V3 créé : {len(tables)} table(s) sélectionnée(s).",
+        )
+        _event(
+            job,
+            "Mode V3 : une table par requête pour permettre "
+            "Pause / Reprendre / Skip.",
+        )
         _save_job(job)
         _set_active(job_id)
-        worker = threading.Thread(
-            target=_run_v1,
-            args=(job_id, fields, lock_fd),
-            name=f"pincabos-batch-live-v4-{job_id[:8]}",
-            daemon=True,
-        )
-        worker.start()
-        return jsonify({"ok": True, "job": _public_job(job)}), 202
 
-    # PINCABOS_BATCH_LIVE_STOP_ENDPOINT_V11
+        _spawn_export_worker(
+            job_id,
+            fields,
+            lock_fd,
+        )
+
+        return jsonify({
+            "ok": True,
+            "job": _public_job(job),
+        }), 202
+
+    # PINCABOS_BATCH_CONTROLS_V3
     @app.route("/api/batch-export/live/stop/<job_id>", methods=["POST"])
-    def pincabos_batch_live_stop(job_id: str) -> Any:
+    def pincabos_batch_live_v3_stop(job_id: str) -> Any:
         job = _load_job(job_id)
+
         if not job:
             return jsonify({"ok": False, "error": "Job introuvable."}), 404
-        if _active_job_id() != job_id or str(job.get("state", "")).lower() not in {"queued", "running", "stopping"}:
-            return jsonify({"ok": False, "error": "Ce job n’est plus actif.", "job": _public_job(job)}), 409
-        if not job.get("stop_requested"):
+
+        state = str(job.get("state", "")).lower()
+
+        if state == "paused":
             job["stop_requested"] = True
-            job["state"] = "stopping"
-            _progress(job, "Arrêt demandé", current=str(job.get("current_table", "") or ""), percent=int((job.get("progress") or {}).get("percent", 0) or 0))
-            _event(job, "Arrêt demandé par l’utilisateur. Le package déjà en cours peut se terminer; le suivant ne sera pas copié.", "warning")
+            _mark_stopped(job)
+            if _active_job_id() == job_id:
+                _set_active(None)
+
+            return jsonify({
+                "ok": True,
+                "job": _public_job(job),
+            }), 202
+
+        if state not in {
+            "queued",
+            "running",
+            "pausing",
+            "stopping",
+        }:
+            return jsonify({
+                "ok": False,
+                "error": "Ce job n’est plus actif.",
+                "job": _public_job(job),
+            }), 409
+
+        job["stop_requested"] = True
+        job["pause_requested"] = False
+        job["state"] = "stopping"
+
+        _progress(
+            job,
+            "Arrêt demandé",
+            current=str(job.get("current_table", "") or ""),
+        )
+        _event(
+            job,
+            "Arrêt demandé. La table déjà en cours se termine; "
+            "la suivante ne démarre pas.",
+            "warning",
+        )
+        _save_job(job)
+
+        return jsonify({
+            "ok": True,
+            "job": _public_job(job),
+        }), 202
+
+
+    @app.route("/api/batch-export/live/pause/<job_id>", methods=["POST"])
+    def pincabos_batch_live_v3_pause(job_id: str) -> Any:
+        job = _load_job(job_id)
+
+        if not job:
+            return jsonify({"ok": False, "error": "Job introuvable."}), 404
+
+        state = str(job.get("state", "")).lower()
+
+        if state == "paused":
+            return jsonify({
+                "ok": True,
+                "job": _public_job(job),
+            }), 200
+
+        if state not in {"queued", "running", "pausing"}:
+            return jsonify({
+                "ok": False,
+                "error": "Ce job ne peut pas être mis en pause.",
+                "job": _public_job(job),
+            }), 409
+
+        if state == "queued":
+            _mark_paused(
+                job,
+                "Export mis en pause avant la prochaine table.",
+            )
+        else:
+            job["pause_requested"] = True
+            job["state"] = "pausing"
+
+            _progress(
+                job,
+                "Pause demandée",
+                current=str(job.get("current_table", "") or ""),
+            )
+            _event(
+                job,
+                "Pause demandée. La table actuelle se termine "
+                "avant la pause.",
+                "warning",
+            )
             _save_job(job)
-        return jsonify({"ok": True, "job": _public_job(job)}), 202
+
+        return jsonify({
+            "ok": True,
+            "job": _public_job(_load_job(job_id) or job),
+        }), 202
+
+
+    @app.route("/api/batch-export/live/resume/<job_id>", methods=["POST"])
+    def pincabos_batch_live_v3_resume(job_id: str) -> Any:
+        job = _load_job(job_id)
+
+        if not job:
+            return jsonify({"ok": False, "error": "Job introuvable."}), 404
+
+        if str(job.get("state", "")) != "paused":
+            return jsonify({
+                "ok": False,
+                "error": "Le job n'est pas en pause.",
+                "job": _public_job(job),
+            }), 409
+
+        remaining = _remaining_tables(job)
+
+        if not remaining:
+            return jsonify({
+                "ok": False,
+                "error": "Aucune table restante.",
+                "job": _public_job(job),
+            }), 409
+
+        fields = _stored_fields(job)
+
+        if not fields:
+            return jsonify({
+                "ok": False,
+                "error": (
+                    "Ce vieux job ne contient pas les données V3 "
+                    "nécessaires à une reprise."
+                ),
+                "job": _public_job(job),
+            }), 409
+
+        lock_fd = _acquire_export_lock()
+
+        if lock_fd is None:
+            return jsonify({
+                "ok": False,
+                "error": "Le moteur Batch est encore occupé.",
+                "job": _public_job(job),
+            }), 409
+
+        job["state"] = "queued"
+        job["pause_requested"] = False
+        job["stop_requested"] = False
+        job["finished_at"] = None
+        job["error"] = ""
+        job["current_table"] = remaining[0]
+
+        _progress(
+            job,
+            "Reprise en file",
+            current=remaining[0],
+        )
+        _event(
+            job,
+            f"Reprise : {len(remaining)} table(s) restante(s).",
+        )
+        _save_job(job)
+        _set_active(job_id)
+
+        _spawn_export_worker(
+            job_id,
+            fields,
+            lock_fd,
+        )
+
+        return jsonify({
+            "ok": True,
+            "job": _public_job(job),
+        }), 202
+
+
+    @app.route("/api/batch-export/live/skip/<job_id>", methods=["POST"])
+    def pincabos_batch_live_v3_skip(job_id: str) -> Any:
+        job = _load_job(job_id)
+
+        if not job:
+            return jsonify({"ok": False, "error": "Job introuvable."}), 404
+
+        if str(job.get("state", "")) != "paused":
+            return jsonify({
+                "ok": False,
+                "error": "Le job doit être en pause avant Skip.",
+                "job": _public_job(job),
+            }), 409
+
+        if not job.get("error"):
+            return jsonify({
+                "ok": False,
+                "error": "Skip est disponible après une erreur.",
+                "job": _public_job(job),
+            }), 409
+
+        remaining = _remaining_tables(job)
+
+        if not remaining:
+            return jsonify({
+                "ok": False,
+                "error": "Aucune table à ignorer.",
+                "job": _public_job(job),
+            }), 409
+
+        current = remaining[0]
+        skipped = job.setdefault("skipped_names", [])
+
+        if current not in skipped:
+            skipped.append(current)
+
+        job["skipped_tables"] = len(skipped)
+        job["error"] = ""
+        job["pause_requested"] = False
+
+        _event(
+            job,
+            f"SKIP : {current}. Passage à la table suivante.",
+            "warning",
+        )
+
+        remaining = _remaining_tables(job)
+
+        if not remaining:
+            job["state"] = "completed_with_warning"
+            job["finished_at"] = _utc_now()
+            job["current_table"] = ""
+
+            _progress(
+                job,
+                "Terminé avec table(s) ignorée(s)",
+                current="",
+                percent=100,
+            )
+            _save_job(job)
+
+            if _active_job_id() == job_id:
+                _set_active(None)
+
+            return jsonify({
+                "ok": True,
+                "job": _public_job(job),
+            }), 202
+
+        job["current_table"] = remaining[0]
+        job["state"] = "paused"
+
+        _progress(
+            job,
+            "Table ignorée — reprise",
+            current=remaining[0],
+        )
+        _save_job(job)
+
+        fields = _stored_fields(job)
+        lock_fd = _acquire_export_lock()
+
+        if lock_fd is None:
+            _event(
+                job,
+                "Table ignorée. Le moteur est encore occupé; "
+                "clique Reprendre.",
+                "warning",
+            )
+            _save_job(job)
+
+            return jsonify({
+                "ok": True,
+                "job": _public_job(job),
+            }), 202
+
+        job["state"] = "queued"
+        _progress(
+            job,
+            "Reprise après Skip",
+            current=remaining[0],
+        )
+        _save_job(job)
+        _set_active(job_id)
+
+        _spawn_export_worker(
+            job_id,
+            fields,
+            lock_fd,
+        )
+
+        return jsonify({
+            "ok": True,
+            "job": _public_job(job),
+        }), 202
+
 
     @app.route("/api/batch-export/live/status/<job_id>", methods=["GET"])
     def pincabos_batch_live_v4_status(job_id: str) -> Any:

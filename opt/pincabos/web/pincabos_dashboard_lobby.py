@@ -1057,6 +1057,9 @@ def widget_content(widget_id, meta, data, csrf):
     </div>
     <div class="pco-batch-actions">
       <a href="/tools/batch-import" data-pco-batch-open>Ouvrir</a>
+      <button type="button" data-pco-batch-pause>Pause</button>
+      <button type="button" data-pco-batch-resume>Reprendre</button>
+      <button type="button" data-pco-batch-skip>Skip</button>
       <button type="button" data-pco-batch-stop hidden>Stop</button>
       <button type="button" data-pco-batch-refresh>Actualiser</button>
     </div>
@@ -1071,6 +1074,9 @@ def widget_content(widget_id, meta, data, csrf):
     </div>
     <div class="pco-batch-actions">
       <a href="/tools/batch-export" data-pco-batch-open>Ouvrir</a>
+      <button type="button" data-pco-batch-pause>Pause</button>
+      <button type="button" data-pco-batch-resume>Reprendre</button>
+      <button type="button" data-pco-batch-skip>Skip</button>
       <button type="button" data-pco-batch-stop hidden>Stop</button>
       <button type="button" data-pco-batch-refresh>Actualiser</button>
     </div>
@@ -1078,35 +1084,74 @@ def widget_content(widget_id, meta, data, csrf):
 </section>
 
 <script>
+/* PINCABOS_DASHBOARD_BATCH_CONTROLS_V3 */
 (() => {
   "use strict";
 
-  if (window.__pcoDashboardBatchControlsV2) return;
-  window.__pcoDashboardBatchControlsV2 = true;
-  /* PINCABOS_BATCH_SERVICE_WIDGET_LEGACY_POLLER_DISABLED_V3 */
-  return;
+  if (window.__pcoDashboardBatchControlsV3) return;
+  window.__pcoDashboardBatchControlsV3 = true;
 
   const root = document.getElementById("pco-dashboard-batch-controls");
   if (!root) return;
 
-  const cache = { import: null, export: null };
-  const activeStates = new Set(["queued", "running", "stopping"]);
+  const cache = {import: null, export: null};
 
-  const api = (kind, suffix) => `/api/batch-${kind}/live/${suffix}`;
-
-  const row = (kind) =>
+  const row = kind =>
     root.querySelector(`[data-pco-batch-kind="${kind}"]`);
+
+  const api = (kind, suffix) =>
+    `/api/batch-${kind}/live/${suffix}`;
+
+  async function json(url, options = {}) {
+    const response = await fetch(url, {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: {"Accept": "application/json"},
+      ...options
+    });
+
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (_) {}
+
+    if (!response.ok || data.ok === false) {
+      throw new Error(
+        data.error || `HTTP ${response.status}`
+      );
+    }
+
+    return data;
+  }
+
+  function label(state) {
+    return ({
+      uploading: "Téléversement",
+      queued: "En file",
+      running: "Actif",
+      pausing: "Pause demandée",
+      paused: "En pause",
+      stopping: "Arrêt demandé",
+      completed: "Terminé",
+      completed_with_warning: "Avertissement",
+      failed: "Erreur",
+      stopped: "Arrêté",
+      cancelled: "Annulé"
+    })[state] || "Disponible";
+  }
 
   function currentName(job) {
     const progress = job?.progress || {};
-    return progress.current_item ||
+    return String(
+      progress.current_item ||
       progress.current_table ||
       job?.current_item ||
       job?.current_table ||
-      "";
+      ""
+    );
   }
 
-  function completed(job) {
+  function done(job) {
     const progress = job?.progress || {};
     return Number(
       progress.completed ??
@@ -1126,77 +1171,178 @@ def widget_content(widget_id, meta, data, csrf):
     );
   }
 
-  function render(kind, packet) {
+  async function load(kind) {
+    if (kind === "import") {
+      const active = await json(
+        "/api/batch-import/live/active"
+      );
+
+      if (active.job) {
+        return {
+          id: String(active.job.id || ""),
+          job: active.job,
+          resumable: Boolean(active.resumable),
+          remaining: Number(active.remaining || 0)
+        };
+      }
+    }
+
+    const history = await json(api(kind, "history"));
+    const activeId = String(history.active_job_id || "");
+
+    if (activeId) {
+      const status = await json(
+        api(kind, `status/${encodeURIComponent(activeId)}`)
+      );
+
+      return {
+        id: activeId,
+        job: status.job || null,
+        resumable: Boolean(status.job?.resumable)
+      };
+    }
+
+    const latest = (history.jobs || [])[0] || null;
+
+    return {
+      id: String(latest?.id || ""),
+      job: latest,
+      resumable: Boolean(latest?.resumable)
+    };
+  }
+
+  function render(kind, packet, error = "") {
     const target = row(kind);
     if (!target) return;
 
     const job = packet?.job || null;
     const state = String(job?.state || "").toLowerCase();
-    const active = Boolean(packet?.id && activeStates.has(state));
     const progress = job?.progress || {};
 
-    target.classList.toggle("is-active", active);
+    const working = [
+      "uploading",
+      "queued",
+      "running",
+      "pausing",
+      "paused",
+      "stopping"
+    ].includes(state);
 
-    const status = target.querySelector("[data-pco-batch-state]");
-    const detail = target.querySelector("[data-pco-batch-detail]");
-    const open = target.querySelector("[data-pco-batch-open]");
-    const stop = target.querySelector("[data-pco-batch-stop]");
-
-    status.textContent = active
-      ? (state === "stopping" ? "Arrêt demandé" : "Actif")
-      : "Disponible";
-
-    if (!active) {
-      detail.textContent = "Aucun job en cours.";
-    } else {
-      const label = String(progress.label || job?.state || "Actif");
-      const done = completed(job);
-      const count = total(job);
-      const percent = Number(progress.percent || 0);
-      const name = currentName(job);
-      const unit = kind === "import" ? "archive(s)" : "package(s)";
-
-      detail.textContent = [
-        label,
-        count ? `${percent}% · ${done}/${count} ${unit}` : "",
-        name
-      ].filter(Boolean).join(" · ");
-    }
-
-    detail.title = detail.textContent;
-    open.textContent = active ? "Voir tâche" : "Ouvrir";
-
-    stop.hidden = !active;
-    stop.disabled = state === "stopping";
-    stop.textContent = state === "stopping" ? "Arrêt…" : "Stop";
-  }
-
-  async function load(kind) {
-    const historyResponse = await fetch(api(kind, "history"), {
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { "Accept": "application/json" }
-    });
-
-    const history = await historyResponse.json();
-    if (!historyResponse.ok) throw new Error(history.error || "Historique indisponible");
-
-    const id = String(history.active_job_id || "");
-    if (!id) return { id: "", job: null };
-
-    const statusResponse = await fetch(
-      api(kind, `status/${encodeURIComponent(id)}`),
-      {
-        cache: "no-store",
-        credentials: "same-origin",
-        headers: { "Accept": "application/json" }
-      }
+    target.classList.toggle(
+      "is-active",
+      working && state !== "paused"
     );
 
-    const status = await statusResponse.json();
-    if (!statusResponse.ok) throw new Error(status.error || "Statut indisponible");
+    const status = target.querySelector(
+      "[data-pco-batch-state]"
+    );
+    const detail = target.querySelector(
+      "[data-pco-batch-detail]"
+    );
+    const open = target.querySelector(
+      "[data-pco-batch-open]"
+    );
 
-    return { id, job: status.job || null };
+    const pause = target.querySelector(
+      "[data-pco-batch-pause]"
+    );
+    const resume = target.querySelector(
+      "[data-pco-batch-resume]"
+    );
+    const skip = target.querySelector(
+      "[data-pco-batch-skip]"
+    );
+    const stop = target.querySelector(
+      "[data-pco-batch-stop]"
+    );
+
+    if (status) {
+      status.textContent = error
+        ? "API indisponible"
+        : label(state);
+    }
+
+    if (detail) {
+      if (error) {
+        detail.textContent = error;
+      } else if (!job) {
+        detail.textContent = kind === "import"
+          ? "Worker prêt · aucun job."
+          : "Aucun job en cours.";
+      } else {
+        const count = total(job);
+        const completed = done(job);
+        const name = currentName(job);
+        const skipped = Number(
+          progress.skipped ??
+          job.skipped_archives ??
+          job.skipped_tables ??
+          0
+        );
+
+        detail.textContent = [
+          progress.label || label(state),
+          count ? `${completed}/${count}` : "",
+          skipped ? `Skip ${skipped}` : "",
+          name,
+          job.error || ""
+        ].filter(Boolean).join(" · ");
+      }
+
+      detail.title = detail.textContent;
+    }
+
+    if (open) {
+      open.textContent = working ? "Voir tâche" : "Ouvrir";
+    }
+
+    const canPause = ["queued", "running"].includes(state);
+
+    const canResume =
+      state === "paused" &&
+      (
+        kind === "import"
+          ? Boolean(packet?.resumable)
+          : Boolean(job?.resumable)
+      );
+
+    const canSkip =
+      state === "paused" &&
+      Boolean(job?.error) &&
+      (
+        kind === "import" ||
+        Boolean(job?.skippable)
+      );
+
+    if (pause) {
+      pause.hidden = false;
+      pause.disabled = !canPause;
+    }
+
+    if (resume) {
+      resume.hidden = false;
+      resume.disabled = !canResume;
+    }
+
+    if (skip) {
+      skip.hidden = false;
+      skip.disabled = !canSkip;
+    }
+
+    if (stop) {
+      const canStop = [
+        "uploading",
+        "queued",
+        "running",
+        "pausing",
+        "stopping"
+      ].includes(state);
+
+      stop.hidden = !canStop;
+      stop.disabled = state === "stopping";
+      stop.textContent =
+        state === "stopping" ? "Arrêt…" : "Stop";
+    }
   }
 
   async function refresh(kind) {
@@ -1205,80 +1351,148 @@ def widget_content(widget_id, meta, data, csrf):
       render(kind, cache[kind]);
     } catch (error) {
       cache[kind] = null;
-      render(kind, null);
-
-      const detail = row(kind)?.querySelector("[data-pco-batch-detail]");
-      if (detail) {
-        detail.textContent = `État indisponible : ${error.message}`;
-        detail.title = detail.textContent;
-      }
+      render(
+        kind,
+        null,
+        `État indisponible : ${error.message}`
+      );
     }
   }
 
   async function refreshAll() {
-    await Promise.all([refresh("import"), refresh("export")]);
+    await Promise.all([
+      refresh("import"),
+      refresh("export")
+    ]);
   }
 
-  async function stop(kind, button) {
+  async function act(kind, action, button) {
     const packet = cache[kind];
-    if (!packet?.id) return;
 
+    if (!packet?.id || button.disabled) return;
+
+    const original = button.textContent;
     button.disabled = true;
-    button.textContent = "Arrêt…";
+    button.textContent = "…";
 
     try {
-      const response = await fetch(
-        api(kind, `stop/${encodeURIComponent(packet.id)}`),
-        {
-          method: "POST",
-          cache: "no-store",
-          credentials: "same-origin",
-          headers: { "Accept": "application/json" }
-        }
+      const data = await json(
+        api(
+          kind,
+          `${action}/${encodeURIComponent(packet.id)}`
+        ),
+        {method: "POST"}
       );
 
-      const data = await response.json();
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Arrêt refusé");
-      }
+      cache[kind] = {
+        id: packet.id,
+        job: data.job || packet.job,
+        resumable: Boolean(
+          data.resumable ??
+          data.job?.resumable
+        )
+      };
 
-      cache[kind] = { id: packet.id, job: data.job || packet.job };
       render(kind, cache[kind]);
       await refreshAll();
-    } catch (error) {
-      button.disabled = false;
-      button.textContent = "Stop";
 
-      const detail = row(kind)?.querySelector("[data-pco-batch-detail]");
+    } catch (error) {
+      button.textContent = original;
+
+      const detail = row(kind)?.querySelector(
+        "[data-pco-batch-detail]"
+      );
+
       if (detail) {
-        detail.textContent = `Arrêt impossible : ${error.message}`;
+        detail.textContent =
+          `${action} impossible : ${error.message}`;
         detail.title = detail.textContent;
       }
+
+      await refresh(kind);
     }
   }
 
-  root.addEventListener("click", (event) => {
-    const refreshButton = event.target.closest("[data-pco-batch-refresh]");
+  root.addEventListener("click", event => {
+    const target = event.target;
+    const targetRow = target.closest(
+      "[data-pco-batch-kind]"
+    );
+
+    if (!targetRow) return;
+
+    const kind = String(
+      targetRow.dataset.pcoBatchKind || ""
+    );
+
+    if (!["import", "export"].includes(kind)) return;
+
+    const refreshButton = target.closest(
+      "[data-pco-batch-refresh]"
+    );
+
     if (refreshButton) {
       event.preventDefault();
-      refreshAll();
+      refresh(kind);
       return;
     }
 
-    const stopButton = event.target.closest("[data-pco-batch-stop]");
+    const pauseButton = target.closest(
+      "[data-pco-batch-pause]"
+    );
+
+    if (pauseButton) {
+      event.preventDefault();
+      act(kind, "pause", pauseButton);
+      return;
+    }
+
+    const resumeButton = target.closest(
+      "[data-pco-batch-resume]"
+    );
+
+    if (resumeButton) {
+      event.preventDefault();
+      act(kind, "resume", resumeButton);
+      return;
+    }
+
+    const skipButton = target.closest(
+      "[data-pco-batch-skip]"
+    );
+
+    if (skipButton) {
+      event.preventDefault();
+
+      if (
+        window.confirm(
+          "Ignorer l'élément fautif et passer au suivant ?"
+        )
+      ) {
+        act(kind, "skip", skipButton);
+      }
+      return;
+    }
+
+    const stopButton = target.closest(
+      "[data-pco-batch-stop]"
+    );
+
     if (stopButton) {
       event.preventDefault();
-      const kind = stopButton.closest("[data-pco-batch-kind]")?.dataset.pcoBatchKind;
-      if (kind === "import" || kind === "export") stop(kind, stopButton);
+
+      if (
+        window.confirm(
+          "Arrêter ce Batch après l'élément en cours ?"
+        )
+      ) {
+        act(kind, "stop", stopButton);
+      }
     }
   });
 
   refreshAll();
-  window.setInterval(refreshAll, 2000);
-
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) refreshAll();
-  });
+  window.setInterval(refreshAll, 2500);
 })();
 </script>
 '''

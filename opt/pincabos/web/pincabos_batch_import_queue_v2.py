@@ -17,13 +17,15 @@ STATE_LOCK_PATH = RUN_DIR / "state.lock"
 SHARED_ENGINE_LOCK = Path(os.environ.get("PINCABOS_BATCH_LIVE_SHARED_LOCK", "/var/lib/pincabos/batch-live/export.lock"))
 MAX_HISTORY = 40
 MAX_ARCHIVES = 1200
-ACTIVE_STATES = {"uploading", "queued", "running", "stopping"}
+ACTIVE_STATES = {"uploading", "queued", "running", "stopping", "pausing"}
 FINAL_STATES = {"completed", "completed_with_warning", "failed", "stopped", "cancelled"}
 
 # PINCABOS_BATCH_FAILSAFE_V1
 # "paused" n'est ni actif ni final : le travail ne consomme pas le creneau
 # d'execution, mais il reste repris tel quel par resume_job().
 PAUSED_STATE = "paused"
+PAUSING_STATE = "pausing"
+# PINCABOS_BATCH_CONTROLS_V3
 
 # Au-dela de ce delai sans la moindre mise a jour, un travail actif qui n'a
 # rien a traiter est considere comme abandonne (onglet ferme, televersement
@@ -135,23 +137,30 @@ def add_event(job: dict[str, Any], message: str, level: str = "info") -> None:
         del events[:-240]
 
 
+
 def refresh_progress(job: dict[str, Any], label: str | None = None, current: str | None = None) -> None:
     total = max(0, int(job.get("total_archives", 0) or 0))
     completed = max(0, min(total, int(job.get("processed_archives", 0) or 0)))
     uploaded = max(0, min(total, int(job.get("uploaded_archives", 0) or 0)))
+    skipped = max(0, int(job.get("skipped_archives", 0) or 0))
     state = str(job.get("state", ""))
+
     if current is not None:
         job["current_item"] = current
+
     if label is None:
         label = str((job.get("progress") or {}).get("label") or state or "En attente")
+
     if state == "uploading":
         percent = int((uploaded * 10) / total) if total else 0
     elif total:
         percent = 10 + int((completed * 90) / total)
     else:
         percent = 0
+
     if state in FINAL_STATES:
         percent = 100
+
     job["progress"] = {
         "mode": "archives",
         "total": total,
@@ -163,8 +172,9 @@ def refresh_progress(job: dict[str, Any], label: str | None = None, current: str
         "successful": int(job.get("successful_archives", 0) or 0),
         "warnings": int(job.get("warning_archives", 0) or 0),
         "failed": int(job.get("failed_archives", 0) or 0),
+        "skipped": skipped,
+        "error_attempts": int(job.get("error_attempts", 0) or 0),
     }
-
 
 def public_job(job: dict[str, Any]) -> dict[str, Any]:
     result = dict(job)
@@ -262,49 +272,128 @@ def job_is_stale(job: dict[str, Any]) -> bool:
     return age > STALE_SECONDS
 
 
+
 def pause_job(job_id: str) -> dict[str, Any] | None:
-    """Suspend un travail en cours sans perdre ce qui a deja ete traite."""
+    """Pause a la prochaine frontiere sure.
+
+    Si un package est deja dans le moteur, il se termine avant la pause.
+    """
     with state_lock(True):
         job = load_job_unlocked(job_id)
         if not job:
             return None
+
         state = str(job.get("state", ""))
+
         if state in FINAL_STATES or state == PAUSED_STATE:
             return job
+
+        running_item = next(
+            (
+                item for item in (job.get("uploads") or [])
+                if isinstance(item, dict)
+                and str(item.get("state", "")) == "running"
+            ),
+            None,
+        )
+
+        if running_item is not None or state == "running":
+            job["pause_requested"] = True
+            job["state"] = PAUSING_STATE
+            add_event(
+                job,
+                "Pause demandée; le package actuel se termine avant la pause.",
+                "warning",
+            )
+            refresh_progress(job, "Pause demandée")
+            save_job_unlocked(job)
+            return job
+
+        job["pause_requested"] = False
         job["state"] = PAUSED_STATE
         job["paused_at"] = utc_now()
-        for item in job.get("uploads", []) or []:
-            if isinstance(item, dict) and str(item.get("state")) == "running":
-                item["state"] = "queued"
-                item["detail"] = "Repris à la reprise du travail"
-        add_event(job, "Travail mis en pause. Reprise possible à tout moment.", "warning")
+
+        add_event(
+            job,
+            "Travail mis en pause. Reprise possible à tout moment.",
+            "warning",
+        )
         refresh_progress(job, "En pause")
         save_job_unlocked(job)
+
         if active_job_id_unlocked() == job_id:
             set_active_unlocked(None)
+
+        return job
+
+
+def complete_pause(job_id: str) -> dict[str, Any] | None:
+    """Finalise une pause demandee apres le package courant."""
+    with state_lock(True):
+        job = load_job_unlocked(job_id)
+        if not job:
+            return None
+
+        job["state"] = PAUSED_STATE
+        job["pause_requested"] = False
+        job["paused_at"] = utc_now()
+
+        add_event(
+            job,
+            "Pause effective à la frontière sécurisée du package.",
+            "warning",
+        )
+        refresh_progress(job, "En pause")
+        save_job_unlocked(job)
+
+        if active_job_id_unlocked() == job_id:
+            set_active_unlocked(None)
+
         return job
 
 
 def resume_job(job_id: str) -> dict[str, Any] | None:
-    """Reprend un travail en pause, ou relance ce qui reste d'un travail
-    interrompu : les elements deja importes ne sont pas refaits."""
+    """Reprend le travail restant sans refaire les packages termines."""
     with state_lock(True):
         job = load_job_unlocked(job_id)
         if not job:
             return None
+
+        if str(job.get("state", "")) == PAUSING_STATE:
+            return job
+
         remaining = [
-            item for item in (job.get("uploads") or [])
-            if isinstance(item, dict) and str(item.get("state")) in {"queued", "running", "uploading"}
+            item
+            for item in (job.get("uploads") or [])
+            if isinstance(item, dict)
+            and str(item.get("state", "")) in {
+                "queued",
+                "running",
+                "uploading",
+                "error",
+            }
         ]
+
         if not remaining:
             return job
+
         for item in remaining:
-            if str(item.get("state")) == "running":
+            if str(item.get("state", "")) in {
+                "running",
+                "uploading",
+                "error",
+            }:
                 item["state"] = "queued"
+
+            if not str(item.get("detail", "")).strip():
+                item["detail"] = "En attente de traitement"
+
         job["state"] = "queued"
+        job["pause_requested"] = False
         job["stop_requested"] = False
-        job.pop("error", None)
-        job.pop("finished_at", None)
+        job["error"] = ""
+        job["finished_at"] = None
+
         add_event(
             job,
             f"Reprise du travail : {len(remaining)} paquet(s) restant(s).",
@@ -312,10 +401,75 @@ def resume_job(job_id: str) -> dict[str, Any] | None:
         )
         refresh_progress(job, "Reprise en file")
         save_job_unlocked(job)
+
         if not active_job_id_unlocked():
             set_active_unlocked(job_id)
+
         return job
 
+
+def skip_job(job_id: str) -> dict[str, Any] | None:
+    """Ignore uniquement le package fautif puis remet la file en marche."""
+    with state_lock(True):
+        job = load_job_unlocked(job_id)
+        if not job:
+            return None
+
+        if str(job.get("state", "")) != PAUSED_STATE:
+            return job
+
+        target = next(
+            (
+                item
+                for item in (job.get("uploads") or [])
+                if isinstance(item, dict)
+                and str(item.get("state", "")) == "error"
+            ),
+            None,
+        )
+
+        if target is None:
+            return job
+
+        index = int(target.get("index", 0) or 0)
+        name = str(target.get("name", "Package"))
+        source = Path(str(target.get("path", "") or ""))
+
+        if source.is_file():
+            try:
+                source.unlink()
+            except OSError:
+                pass
+
+        target["state"] = "skipped"
+        target["detail"] = "Ignoré par l’utilisateur après erreur"
+        target["path"] = ""
+
+        job["skipped_archives"] = int(job.get("skipped_archives", 0) or 0) + 1
+        job["processed_archives"] = max(
+            int(job.get("processed_archives", 0) or 0),
+            index,
+        )
+        job["current_index"] = index
+        job["current_item"] = ""
+        job["error"] = ""
+        job["pause_requested"] = False
+        job["stop_requested"] = False
+        job["state"] = "queued"
+
+        add_event(
+            job,
+            f"SKIP {index}/{job.get('total_archives', 0)} : {name}. "
+            "Passage au package suivant.",
+            "warning",
+        )
+        refresh_progress(job, "Package ignoré; reprise de la file", "")
+        save_job_unlocked(job)
+
+        if not active_job_id_unlocked():
+            set_active_unlocked(job_id)
+
+        return job
 
 def collect_orphan_uploads() -> list[str]:
     """PINCABOS_BATCH_ORPHAN_GC_V1

@@ -1021,6 +1021,45 @@ def register_batch_import_live(app: Any) -> None:
             "job": queue.public_job(job),
         }), 202
 
+
+    # PINCABOS_BATCH_SKIP_ROUTE_V3
+    @app.route("/api/batch-import/live/skip/<job_id>", methods=["POST"])
+    def pincabos_batch_import_v3_skip(job_id: str) -> Any:
+        before = queue.load_job(job_id)
+        if not before:
+            return jsonify({"ok": False, "error": "Job introuvable."}), 404
+
+        error_item = next(
+            (
+                item
+                for item in (before.get("uploads") or [])
+                if isinstance(item, dict)
+                and str(item.get("state", "")) == "error"
+            ),
+            None,
+        )
+
+        if str(before.get("state", "")) != queue.PAUSED_STATE:
+            return jsonify({
+                "ok": False,
+                "error": "Le Batch doit être en pause avant Skip.",
+                "job": queue.public_job(before),
+            }), 409
+
+        if error_item is None:
+            return jsonify({
+                "ok": False,
+                "error": "Aucun package fautif à ignorer.",
+                "job": queue.public_job(before),
+            }), 409
+
+        job = queue.skip_job(job_id)
+
+        return jsonify({
+            "ok": True,
+            "job": queue.public_job(job or before),
+        }), 202
+
     @app.route("/api/batch-import/live/active", methods=["GET"])
     def pincabos_batch_import_v2_active() -> Any:
         """Travail a reprendre en charge quand on (re)vient sur la page.
@@ -1037,7 +1076,7 @@ def register_batch_import_live(app: Any) -> None:
             for candidate in reversed(queue.list_jobs()):
                 state = str(candidate.get("state", ""))
                 remaining = any(
-                    isinstance(item, dict) and str(item.get("state")) in {"queued", "running"}
+                    isinstance(item, dict) and str(item.get("state")) in {"queued", "running", "error"}
                     for item in (candidate.get("uploads") or [])
                 )
                 if state == queue.PAUSED_STATE or (remaining and state not in {"completed", "completed_with_warning"}):
@@ -1050,7 +1089,7 @@ def register_batch_import_live(app: Any) -> None:
         state = str(job.get("state", ""))
         remaining = sum(
             1 for item in (job.get("uploads") or [])
-            if isinstance(item, dict) and str(item.get("state")) in {"queued", "running"}
+            if isinstance(item, dict) and str(item.get("state")) in {"queued", "running", "error"}
         )
         return jsonify({
             "ok": True,
