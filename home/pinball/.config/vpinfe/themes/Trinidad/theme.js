@@ -765,7 +765,18 @@ function renderWheelCarousel(options = {}) {
         return;
     }
 
-    const offsets = [-3, -2, -1, 0, 1, 2, 3];
+    // PINCABOS_WHEEL_SMALL_LIBRARY_V1
+    // Sept emplacements pour moins de sept tables, c'est le meme index
+    // demande plusieurs fois : les cartes etant recensees par index, le
+    // doublon en ecrasait un et l'emplacement orphelin restait fige. On borne
+    // l'etalement a ce que la bibliotheque peut remplir — sans le forcer a
+    // etre symetrique, sinon deux tables n'en afficheraient qu'une.
+    const spanBack = Math.min(3, Math.floor((itemCount - 1) / 2));
+    const spanForward = Math.min(3, itemCount - 1 - spanBack);
+    const offsets = [];
+    for (let offset = -spanBack; offset <= spanForward; offset += 1) {
+        offsets.push(offset);
+    }
     const nextVisible = offsets.map((offset) => ({
         offset,
         index: wrapIndex(currentIndex + offset, itemCount)
@@ -793,9 +804,9 @@ function renderWheelCarousel(options = {}) {
         Array.from(carousel.children).map((card) => [Number(card.dataset.itemIndex), card])
     );
     const nextIndexSet = new Set(nextVisible.map(({ index }) => index));
-    const enteringOffset = delta > 0 ? 3 : -3;
-    const enteringStartOffset = delta > 0 ? 4 : -4;
-    const exitingTargetOffset = delta > 0 ? -4 : 4;
+    const enteringOffset = delta > 0 ? spanForward : -spanBack;
+    const enteringStartOffset = delta > 0 ? spanForward + 1 : -(spanBack + 1);
+    const exitingTargetOffset = delta > 0 ? -(spanBack + 1) : spanForward + 1;
 
     nextVisible.forEach(({ index, offset }) => {
         let card = cardsByIndex.get(index);
