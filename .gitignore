@@ -236,3 +236,9 @@
 # et propres a la machine qui les a ecrites (UUID de disque, taille du SSD).
 /etc/lvm/backup/
 /etc/lvm/archive/
+
+# ------------------------------------------------------------
+# Vidages de plantage : residus propres a la machine qui les a
+# ecrits, deja exclus de l'ISO par iso.sh.
+# ------------------------------------------------------------
+/var/crash/
