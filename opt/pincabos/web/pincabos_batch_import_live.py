@@ -331,66 +331,178 @@ _PAGE_UI = r'''
   }
 
   async function submitQueue(target) {
-    const input = target.querySelector('input[name="archives"]');
-    const files = Array.from(input?.files || []);
-    if (!files.length) throw new Error("Choisis au moins un package .PinCabOS.");
-    const conflict = target.querySelector('input[name="conflict_mode"]:checked')?.value || "skip";
-    disable(target, true);
-    setProgress(0, null);
-    queuePanel(files);
-    setMessage(`Cr\u00e9ation de la file s\u00e9quentielle pour ${files.length} package(s)\u2026`);
+    /* PINCABOS_BATCH_STAGE_ALL_V33 */
 
-    const created = await json("/api/batch-import/live/create", {
-      method: "POST",
-      headers: {"Content-Type": "application/json", "Accept": "application/json"},
-      body: JSON.stringify({total: files.length, conflict_mode: conflict})
-    });
+    const input = target.querySelector(
+      'input[name="archives"]'
+    );
+
+    const files = Array.from(
+      input?.files || []
+    );
+
+    if (!files.length) {
+      throw new Error(
+        "Choisis au moins un package .PinCabOS."
+      );
+    }
+
+    const conflict = (
+      target.querySelector(
+        'input[name="conflict_mode"]:checked'
+      )?.value
+      || "skip"
+    );
+
+    disable(target, true);
+
+    setMessage(
+      `Préparation de ${files.length} package(s). `
+      + `Ne quitte pas cette page avant `
+      + `${files.length}/${files.length} téléversés.`
+    );
+
+    const created = await json(
+      "/api/batch-import/live/create",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          total: files.length,
+          conflict_mode: conflict
+        })
+      }
+    );
+
     const jobId = created.job.id;
-    emit("pcos-batch-import-started", created.job);
+
+    emit(
+      "pcos-batch-import-started",
+      created.job
+    );
 
     try {
-      for (let index = 0; index < files.length; index += 1) {
+
+      /*
+       * Important:
+       * on STAGE tous les fichiers sur le cab AVANT de
+       * dépendre du worker.
+       *
+       * Aucune attente de processed_archives ici.
+       */
+      for (
+        let index = 0;
+        index < files.length;
+        index += 1
+      ) {
+
         const file = files[index];
-        emit("pcos-batch-import-uploading", {job_id: jobId, index: index + 1, total: files.length, name: file.name});
-        const body = new FormData();
-        body.append("archive", file, file.name);
-        body.append("index", String(index + 1));
-        const startedAt = Date.now();
-        await uploadWithProgress(`/api/batch-import/live/upload/${encodeURIComponent(jobId)}`, body, (loaded, totalBytes) => {
-          const seconds = Math.max((Date.now() - startedAt) / 1000, 0.2);
-          const mbps = (loaded / (1024 * 1024)) / seconds;
-          const pct = Math.round(100 * loaded / totalBytes);
-          setProgress(loaded / totalBytes, `T\u00e9l\u00e9versement ${index + 1}/${files.length} : ${file.name} \u2014 ${pct}% (${mbps.toFixed(1)} Mo/s)`);
-          setRow(index, "\u2b06\ufe0f", `envoi ${pct}% (${mbps.toFixed(1)} Mo/s)`, "#ffb347");
-          emit("pcos-batch-import-upload-progress", {job_id: jobId, index: index + 1, total: files.length, loaded: loaded, total_bytes: totalBytes});
-        });
-        setProgress(null);
-        const upSeconds = Math.max((Date.now() - startedAt) / 1000, 0.01);
-        const upMbps = (file.size / (1024 * 1024)) / upSeconds;
-        setRow(index, "\u2699\ufe0f", `envoy\u00e9 (${(file.size / (1024 * 1024)).toFixed(1)} Mo, ${upMbps.toFixed(1)} Mo/s) \u2014 analyse\u2026`, "#ffb347");
-        setMessage(`Traitement ${index + 1}/${files.length} : ${file.name}\u2026`);
-        while (true) {
-          await new Promise(resolve => window.setTimeout(resolve, 900));
-          const packet = await json(`/api/batch-import/live/status/${encodeURIComponent(jobId)}`);
-          const job = packet.job || {};
-          applyPacketRows(job, files);
-          if (["failed", "stopped", "cancelled"].includes(String(job.state || ""))) {
-            throw new Error(job.error || `Le job s\u2019est arr\u00eat\u00e9 \u00e0 ${index + 1}/${files.length}.`);
+
+        setMessage(
+          `Téléversement ${index + 1}/${files.length} : `
+          + `${file.name} · `
+          + `garde cette page ouverte`
+        );
+
+        emit(
+          "pcos-batch-import-uploading",
+          {
+            job_id: jobId,
+            index: index + 1,
+            total: files.length,
+            name: file.name
           }
-          if (Number(job.processed_archives || 0) >= index + 1) break;
-        }
-        setRow(index, "\u23f3", "pr\u00e9par\u00e9 \u2014 en file d\u2019import", "#999");
+        );
+
+        const body = new FormData();
+
+        body.append(
+          "archive",
+          file,
+          file.name
+        );
+
+        body.append(
+          "index",
+          String(index + 1)
+        );
+
+        await json(
+          `/api/batch-import/live/upload/`
+          + encodeURIComponent(jobId),
+          {
+            method: "POST",
+            body
+          }
+        );
+
+        setMessage(
+          `Téléversement ${index + 1}/${files.length} terminé. `
+          + (
+            index + 1 === files.length
+              ? "Préparation du traitement en arrière-plan…"
+              : "Envoi du package suivant…"
+          )
+        );
       }
-      const finished = await json(`/api/batch-import/live/finish/${encodeURIComponent(jobId)}`, {method: "POST"});
-      setMessage(`Les ${files.length} package(s) sont en file. Le worker les importe un \u00e0 la fois \u2014 suivi ci-dessous.`);
-      emit("pcos-batch-import-started", finished.job);
-      pollWorker(jobId, files);
+
+      /*
+       * Tous les fichiers sont maintenant physiquement
+       * stockés sur le cab.
+       */
+      const finished = await json(
+        `/api/batch-import/live/finish/`
+        + encodeURIComponent(jobId),
+        {
+          method: "POST"
+        }
+      );
+
+      setMessage(
+        `${files.length}/${files.length} packages téléversés. `
+        + `Import en arrière-plan actif. `
+        + `Tu peux maintenant quitter cette page et contrôler `
+        + `le Batch depuis le widget Services.`
+      );
+
+      emit(
+        "pcos-batch-import-started",
+        finished.job
+      );
+
     } catch (error) {
-      try { await json(`/api/batch-import/live/stop/${encodeURIComponent(jobId)}`, {method: "POST"}); } catch (_) {}
-      emit("pcos-batch-import-upload-failed", {job_id: jobId, error: error.message});
+
+      /*
+       * Une erreur de TRANSMISSION est différente d'une
+       * erreur d'import.
+       *
+       * On arrête la file incomplète : les fichiers locaux
+       * non envoyés ne sont pas récupérables par le serveur.
+       */
+      try {
+        await json(
+          `/api/batch-import/live/stop/`
+          + encodeURIComponent(jobId),
+          {
+            method: "POST"
+          }
+        );
+      } catch (_) {}
+
+      emit(
+        "pcos-batch-import-upload-failed",
+        {
+          job_id: jobId,
+          error: error.message
+        }
+      );
+
       throw error;
+
     } finally {
-      setProgress(null);
       disable(target, false);
     }
   }

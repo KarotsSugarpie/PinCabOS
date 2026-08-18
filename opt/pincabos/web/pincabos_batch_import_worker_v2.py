@@ -338,11 +338,57 @@ def fail_job(job_id: str, error: str) -> None:
 
 
 def process_job(job_id: str) -> None:
+    # PINCABOS_BATCH_WAIT_FULL_STAGE_V33
+    #
+    # Le navigateur commence par déposer TOUS les packages.
+    # Le worker ne démarre aucun import avant uploads_complete.
+    #
+    # Une fois ce drapeau positionné, le navigateur n'est plus
+    # nécessaire et le Batch peut vivre entièrement en arrière-plan.
+    staging = queue.load_job(job_id)
+
+    if not staging:
+        return
+
+    if not bool(staging.get("uploads_complete")):
+        uploaded = int(
+            staging.get("uploaded_archives", 0) or 0
+        )
+
+        total = int(
+            staging.get("total_archives", 0) or 0
+        )
+
+        def waiting_for_stage(job: dict[str, Any]) -> None:
+            queue.refresh_progress(
+                job,
+                f"Téléversement vers le cab "
+                f"{uploaded}/{total}",
+                str(job.get("current_item", "") or ""),
+            )
+
+        queue.update_job(
+            job_id,
+            waiting_for_stage,
+        )
+
+        heartbeat(
+            "waiting-upload",
+            job_id,
+            f"{uploaded}/{total}",
+        )
+
+        return
+
     job = mark_running(job_id)
+
     if not job:
         return
 
-    conflict_mode = str(job.get("conflict_mode", "skip") or "skip")
+    conflict_mode = str(
+        job.get("conflict_mode", "skip")
+        or "skip"
+    )
 
     while RUNNING:
         current = queue.load_job(job_id)
