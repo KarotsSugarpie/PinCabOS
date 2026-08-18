@@ -36,9 +36,10 @@ h2{font-size:1.35rem;margin-bottom:18px;color:var(--accent)}
   background:var(--card);border:2px solid var(--border);transition:.15s;user-select:none
 }
 .lang:hover,.opt:hover{border-color:var(--accent);transform:translateY(-2px)}
-.lang .code{display:block;margin:0 auto 10px;width:56px;line-height:38px;border-radius:8px;
-  font-weight:900;font-size:1.15rem;letter-spacing:.06em;color:#160020;
-  background:linear-gradient(135deg,var(--accent2),var(--accent))}
+/* PINCABOS_INSTALLER_FLAGS_V1 */
+.lang .flag{display:block;margin:0 auto;width:88px;height:59px;border-radius:7px;
+  box-shadow:0 3px 10px rgba(0,0,0,.5);outline:1px solid rgba(255,255,255,.16);
+  outline-offset:-1px}
 /* petits ecrans / resolutions GOP (cab) : tout doit tenir sans scroll */
 @media (max-height:860px){
   .logo-img{height:110px}
@@ -46,6 +47,7 @@ h2{font-size:1.35rem;margin-bottom:18px;color:var(--accent)}
   main{padding:8px 0 16px}
   h2{font-size:1.1rem;margin-bottom:10px}
   .lang,.opt{padding:12px 8px}
+  .lang .flag{width:66px;height:44px}
   .mon{width:56px;height:38px;margin-bottom:6px}
   .card{padding:12px}
   button{padding:9px 20px;font-size:.95rem}
@@ -129,11 +131,11 @@ button{
 <section class="step active" id="st-lang">
   <h2 data-i18n="choose_lang">Choose your language</h2>
   <div class="grid langs">
-    <div class="lang" role="button" tabindex="0" data-lang="fr"><span class="code">FR</span>Français</div>
-    <div class="lang" role="button" tabindex="0" data-lang="en"><span class="code">EN</span>English</div>
-    <div class="lang" role="button" tabindex="0" data-lang="de"><span class="code">DE</span>Deutsch</div>
-    <div class="lang" role="button" tabindex="0" data-lang="it"><span class="code">IT</span>Italiano</div>
-    <div class="lang" role="button" tabindex="0" data-lang="es"><span class="code">ES</span>Español</div>
+    <div class="lang" role="button" tabindex="0" data-lang="fr" title="Français" aria-label="Français"><svg class="flag" viewBox="0 0 60 40" role="img" aria-hidden="true"><rect width="60" height="40" fill="#fff"/><rect width="20" height="40" fill="#002654"/><rect x="40" width="20" height="40" fill="#ce1126"/></svg></div>
+    <div class="lang" role="button" tabindex="0" data-lang="en" title="English" aria-label="English"><svg class="flag" viewBox="0 0 60 40" role="img" aria-hidden="true"><clipPath id="uj"><path d="M30,20 L60,40 L60,20 Z M30,20 L60,0 L30,0 Z M30,20 L0,0 L0,20 Z M30,20 L0,40 L30,40 Z"/></clipPath><rect width="60" height="40" fill="#012169"/><path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" stroke-width="8"/><path d="M0,0 L60,40 M60,0 L0,40" stroke="#c8102e" stroke-width="5" clip-path="url(#uj)"/><path d="M30,0 V40 M0,20 H60" stroke="#fff" stroke-width="13"/><path d="M30,0 V40 M0,20 H60" stroke="#c8102e" stroke-width="8"/></svg></div>
+    <div class="lang" role="button" tabindex="0" data-lang="de" title="Deutsch" aria-label="Deutsch"><svg class="flag" viewBox="0 0 60 40" role="img" aria-hidden="true"><rect width="60" height="40" fill="#ffce00"/><rect width="60" height="26.67" fill="#dd0000"/><rect width="60" height="13.33" fill="#000"/></svg></div>
+    <div class="lang" role="button" tabindex="0" data-lang="it" title="Italiano" aria-label="Italiano"><svg class="flag" viewBox="0 0 60 40" role="img" aria-hidden="true"><rect width="60" height="40" fill="#fff"/><rect width="20" height="40" fill="#008c45"/><rect x="40" width="20" height="40" fill="#cd212a"/></svg></div>
+    <div class="lang" role="button" tabindex="0" data-lang="es" title="Español" aria-label="Español"><svg class="flag" viewBox="0 0 60 40" role="img" aria-hidden="true"><rect width="60" height="40" fill="#aa151b"/><rect y="10" width="60" height="20" fill="#f1bf00"/></svg></div>
   </div>
 </section>
 
