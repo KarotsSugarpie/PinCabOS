@@ -17,6 +17,7 @@
 set -euo pipefail
 
 TABLES_DIR="/home/pinball/Tables"
+MEDIA_DIR="/opt/pincabos/assets/sample-tables"
 CONFIG="/opt/pincabos/config/sample-tables.json"
 REGIONAL="/etc/pincabos/regional.conf"
 MARKER=".pincabos-sample-table"
@@ -134,8 +135,14 @@ install_samples() {
         fi
         name="$(sample_name "$key")"
         dest="$TABLES_DIR/$name"
-        # Un dossier du meme nom sans marqueur appartient a l'utilisateur.
-        [ -e "$dest" ] && continue
+        # Un dossier du meme nom qui contient DEJA une table appartient a
+        # l'utilisateur : on n'y touche pas. En revanche un dossier vide n'est
+        # pas un obstacle — le surveillant d'arborescence de PinCabOS recree
+        # le squelette (logs, pinmame, user...) des qu'un dossier disparait,
+        # et refuser d'ecrire dedans faisait silencieusement sauter la table.
+        if [ -d "$dest" ] && compgen -G "$dest/*.vpx" >/dev/null 2>&1; then
+            continue
+        fi
         install -d -m 0755 -o pinball -g pinball "$dest"
         install -m 0644 -o pinball -g pinball "$src" "$dest/$name.vpx"
         cat > "$dest/$MARKER" <<EOF
@@ -145,6 +152,21 @@ key=$key
 # Outils PinCabOS > Tables de demonstration pour changer ce comportement.
 EOF
         chown pinball:pinball "$dest/$MARKER"
+
+        # Une table sans media s'affiche en noir dans le frontend : VPinFE
+        # cherche roue, visuel, backglass et DMD dans medias/, et la
+        # configuration livree n'a pas d'image de remplacement.
+        if [ -d "$MEDIA_DIR/$key" ]; then
+            install -d -m 0755 -o pinball -g pinball "$dest/medias"
+            for media in "$MEDIA_DIR/$key"/*.png; do
+                [ -f "$media" ] || continue
+                install -m 0644 -o pinball -g pinball \
+                    "$media" "$dest/medias/$(basename "$media")"
+            done
+        else
+            echo "medias de demonstration absents : $MEDIA_DIR/$key" >&2
+        fi
+
         echo "table de demonstration installee : $name"
     done <<< "$SAMPLES"
 }
