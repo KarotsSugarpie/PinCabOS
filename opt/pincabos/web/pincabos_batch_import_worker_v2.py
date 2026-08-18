@@ -9,6 +9,7 @@ import shutil
 import signal
 import subprocess
 import tempfile
+import zipfile
 import time
 import traceback
 from pathlib import Path
@@ -74,6 +75,20 @@ def cleanup_new_engine_dirs(before: set[Path]) -> list[str]:
 def classify_response(status: int, body: str, curl_code: int) -> tuple[str, str, str]:
     excerpt = compact_html(body)
     folded = excerpt.casefold()
+
+    # PINCABOS_ARCHIVE_INVALID_MESSAGE_V1
+    # Archive tronquee ou corrompue : le motif exact ne vivait que dans un
+    # journal serveur, l'utilisateur ne voyait qu'une erreur generique et
+    # soupconnait son installation.
+    if "pincabos_archive_invalide" in folded or "not a zip file" in folded or "badzipfile" in folded:
+        return (
+            "failed",
+            "Archive invalide ou incomplète (ce n'est pas une archive ZIP lisible)",
+            "Le fichier reçu n'est pas une archive ZIP exploitable : "
+            "téléchargement ou copie incomplète. Récupérez à nouveau ce paquet "
+            "avant de le réimporter.",
+        )
+
     if curl_code != 0:
         return "failed", "Erreur de communication WebApp", excerpt
     if status < 200 or status >= 300:
@@ -94,6 +109,11 @@ def call_engine(job_id: str, conflict_mode: str, item: dict[str, Any]) -> tuple[
     name = str(item.get("name", source.name))
     if not source.is_file():
         return 2, 0, f"Archive temporaire introuvable : {source}"
+
+    # PINCABOS_ARCHIVE_INVALID_MESSAGE_V1 : on refuse tout de suite une archive
+    # illisible, plutot que de la televerser au moteur pour rien.
+    if not zipfile.is_zipfile(source):
+        return 0, 200, "PINCABOS_ARCHIVE_INVALIDE"
     with tempfile.NamedTemporaryFile(prefix="pincabos-biq-v2-response-", suffix=".html", delete=False) as temp:
         response_path = Path(temp.name)
     try:
