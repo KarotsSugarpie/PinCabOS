@@ -106,7 +106,8 @@ def _save_one_upload(job_id: str, upload: FileStorage, index: int) -> dict[str, 
         if not job:
             stored.unlink(missing_ok=True)
             raise RuntimeError("Job introuvable.")
-        if str(job.get("state")) not in {"uploading", "running", "queued"} or job.get("uploads_complete"):
+        # PINCABOS_BATCH_IMPORT_UPLOAD_PAUSED_V31
+        if str(job.get("state")) not in {"uploading", "running", "queued", "paused", "pausing"} or job.get("uploads_complete"):
             stored.unlink(missing_ok=True)
             raise RuntimeError("Ce job n’accepte plus de packages.")
         total = int(job.get("total_archives", 0) or 0)

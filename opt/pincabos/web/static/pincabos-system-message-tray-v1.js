@@ -1386,6 +1386,9 @@
   if (window.__pcosBatchServiceWidgetSinglePollerV3) return;
   window.__pcosBatchServiceWidgetSinglePollerV3 = true;
 
+  /* PINCABOS_BATCH_SERVICE_WIDGET_SINGLE_POLLER_V3_DISABLED_V31 */
+  return;
+
   /*
    * Bloque le correctif V2 lorsqu’il est injecté après ce fichier.
    * L’ancien poller Dashboard est aussi désactivé dans sa source Python.

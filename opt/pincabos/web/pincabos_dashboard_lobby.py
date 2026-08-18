@@ -1185,14 +1185,74 @@ def widget_content(widget_id, meta, data, csrf):
           remaining: Number(active.remaining || 0)
         };
       }
+
+      /*
+       * PINCABOS_BATCH_IMPORT_STALE_WIDGET_V31
+       *
+       * /active est la source de verite pour Import.
+       * Si aucun job n'est rattache mais que le dernier historique
+       * porte encore un etat transitoire, il s'agit d'un etat
+       * orphelin/stale et non d'un job actuellement pilotable.
+       */
+      const history = await json(
+        "/api/batch-import/live/history"
+      );
+
+      const latest = (history.jobs || [])[0] || null;
+
+      if (!latest) {
+        return {
+          id: "",
+          job: null,
+          resumable: false,
+          remaining: 0
+        };
+      }
+
+      const latestState = String(
+        latest.state || ""
+      ).toLowerCase();
+
+      const staleStates = new Set([
+        "uploading",
+        "queued",
+        "running",
+        "pausing",
+        "paused",
+        "stopping"
+      ]);
+
+      if (staleStates.has(latestState)) {
+        return {
+          id: "",
+          job: null,
+          resumable: false,
+          remaining: 0
+        };
+      }
+
+      return {
+        id: String(latest.id || ""),
+        job: latest,
+        resumable: false,
+        remaining: 0
+      };
     }
 
-    const history = await json(api(kind, "history"));
-    const activeId = String(history.active_job_id || "");
+    const history = await json(
+      api(kind, "history")
+    );
+
+    const activeId = String(
+      history.active_job_id || ""
+    );
 
     if (activeId) {
       const status = await json(
-        api(kind, `status/${encodeURIComponent(activeId)}`)
+        api(
+          kind,
+          `status/${encodeURIComponent(activeId)}`
+        )
       );
 
       return {
@@ -1296,7 +1356,8 @@ def widget_content(widget_id, meta, data, csrf):
       open.textContent = working ? "Voir tâche" : "Ouvrir";
     }
 
-    const canPause = ["queued", "running"].includes(state);
+    /* PINCABOS_BATCH_PAUSE_UPLOAD_V31 */
+    const canPause = ["uploading", "queued", "running"].includes(state);
 
     const canResume =
       state === "paused" &&
