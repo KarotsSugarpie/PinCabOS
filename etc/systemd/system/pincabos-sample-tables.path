@@ -1,0 +1,14 @@
+[Unit]
+Description=PinCabOS - surveille la bibliotheque de tables
+Documentation=https://github.com/KarotsSugarpie/PinCabOS
+ConditionPathExists=/usr/local/sbin/pincabos-sample-tables
+
+[Path]
+# La bibliotheque change aussi bien par la webapp que par un partage reseau ou
+# une copie manuelle : on observe le repertoire lui-meme plutot que de se
+# brancher sur un seul chemin d'import.
+PathChanged=/home/pinball/Tables
+Unit=pincabos-sample-tables.service
+
+[Install]
+WantedBy=multi-user.target

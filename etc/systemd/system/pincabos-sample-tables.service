@@ -1,0 +1,13 @@
+[Unit]
+Description=PinCabOS - tables de demonstration (presence conditionnelle)
+Documentation=https://github.com/KarotsSugarpie/PinCabOS
+After=local-fs.target
+Before=pincabos-vpinfe.service
+ConditionPathExists=/usr/local/sbin/pincabos-sample-tables
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-sample-tables reconcile
+
+[Install]
+WantedBy=multi-user.target

@@ -643,6 +643,19 @@ def tools_hub_html():
           </div>
         </a>
 
+        <!-- PINCABOS_SAMPLE_TABLES_UI_V1 -->
+        <a class="tool-card" href="/tools/vpinfe/sample-tables">
+          <div class="pco-tool-art">
+            <img src="/static/pincabos-assets/PCOSTablesVPinFE.png?v=sampletables1"
+                 alt="Tables de démonstration" loading="lazy">
+          </div>
+          <div class="pco-tool-body">
+            <strong>Tables de démonstration</strong>
+            <span class="pco-tool-description">Les tables d’exemple livrées avec VPX, présentes tant qu’aucune table n’est installée. À rappeler à tout moment pour un test.</span>
+            <div class="pco-tool-footer"><span>Régler la présence</span><span class="pco-tool-open">→</span></div>
+          </div>
+        </a>
+
         <a class="tool-card" href="/tools/vpinfe/collections">
           <div class="pco-tool-art">
             <img src="/static/pincabos-assets/PCOSVPinFECollections.png?v=vpinfewidgets9"
@@ -1069,6 +1082,7 @@ def register_tools_routes(app, page):
     _tools_register_ini_readonly_routes(app)
     _tools_register_vpinfe_update_routes(app)
     _tools_register_vpinfe_8001_embed_routes(app)
+    _tools_register_sample_tables_routes(app)
     # PINCABOS_MEDIA_HUNTER_REGISTER_V1
     try:
         from pincabos_media_hunter import register as _pincabos_media_hunter_register
@@ -5798,3 +5812,175 @@ def _tools_register_vpinfe_8001_embed_routes(app):
             "Médias VPinFE",
             "Dans le menu latéral VPinFE intégré, sélectionne Media.",
         )
+
+
+# ---------------------------------------------------------------------------
+# PINCABOS_SAMPLE_TABLES_UI_V1
+# Tables de demonstration : un cabinet neuf n'a aucune table, donc rien a
+# lancer pour verifier ses ecrans, son audio ou son nudge. Les tables
+# d'exemple livrees avec VPX sont publiees tant que l'utilisateur n'a pas de
+# table a lui, puis retirees. Cette page expose ce comportement et permet de
+# les rappeler pour un test.
+# ---------------------------------------------------------------------------
+
+PINCABOS_SAMPLE_TABLES_BIN = "/usr/local/sbin/pincabos-sample-tables"
+
+_SAMPLE_TABLES_MODES = (
+    ("auto",
+     "Automatique (recommandé)",
+     "Présentes tant qu’aucune table n’est installée, retirées dès le premier import."),
+    ("always",
+     "Toujours affichées",
+     "Utile pour retester les écrans, le son ou le nudge sur un cabinet déjà garni."),
+    ("never",
+     "Jamais",
+     "Aucune table de démonstration, même sur une bibliothèque vide."),
+)
+
+
+def _sample_tables_status():
+    try:
+        result = subprocess.run(
+            [PINCABOS_SAMPLE_TABLES_BIN, "status"],
+            capture_output=True, text=True, timeout=30, check=False)
+        if result.returncode != 0:
+            return {"error": (result.stderr or result.stdout or "").strip() or "statut indisponible"}
+        payload = json.loads((result.stdout or "").strip() or "{}")
+        return payload if isinstance(payload, dict) else {"error": "statut illisible"}
+    except FileNotFoundError:
+        return {"error": "outil absent de cette installation"}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def _sample_tables_token():
+    token = session.get("pco_sample_tables_csrf")
+    if not isinstance(token, str) or len(token) < 20:
+        token = secrets.token_urlsafe(32)
+        session["pco_sample_tables_csrf"] = token
+    return token
+
+
+def _sample_tables_page(status, token, notice="", notice_class=""):
+    mode = str(status.get("mode") or "auto")
+    error = status.get("error")
+
+    if error:
+        state_html = f'<p class="bad">Statut indisponible : {_tools_esc(str(error))}</p>'
+    else:
+        installed = int(status.get("installed") or 0)
+        names = str(status.get("names") or "")
+        user_tables = int(status.get("user_tables") or 0)
+        if installed:
+            present = f"{installed} présente(s) : <code>{_tools_esc(names)}</code>"
+        else:
+            present = "aucune actuellement installée"
+        state_html = (
+            f"<p><strong>Tables de démonstration :</strong> {present}</p>"
+            f"<p><strong>Tables installées sur ce cabinet :</strong> "
+            f"<code>{user_tables}</code></p>"
+        )
+
+    choices = []
+    for value, label, help_text in _SAMPLE_TABLES_MODES:
+        checked = " checked" if value == mode else ""
+        choices.append(
+            f'<label style="display:block;margin:0 0 12px;cursor:pointer">'
+            f'<input type="radio" name="mode" value="{value}"{checked}> '
+            f'<strong>{_tools_esc(label)}</strong><br>'
+            f'<span style="opacity:.78;font-size:14px;margin-left:22px">'
+            f'{_tools_esc(help_text)}</span></label>'
+        )
+
+    notice_html = ""
+    if notice:
+        notice_html = f'<p class="{notice_class}">{_tools_esc(notice)}</p>'
+
+    body = (
+        '<div class="pco-tools-page">'
+        '<p><a class="button secondary" href="/tools">← Retour aux outils</a></p>'
+        '<section class="pco-tools-family" style="max-width:980px">'
+        '<div class="pco-tools-family-head">'
+        '<p class="pco-tools-family-kicker">Frontend · première prise en main</p>'
+        '<h2>Tables de démonstration</h2>'
+        '<p class="pco-tools-family-intro">'
+        'Un cabinet neuf n’a aucune table : impossible de vérifier ses écrans, '
+        'son son ou son nudge avant d’avoir importé quelque chose. PinCabOS '
+        'publie les tables d’exemple livrées avec VPX, et les retire dès que '
+        'vos propres tables arrivent. Leur nom suit la langue choisie à '
+        'l’installation.'
+        '</p>'
+        '</div>'
+        f'<div class="card">{state_html}{notice_html}'
+        '<form method="post" action="/tools/vpinfe/sample-tables/apply">'
+        f'<input type="hidden" name="csrf" value="{_tools_esc(token)}">'
+        + "".join(choices) +
+        '<button class="button" type="submit">Appliquer</button>'
+        '</form>'
+        '<p style="opacity:.7;font-size:13px;margin-top:14px">'
+        'Ces tables sont recopiées depuis l’installation VPX : les retirer ne '
+        'supprime rien d’autre, et aucun dossier qui ne vient pas de PinCabOS '
+        'n’est touché.</p>'
+        '</div></section></div>'
+    )
+    return _TOOLS_PAGE_HELPER("Tables de démonstration", body)
+
+
+def _tools_register_sample_tables_routes(app):
+    @app.route("/tools/vpinfe/sample-tables", methods=["GET"])
+    def tools_sample_tables():
+        return _sample_tables_page(_sample_tables_status(), _sample_tables_token())
+
+    @app.route("/tools/vpinfe/sample-tables/apply", methods=["POST"])
+    def tools_sample_tables_apply():
+        token = _sample_tables_token()
+        if not hmac.compare_digest(request.form.get("csrf", ""), token):
+            return _sample_tables_page(
+                _sample_tables_status(), token,
+                "Jeton de session invalide, rien n’a été modifié.", "bad"), 400
+
+        mode = request.form.get("mode", "")
+        if mode not in {value for value, _, _ in _SAMPLE_TABLES_MODES}:
+            return _sample_tables_page(
+                _sample_tables_status(), token, "Choix invalide.", "bad"), 400
+
+        try:
+            result = subprocess.run(
+                ["/usr/bin/sudo", "-n", PINCABOS_SAMPLE_TABLES_BIN, "set-mode", mode],
+                capture_output=True, text=True, timeout=180, check=False)
+        except Exception as exc:
+            return _sample_tables_page(
+                _sample_tables_status(), token, f"Application impossible : {exc}", "bad"), 500
+
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip() or "échec"
+            return _sample_tables_page(
+                _sample_tables_status(), token,
+                f"Application impossible : {detail}", "bad"), 500
+
+        # VPinFE construit sa liste de tables au demarrage : sans redemarrage,
+        # la bibliotheque affichee ne bouge pas. On ne coupe jamais une partie.
+        status = _sample_tables_status()
+        installed = int(status.get("installed") or 0)
+        if installed:
+            notice = ("Comportement enregistré. Tables de démonstration présentes : "
+                      f"{status.get('names') or ''}.")
+        else:
+            notice = "Comportement enregistré. Aucune table de démonstration installée."
+
+        table_running = subprocess.run(
+            ["/usr/bin/pgrep", "-u", "pinball", "-f", "VPinballX"],
+            capture_output=True, timeout=5, check=False).returncode == 0
+        if table_running:
+            notice += " Une table est en cours : la bibliothèque sera à jour au prochain démarrage du frontend."
+        else:
+            restart = subprocess.run(
+                ["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "restart",
+                 "pincabos-vpinfe.service"],
+                capture_output=True, text=True, timeout=60, check=False)
+            if restart.returncode == 0:
+                notice += " Frontend redémarré."
+            else:
+                notice += " Le frontend n’a pas pu être redémarré : la bibliothèque sera à jour au prochain démarrage."
+
+        return _sample_tables_page(status, token, notice, "good")

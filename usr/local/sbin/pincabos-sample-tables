@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+# PinCabOS — tables de demonstration.
+#
+# Un cabinet neuf n'a aucune table : le frontend s'ouvre sur une bibliotheque
+# vide, et rien ne permet de verifier les ecrans, l'audio ou le nudge avant
+# d'avoir importe quelque chose. VPX livre deja des tables d'exemple dans son
+# propre repertoire : on les publie dans /home/pinball/Tables tant que
+# l'utilisateur n'a pas de table a lui, et on les retire des qu'il en a une.
+#
+# Modes, dans /opt/pincabos/config/sample-tables.json :
+#   auto   (defaut) presentes tant qu'aucune table utilisateur n'existe ;
+#   always toujours presentes, pour retester apres coup ;
+#   never  jamais.
+#
+# Les dossiers installes portent un marqueur qui indique aussi de quelle table
+# d'exemple il s'agit : rien qui ne soit pas marque n'est jamais supprime.
+set -euo pipefail
+
+TABLES_DIR="/home/pinball/Tables"
+CONFIG="/opt/pincabos/config/sample-tables.json"
+REGIONAL="/etc/pincabos/regional.conf"
+MARKER=".pincabos-sample-table"
+OWNER="pinball:pinball"
+
+# cle|chemin relatif dans l'installation VPX
+SAMPLES="example|assets/exampleTable.vpx
+nudge|docs/Nudge Test and Calibration.vpx"
+
+# --- langue -----------------------------------------------------------------
+# La langue choisie a l'installation est enregistree par l'installeur. On ne
+# traduit que ce qui est visible dans le frontend : le nom du dossier EST le
+# nom affiche par VPinFE.
+lang_code() {
+    local loc=""
+    if [ -r "$REGIONAL" ]; then
+        loc="$(. "$REGIONAL" >/dev/null 2>&1; printf '%s' "${PINCABOS_LOCALE:-}")"
+    fi
+    [ -n "$loc" ] || loc="${LANG:-}"
+    case "${loc%%_*}" in
+        fr) printf 'fr\n' ;;
+        de) printf 'de\n' ;;
+        it) printf 'it\n' ;;
+        es) printf 'es\n' ;;
+        *)  printf 'en\n' ;;
+    esac
+}
+
+sample_name() {
+    case "$1:$(lang_code)" in
+        example:fr) printf 'PinCabOS Table de test\n' ;;
+        example:de) printf 'PinCabOS Testtisch\n' ;;
+        example:it) printf 'PinCabOS Tavolo di prova\n' ;;
+        example:es) printf 'PinCabOS Mesa de prueba\n' ;;
+        example:*)  printf 'PinCabOS Test Table\n' ;;
+        nudge:fr)   printf 'PinCabOS Calibration Nudge\n' ;;
+        nudge:de)   printf 'PinCabOS Nudge-Kalibrierung\n' ;;
+        nudge:it)   printf 'PinCabOS Calibrazione Nudge\n' ;;
+        nudge:es)   printf 'PinCabOS Calibracion Nudge\n' ;;
+        nudge:*)    printf 'PinCabOS Nudge Calibration\n' ;;
+    esac
+}
+
+# --- etat -------------------------------------------------------------------
+vpx_dir() {
+    local d
+    for d in /home/pinball/VPinballX_BGFX-*-linux-x64 /home/pinball/VPinballX*; do
+        [ -d "$d" ] || continue
+        printf '%s\n' "$d"
+        return 0
+    done
+    return 1
+}
+
+mode() {
+    local m=""
+    if [ -r "$CONFIG" ]; then
+        m="$(python3 -c 'import json,sys
+try:
+    print((json.load(open(sys.argv[1])) or {}).get("mode",""))
+except Exception:
+    print("")' "$CONFIG" 2>/dev/null || true)"
+    fi
+    case "$m" in
+        auto|always|never) printf '%s\n' "$m" ;;
+        *) printf 'auto\n' ;;
+    esac
+}
+
+# Un dossier de table est "utilisateur" s'il contient un .vpx et ne porte pas
+# notre marqueur. Un dossier en cours de creation, sans .vpx, ne compte pas :
+# un import a moitie fait ne doit pas escamoter les tables de demonstration.
+count_user_tables() {
+    local d n=0
+    shopt -s nullglob
+    for d in "$TABLES_DIR"/*/; do
+        [ -e "$d$MARKER" ] && continue
+        compgen -G "$d*.vpx" >/dev/null 2>&1 && n=$((n + 1))
+    done
+    printf '%s\n' "$n"
+}
+
+# Chemin du dossier installe pour cette cle, quel que soit son nom : la langue
+# a pu changer entre deux demarrages, on ne veut pas d'un doublon.
+installed_dir() {
+    local key="$1" d
+    shopt -s nullglob
+    for d in "$TABLES_DIR"/*/; do
+        [ -e "$d$MARKER" ] || continue
+        if grep -qx "key=$key" "$d$MARKER" 2>/dev/null; then
+            printf '%s\n' "${d%/}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# --- actions ----------------------------------------------------------------
+install_samples() {
+    local root key rel src name dest line
+    root="$(vpx_dir 2>/dev/null || true)"
+    if [ -z "$root" ]; then
+        echo "installation VPX introuvable : aucune table de demonstration installee" >&2
+        return 0
+    fi
+    install -d -m 0755 -o pinball -g pinball "$TABLES_DIR"
+
+    while IFS='|' read -r key rel; do
+        [ -n "$key" ] || continue
+        installed_dir "$key" >/dev/null 2>&1 && continue
+        src="$root/$rel"
+        if [ ! -f "$src" ]; then
+            echo "table d'exemple absente de l'installation VPX : $rel" >&2
+            continue
+        fi
+        name="$(sample_name "$key")"
+        dest="$TABLES_DIR/$name"
+        # Un dossier du meme nom sans marqueur appartient a l'utilisateur.
+        [ -e "$dest" ] && continue
+        install -d -m 0755 -o pinball -g pinball "$dest"
+        install -m 0644 -o pinball -g pinball "$src" "$dest/$name.vpx"
+        cat > "$dest/$MARKER" <<EOF
+key=$key
+# Table de demonstration installee par PinCabOS, copiee depuis VPX.
+# Elle disparait des qu'une table est installee sur ce cabinet.
+# Outils PinCabOS > Tables de demonstration pour changer ce comportement.
+EOF
+        chown pinball:pinball "$dest/$MARKER"
+        echo "table de demonstration installee : $name"
+    done <<< "$SAMPLES"
+}
+
+remove_samples() {
+    local d
+    shopt -s nullglob
+    for d in "$TABLES_DIR"/*/; do
+        [ -e "$d$MARKER" ] || continue
+        rm -rf -- "${d%/}"
+        echo "table de demonstration retiree : $(basename "${d%/}")"
+    done
+}
+
+reconcile() {
+    case "$(mode)" in
+        never)  remove_samples ;;
+        always) install_samples ;;
+        auto)
+            if [ "$(count_user_tables)" -gt 0 ]; then
+                remove_samples
+            else
+                install_samples
+            fi
+            ;;
+    esac
+}
+
+set_mode() {
+    case "${1:-}" in
+        auto|always|never) ;;
+        *) echo "mode inconnu : ${1:-} (auto, always ou never)" >&2; return 2 ;;
+    esac
+    install -d -m 0755 "$(dirname "$CONFIG")"
+    printf '{\n  "mode": "%s"\n}\n' "$1" > "$CONFIG"
+    chmod 0644 "$CONFIG"
+}
+
+status() {
+    local key dir installed=0 names=""
+    while IFS='|' read -r key _; do
+        [ -n "$key" ] || continue
+        if dir="$(installed_dir "$key" 2>/dev/null)"; then
+            installed=$((installed + 1))
+            names="$names${names:+, }$(basename "$dir")"
+        fi
+    done <<< "$SAMPLES"
+    python3 -c 'import json,sys
+print(json.dumps({"mode": sys.argv[1], "installed": int(sys.argv[2]),
+                  "names": sys.argv[3], "user_tables": int(sys.argv[4]),
+                  "language": sys.argv[5]}))' \
+        "$(mode)" "$installed" "$names" "$(count_user_tables)" "$(lang_code)"
+}
+
+case "${1:-reconcile}" in
+    reconcile) reconcile ;;
+    status)    status ;;
+    set-mode)  set_mode "${2:-}"; reconcile ;;
+    *) echo "usage: $(basename "$0") [reconcile|status|set-mode <auto|always|never>]" >&2; exit 2 ;;
+esac
