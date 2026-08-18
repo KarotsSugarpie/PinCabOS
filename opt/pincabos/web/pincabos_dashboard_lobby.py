@@ -1359,8 +1359,9 @@ def widget_content(widget_id, meta, data, csrf):
     /* PINCABOS_BATCH_PAUSE_UPLOAD_V31 */
     const canPause = ["uploading", "queued", "running"].includes(state);
 
+    /* PINCABOS_DASHBOARD_PAUSING_RESUME_V32 */
     const canResume =
-      state === "paused" &&
+      ["paused", "pausing"].includes(state) &&
       (
         kind === "import"
           ? Boolean(packet?.resumable)

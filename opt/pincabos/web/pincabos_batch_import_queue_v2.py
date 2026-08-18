@@ -360,6 +360,42 @@ def resume_job(job_id: str) -> dict[str, Any] | None:
             return None
 
         if str(job.get("state", "")) == PAUSING_STATE:
+            # PINCABOS_BATCH_PAUSING_FIX_V32
+            running_item = next(
+                (
+                    item
+                    for item in (job.get("uploads") or [])
+                    if isinstance(item, dict)
+                    and str(item.get("state", "")) == "running"
+                ),
+                None,
+            )
+
+            job["pause_requested"] = False
+            job["paused_at"] = None
+
+            job["state"] = (
+                "running"
+                if running_item is not None
+                else "queued"
+            )
+
+            add_event(
+                job,
+                "Demande de pause annulée; reprise du Batch.",
+                "info",
+            )
+
+            refresh_progress(
+                job,
+                "Reprise du Batch",
+            )
+
+            save_job_unlocked(job)
+
+            if not active_job_id_unlocked():
+                set_active_unlocked(job_id)
+
             return job
 
         remaining = [

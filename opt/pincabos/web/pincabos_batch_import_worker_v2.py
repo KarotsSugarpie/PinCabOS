@@ -349,7 +349,14 @@ def process_job(job_id: str) -> None:
         if not current:
             return
 
-        if str(current.get("state", "")) == queue.PAUSED_STATE:
+        state = str(current.get("state", ""))
+
+        if state == queue.PAUSED_STATE:
+            return
+
+        # PINCABOS_WORKER_PAUSING_FIX_V32
+        if state == queue.PAUSING_STATE:
+            queue.complete_pause(job_id)
             return
 
         if current.get("stop_requested"):
