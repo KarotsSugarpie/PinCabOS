@@ -6,7 +6,9 @@ After=lightdm.service display-manager.service pincabos-final-graphical-guard.ser
 Wants=lightdm.service display-manager.service
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -lc 'for i in $(seq 1 60); do [ -S /tmp/.X11-unix/X0 ] && break; sleep 1; done; command -v chvt >/dev/null 2>&1 && chvt 7 || true; echo "GO: pincabos-vpinfe restart deferred until final reboot"'
+# Le terminal graphique suit Xorg : LightDM peut reprendre celui de
+# Plymouth (VT 1) pour un passage de relais sans console visible.
+ExecStart=/bin/bash -lc 'for i in $(seq 1 60); do [ -S /tmp/.X11-unix/X0 ] && break; sleep 1; done; PCO_GVT=$(ps -eo args= | sed -n "s/.*Xorg .* vt\\([0-9]\\{1,\\}\\).*/\\1/p" | head -n1); [ -n "${PCO_GVT:-}" ] || PCO_GVT=7; command -v chvt >/dev/null 2>&1 && chvt "$PCO_GVT" || true; echo "GO: pincabos-vpinfe restart deferred until final reboot"'
 RemainAfterExit=yes
 TimeoutStartSec=90
 
