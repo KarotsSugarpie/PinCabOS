@@ -24,6 +24,29 @@ export XAUTHORITY="$AUTH"
 
 xrandr --query >"$TMP" 2>&1 || exit 0
 
+# PINCABOS_PHANTOM_OUTPUT_GUARD_V1
+# Une sortie annoncee « connected » mais sans EDID n'est pas un ecran : c'est
+# un cable qui pend, un adaptateur seul ou un moniteur en veille profonde. Le
+# pilote lui donne un mode de secours 640x480 et X la place a +0+0, donc
+# par-dessus le playfield. On l'ecarte avant de composer quoi que ce soit.
+drop_phantom_outputs() {
+  local edid conn dropped=0
+  for edid in /sys/class/drm/card*-*/edid; do
+    [ -e "$edid" ] || continue
+    [ -s "$edid" ] && continue
+    conn="${edid%/edid}"
+    conn="${conn##*/}"
+    conn="${conn#card*-}"
+    grep -q "^$conn connected" "$TMP" || continue
+    echo "sortie sans EDID ignoree (cable sans ecran ?) : $conn"
+    xrandr --output "$conn" --off 2>/dev/null || true
+    dropped=1
+  done
+  [ "$dropped" = 1 ] && xrandr --query >"$TMP" 2>&1
+  return 0
+}
+drop_phantom_outputs
+
 python3 - "$CFG" >"$ITEMS" <<'PY'
 import json, sys
 try:
