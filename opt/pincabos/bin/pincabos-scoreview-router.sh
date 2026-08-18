@@ -44,6 +44,22 @@ run_x() {
 routed_window=""
 geometry=""
 curtain=""
+game_seen=0
+
+# PINCABOS_ROUTER_FOCUS_V24
+# Rendre le clavier au playfield : sans cela, la derniere fenetre mappee (le
+# rideau DMD, sur l'ecran secondaire) garde le focus et le menu reste sourd.
+focus_playfield() {
+    local listing target
+    listing="$(run_x wmctrl -lGx 2>/dev/null)" || return 0
+    target="$(awk '/VPinFE Table$/ {print $1;exit}' <<< "$listing")"
+    if [[ -z "$target" ]]; then
+        target="$(awk '/VPinFE/ && !/VPinFE DMD$/ && !/VPinFE Backglass$/ {print $1;exit}' <<< "$listing")"
+    fi
+    [[ -n "$target" ]] || return 0
+    run_x xdotool windowactivate "$target" >/dev/null 2>&1 \
+        || run_x wmctrl -ia "$target" >/dev/null 2>&1 || true
+}
 
 restore_curtain() {
     if [[ -n "$curtain" ]]; then
@@ -51,7 +67,15 @@ restore_curtain() {
         curtain=""
     fi
 }
-trap restore_curtain EXIT TERM INT
+# PINCABOS_ROUTER_STOP_V25
+# Un trap qui revient poursuit la boucle : sur TERM/INT il faut sortir, sinon
+# le service ignore l'ordre d'arret et bloque l'extinction de la machine.
+on_signal() {
+    restore_curtain
+    exit 0
+}
+trap restore_curtain EXIT
+trap on_signal TERM INT
 
 sink_curtain_if_buried() {
     # $1 = fenetre Score View, $2 = listing wmctrl -lGx courant
@@ -83,9 +107,15 @@ while true; do
         routed_window=""
         geometry=""
         restore_curtain
+        if [[ "$game_seen" = "1" ]]; then
+            focus_playfield
+            game_seen=0
+        fi
         sleep 2
         continue
     fi
+
+    game_seen=1
 
     if [[ -z "$geometry" ]]; then
         geometry="$(run_x xrandr --query 2>/dev/null | awk '$1=="DP-2" && $2=="connected" {for(i=3;i<=NF;i++) if($i~/^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/){print $i;exit}}')"
