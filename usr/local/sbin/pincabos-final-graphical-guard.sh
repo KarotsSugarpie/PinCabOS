@@ -106,13 +106,18 @@ if command -v fgconsole >/dev/null 2>&1; then
 fi
 
 if command -v chvt >/dev/null 2>&1; then
-  # Try tty7 first, then tty1->tty7 wake style.
-  chvt 7 || true
+  # PINCABOS_GRAPHICAL_VT_DYNAMIC_V1
+  # Le terminal graphique n'est plus fige a 7 : LightDM reprend desormais
+  # celui de Plymouth, pour que le splash cede la place a X sans laisser voir
+  # la console. On bascule vers le terminal que Xorg utilise reellement.
+  PCO_GVT="$(ps -eo args= | sed -n 's/.*Xorg .* vt\([0-9]\{1,\}\).*/\1/p' | head -n1)"
+  [ -n "${PCO_GVT:-}" ] || PCO_GVT=7
+  chvt "$PCO_GVT" || true
   sleep 2
   if command -v fgconsole >/dev/null 2>&1; then
-    echo "VT after chvt7: $(fgconsole 2>/dev/null || true)"
+    echo "VT after chvt$PCO_GVT: $(fgconsole 2>/dev/null || true)"
   fi
-  echo "GO: chvt 7 attempted"
+  echo "GO: chvt $PCO_GVT attempted"
 else
   echo "WARN: chvt missing; install package kbd in RUN_01"
 fi

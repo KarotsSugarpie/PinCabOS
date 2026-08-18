@@ -3495,9 +3495,9 @@ for unit in cups.service cups.socket cups.path cups-browsed.service; do
 done
 
 if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' "$TARGET/etc/default/grub"; then
-  sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' "$TARGET/etc/default/grub"
+  sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=0"/' "$TARGET/etc/default/grub"
 else
-  echo 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"' >> "$TARGET/etc/default/grub"
+  echo 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=0"' >> "$TARGET/etc/default/grub"
 fi
 
 printf '[Daemon]\nTheme=pincabos\n' > "$TARGET/etc/plymouth/plymouthd.conf"
