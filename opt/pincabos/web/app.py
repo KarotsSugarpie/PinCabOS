@@ -2158,13 +2158,13 @@ def gpu_page():
     if "gpu_apply_vpinfe" in globals():
         vpinfe_buttons += """
       <form action="/gpu/apply-vpinfe" method="post" onsubmit="return confirm('Appliquer la configuration écran actuelle à VPinFE ?');">
-        <button class="button secondary" type="submit">Appliquer la config à VPinFE</button>
+        <button class="button secondary" type="submit" title="Dépannage : réécrit le vpinfe.ini depuis la configuration déjà enregistrée. Inutile en usage normal, le bouton « Appliquer assignation écrans » le fait déjà.">Re-synchroniser VPinFE (dépannage)</button>
       </form>
 """
     if "gpu_apply_vpx" in globals():
         vpinfe_buttons += """
       <form action="/gpu/apply-vpx" method="post" onsubmit="return confirm('Appliquer la configuration écran actuelle à VPX / VPinballX.ini ?');">
-        <button class="button secondary" type="submit">Appliquer la config à VPX</button>
+        <button class="button secondary" type="submit" title="Dépannage : réécrit le VPinballX.ini depuis la configuration déjà enregistrée. Inutile en usage normal.">Re-synchroniser VPX (dépannage)</button>
       </form>
 
 
@@ -2322,7 +2322,7 @@ def gpu_page():
 
     <p class="warn">
       Si le playfield apparaît sur le FullDMD, corrige l’ordre ici,
-      applique l’assignation, puis applique à VPinFE et redémarre VPinFE.
+      corrige l’ordre ici puis applique : VPinFE et VPX sont configurés ensemble, et le frontend redémarre automatiquement si aucune table ne tourne.
     </p>
 
     <form action="/gpu/apply-screens" method="post" onsubmit="return confirm('Appliquer cette assignation écran à PinCabOS et VPinFE ?');">
@@ -2540,14 +2540,17 @@ def pincabos_write_manual_screen_roles(playfield_id, backglass_id, fulldmd_id, c
         )
         if screen
     ]
-    seen = {}
-    for role, output in assigned:
-        if output in seen:
-            raise ValueError(
-                f"{seen[output]} et {role} sont réglés sur le même écran ({output}). "
-                "Choisissez un écran différent, ou « Aucun »."
-            )
-        seen[output] = role
+    # Backglass et FullDMD PEUVENT partager un ecran : le DMD occupe alors une
+    # zone de l ecran du backglass, c est la configuration courante. Seul le
+    # playfield doit rester seul : le partager produit un affichage clone et
+    # fait rendre le B2S par-dessus la table (10 a 20 fps perdus).
+    if playfield:
+        for role, output in assigned:
+            if role != "Playfield" and output == playfield["name"]:
+                raise ValueError(
+                    f"{role} est réglé sur l écran du Playfield ({output}). "
+                    "Le playfield doit rester seul : choisissez un autre écran, ou « Aucun »."
+                )
 
     layout = {
         "mode": "manual",
