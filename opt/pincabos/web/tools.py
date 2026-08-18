@@ -680,6 +680,22 @@ def tools_hub_html():
           </div>
         </a>
 
+
+        <!-- PINCABOS_MEDIA_RECORDER_CARD_V1 -->
+        <a class="tool-card" href="/tools/media-recorder">
+          
+          <div class="pco-tool-art">
+            <img src="/static/pincabos-assets/PCOSRecorder.png?v=pincabrecorder2"
+                 alt="PinCab Recorder"
+                 loading="lazy">
+          </div>
+          <div class="pco-tool-body">
+            <strong>PinCab Recorder</strong>
+            <span class="pco-tool-description">Lancer automatiquement une ou plusieurs tables et créer les médias Playfield, Backglass, FullDMD ou Topper.</span>
+            <div class="pco-tool-footer"><span>Ouvrir PinCab Recorder</span><span class="pco-tool-open">→</span></div>
+          </div>
+        </a>
+
         <!-- PINCABOS_MEDIA_HUNTER_CARD_V1 -->
         <a class="tool-card" href="/tools/vpinfe/media-hunter">
           <div class="pco-tool-art">
@@ -1092,6 +1108,16 @@ def register_tools_routes(app, page):
             app.logger.exception("PinCabOS Medias Hunter registration failed: %s", _pincabos_media_hunter_error)
         except Exception:
             pass
+    # PINCABOS_MEDIA_RECORDER_REGISTER_V1
+    try:
+        from pincabos_media_recorder import register as _pincabos_media_recorder_register
+        _pincabos_media_recorder_register(app, page)
+    except Exception as _pincabos_media_recorder_error:
+        try:
+            app.logger.exception("PinCabOS PinCab Recorder registration failed: %s", _pincabos_media_recorder_error)
+        except Exception:
+            pass
+
     # PINCABOS_IMPEXP_NATIVE_V1: GET /tools/import-table and
     # GET /tools/export-table are provided natively by pincabos_impexp.py.
     if not app.config.get("PINCABOS_IMPEXP_NATIVE_UI"):

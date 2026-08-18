@@ -1,0 +1,16 @@
+[Unit]
+Description=PinCabOS WebApp fallback direct Flask service
+After=network-online.target
+Wants=network-online.target
+Conflicts=pincabos-web.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/pincabos/web
+ExecStart=/usr/local/sbin/pincabos-webapp-fallback-start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

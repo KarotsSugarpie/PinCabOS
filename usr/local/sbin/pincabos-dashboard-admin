@@ -17,8 +17,10 @@ service_action(){
     vpx:stop) log 'vpx stop'; /usr/bin/pkill -TERM -u pinball -f '(^|/)VPinballX(_BGFX)?([[:space:]]|$)' || true; echo 'Arrêt VPX demandé.' ;;
     vpx:restart) log 'vpx restart'; /usr/bin/pkill -TERM -u pinball -f '(^|/)VPinballX(_BGFX)?([[:space:]]|$)' || true; sleep 1; exec systemctl restart pincabos-vpinfe.service ;;
     screens:apply)
-      log 'screen topology one-shot apply'
-      exec systemctl start pincabos-screen-topology.service
+      log 'screen topology unified apply'
+      systemctl restart pincabos-screen-topology-boot.service
+      systemctl restart pincabos-vpinfe.service
+      echo 'Topologie appliquée et VPinFE redémarré.'
       ;;
     *) fail 'service/action non autorisé.' ;;
   esac

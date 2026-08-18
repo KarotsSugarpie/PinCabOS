@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /opt/pincabos/web
+
+PYTHON_CANDIDATES=(
+  /opt/pincabos/web/.venv/bin/python
+  /opt/pincabos/web/venv/bin/python
+  /opt/pincabos/.venv/bin/python
+  /opt/pincabos/venv/bin/python
+  /usr/bin/python3
+)
+
+for py in "${PYTHON_CANDIDATES[@]}"; do
+  [ -x "$py" ] || continue
+
+  if "$py" - <<'PYTEST' >/dev/null 2>&1
+import flask
+PYTEST
+  then
+    echo "Using Python runtime: $py"
+
+    exec "$py" - <<'PYRUN'
+import os
+import sys
+
+os.chdir("/opt/pincabos/web")
+sys.path.insert(0, "/opt/pincabos/web")
+
+import app as pincabos_app_module
+
+app = getattr(pincabos_app_module, "app", None)
+if app is None:
+    raise SystemExit("ERROR: app.py does not expose Flask object named app")
+
+app.run(host="0.0.0.0", port=80, debug=False, use_reloader=False)
+PYRUN
+  fi
+done
+
+echo "ERROR: no Python runtime with Flask found for PinCabOS WebApp"
+exit 1

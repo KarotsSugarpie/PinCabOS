@@ -1,5 +1,5 @@
 # ============================================================
-# PinCabOS ??? Git RootFS exclusions
+# PinCabOS — Git RootFS exclusions
 # ============================================================
 
 # ------------------------------------------------------------
@@ -8,7 +8,7 @@
 /opt/pincabos/.git-rootfs/
 
 # ------------------------------------------------------------
-# TABLES ??? jamais publiees
+# TABLES — jamais publiees
 # ------------------------------------------------------------
 /home/pinball/Tables/
 /home/pinball/tables/
@@ -20,7 +20,7 @@
 /home/pinball/Downloads/
 
 # ------------------------------------------------------------
-# ISO ??? jamais publiees
+# ISO — jamais publiees
 # ------------------------------------------------------------
 *.iso
 *.ISO
@@ -65,13 +65,13 @@
 /var/lib/flatpak/
 
 # ------------------------------------------------------------
-# Docker runtime ??? pas les fichiers source
+# Docker runtime — pas les fichiers source
 # ------------------------------------------------------------
 /var/lib/docker/
 /var/lib/containerd/
 
 # ------------------------------------------------------------
-# Ubuntu ??? binaires fournis par les paquets
+# Ubuntu — binaires fournis par les paquets
 # On les reconstruit avec apt-packages.tsv
 # ------------------------------------------------------------
 /boot/
@@ -107,12 +107,12 @@
 /opt/pincabos/build/legacy-package-builder/pilot-*/
 
 # ------------------------------------------------------------
-# VPinFE ??? packages de mise a jour telecharges
+# VPinFE — packages de mise a jour telecharges
 # ------------------------------------------------------------
 /home/pinball/.config/vpinfe/updates/
 
 # ------------------------------------------------------------
-# Python ??? environnements reconstruisibles
+# Python — environnements reconstruisibles
 # ------------------------------------------------------------
 **/.venv/
 **/venv/
@@ -170,7 +170,7 @@
 # Cache / runtime PinCabOS
 # ============================================================
 
-# VPinFE ??? medias/cache generes a partir des tables
+# VPinFE — medias/cache generes a partir des tables
 /home/pinball/.config/vpinfe/cache/
 
 # Logs runtime
@@ -185,6 +185,3 @@
 
 # Ancienne cle CA generee par les tests Sunshine
 /opt/pincabos/apps/sunshine-stream-test/**/cakey.pem
-
-# Cache UCF Linux - genere automatiquement, noms incompatibles Windows
-/var/lib/ucf/cache/

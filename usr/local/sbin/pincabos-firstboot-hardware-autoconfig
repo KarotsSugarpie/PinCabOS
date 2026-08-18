@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+set -u
+
+LOG="/var/log/pincabos-firstboot-hardware-autoconfig.log"
+STATE_DIR="/var/lib/pincabos"
+DONE="$STATE_DIR/hardware-autoconfig.done"
+PENDING="$STATE_DIR/hardware-autoconfig.reboot-pending"
+FAILED="$STATE_DIR/hardware-autoconfig.failed"
+
+mkdir -p "$STATE_DIR" /var/log
+
+exec >>"$LOG" 2>&1
+
+echo
+echo "==============================================================="
+echo " PinCabOS automatic GPU configuration"
+echo " Started: $(date -Is)"
+echo "==============================================================="
+
+if [ -f "$DONE" ]; then
+  echo "Already completed."
+  exit 0
+fi
+
+GPU_LINES="$(
+  lspci -Dnn 2>/dev/null |
+    grep -Ei 'VGA compatible controller|3D controller|Display controller' ||
+    true
+)"
+
+echo
+echo "=== Detected GPU devices ==="
+printf '%s\n' "$GPU_LINES"
+
+HAS_NVIDIA=0
+HAS_AMD=0
+HAS_INTEL=0
+HAS_VM=0
+
+grep -Eqi '\[10de:' <<<"$GPU_LINES" && HAS_NVIDIA=1
+grep -Eqi '\[(1002|1022):' <<<"$GPU_LINES" && HAS_AMD=1
+grep -Eqi '\[8086:' <<<"$GPU_LINES" && HAS_INTEL=1
+grep -Eqi '\[(1af4|1234|15ad|1b36):' <<<"$GPU_LINES" && HAS_VM=1
+
+echo
+echo "NVIDIA=$HAS_NVIDIA AMD=$HAS_AMD INTEL=$HAS_INTEL VM=$HAS_VM"
+
+network_ready() {
+  getent hosts archive.ubuntu.com >/dev/null 2>&1 ||
+  getent hosts security.ubuntu.com >/dev/null 2>&1
+}
+
+ensure_mesa_runtime() {
+  local missing=0
+
+  for package in \
+    mesa-vulkan-drivers \
+    mesa-utils \
+    libgl1-mesa-dri \
+    libglx-mesa0
+  do
+    dpkg-query -W -f='${Status}' "$package" 2>/dev/null |
+      grep -q 'install ok installed' || missing=1
+  done
+
+  if [ "$missing" = "0" ]; then
+    echo "Mesa graphics runtime already installed."
+    return 0
+  fi
+
+  if ! network_ready; then
+    echo "NOTICE: Mesa package repair deferred; network unavailable."
+    return 1
+  fi
+
+  apt-get update || return 1
+
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    mesa-vulkan-drivers \
+    mesa-utils \
+    libgl1-mesa-dri \
+    libglx-mesa0
+}
+
+if [ "$HAS_NVIDIA" = "1" ]; then
+  echo
+  echo "=== NVIDIA automatic configuration ==="
+
+  if [ -f "$PENDING" ]; then
+    echo "Verifying NVIDIA after requested reboot."
+
+    if command -v nvidia-smi >/dev/null 2>&1 &&
+       nvidia-smi >/dev/null 2>&1; then
+      echo "NVIDIA driver operational after reboot."
+      rm -f "$PENDING" "$FAILED"
+      touch "$DONE"
+      exit 0
+    fi
+
+    echo "ERROR: NVIDIA is still unavailable after automatic repair."
+    lspci -Dnnk 2>/dev/null |
+      grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
+      true
+    lsmod | grep -Ei 'nvidia|nouveau' || true
+    dmesg 2>/dev/null | grep -Ei 'nvidia|nouveau|NVRM' | tail -100 || true
+
+    touch "$FAILED" "$DONE"
+    rm -f "$PENDING"
+    exit 0
+  fi
+
+  if command -v nvidia-smi >/dev/null 2>&1 &&
+     nvidia-smi >/dev/null 2>&1; then
+    echo "NVIDIA driver already operational."
+    nvidia-smi || true
+    touch "$DONE"
+    exit 0
+  fi
+
+  if ! command -v ubuntu-drivers >/dev/null 2>&1; then
+    echo "ERROR: ubuntu-drivers is unavailable."
+    touch "$FAILED" "$DONE"
+    exit 0
+  fi
+
+  if ! network_ready; then
+    echo "NOTICE: network unavailable; NVIDIA setup will retry next boot."
+    exit 0
+  fi
+
+  echo
+  echo "--- Available/recommended NVIDIA drivers ---"
+  ubuntu-drivers devices || true
+  ubuntu-drivers list || true
+
+  echo
+  echo "--- Disable nouveau before NVIDIA activation ---"
+
+  cat > /etc/modprobe.d/pincabos-disable-nouveau.conf <<'NOUVEAU'
+blacklist nouveau
+options nouveau modeset=0
+NOUVEAU
+
+  apt-get update || {
+    echo "NOTICE: apt update failed; retrying next boot."
+    exit 0
+  }
+
+  echo
+  echo "--- Install Ubuntu recommended desktop NVIDIA driver ---"
+
+  if ! DEBIAN_FRONTEND=noninteractive ubuntu-drivers install; then
+    echo "ERROR: ubuntu-drivers install failed."
+    touch "$FAILED" "$DONE"
+    exit 0
+  fi
+
+  update-initramfs -u -k all || true
+
+  touch "$PENDING"
+
+  echo
+  echo "NVIDIA driver changed. Automatic reboot required."
+  sync
+  sleep 3
+  systemctl reboot || reboot
+  exit 0
+fi
+
+if [ "$HAS_AMD" = "1" ]; then
+  echo
+  echo "=== AMD/ATI configuration ==="
+  ensure_mesa_runtime || true
+  modprobe amdgpu 2>/dev/null || true
+
+  lspci -Dnnk 2>/dev/null |
+    grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
+    true
+
+  touch "$DONE"
+  exit 0
+fi
+
+if [ "$HAS_INTEL" = "1" ]; then
+  echo
+  echo "=== Intel configuration ==="
+  ensure_mesa_runtime || true
+
+  modprobe xe 2>/dev/null ||
+  modprobe i915 2>/dev/null ||
+  true
+
+  lspci -Dnnk 2>/dev/null |
+    grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
+    true
+
+  touch "$DONE"
+  exit 0
+fi
+
+if [ "$HAS_VM" = "1" ]; then
+  echo
+  echo "=== Virtual GPU configuration ==="
+  ensure_mesa_runtime || true
+
+  modprobe virtio_gpu 2>/dev/null ||
+  modprobe qxl 2>/dev/null ||
+  modprobe vmwgfx 2>/dev/null ||
+  true
+
+  echo "Virtual machine display accepted; one-screen mode is valid."
+  touch "$DONE"
+  exit 0
+fi
+
+echo
+echo "Unknown or generic graphics device."
+echo "Using kernel modesetting/Mesa without forcing a vendor package."
+ensure_mesa_runtime || true
+touch "$DONE"
+
+echo "Completed: $(date -Is)"
+exit 0

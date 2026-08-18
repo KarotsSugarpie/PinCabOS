@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
+# PINCABOS_SHARED_LOGS_PR_TMPFILES_V1
+# Keep root ownership; pinball gets write access through group/setgid/ACL.
 set -euo pipefail
 
 for d in /opt/pincabos/backups /opt/pincabos/logs; do
   install -d -o pinball -g pinball -m 2775 "$d"
-  chown pinball:pinball "$d"
+  chown root:pinball "$d"
   chmod u-s,g+s,o-t "$d"
   chmod 2775 "$d"
 done
 
-chown -R pinball:pinball /opt/pincabos/backups /opt/pincabos/logs
+chgrp -R pinball /opt/pincabos/backups /opt/pincabos/logs
 
 find /opt/pincabos/backups /opt/pincabos/logs -type d -exec chmod u-s,o-t {} \;
 find /opt/pincabos/backups /opt/pincabos/logs -type d -exec chmod g+rwxs {} \;

@@ -1,0 +1,14 @@
+[Unit]
+Description=PinCabOS first boot VPinFE packaged runtime fix
+After=display-manager.service network-online.target pincabos-firstboot-network-webapp-fix.service
+Wants=network-online.target
+ConditionPathExists=!/var/lib/pincabos/firstboot-vpinfe-packaged-runtime.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix
+TimeoutStartSec=3min
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target

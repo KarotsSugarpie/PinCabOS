@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -u
+
+FLAG="/var/lib/pincabos/firstboot-initramfs-refresh.done"
+LOG="/var/log/pincabos-firstboot-initramfs-refresh.log"
+
+mkdir -p /var/lib/pincabos /tmp /var/tmp /var/log /var/cache/apt/archives/partial
+chmod 1777 /tmp /var/tmp 2>/dev/null || true
+
+{
+  echo "==============================================================="
+  echo " PinCabOS first boot initramfs refresh"
+  echo " Started: $(date -Is)"
+  echo "==============================================================="
+
+  if [ -f "$FLAG" ]; then
+    echo "Already completed."
+    exit 0
+  fi
+
+  if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+    plymouth-set-default-theme pincabos || true
+  fi
+
+  if command -v update-initramfs >/dev/null 2>&1; then
+    update-initramfs -u -k all || true
+  fi
+
+  if command -v update-grub >/dev/null 2>&1; then
+    update-grub || true
+  fi
+
+  touch "$FLAG"
+  systemctl disable pincabos-firstboot-initramfs-refresh.service >/dev/null 2>&1 || true
+
+  echo "Completed: $(date -Is)"
+} >> "$LOG" 2>&1
+
+exit 0

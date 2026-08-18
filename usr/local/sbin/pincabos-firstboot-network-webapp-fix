@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+set -u
+
+LOG="/var/log/pincabos-firstboot-network-webapp-fix.log"
+FLAG="/var/lib/pincabos/firstboot-network-webapp.done"
+
+mkdir -p /var/log /var/lib/pincabos
+
+{
+  echo "==============================================================="
+  echo " PinCabOS first boot network + WebApp fix"
+  echo " Started: $(date -Is)"
+  echo "==============================================================="
+
+  if [ -f "$FLAG" ]; then
+    echo "Already completed."
+    exit 0
+  fi
+
+  echo
+  echo "=== Disable unused print services ==="
+  for unit in cups.service cups.socket cups.path cups-browsed.service; do
+    systemctl mask "$unit" >/dev/null 2>&1 || true
+    systemctl disable "$unit" >/dev/null 2>&1 || true
+    systemctl stop "$unit" >/dev/null 2>&1 || true
+  done
+
+  echo
+  echo "=== Clean Chrome crash restore state ==="
+  if [ -d /home/pinball/.config/google-chrome ]; then
+    find /home/pinball/.config/google-chrome -maxdepth 4 -type f \( \
+      -name 'Current Session' -o \
+      -name 'Current Tabs' -o \
+      -name 'Last Session' -o \
+      -name 'Last Tabs' \
+    \) -print -delete 2>/dev/null || true
+
+    find /home/pinball/.config/google-chrome -maxdepth 2 \( \
+      -name 'SingletonCookie' -o \
+      -name 'SingletonLock' -o \
+      -name 'SingletonSocket' \
+    \) -print -delete 2>/dev/null || true
+
+    chown -R pinball:pinball /home/pinball/.config/google-chrome 2>/dev/null || true
+  fi
+
+  echo
+  echo "=== Detect first ethernet interface ==="
+  IFACE=""
+  for p in /sys/class/net/*; do
+    n="${p##*/}"
+    [ "$n" = "lo" ] && continue
+    [ -d "/sys/class/net/$n" ] || continue
+    IFACE="$n"
+    break
+  done
+
+  echo "Detected interface: ${IFACE:-none}"
+
+  if [ -n "$IFACE" ]; then
+    ip link set "$IFACE" up 2>/dev/null || true
+
+    echo
+    echo "=== Write generic DHCP netplan ==="
+    mkdir -p /etc/netplan
+    cat > /etc/netplan/01-pincabos-dhcp.yaml <<NETPLAN
+network:
+  version: 2
+  renderer: NetworkManager
+  ethernets:
+    $IFACE:
+      dhcp4: true
+      dhcp6: true
+      optional: true
+NETPLAN
+
+    chmod 600 /etc/netplan/01-pincabos-dhcp.yaml 2>/dev/null || true
+  fi
+
+  echo
+  echo "=== Enable NetworkManager and DHCP ==="
+  systemctl daemon-reload || true
+  systemctl enable NetworkManager.service >/dev/null 2>&1 || true
+  systemctl start NetworkManager.service >/dev/null 2>&1 || true
+
+  if command -v nmcli >/dev/null 2>&1 && [ -n "$IFACE" ]; then
+    nmcli networking on >/dev/null 2>&1 || true
+    nmcli device set "$IFACE" managed yes >/dev/null 2>&1 || true
+    nmcli connection delete "PinCabOS DHCP" >/dev/null 2>&1 || true
+    nmcli connection add type ethernet ifname "$IFACE" con-name "PinCabOS DHCP" \
+      connection.autoconnect yes ipv4.method auto ipv6.method auto >/dev/null 2>&1 || true
+    nmcli connection up "PinCabOS DHCP" >/dev/null 2>&1 || true
+  fi
+
+  if command -v netplan >/dev/null 2>&1; then
+    netplan generate >/dev/null 2>&1 || true
+    netplan apply >/dev/null 2>&1 || true
+  fi
+
+  sleep 3
+  ip -br addr || true
+
+  echo
+  echo "=== Enable/start PinCabOS WebApp single service ==="
+  systemctl daemon-reload || true
+
+  # Kill the old legacy alias loop. Only pincabos-webapp.service should run.
+  systemctl stop pincabos-web.service >/dev/null 2>&1 || true
+  systemctl disable pincabos-web.service >/dev/null 2>&1 || true
+  systemctl mask pincabos-web.service >/dev/null 2>&1 || true
+  systemctl reset-failed pincabos-web.service >/dev/null 2>&1 || true
+  systemctl reset-failed pincabos-webapp.service >/dev/null 2>&1 || true
+
+  if systemctl list-unit-files | grep -q '^pincabos-webapp\.service'; then
+    systemctl enable pincabos-webapp.service >/dev/null 2>&1 || true
+    systemctl start pincabos-webapp.service >/dev/null 2>&1 || true
+  else
+    echo "NOTICE: pincabos-webapp.service not listed."
+  fi
+
+  echo
+  echo "=== Wait for local web port ==="
+  WEB_OK=0
+  for i in $(seq 1 30); do
+    if command -v curl >/dev/null 2>&1 && curl -fsS --max-time 2 http://127.0.0.1/ >/dev/null 2>&1; then
+      WEB_OK=1
+      break
+    fi
+
+    if ss -lnt 2>/dev/null | grep -qE ':(80|5000|8000|8080)\s'; then
+      WEB_OK=1
+      break
+    fi
+
+    sleep 2
+  done
+
+  echo "WEB_OK=$WEB_OK"
+
+  if [ "$WEB_OK" != "1" ]; then
+    echo
+    echo "=== Official WebApp did not answer; enabling fallback ==="
+    systemctl enable pincabos-webapp-fallback.service >/dev/null 2>&1 || true
+    systemctl restart pincabos-webapp-fallback.service >/dev/null 2>&1 || true
+
+    for i in $(seq 1 20); do
+      if ss -lnt 2>/dev/null | grep -qE ':80\s'; then
+        WEB_OK=1
+        break
+      fi
+      sleep 2
+    done
+  fi
+
+  echo "WEB_OK_AFTER_FALLBACK=$WEB_OK"
+  systemctl status pincabos-webapp.service --no-pager -l || true
+  systemctl status pincabos-webapp-fallback.service --no-pager -l || true
+  ss -lntup 2>/dev/null | grep -E '(:80|:5000|:8000|:8080)' || true
+
+  touch "$FLAG"
+  systemctl disable pincabos-firstboot-network-webapp-fix.service >/dev/null 2>&1 || true
+
+  echo
+  echo "Completed: $(date -Is)"
+} >> "$LOG" 2>&1
+
+exit 0

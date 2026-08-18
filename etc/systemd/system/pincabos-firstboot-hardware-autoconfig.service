@@ -1,0 +1,15 @@
+[Unit]
+Description=PinCabOS automatic GPU configuration
+After=NetworkManager.service network-online.target pincabos-firstboot-network-webapp-fix.service
+Wants=network-online.target
+Before=display-manager.service lightdm.service gdm.service gdm3.service graphical.target
+ConditionPathExists=!/var/lib/pincabos/hardware-autoconfig.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-hardware-autoconfig
+TimeoutStartSec=30min
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

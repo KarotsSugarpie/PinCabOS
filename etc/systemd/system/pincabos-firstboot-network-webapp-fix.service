@@ -1,0 +1,15 @@
+[Unit]
+Description=PinCabOS first boot network and WebApp self-heal
+After=local-fs.target dbus.service NetworkManager.service
+Before=display-manager.service lightdm.service gdm.service gdm3.service graphical.target
+Wants=NetworkManager.service
+ConditionPathExists=!/var/lib/pincabos/firstboot-network-webapp.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-network-webapp-fix
+TimeoutStartSec=2min
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

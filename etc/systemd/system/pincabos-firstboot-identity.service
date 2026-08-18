@@ -1,0 +1,14 @@
+[Unit]
+Description=PinCabOS first boot unique identity (SSH host keys, machine-id)
+ConditionPathExists=!/etc/ssh/ssh_host_ed25519_key
+Before=ssh.service sshd.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ssh-keygen -A
+ExecStart=/usr/bin/systemd-machine-id-setup
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+[Unit]
+Description=PinCabOS Media Recorder Worker
+After=network.target graphical.target
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=root
+Group=pinball
+UMask=0002
+WorkingDirectory=/opt/pincabos/web
+ExecStart=/usr/bin/python3 /opt/pincabos/web/pincabos_media_recorder_worker.py
+Restart=always
+RestartSec=2
+KillMode=process
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

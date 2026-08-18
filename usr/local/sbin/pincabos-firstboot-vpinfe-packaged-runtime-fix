@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -u
+
+LOG="/var/log/pincabos-firstboot-vpinfe-packaged-runtime-fix.log"
+FLAG="/var/lib/pincabos/firstboot-vpinfe-packaged-runtime.done"
+
+mkdir -p /var/log /var/lib/pincabos
+
+{
+  echo "==============================================================="
+  echo " PinCabOS first boot VPinFE packaged runtime fix"
+  echo " Started: $(date -Is)"
+  echo "==============================================================="
+
+  if [ -f "$FLAG" ]; then
+    echo "Already completed."
+    exit 0
+  fi
+
+  echo
+  echo "=== Runtime files ==="
+  ls -lah /home/pinball/vpinfe 2>/dev/null || true
+  ls -lah /home/pinball/vpinfe/_internal 2>/dev/null | sed -n '1,80p' || true
+  ls -lah /opt/pincabos/tools/run-vpinfe-systemd.sh 2>/dev/null || true
+
+  echo
+  echo "=== Permissions ==="
+  chown -R pinball:pinball /home/pinball/vpinfe 2>/dev/null || true
+  chown -R pinball:pinball /home/pinball/.config/vpinfe 2>/dev/null || true
+  chown -R pinball:pinball /opt/pincabos/config/vpinfe 2>/dev/null || true
+  chmod 755 /opt/pincabos/tools/run-vpinfe-systemd.sh 2>/dev/null || true
+
+  echo
+  echo "=== Enable/start VPinFE ==="
+  systemctl daemon-reload || true
+  systemctl reset-failed pincabos-vpinfe.service >/dev/null 2>&1 || true
+  systemctl enable pincabos-vpinfe.service >/dev/null 2>&1 || true
+  systemctl restart pincabos-vpinfe.service >/dev/null 2>&1 || true
+
+  echo
+  echo "=== Wait for VPinFE port 8001 ==="
+  VPINFE_OK=0
+  for i in $(seq 1 45); do
+    if ss -lnt 2>/dev/null | grep -qE ':8001\s'; then
+      VPINFE_OK=1
+      break
+    fi
+    sleep 2
+  done
+
+  echo "VPINFE_OK=$VPINFE_OK"
+  systemctl status pincabos-vpinfe.service --no-pager -l || true
+  journalctl -u pincabos-vpinfe.service -b --no-pager -n 160 || true
+  ss -lntup 2>/dev/null | grep -E '(:8001|:80|:5000|:8080)' || true
+
+  touch "$FLAG"
+  systemctl disable pincabos-firstboot-vpinfe-packaged-runtime-fix.service >/dev/null 2>&1 || true
+
+  echo
+  echo "Completed: $(date -Is)"
+} >> "$LOG" 2>&1
+
+exit 0

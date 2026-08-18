@@ -1,0 +1,12 @@
+[Unit]
+Description=PinCabOS first boot initramfs refresh
+After=local-fs.target
+ConditionPathExists=!/var/lib/pincabos/firstboot-initramfs-refresh.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-initramfs-refresh
+TimeoutStartSec=10min
+
+[Install]
+WantedBy=multi-user.target
