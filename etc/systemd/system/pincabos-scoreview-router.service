@@ -8,6 +8,8 @@ Type=simple
 ExecStart=/opt/pincabos/bin/pincabos-scoreview-router.sh
 Restart=always
 RestartSec=2
+# Un service d'affichage qui traine ne doit pas retenir l'extinction.
+TimeoutStopSec=10
 
 [Install]
 WantedBy=graphical.target

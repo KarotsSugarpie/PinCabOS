@@ -67,7 +67,15 @@ restore_curtain() {
         curtain=""
     fi
 }
-trap restore_curtain EXIT TERM INT
+# PINCABOS_ROUTER_STOP_V25
+# Un trap qui revient poursuit la boucle : sur TERM/INT il faut sortir, sinon
+# le service ignore l'ordre d'arret et bloque l'extinction de la machine.
+on_signal() {
+    restore_curtain
+    exit 0
+}
+trap restore_curtain EXIT
+trap on_signal TERM INT
 
 sink_curtain_if_buried() {
     # $1 = fenetre Score View, $2 = listing wmctrl -lGx courant
