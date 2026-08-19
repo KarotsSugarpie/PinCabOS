@@ -20,12 +20,54 @@ python3 -S - "$GLOBAL_INI" "$TABLES_ROOT" "$TARGET_VPX" <<'PY'
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import os
 import pwd
 import re
 import sys
 
 GLOBAL_INI = Path(sys.argv[1])
+
+# PINCABOS_BACKGLASS_GEOMETRY_V1
+# Sans BackglassWidth/BackglassHeight, VPX dimensionne la fenetre backglass
+# d'apres le playfield tourne en portrait — 960x1706 pour un playfield 4K —
+# et fige cette taille par WM_NORMAL_HINTS (minimum == maximum). Aucun
+# gestionnaire de fenetres ne peut la corriger ensuite : la seule fenetre de
+# tir est ici, avant le lancement.
+SCREENS_JSON = Path("/opt/pincabos/config/screens/screens.json")
+
+
+def role_geometry(role: str) -> tuple[int, int, int, int] | None:
+    """(x, y, largeur, hauteur) de l'ecran portant ce role, ou None."""
+    try:
+        data = json.loads(SCREENS_JSON.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    entry = data.get(role)
+    if not isinstance(entry, dict):
+        return None
+    m = re.match(r"^(\d+)x(\d+)\+(-?\d+)\+(-?\d+)$", str(entry.get("geometry") or ""))
+    if not m:
+        return None
+    largeur, hauteur, x, y = (int(v) for v in m.groups())
+    return x, y, largeur, hauteur
+
+
+def backglass_window_geometry() -> dict[str, str]:
+    """Dimensions a imposer, seulement si le fronton a deux ecrans distincts.
+
+    Sur un cabinet a deux ecrans, backglass et fulldmd designent la meme
+    dalle : on ne touche a rien et le comportement reste celui d'avant.
+    """
+    backglass = role_geometry("backglass")
+    fulldmd = role_geometry("fulldmd")
+    if not backglass or not fulldmd or backglass == fulldmd:
+        return {}
+    _, _, largeur, hauteur = backglass
+    return {"BackglassWidth": str(largeur), "BackglassHeight": str(hauteur)}
+
+
+BACKGLASS_WINDOW = backglass_window_geometry()
 TABLES_ROOT = Path(sys.argv[2]).resolve()
 TARGET_VPX = Path(sys.argv[3]).resolve() if sys.argv[3] else None
 
@@ -254,6 +296,7 @@ patch_ini(
         "ScoreView": SCOREVIEW_WINDOW,
         "Plugin.B2SLegacy": B2S_GEOMETRY,
         "Plugin.ScoreView": {"Enable": "1"},
+        **({"Backglass": BACKGLASS_WINDOW} if BACKGLASS_WINDOW else {}),
     },
 )
 
