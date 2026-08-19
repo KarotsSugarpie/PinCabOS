@@ -419,6 +419,15 @@ app = Flask(__name__)
 pco_register_dashboard_control_routes(app)
 # === PINCABOS DASHBOARD V7 CONTROL ROUTES END ===
 app.register_blueprint(screen_bp)
+
+# PINCABOS_PUPPACK_PAGE_V1
+# Page de choix de la disposition d'ecrans d'un PuP-Pack. Aucun privilege :
+# les fichiers du pack appartiennent deja a pinball.
+try:
+    from puppack_options import puppack_bp as _pco_puppack_bp
+    app.register_blueprint(_pco_puppack_bp)
+except Exception as _pco_puppack_e:
+    print("WARN: PinCabOS PuP-Pack module load failed:", _pco_puppack_e)
 app.secret_key = pincabos_webapp_secret_key()
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -16825,6 +16834,15 @@ try:
     )
 except Exception as _pco_explorer_install_e:
     print("WARN: PinCabOS ExplorerInstall module load failed:", _pco_explorer_install_e)
+
+# PINCABOS_PUPPACK_EXPLORER_V1
+# Bouton "Options d'ecrans", affiche uniquement dans un dossier de PuP-Pack.
+# Pose apres l'Explorateur pour envelopper la vue deja enveloppee par lui.
+try:
+    from puppack_options import install_puppack_explorer_button as _pco_puppack_explorer
+    print("GO: PinCabOS PuP-Pack explorer button", _pco_puppack_explorer(app))
+except Exception as _pco_puppack_explorer_e:
+    print("WARN: PinCabOS PuP-Pack explorer button failed:", _pco_puppack_explorer_e)
 
 # PINCABOS_PACKAGE_ICON_LOADER_V1
 try:

@@ -11,6 +11,7 @@ DETECTOR="${LAUNCHER_DIR}/pincabos-detect-table-modes.py"
 CHOOSER="${LAUNCHER_DIR}/pincabos-hybrid-chooser.py"
 ASSET="${LAUNCHER_DIR}/assets/PCOSGamesChoices.png"
 MODE_HELPER="${PINCABOS_MODE_HELPER:-/usr/local/sbin/pincabos-hybrid-pup-mode}"
+PUPPACK_TOOL="${PINCABOS_PUPPACK_TOOL:-/opt/pincabos/bin/pincabos-puppack-option}"
 REAL_LAUNCHER="${PINCABOS_REAL_LAUNCHER:-/opt/pincabos/scripts/VPXlauncher.real.sh}"
 PINBALL_UID="$(id -u pinball 2>/dev/null || echo 1000)"
 CALLER_UID="$(id -u)"
@@ -345,6 +346,18 @@ case "$SELECTED_MODE" in
         # vidéos, B2S éventuel, FullDMD, etc.
         #
         mode_helper show >> "$LOG" 2>&1 || true
+
+        # PINCABOS_PUPPACK_GUARD_V1
+        #
+        # Un PuP-Pack arrive non configure de chez son auteur, et une table
+        # importee d'un cabinet mieux equipe arrive configuree pour des
+        # ecrans absents d'ici. Dans les deux cas le pack ne montre rien et
+        # rien ne l'explique. On corrige quand c'est possible, on le dit
+        # toujours, et l'etat d'origine reste restaurable.
+        if [[ -x "$PUPPACK_TOOL" ]]; then
+            PUPPACK_MESSAGE="$("$PUPPACK_TOOL" autofix "$TABLE" 2>&1 || true)"
+            [[ -n "$PUPPACK_MESSAGE" ]] && log "$PUPPACK_MESSAGE"
+        fi
 
         log "PUP [▶] Lancement PUPPack direct."
 

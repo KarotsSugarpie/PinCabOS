@@ -35,7 +35,13 @@ validate_path() {
 
     base="$(basename "$path")"
     case "$base" in
-        pupvideos|pupvideo|pupvideos"$SUFFIX"|pupvideo"$SUFFIX") ;;
+        # PINCABOS_PUP_DIRNAMES_V1
+        # Tous les packs ne disent pas "pupvideos" : Terminator 2 range le
+        # sien dans "pinupvideo". Le refuser interdisait le mode Original
+        # sur ces tables. La detection, elle, connaissait deja ces noms.
+        pupvideos|pupvideo|pinupvideo|pinupvideos| \
+        pupvideos"$SUFFIX"|pupvideo"$SUFFIX"| \
+        pinupvideo"$SUFFIX"|pinupvideos"$SUFFIX") ;;
         *) fail "Nom de dossier PuP refusé : $base" ;;
     esac
 
