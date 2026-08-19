@@ -8,6 +8,7 @@ import mimetypes
 import urllib.parse
 from flask import send_file, request, redirect, session
 from screen import screen_bp
+from internal_disk import internal_disk_bp
 import shutil
 import uuid
 import shlex
@@ -419,6 +420,7 @@ app = Flask(__name__)
 pco_register_dashboard_control_routes(app)
 # === PINCABOS DASHBOARD V7 CONTROL ROUTES END ===
 app.register_blueprint(screen_bp)
+app.register_blueprint(internal_disk_bp)
 
 # PINCABOS_PUPPACK_PAGE_V1
 # Page de choix de la disposition d'ecrans d'un PuP-Pack. Aucun privilege :

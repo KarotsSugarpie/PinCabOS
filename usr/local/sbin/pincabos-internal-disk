@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# PINCABOS_INTERNAL_DISK_V1
+#
+# Adopte un disque interne comme bibliotheque de tables.
+#
+# Pourquoi un montage LIE et non un lien symbolique : de nombreux composants
+# de PinCabOS codent /home/pinball/Tables en dur, et plusieurs valident les
+# chemins par p.resolve(strict=True).relative_to(TABLES_ROOT). Un lien
+# symbolique resout vers le disque et fait echouer ces controles ; un montage
+# lie laisse les chemins inchanges, si bien qu'aucun composant n'a a changer.
+#
+#   list              partitions internes candidates, en JSON
+#   adopt UUID SOUS_DOSSIER [--boot]   monte, relie, et persiste si --boot
+#   release [--boot]  defait le lien et le montage, et nettoie fstab
+#   status            etat courant
+set -uo pipefail
+
+TABLES=/home/pinball/Tables
+POINT=/mnt/pincabos/tables
+MARQUE="# PINCABOS_INTERNAL_DISK_V1"
+PINBALL_UID=$(id -u pinball 2>/dev/null || echo 1000)
+PINBALL_GID=$(id -g pinball 2>/dev/null || echo 1000)
+
+[ "$(id -u)" -eq 0 ] || { echo "Cette commande demande les privileges root." >&2; exit 1; }
+
+disque_systeme() {
+    # disque portant la racine : jamais propose a l'adoption
+    lsblk -no PKNAME "$(findmnt -no SOURCE / 2>/dev/null)" 2>/dev/null | head -1
+}
+
+options_montage() {  # $1 = type de systeme de fichiers
+    case "$1" in
+        ntfs|ntfs3)
+            # NTFS ignore les permissions Unix : sans uid/gid tout appartient
+            # a root et le frontend ne peut rien ecrire.
+            printf 'uid=%s,gid=%s,umask=0022,windows_names,nofail' "$PINBALL_UID" "$PINBALL_GID" ;;
+        exfat|vfat)
+            printf 'uid=%s,gid=%s,umask=0022,nofail' "$PINBALL_UID" "$PINBALL_GID" ;;
+        *)
+            printf 'defaults,nofail' ;;
+    esac
+}
+
+cmd_list() {
+    local sys; sys="$(disque_systeme)"
+    lsblk -bJ -o NAME,PKNAME,TYPE,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINT,RM,TRAN 2>/dev/null \
+      | python3 -c '
+import json, sys
+systeme = sys.argv[1] if len(sys.argv) > 1 else ""
+data = json.load(sys.stdin)
+sorties = []
+
+def parcours(noeuds, parent=""):
+    for n in noeuds:
+        nom = n.get("name", "")
+        parcours(n.get("children", []) or [], nom)
+        if n.get("type") != "part":
+            continue
+        pk = n.get("pkname") or parent
+        if pk and pk == systeme:
+            continue                      # disque systeme : hors de question
+        if n.get("rm"):
+            continue                      # amovible : releve de la page USB
+        if not n.get("fstype"):
+            continue                      # pas de systeme de fichiers
+        if not n.get("uuid"):
+            continue                      # sans UUID, pas de montage stable
+        sorties.append({
+            "device": "/dev/" + nom,
+            "uuid": n["uuid"],
+            "fstype": n["fstype"],
+            "label": n.get("label") or "",
+            "size": n.get("size") or 0,
+            "mountpoint": n.get("mountpoint") or "",
+            "transport": n.get("tran") or "",
+        })
+
+parcours(data.get("blockdevices", []))
+print(json.dumps(sorties, ensure_ascii=False, indent=2))
+' "$sys"
+}
+
+fstab_nettoie() {
+    sed -i "\|$MARQUE|d" /etc/fstab
+}
+
+fstab_ajoute() {  # $1 = ligne
+    printf '%s  %s\n' "$1" "$MARQUE" >> /etc/fstab
+}
+
+cmd_probe() {
+    # Monte le disque et rend ses dossiers de premier niveau, pour que
+    # l'utilisateur designe celui qui contient deja ses tables. Le montage
+    # reste en place : l'adoption qui suit le reutilise tel quel.
+    local uuid="${1:-}"
+    [ -n "$uuid" ] || { echo "UUID manquant." >&2; exit 2; }
+    local dev="/dev/disk/by-uuid/$uuid"
+    [ -b "$dev" ] || { echo "Aucune partition avec cet UUID." >&2; exit 2; }
+    local fstype; fstype="$(lsblk -no FSTYPE "$(readlink -f "$dev")" | head -1)"
+    [ "$fstype" = "ntfs" ] && fstype=ntfs3
+    mkdir -p "$POINT"
+    mountpoint -q "$POINT" || mount -t "$fstype" -o "$(options_montage "$fstype")" "$dev" "$POINT" \
+        || { echo "Montage impossible ($fstype)." >&2; exit 3; }
+
+    python3 - "$POINT" <<'PY'
+import json, os, sys
+racine = sys.argv[1]
+dossiers = []
+try:
+    for e in sorted(os.scandir(racine), key=lambda x: x.name.lower()):
+        if not e.is_dir(follow_symlinks=False) or e.name.startswith(("$", ".")):
+            continue
+        try:
+            vpx = sum(1 for r, _, f in os.walk(e.path)
+                      for n in f if n.lower().endswith(".vpx"))
+        except OSError:
+            vpx = 0
+        dossiers.append({"nom": e.name, "tables": vpx})
+except OSError as err:
+    print(json.dumps({"erreur": str(err)}, ensure_ascii=False)); raise SystemExit(0)
+print(json.dumps({"racine": racine, "dossiers": dossiers}, ensure_ascii=False, indent=2))
+PY
+}
+
+cmd_adopt() {
+    local uuid="${1:-}" sous="${2:-}" boot="${3:-}"
+    [ -n "$uuid" ] || { echo "UUID manquant." >&2; exit 2; }
+    local dev="/dev/disk/by-uuid/$uuid"
+    [ -b "$dev" ] || { echo "Aucune partition avec cet UUID." >&2; exit 2; }
+    local fstype; fstype="$(lsblk -no FSTYPE "$(readlink -f "$dev")" | head -1)"
+    [ -n "$fstype" ] || { echo "Systeme de fichiers indetermine." >&2; exit 2; }
+    [ "$fstype" = "ntfs" ] && fstype=ntfs3
+
+    local opts; opts="$(options_montage "$fstype")"
+    mkdir -p "$POINT"
+    mountpoint -q "$POINT" || mount -t "$fstype" -o "$opts" "$dev" "$POINT" \
+        || { echo "Montage impossible ($fstype)." >&2; exit 3; }
+    echo "disque monte sur $POINT ($fstype, $opts)"
+
+    local source="$POINT"
+    [ -n "$sous" ] && source="$POINT/$sous"
+    mkdir -p "$source"
+    chown "$PINBALL_UID:$PINBALL_GID" "$source" 2>/dev/null || true
+
+    # Le dossier d'origine doit etre vide, sinon son contenu devient
+    # invisible sans etre efface — on refuse plutot que de surprendre.
+    mkdir -p "$TABLES"
+    if ! mountpoint -q "$TABLES" && [ -n "$(ls -A "$TABLES" 2>/dev/null)" ]; then
+        echo "ATTENTION: $TABLES n'est pas vide." >&2
+        echo "Deplacez son contenu vers $source, puis relancez." >&2
+        umount "$POINT" 2>/dev/null || true
+        exit 4
+    fi
+
+    mountpoint -q "$TABLES" || mount --bind "$source" "$TABLES" \
+        || { echo "Montage lie impossible." >&2; exit 3; }
+    echo "bibliotheque liee : $source -> $TABLES"
+
+    fstab_nettoie
+    if [ "$boot" = "--boot" ]; then
+        fstab_ajoute "UUID=$uuid  $POINT  $fstype  $opts  0 0"
+        fstab_ajoute "$source  $TABLES  none  bind,nofail  0 0"
+        echo "montage automatique au demarrage : active"
+    else
+        echo "montage automatique au demarrage : desactive (valable jusqu'au redemarrage)"
+    fi
+    systemctl daemon-reload 2>/dev/null || true
+}
+
+cmd_release() {
+    umount "$TABLES" 2>/dev/null && echo "lien defait" || echo "aucun lien en place"
+    umount "$POINT" 2>/dev/null && echo "disque demonte" || echo "aucun disque monte"
+    fstab_nettoie
+    systemctl daemon-reload 2>/dev/null || true
+    echo "entrees fstab retirees"
+}
+
+cmd_status() {
+    echo "point de montage : $(findmnt -no SOURCE,FSTYPE "$POINT" 2>/dev/null || echo 'non monte')"
+    echo "bibliotheque     : $(findmnt -no SOURCE "$TABLES" 2>/dev/null || echo 'dossier local')"
+    # grep -c sort en 1 quand le compte est nul : sans le || true, un second
+    # zero s'affichait a la suite du premier.
+    echo "au demarrage     : $(grep -c "$MARQUE" /etc/fstab 2>/dev/null || true) entree(s) fstab"
+}
+
+case "${1:-status}" in
+    list)    cmd_list ;;
+    probe)   shift; cmd_probe "$@" ;;
+    adopt)   shift; cmd_adopt "$@" ;;
+    release) cmd_release ;;
+    status)  cmd_status ;;
+    *) echo "Usage: pincabos-internal-disk {list|probe UUID|adopt UUID SOUS_DOSSIER [--boot]|release|status}" >&2; exit 64 ;;
+esac
