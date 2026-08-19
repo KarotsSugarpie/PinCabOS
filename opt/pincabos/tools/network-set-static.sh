@@ -162,11 +162,32 @@ EOF_YAML
 chmod 600 "$tmp"
 mv -f "$tmp" "$CONF"
 
+# PINCABOS_NM_PROFILES_V1
+# Netplan a beau etre prioritaire, NetworkManager conserve ses propres
+# profils de connexion. Si l'un d'eux vise cette interface en ipv4.method=auto,
+# il est reapplique des que NM reprend la main — et l'adresse fixe retombe en
+# DHCP quelques secondes apres avoir ete posee.
+# On desactive donc l'auto-connexion des profils concurrents, sans les
+# supprimer : l'utilisateur les retrouve intacts s'il revient au DHCP.
+neutraliser_profils_nm() {
+  command -v nmcli >/dev/null 2>&1 || return 0
+  systemctl is-active --quiet NetworkManager 2>/dev/null || return 0
+  local nom uuid dev
+  while IFS=: read -r nom uuid dev; do
+    [[ "$dev" == "$iface" ]] || continue
+    [[ "$nom" == netplan-* ]] && continue   # le profil genere par netplan
+    nmcli -t connection modify "$uuid" connection.autoconnect no 2>/dev/null \
+      && echo "Auto-connexion desactivee sur le profil concurrent: $nom"
+  done < <(nmcli -t -f NAME,UUID,DEVICE connection show 2>/dev/null)
+}
+
 if ! netplan generate; then
   echo "ERREUR: Netplan refuse la configuration. Restauration automatique."
   restore_netplan
   exit 1
 fi
+
+neutraliser_profils_nm
 
 if ! netplan apply; then
   echo "ERREUR: application Netplan échouée. Restauration automatique."
