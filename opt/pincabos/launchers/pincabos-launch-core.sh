@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 # PINCABOS_HYBRID_LAUNCH_CORE_V3_2_1
+# PINCABOS_DIRECT_LAUNCH_MODES_V2
 
 MODE="${1:-hybrid}"
 shift || true
@@ -9,7 +10,7 @@ LAUNCHER_DIR="/opt/pincabos/launchers"
 DETECTOR="${LAUNCHER_DIR}/pincabos-detect-table-modes.py"
 CHOOSER="${LAUNCHER_DIR}/pincabos-hybrid-chooser.py"
 ASSET="${LAUNCHER_DIR}/assets/PCOSGamesChoices.png"
-MODE_HELPER="/usr/local/sbin/pincabos-hybrid-pup-mode"
+MODE_HELPER="${PINCABOS_MODE_HELPER:-/usr/local/sbin/pincabos-hybrid-pup-mode}"
 REAL_LAUNCHER="${PINCABOS_REAL_LAUNCHER:-/opt/pincabos/scripts/VPXlauncher.real.sh}"
 PINBALL_UID="$(id -u pinball 2>/dev/null || echo 1000)"
 CALLER_UID="$(id -u)"
@@ -69,6 +70,45 @@ find_table_argument() {
     done
     return 1
 }
+
+# PINCABOS_DIRECT_PUP_ROOT_V1
+#
+# Ce finder NE choisit PAS le mode de jeu.
+# Il sert seulement au bouton Legacy afin de masquer un
+# éventuel dossier PuP local pendant l'exécution Original.
+find_local_pup_root() {
+    local table="$1"
+    local directory
+    local child
+    local name
+
+    directory="$(dirname -- "$table")"
+
+    [[ -d "$directory" ]] || return 1
+
+    while IFS= read -r -d '' child; do
+        [[ -d "$child" ]] || continue
+
+        name="${child##*/}"
+
+        case "${name,,}" in
+            pupvideos|pupvideo|pinupvideo|pinupvideos)
+                printf '%s\n' "$child"
+                return 0
+                ;;
+        esac
+
+    done < <(
+        find "$directory" \
+            -mindepth 1 \
+            -maxdepth 1 \
+            -type d \
+            -print0 2>/dev/null
+    )
+
+    return 1
+}
+
 
 run_chooser() {
     local result="$1" default="$2" timeout="$3"
@@ -130,23 +170,70 @@ TABLE="$(find_table_argument "${FILTERED_ARGS[@]}")" || {
     exit 64
 }
 
-[[ -x "$DETECTOR" ]] || { log "NOGO [X] Détecteur absent : $DETECTOR"; exit 65; }
-[[ -x "$CHOOSER" ]] || { log "NOGO [X] Chooser absent : $CHOOSER"; exit 65; }
-[[ -f "$ASSET" ]] || { log "NOGO [X] Image absente : $ASSET"; exit 65; }
-[[ -x "$MODE_HELPER" ]] || { log "NOGO [X] Helper PuP absent : $MODE_HELPER"; exit 65; }
-[[ -x "$REAL_LAUNCHER" ]] || { log "NOGO [X] Launcher VPX réel absent : $REAL_LAUNCHER"; exit 66; }
+[[ -f "$TABLE" ]] || {
+    log "NOGO [X] Table VPX absente : $TABLE"
+    exit 65
+}
+
+[[ -x "$MODE_HELPER" ]] || {
+    log "NOGO [X] Helper PuP absent : $MODE_HELPER"
+    exit 65
+}
+
+[[ -x "$REAL_LAUNCHER" ]] || {
+    log "NOGO [X] Launcher VPX réel absent : $REAL_LAUNCHER"
+    exit 66
+}
 
 mode_helper recover >> "$LOG" 2>&1 || true
 
-eval "$(python3 "$DETECTOR" --shell "$TABLE")"
-log "TABLE=$DETECT_TABLE"
-log "MODE_DETECTE=$DETECT_MODE ORIGINAL=$DETECT_ORIGINAL PUP=$DETECT_PUP DEFAULT=$DETECT_DEFAULT"
-[[ -n "$DETECT_B2S" ]] && log "B2S=$DETECT_B2S"
-[[ -n "$DETECT_PUP_ROOT" ]] && log "PUP_ROOT=$DETECT_PUP_ROOT"
 
-if [[ "$DETECT_ONLY" == "1" ]]; then
-    python3 "$DETECTOR" "$TABLE"
-    exit 0
+# =============================================================
+# HYBRID = VPINFE = AUTODETECTION
+# =============================================================
+
+if [[ "$MODE" == "hybrid" ]]; then
+
+    [[ -x "$DETECTOR" ]] || {
+        log "NOGO [X] Détecteur absent : $DETECTOR"
+        exit 65
+    }
+
+    eval "$(python3 "$DETECTOR" --shell "$TABLE")"
+
+    log "TABLE=$DETECT_TABLE"
+    log "MODE_DETECTE=$DETECT_MODE ORIGINAL=$DETECT_ORIGINAL PUP=$DETECT_PUP DEFAULT=$DETECT_DEFAULT"
+
+    [[ -n "$DETECT_B2S" ]] && \
+        log "B2S=$DETECT_B2S"
+
+    [[ -n "$DETECT_PUP_ROOT" ]] && \
+        log "PUP_ROOT=$DETECT_PUP_ROOT"
+
+    if [[ "$DETECT_ONLY" == "1" ]]; then
+        python3 "$DETECTOR" "$TABLE"
+        exit 0
+    fi
+
+    # Le chooser n'est nécessaire que si la détection prouve
+    # que les deux modes sont disponibles.
+    if [[ "$DETECT_ORIGINAL" == "1" && "$DETECT_PUP" == "1" ]]; then
+
+        [[ -x "$CHOOSER" ]] || {
+            log "NOGO [X] Chooser absent : $CHOOSER"
+            exit 65
+        }
+
+        [[ -f "$ASSET" ]] || {
+            log "NOGO [X] Image absente : $ASSET"
+            exit 65
+        }
+    fi
+
+elif [[ "$DETECT_ONLY" == "1" ]]; then
+
+    log "NOGO [X] --detect-only est reserve au mode Hybrid / VPinFE."
+    exit 64
 fi
 
 SELECTED_MODE="$MODE"
@@ -187,44 +274,85 @@ fi
 
 case "$SELECTED_MODE" in
     original)
+        # =====================================================
+        # PINCAB EXPLORER : PLAY LEGACY
+        # =====================================================
+        #
+        # Le mode est DEJA choisi par le bouton.
+        # Aucune autodétection ne décide Original/PuP ici.
+        #
         HIDDEN=0
+        DIRECT_PUP_ROOT=""
+
         restore_pup() {
             if [[ "$HIDDEN" == "1" ]]; then
                 mode_helper show >> "$LOG" 2>&1 || true
                 HIDDEN=0
             fi
         }
+
         trap restore_pup EXIT INT TERM HUP
-        if [[ -n "$DETECT_PUP_ROOT" && -d "$DETECT_PUP_ROOT" ]]; then
-            mode_helper hide "$DETECT_PUP_ROOT" >> "$LOG" 2>&1
+
+        DIRECT_PUP_ROOT="$(
+            find_local_pup_root "$TABLE" || true
+        )"
+
+        if [[ -n "$DIRECT_PUP_ROOT" && -d "$DIRECT_PUP_ROOT" ]]; then
+
+            log "LEGACY [=] PuP local masque : $DIRECT_PUP_ROOT"
+
+            mode_helper hide \
+                "$DIRECT_PUP_ROOT" \
+                >> "$LOG" 2>&1
+
             HIDDEN=1
+
+        else
+
+            log "LEGACY [=] Aucun dossier PuP local a masquer."
+
         fi
-        log "ORIGINAL [▶] Choix Original confirmé par Launch/Plunger."
+
+        log "LEGACY [▶] Lancement Original direct."
+
         set +e
+
         env \
             PINCABOS_GAME_CHOICE=original \
             PINCABOS_PUP_ENABLED=0 \
             "$REAL_LAUNCHER" "${FILTERED_ARGS[@]}"
+
         RC=$?
+
         set -e
+
         restore_pup
         trap - EXIT INT TERM HUP
+
         exit "$RC"
         ;;
-
     pup)
-        if [[ "$DETECT_PUP" != "1" || -z "$DETECT_PUP_ROOT" ]]; then
-            log "NOGO [X] Aucun PuP-Pack valide détecté pour cette table."
-            exit 67
-        fi
+        # =====================================================
+        # PINCAB EXPLORER : PLAY PUPPACK
+        # =====================================================
+        #
+        # Le mode est DEJA choisi par le bouton Play PUPPack.
+        # Le détecteur n'a pas le droit de transformer ce choix
+        # en NOGO.
+        #
+        # On restaure un éventuel PuP précédemment masqué puis
+        # VPX/PuP applique la configuration réelle du pack :
+        # vidéos, B2S éventuel, FullDMD, etc.
+        #
         mode_helper show >> "$LOG" 2>&1 || true
-        log "PUP [▶] Choix PuP-Pack confirmé par Launch/Plunger."
+
+        log "PUP [▶] Lancement PUPPack direct."
+
         exec env \
             PINCABOS_GAME_CHOICE=pup \
             PINCABOS_PUP_ENABLED=1 \
             "$REAL_LAUNCHER" "${FILTERED_ARGS[@]}"
         ;;
-
     *)
         log "NOGO [X] Mode final invalide : $SELECTED_MODE"
         exit 68
