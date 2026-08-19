@@ -157,6 +157,40 @@ if not items:
 for cmd in items:
     run(cmd)
 
+# PINCABOS_LAYOUT_NO_OVERLAP_V1
+# Les positions ci-dessus derivent de la largeur du MODE configure. Un role
+# laisse sur "Auto / inchange" donne une largeur nulle, et l'ecran suivant se
+# retrouve pose sur le precedent : X accepte sans broncher deux zones qui se
+# recouvrent, l'affichage devient incoherent, et rien ne le signale.
+# On relit donc les largeurs REELLEMENT appliquees et on recale de gauche a
+# droite. Sans effet quand la disposition est deja juste.
+import subprocess as _sp
+
+_ordre = [r.get("output") for r in (pf, bg, fd) if r.get("output")]
+_geo = {}
+try:
+    _brut = _sp.run(["xrandr", "--query"], text=True, capture_output=True).stdout
+except Exception:
+    _brut = ""
+for _ligne in _brut.splitlines():
+    _m = re.match(r"^(\S+) connected.*?(\d+)x(\d+)\+(-?\d+)\+(-?\d+)", _ligne)
+    if _m:
+        _geo[_m.group(1)] = (int(_m.group(2)), int(_m.group(4)))
+
+_x = 0
+_recale = []
+for _sortie in _ordre:
+    if _sortie not in _geo:
+        continue
+    _largeur, _pos = _geo[_sortie]
+    if _pos != _x:
+        _recale += ["--output", _sortie, "--pos", f"{_x}x0"]
+    _x += _largeur
+
+if _recale:
+    run(["xrandr"] + _recale)
+    print(f"GO: positions recalees ({len(_recale)//4} ecran(s)) — chevauchement evite")
+
 print("GO: xrandr layout appliqué")
 PY
             return 0
