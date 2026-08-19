@@ -37,8 +37,11 @@ if m:
 PY
 }
 
-BACKGLASS="$(geometrie backglass)"
-FULLDMD="$(geometrie fulldmd)"
+relire_geometries() {
+    BACKGLASS="$(geometrie backglass)"
+    FULLDMD="$(geometrie fulldmd)"
+}
+relire_geometries
 
 if [ -z "$BACKGLASS" ] || [ -z "$FULLDMD" ] || [ "$BACKGLASS" = "$FULLDMD" ]; then
     echo "fronton a un seul ecran (ou roles absents) : rien a faire."
@@ -77,12 +80,22 @@ plein_ecran() {  # $1 = fin du titre de fenetre, $2 = geometrie "x y l h"
 }
 
 while true; do
+    # la disposition peut changer en cours de route (resolution modifiee,
+    # ecran rebranche) : on relit plutot que de viser des coordonnees figees
+    relire_geometries
     if pgrep -u pinball -f VPinballX >/dev/null 2>&1; then
         place "Visual Pinball Score View" "$FULLDMD"
         place "Visual Pinball Backglass"  "$BACKGLASS"
     fi
     # dans le menu comme en jeu : la fenetre DMD de VPinFE doit remplir son
     # ecran, faute de quoi son cadre reste visible sur le fronton
+    # PINCABOS_PLACE_VPINFE_V1
+    # Les identifiants d'ecran de VPinFE n'agissent pas sur la position de
+    # ses fenetres : on les pose nous-memes, ce qui rend le resultat
+    # independant de sa numerotation interne.
+    place "VPinFE BG"  "$BACKGLASS"
+    place "VPinFE DMD" "$FULLDMD"
     plein_ecran "VPinFE DMD" "$FULLDMD"
+    plein_ecran "VPinFE BG"  "$BACKGLASS"
     sleep 2
 done
