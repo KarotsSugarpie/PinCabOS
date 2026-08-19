@@ -126,6 +126,44 @@ B2S_PUP = {
     "ScoreViewDMDAutoPos": "0",
 }
 
+# PINCABOS_PUP_B2S_CONDITIONNEL_V1
+#
+# Toutes les dispositions de PuP-Pack ne prennent pas le fronton. Plusieurs
+# posent le pack sur le FullDMD et attendent un B2S dans le backglass — leur
+# notice le dit mot pour mot. Masquer le B2S dans ce cas laisse le fronton
+# noir alors que le pack est correctement configure : c'est le defaut que
+# l'on corrige. On garde donc B2SLegacy et son image de fronton, tout en
+# neutralisant sa partie DMD, dont le pack se charge.
+B2S_PUP_FRONTON_B2S = {
+    **B2S_PUP,
+    "Enable": "1",
+    "B2SHideB2SBackglass": "0",
+}
+
+
+def pup_peint_le_fronton(table) -> bool:
+    """Le PuP-Pack de cette table dessine-t-il lui-meme le backglass ?
+
+    En l'absence de l'outil — ancienne installation, appel hors contexte —
+    on repond oui, ce qui reconduit exactement le comportement anterieur.
+    """
+    import subprocess
+
+    outil = Path("/opt/pincabos/bin/pincabos-puppack-option")
+    if not outil.is_file():
+        return True
+    try:
+        resultat = subprocess.run(
+            ["python3", str(outil), "backglass", str(table)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=20,
+        )
+    except Exception:
+        return True
+    return resultat.returncode == 0
+
+
 DMD_DEFAULTS_ONLY = {
     "ScoreViewDMDAutoPos": "1",
     "ScoreViewDMDX": "0",
@@ -312,16 +350,17 @@ if TARGET_VPX and TARGET_VPX.is_file():
     full_dmd = directb2s_has_fulldmd(b2s)
 
     if pup:
+        fronton_au_pack = pup_peint_le_fronton(TARGET_VPX)
         patch_ini(
             table_ini,
             {
                 "ScoreView": SCOREVIEW_DISABLED_OUTPUT,
-                "Plugin.B2SLegacy": B2S_PUP,
+                "Plugin.B2SLegacy": B2S_PUP if fronton_au_pack else B2S_PUP_FRONTON_B2S,
                 "Plugin.ScoreView": {"Enable": "0"},
             },
             remove_sections=("PinCabOS.ScoreViewWindow",),
         )
-        mode = "PUP"
+        mode = "PUP" if fronton_au_pack else "PUP_FRONTON_B2S"
     elif full_dmd:
         patch_ini(
             table_ini,

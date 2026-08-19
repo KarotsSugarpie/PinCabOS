@@ -1,0 +1,777 @@
+#!/usr/bin/env python3
+# PINCABOS_PUPPACK_OPTION_V1
+#
+# Choix de l'option d'un PuP-Pack.
+#
+# Un PuP-Pack est livre avec un screens.pup racine a l'etat d'usine — tous
+# les ecrans a "off" — et un dossier PuP-Pack_Options/ contenant plusieurs
+# dispositions selon le nombre d'ecrans du cabinet. Sous Windows, l'auteur
+# du pack fournit des "Option N.bat" qui se contentent de recopier les *.pup
+# de la variante choisie a la racine du pack. Ces .bat ne s'executent pas
+# sous Linux : sans equivalent, le pack reste inerte et le proprietaire voit
+# un fronton noir sans la moindre explication.
+#
+# Cet outil fait ce que font les .bat, avec une sauvegarde de l'etat initial
+# et une recommandation deduite des ecrans reellement declares par PinCabOS.
+#
+# Il tourne sous l'identite de pinball : les tables lui appartiennent deja,
+# aucun privilege supplementaire n'est demande.
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import re
+import shutil
+import sys
+from pathlib import Path
+
+TABLES_ROOT = Path("/home/pinball/Tables")
+SCREENS_CONFIG = Path("/opt/pincabos/config/screens/screens.json")
+
+# Deposer ce fichier desactive la correction automatique au lancement.
+SANS_CORRECTION_AUTO = Path("/opt/pincabos/config/puppack-sans-correction-auto")
+
+# Noms de dossier employes par les packs selon leur auteur.
+PUP_DIR_NAMES = {"pupvideos", "pupvideo", "pinupvideo", "pinupvideos"}
+
+SAUVEGARDE = ".pincabos-origine"
+NOTICE_NAMES = ("choose_screen_options.txt", "readme.txt", "read me.txt")
+
+# Ecrans PuP standard vers roles PinCabOS.
+#
+# Le DMD (1) et le FullDMD (5) se rendent tous deux sur la surface que
+# PinCabOS appelle fulldmd : le cabinet n'en a qu'une. Les autres numeros
+# sont auxiliaires — musique, appels, superpositions — et n'ont pas de
+# surface propre : ils se posent sur un ecran hote via CustomPos, dont le
+# premier champ donne justement la cible.
+ROLE_PAR_ECRAN_PUP = {
+    0: "topper",
+    1: "fulldmd",
+    2: "backglass",
+    3: "playfield",
+    5: "fulldmd",
+}
+
+
+# ----------------------------------------------------------------- lecture
+
+
+def sous_tables(chemin: Path) -> bool:
+    """Le chemin est-il bien sous la racine des tables ?"""
+    try:
+        chemin.resolve(strict=True).relative_to(TABLES_ROOT.resolve())
+    except (OSError, ValueError):
+        return False
+    return True
+
+
+def racines_pup(dossier_table: Path) -> list[Path]:
+    trouvees: list[Path] = []
+    try:
+        for enfant in dossier_table.iterdir():
+            if enfant.is_dir() and enfant.name.casefold() in PUP_DIR_NAMES:
+                trouvees.append(enfant)
+    except OSError:
+        pass
+    return sorted(trouvees, key=lambda p: str(p).casefold())
+
+
+def pack_de_table(table: Path) -> Path | None:
+    """Dossier du pack — celui qui contient screens.pup."""
+    for racine in racines_pup(table.parent):
+        if (racine / "screens.pup").is_file():
+            return racine
+        try:
+            enfants = sorted(racine.iterdir(), key=lambda p: str(p).casefold())
+        except OSError:
+            continue
+        for enfant in enfants:
+            if enfant.is_dir() and (enfant / "screens.pup").is_file():
+                return enfant
+    return None
+
+
+def lire_screens_pup(chemin: Path) -> list[dict]:
+    """Ecrans declares. Le format est un CSV a en-tete, champs parfois entre
+    guillemets — csv s'en charge, un split sur la virgule non."""
+    ecrans: list[dict] = []
+    try:
+        texte = chemin.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ecrans
+
+    lignes = [l for l in texte.splitlines() if l.strip()]
+    if not lignes:
+        return ecrans
+
+    for champs in csv.reader(lignes[1:]):
+        if len(champs) < 6:
+            continue
+        try:
+            numero = int(champs[0].strip())
+        except ValueError:
+            continue
+
+        actif = champs[5].strip()
+        position = champs[7].strip() if len(champs) > 7 else ""
+
+        # CustomPos = "<ecran cible>,x%,y%,largeur%,hauteur%". Sans lui,
+        # l'ecran se rend sur sa propre surface.
+        cible = numero
+        if position:
+            premier = position.split(",")[0].strip().strip('"')
+            try:
+                cible = int(float(premier))
+            except ValueError:
+                cible = numero
+
+        ecrans.append(
+            {
+                "numero": numero,
+                "nom": champs[1].strip().strip('"'),
+                "actif": actif,
+                "allume": actif.casefold() not in ("", "off"),
+                "cible": cible,
+                "position": position,
+            }
+        )
+    return ecrans
+
+
+def surfaces_utilisees(ecrans: list[dict]) -> list[str]:
+    """Roles PinCabOS dont l'option a besoin."""
+    roles: list[str] = []
+    for ecran in ecrans:
+        if not ecran["allume"]:
+            continue
+        role = ROLE_PAR_ECRAN_PUP.get(ecran["cible"])
+        if role and role not in roles:
+            roles.append(role)
+    return roles
+
+
+def notice(pack: Path) -> dict[int, str]:
+    """Descriptions des options, telles que l'auteur du pack les a ecrites."""
+    fichier = None
+    try:
+        for item in pack.iterdir():
+            if item.is_file() and item.name.casefold() in NOTICE_NAMES:
+                fichier = item
+                break
+    except OSError:
+        return {}
+    if fichier is None:
+        return {}
+
+    try:
+        texte = fichier.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {}
+
+    blocs: dict[int, str] = {}
+    courant = None
+    lignes: list[str] = []
+
+    for ligne in texte.splitlines():
+        entete = re.search(r"option\s*(\d+)\s*>", ligne, re.IGNORECASE)
+        if entete:
+            if courant is not None:
+                blocs[courant] = "\n".join(lignes).strip()
+            courant = int(entete.group(1))
+            lignes = []
+            continue
+        if courant is not None:
+            propre = ligne.strip().lstrip("*").strip()
+            if propre:
+                lignes.append(propre)
+
+    if courant is not None:
+        blocs[courant] = "\n".join(lignes).strip()
+    return blocs
+
+
+def numero_option(nom: str) -> int | None:
+    trouve = re.search(r"option[\s_-]*(\d+)", nom, re.IGNORECASE)
+    return int(trouve.group(1)) if trouve else None
+
+
+def ecrans_du_cabinet() -> list[str]:
+    """Roles reellement branches, d'apres la configuration ecrans."""
+    try:
+        donnees = json.loads(SCREENS_CONFIG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+    presents: list[str] = []
+    for role in ("playfield", "backglass", "fulldmd", "topper"):
+        objet = donnees.get(role)
+        if isinstance(objet, dict) and objet.get("name") and objet.get("available", True):
+            presents.append(role)
+    return presents
+
+
+# ------------------------------------------------------------- inventaire
+
+
+CONFIG_HYBRIDE = "PinCabOS-Hybrid.json"
+
+
+def lire_config_hybride(table: Path) -> dict:
+    chemin = table.parent / CONFIG_HYBRIDE
+    if not chemin.is_file():
+        return {}
+    try:
+        donnees = json.loads(chemin.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return donnees if isinstance(donnees, dict) else {}
+
+
+def pup_obligatoire(table: Path) -> bool:
+    dispo = lire_config_hybride(table).get("availability")
+    return isinstance(dispo, dict) and dispo.get("original") is False
+
+
+def definir_pup_obligatoire(table: Path, obligatoire: bool) -> tuple[int, str]:
+    """Supprime — ou retablit — le choix Original/PuP au demarrage.
+
+    Certaines tables ne fonctionnent tout simplement pas sans leur PuP-Pack,
+    meme lorsqu'un directb2s existe a cote : leur script affiche une consigne
+    et la partie n'a pas de sens. Rien ne permet de le deviner depuis les
+    fichiers, c'est donc au proprietaire de le declarer. Le lanceur sait
+    deja lire ce reglage ; il n'etait simplement expose nulle part.
+    """
+    chemin = table.parent / CONFIG_HYBRIDE
+    donnees = lire_config_hybride(table)
+
+    dispo = donnees.get("availability")
+    if not isinstance(dispo, dict):
+        dispo = {}
+
+    if obligatoire:
+        dispo["original"] = False
+        donnees["default"] = "pup"
+    else:
+        dispo.pop("original", None)
+
+    if dispo:
+        donnees["availability"] = dispo
+    else:
+        donnees.pop("availability", None)
+
+    try:
+        chemin.write_text(
+            json.dumps(donnees, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    except OSError as erreur:
+        return 1, f"NOGO [X] Ecriture impossible : {erreur}"
+
+    if obligatoire:
+        return 0, "GO [√] Cette table se lancera directement en PuP-Pack, sans choix."
+    return 0, "GO [√] Le choix Original / PuP-Pack est retabli au demarrage."
+
+
+def empreinte_pup(dossier: Path) -> dict[str, str]:
+    """Contenu de tous les *.pup d'un dossier, pour comparer deux variantes."""
+    empreinte: dict[str, str] = {}
+    try:
+        fichiers = sorted(dossier.glob("*.pup"))
+    except OSError:
+        return empreinte
+    for fichier in fichiers:
+        try:
+            empreinte[fichier.name.casefold()] = fichier.read_text(
+                encoding="utf-8", errors="replace"
+            )
+        except OSError:
+            continue
+    return empreinte
+
+
+def options_du_pack(pack: Path) -> list[dict]:
+    dossier = None
+    try:
+        for item in pack.iterdir():
+            if item.is_dir() and item.name.casefold().replace(" ", "") in (
+                "pup-pack_options",
+                "puppack_options",
+                "pup-packoptions",
+            ):
+                dossier = item
+                break
+    except OSError:
+        return []
+    if dossier is None:
+        return []
+
+    descriptions = notice(pack)
+    presents = ecrans_du_cabinet()
+
+    # Plusieurs variantes partagent souvent le meme screens.pup et ne
+    # different que par leurs declencheurs. Comparer ce seul fichier
+    # designerait deux options comme installees a la fois.
+    actuel = empreinte_pup(pack)
+
+    options: list[dict] = []
+    try:
+        enfants = sorted(dossier.iterdir(), key=lambda p: str(p).casefold())
+    except OSError:
+        return []
+
+    for enfant in enfants:
+        screens = enfant / "screens.pup"
+        if not enfant.is_dir() or not screens.is_file():
+            continue
+
+        ecrans = lire_screens_pup(screens)
+        surfaces = surfaces_utilisees(ecrans)
+        numero = numero_option(enfant.name)
+        contenu = empreinte_pup(enfant)
+
+        options.append(
+            {
+                "id": enfant.name,
+                "numero": numero,
+                "description": descriptions.get(numero, "") if numero else "",
+                "surfaces": surfaces,
+                "ecrans_actifs": [e for e in ecrans if e["allume"]],
+                "installee": bool(contenu) and contenu == actuel,
+                # Compatible si toutes les surfaces demandees existent bel et
+                # bien sur ce cabinet. On ne devine pas d'apres le texte de la
+                # notice : on lit ce que l'option vise reellement.
+                "compatible": bool(surfaces) and all(s in presents for s in surfaces),
+                "manquantes": [s for s in surfaces if s not in presents] if presents else [],
+                # Une option qui perd son topper reste utilisable ; une option
+                # dont aucune surface n'existe ici ne l'est pas.
+                "visibles": [s for s in surfaces if s in presents] if presents else surfaces,
+                "utilisable": bool([s for s in surfaces if s in presents] if presents else surfaces),
+                "fichiers": sorted(p.name for p in enfant.glob("*.pup")),
+            }
+        )
+
+    # Recommandation, parmi les seules options entierement realisables ici.
+    #
+    # Le fronton passe avant le reste : en mode PuP, PinCabOS masque le
+    # backglass B2S puisque le pack est cense s'en charger. Une option qui
+    # n'y peint rien laisserait donc le fronton noir — c'est precisement le
+    # defaut d'origine. A egalite, celle qui exploite le plus de surfaces,
+    # puis le plus petit numero pour que le choix ne bouge pas d'un appel
+    # a l'autre.
+    # L'ajustement exact passe en premier : une option taillee pour ce
+    # cabinet vaut mieux qu'une option plus riche dont une partie tombera
+    # dans le vide.
+    def rang(option: dict) -> tuple:
+        return (
+            not option["manquantes"],
+            "backglass" in option["visibles"],
+            len(option["visibles"]),
+            -(option["numero"] or 99),
+        )
+
+    realisables = [o for o in options if o["utilisable"]]
+    meilleure = max(realisables, key=rang) if realisables else None
+    for option in options:
+        option["recommandee"] = option is meilleure
+
+    return options
+
+
+def etat_du_pack(table: Path) -> dict:
+    pack = pack_de_table(table)
+    if pack is None:
+        return {"table": str(table), "pack": None}
+
+    ecrans = lire_screens_pup(pack / "screens.pup")
+    actifs = [e for e in ecrans if e["allume"]]
+    options = options_du_pack(pack)
+    installee = next((o["id"] for o in options if o["installee"]), "")
+    surfaces = surfaces_utilisees(ecrans)
+    cabinet = ecrans_du_cabinet()
+
+    # Une table importee depuis un cabinet a trois ecrans arrive configuree
+    # pour trois surfaces. Posee sur un cabinet a deux ecrans, le pack est
+    # bien configure — mais il peint sur une surface qui n'existe pas, et le
+    # proprietaire ne voit rien. Le cas inverse est benin : un pack a deux
+    # surfaces fonctionne sur un cabinet qui en a trois, il en exploite
+    # simplement moins.
+    manquantes = [s for s in surfaces if s not in cabinet] if cabinet else []
+    visibles = [s for s in surfaces if s in cabinet] if cabinet else surfaces
+
+    # Perdre un topper n'est pas perdre l'image. On ne parle d'incompatible
+    # que lorsque plus rien n'est visible — le cas d'une table venue d'un
+    # cabinet mieux equipe, dont le pack peint sur un ecran absent. Quand
+    # une partie seulement manque, on le signale sans rien changer.
+    if not actifs:
+        statut = "non-configure"
+    elif surfaces and not visibles:
+        statut = "incompatible"
+    elif manquantes:
+        statut = "partiel"
+    else:
+        statut = "ok"
+
+    return {
+        "table": str(table),
+        "nom": table.stem,
+        "pack": str(pack),
+        "configure": bool(actifs),
+        "statut": statut,
+        "manquantes": manquantes,
+        "visibles": visibles,
+        # En mode PuP, PinCabOS masque le backglass B2S en supposant que le
+        # pack s'en charge. Certaines dispositions posent au contraire le
+        # pack sur le FullDMD et comptent sur le B2S pour le fronton. La
+        # politique de lancement lit cette reponse pour ne masquer que
+        # lorsque le pack peint reellement le fronton.
+        "peint_backglass": "backglass" in surfaces,
+        "ecrans_actifs": actifs,
+        "surfaces": surfaces,
+        "options": options,
+        "option_installee": installee,
+        "sauvegarde": (pack / SAUVEGARDE).is_dir(),
+        "cabinet": cabinet,
+        "pup_obligatoire": pup_obligatoire(table),
+    }
+
+
+def tables_avec_pack() -> list[Path]:
+    tables: list[Path] = []
+    if not TABLES_ROOT.is_dir():
+        return tables
+    for vpx in sorted(TABLES_ROOT.glob("*/*.vpx"), key=lambda p: str(p).casefold()):
+        if pack_de_table(vpx) is not None:
+            tables.append(vpx)
+    return tables
+
+
+# ---------------------------------------------------------------- actions
+
+
+def sauvegarder(pack: Path) -> None:
+    """Etat d'usine conserve une fois pour toutes — jamais ecrase."""
+    dossier = pack / SAUVEGARDE
+    if dossier.is_dir():
+        return
+    dossier.mkdir(parents=True, exist_ok=True)
+    for fichier in pack.glob("*.pup"):
+        shutil.copy2(fichier, dossier / fichier.name)
+
+
+def appliquer(table: Path, identifiant: str) -> tuple[int, str]:
+    pack = pack_de_table(table)
+    if pack is None:
+        return 2, f"NOGO [X] Aucun PuP-Pack pour {table.name}"
+
+    option = next((o for o in options_du_pack(pack) if o["id"] == identifiant), None)
+    if option is None:
+        return 2, f"NOGO [X] Option inconnue : {identifiant}"
+
+    source = pack / "PuP-Pack_Options" / identifiant
+    if not source.is_dir():
+        for item in pack.iterdir():
+            if item.is_dir() and item.name.casefold().replace(" ", "").startswith("pup"):
+                candidat = item / identifiant
+                if candidat.is_dir():
+                    source = candidat
+                    break
+    if not source.is_dir():
+        return 2, f"NOGO [X] Dossier d'option introuvable : {identifiant}"
+
+    sauvegarder(pack)
+
+    copies = []
+    for fichier in sorted(source.glob("*.pup")):
+        shutil.copy2(fichier, pack / fichier.name)
+        copies.append(fichier.name)
+
+    if not copies:
+        return 3, f"NOGO [X] Aucun fichier .pup dans {identifiant}"
+
+    ecrans = [e for e in lire_screens_pup(pack / "screens.pup") if e["allume"]]
+    resume = ", ".join(f"{e['nom']} -> ecran {e['cible']}" for e in ecrans) or "aucun"
+    return 0, (
+        f"GO [√] Option installee : {identifiant}\n"
+        f"    fichiers : {', '.join(copies)}\n"
+        f"    ecrans actifs : {resume}"
+    )
+
+
+def restaurer(table: Path) -> tuple[int, str]:
+    pack = pack_de_table(table)
+    if pack is None:
+        return 2, f"NOGO [X] Aucun PuP-Pack pour {table.name}"
+
+    dossier = pack / SAUVEGARDE
+    if not dossier.is_dir():
+        return 3, "NOGO [X] Aucune sauvegarde : le pack n'a jamais ete modifie ici."
+
+    restaures = []
+    for fichier in sorted(dossier.glob("*.pup")):
+        shutil.copy2(fichier, pack / fichier.name)
+        restaures.append(fichier.name)
+
+    return 0, f"GO [√] Etat d'origine restaure : {', '.join(restaures) or 'aucun fichier'}"
+
+
+def corriger(table: Path) -> tuple[int, str]:
+    """Filet de securite au lancement.
+
+    On n'intervient que lorsque le pack est reellement inutilisable ici :
+    aucun ecran actif, ou des ecrans qui visent une surface absente du
+    cabinet — le cas d'une table importee d'une machine mieux equipee.
+    Un pack simplement plus modeste que le cabinet est laisse tel quel :
+    il fonctionne, et changer son rendu sans qu'on l'ait demande serait
+    plus penible qu'utile.
+
+    L'etat d'origine est sauvegarde avant toute copie, et la page PuP-Packs
+    permet d'y revenir.
+    """
+    etat = etat_du_pack(table)
+    if not etat.get("pack"):
+        return 0, ""
+
+    if etat["statut"] == "ok":
+        return 0, ""
+
+    if etat["statut"] == "partiel":
+        # Une partie du pack seulement est perdue : on informe, on ne touche
+        # a rien. Rebattre les cartes pour recuperer un topper absent serait
+        # plus penible qu'utile.
+        return 0, (
+            f"PUP [=] {etat['nom']} : le pack prevoit aussi "
+            f"{', '.join(etat['manquantes'])}, absent de ce cabinet. "
+            f"Le reste s'affiche normalement ({', '.join(etat['visibles'])})."
+        )
+
+    if SANS_CORRECTION_AUTO.exists():
+        return 1, (
+            f"PUP [!] {etat['nom']} : pack {etat['statut']}, correction automatique desactivee."
+        )
+
+    candidate = next(
+        (o for o in etat["options"] if o.get("recommandee")),
+        None,
+    )
+    if candidate is None:
+        if etat["statut"] == "incompatible":
+            manquantes = ", ".join(etat["manquantes"])
+            return 1, (
+                f"PUP [!] {etat['nom']} : le pack vise un ecran absent de ce cabinet "
+                f"({manquantes}) et n'offre aucune variante compatible. "
+                "Le rendu sera partiel ou invisible."
+            )
+        return 1, (
+            f"PUP [!] {etat['nom']} : pack non configure et sans variante utilisable. "
+            "Rien ne sera affiche."
+        )
+
+    code, message = appliquer(table, candidate["id"])
+    if code != 0:
+        return 1, f"PUP [!] {etat['nom']} : correction impossible — {message}"
+
+    raison = (
+        "aucun ecran actif"
+        if etat["statut"] == "non-configure"
+        else f"visait un ecran absent ({', '.join(etat['manquantes'])})"
+    )
+    return 0, (
+        f"PUP [√] {etat['nom']} : pack adapte automatiquement — {raison}. "
+        f"Option retenue : {candidate['id']}. "
+        "Reversible depuis Outils > PuP-Packs."
+    )
+
+
+# ------------------------------------------------------------------- sortie
+
+
+def afficher_etat(etat: dict) -> None:
+    if not etat.get("pack"):
+        print(f"INFO [=] {Path(etat['table']).name} : aucun PuP-Pack")
+        return
+
+    print(f"Table : {etat['nom']}")
+    print(f"Pack  : {etat['pack']}")
+    if etat["statut"] == "ok":
+        surfaces = ", ".join(etat["surfaces"]) or "aucune"
+        print(f"GO [√] Pack configure — surfaces utilisees : {surfaces}")
+    elif etat["statut"] == "partiel":
+        print(
+            f"GO [√] Pack configure — {', '.join(etat['visibles'])} s'affiche ; "
+            f"{', '.join(etat['manquantes'])} n'existe pas sur ce cabinet."
+        )
+    elif etat["statut"] == "incompatible":
+        print(
+            "AVERTISSEMENT [!] Ce pack ne vise que des ecrans absents "
+            f"({', '.join(etat['manquantes'])}) : rien ne s'affichera."
+        )
+    else:
+        print("AVERTISSEMENT [!] Pack NON configure : aucun ecran actif.")
+        print("AVERTISSEMENT [!] Choisissez une option, sinon le pack n'affichera rien.")
+
+    if etat["option_installee"]:
+        print(f"Option installee : {etat['option_installee']}")
+
+    if not etat["options"]:
+        print("INFO [=] Ce pack ne propose pas d'options ; il s'utilise tel quel.")
+        return
+
+    print(f"Cabinet : {', '.join(etat['cabinet']) or 'inconnu'}")
+    print("Options disponibles :")
+    for option in etat["options"]:
+        marques = []
+        if option["installee"]:
+            marques.append("INSTALLEE")
+        if option["recommandee"]:
+            marques.append("RECOMMANDEE")
+        if not option["utilisable"]:
+            marques.append("aucun ecran disponible")
+        elif option["manquantes"]:
+            marques.append(f"{', '.join(option['manquantes'])} inutilise")
+        suffixe = f"   [{' / '.join(marques)}]" if marques else ""
+        print(f"  - {option['id']}{suffixe}")
+        print(f"      surfaces : {', '.join(option['surfaces']) or 'aucune'}")
+        premiere = (option["description"] or "").splitlines()
+        if premiere:
+            print(f"      notice   : {premiere[0]}")
+
+
+def resoudre_table(valeur: str) -> Path | None:
+    chemin = Path(valeur)
+    if not chemin.is_absolute():
+        chemin = TABLES_ROOT / valeur
+    if not chemin.is_file() or chemin.suffix.casefold() != ".vpx":
+        return None
+    if not sous_tables(chemin):
+        return None
+    return chemin
+
+
+def main() -> int:
+    analyseur = argparse.ArgumentParser(
+        description="Choix de l'option d'un PuP-Pack (equivalent des 'Option N.bat' Windows)."
+    )
+    analyseur.add_argument(
+        "action",
+        choices=(
+            "list",
+            "show",
+            "apply",
+            "restore",
+            "check",
+            "autofix",
+            "backglass",
+            "pup-obligatoire",
+        ),
+    )
+    analyseur.add_argument("table", nargs="?", help="Chemin de la table .vpx")
+    analyseur.add_argument("option", nargs="?", help="Identifiant de l'option a installer")
+    analyseur.add_argument("--json", action="store_true", help="Sortie machine")
+    arguments = analyseur.parse_args()
+
+    if arguments.action == "list":
+        etats = [etat_du_pack(t) for t in tables_avec_pack()]
+        if arguments.json:
+            print(json.dumps(etats, ensure_ascii=False, indent=2))
+            return 0
+        if not etats:
+            print("INFO [=] Aucune table avec PuP-Pack.")
+            return 0
+        for etat in etats:
+            drapeau = "OK " if etat["configure"] else "!! "
+            option = etat["option_installee"] or ("configure" if etat["configure"] else "NON CONFIGURE")
+            print(f"{drapeau}{etat['nom']}  —  {option}")
+        return 0
+
+    if not arguments.table:
+        print("NOGO [X] Chemin de table attendu.", file=sys.stderr)
+        return 64
+
+    table = resoudre_table(arguments.table)
+    if table is None:
+        print(f"NOGO [X] Table introuvable ou hors de {TABLES_ROOT} : {arguments.table}", file=sys.stderr)
+        return 2
+
+    if arguments.action in ("show", "check"):
+        etat = etat_du_pack(table)
+        if arguments.json:
+            print(json.dumps(etat, ensure_ascii=False, indent=2))
+            return 0
+        if arguments.action == "check":
+            # Sortie courte, destinee au journal de lancement.
+            if not etat.get("pack"):
+                return 0
+            if etat["statut"] == "ok":
+                print(f"PUP [√] Pack configure : {', '.join(etat['surfaces']) or 'aucune surface'}")
+                return 0
+            if etat["statut"] == "partiel":
+                print(
+                    f"PUP [=] Pack configure ({', '.join(etat['visibles'])}) ; "
+                    f"il prevoit aussi {', '.join(etat['manquantes'])}, absent de ce cabinet."
+                )
+                return 0
+            if etat["statut"] == "incompatible":
+                print(
+                    "PUP [!] Ce PuP-Pack ne vise que des ecrans absents de ce cabinet "
+                    f"({', '.join(etat['manquantes'])}) : rien ne s'affichera. "
+                    "Choisissez une autre option dans Outils > PuP-Packs."
+                )
+                return 1
+            print(
+                "PUP [!] Le PuP-Pack de cette table n'est pas configure : aucun ecran actif. "
+                "Choisissez une option dans Outils > PuP-Packs, sinon le pack n'affichera rien."
+            )
+            return 1
+        afficher_etat(etat)
+        return 0
+
+    if arguments.action == "pup-obligatoire":
+        valeur = (arguments.option or "").strip().casefold()
+        if valeur not in ("oui", "non"):
+            print("NOGO [X] Attendu : oui ou non.", file=sys.stderr)
+            return 64
+        code, message = definir_pup_obligatoire(table, valeur == "oui")
+        if arguments.json:
+            print(json.dumps({"code": code, "message": message}, ensure_ascii=False))
+        else:
+            print(message)
+        return code
+
+    if arguments.action == "backglass":
+        # Interroge par la politique de lancement : faut-il masquer le
+        # backglass B2S ? Oui seulement si le pack peint lui-meme le fronton.
+        # Sortie 0 = le pack s'en charge, 1 = laisser le B2S visible.
+        etat = etat_du_pack(table)
+        if not etat.get("pack") or not etat.get("configure"):
+            print("non")
+            return 1
+        peint = bool(etat.get("peint_backglass"))
+        print("oui" if peint else "non")
+        return 0 if peint else 1
+
+    if arguments.action == "autofix":
+        code, message = corriger(table)
+        if arguments.json:
+            print(json.dumps({"code": code, "message": message}, ensure_ascii=False))
+        elif message:
+            print(message)
+        return code
+
+    if arguments.action == "apply":
+        if not arguments.option:
+            print("NOGO [X] Identifiant d'option attendu.", file=sys.stderr)
+            return 64
+        code, message = appliquer(table, arguments.option)
+    else:
+        code, message = restaurer(table)
+
+    if arguments.json:
+        print(json.dumps({"code": code, "message": message}, ensure_ascii=False))
+    else:
+        print(message)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())
