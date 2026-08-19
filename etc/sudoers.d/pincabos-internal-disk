@@ -1,0 +1,10 @@
+# PINCABOS_INTERNAL_DISK_SUDOERS_V1
+# La page de gestion des disques tourne sous pinball et doit pouvoir
+# interroger, explorer, adopter et liberer un disque interne. Les actions
+# sont bornees aux sous-commandes de l'aide, qui valide elle-meme ses
+# arguments et refuse tout ce qui touche au disque systeme.
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-internal-disk list, \
+                             /usr/local/sbin/pincabos-internal-disk status, \
+                             /usr/local/sbin/pincabos-internal-disk release, \
+                             /usr/local/sbin/pincabos-internal-disk probe *, \
+                             /usr/local/sbin/pincabos-internal-disk adopt *
