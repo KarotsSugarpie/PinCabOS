@@ -290,6 +290,11 @@ PinCabOS est actuellement documenté en Alpha 2.0 / build dev.
 
 Certaines fonctions peuvent dépendre du matériel, du pilote ou du module installé. Les fonctions annoncées comme futures ne doivent pas être considérées comme disponibles avant leur validation dans la version installée.
 
+
+***************************************************************************************************************************************************************************************************************************
+
+
+
 🇬🇧 English
 
 A complete environment for your virtual pinball cabinet
