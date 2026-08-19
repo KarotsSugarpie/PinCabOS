@@ -149,6 +149,38 @@ def write_from_form(form) -> dict:
         }
 
     data["roles"] = roles
+
+    # PINCABOS_SCREEN_PAGE_TRUTH_V1
+    # screens.json porte deux schemas : les objets de premier niveau, que lit
+    # tout le systeme (topologie, politique B2S, placement des fenetres), et
+    # la cle "roles" ecrite ici. La chaine de roles assurait la recopie ;
+    # quand elle est masquee, un changement de role n'atteint plus personne.
+    # On alimente donc les deux, pour que la page reste la source de verite
+    # meme sans cette chaine.
+    screens_courants = parse_xrandr(xrandr_query())
+    for role, choix in roles.items():
+        sc = find_screen(screens_courants, choix.get("output", ""))
+        if not sc:
+            continue
+        largeur_hauteur = sc.get("current") or ""
+        x = sc.get("x") or "0"
+        y = sc.get("y") or "0"
+        ancien = data.get(role) if isinstance(data.get(role), dict) else {}
+        data[role] = {
+            **ancien,
+            "name": sc["output"],
+            "geometry": f"{largeur_hauteur}+{x}+{y}" if largeur_hauteur else "",
+            "x": int(x),
+            "y": int(y),
+            "is_primary": bool(sc.get("primary")),
+            "available": True,
+        }
+        if largeur_hauteur and "x" in largeur_hauteur:
+            l, h = largeur_hauteur.split("x", 1)
+            if l.isdigit() and h.isdigit():
+                data[role]["width"] = int(l)
+                data[role]["height"] = int(h)
+
     data["cabinet_mode"] = bool(form.get("cabinet_mode"))
     data["playfield_orientation"] = form.get("playfield_orientation", "landscape")
     data["playfield_rotation"] = form.get("playfield_rotation", "0")
@@ -250,8 +282,20 @@ def screen_page():
     cfg = load_cfg()
     roles = cfg.get("roles", {})
 
+    def role_reel(role: str) -> str:
+        """Sortie effectivement associee au role, telle que le systeme la voit.
+
+        On privilegie l'objet de premier niveau — celui que lisent la
+        topologie et le placement des fenetres — et on retombe sur "roles"
+        quand il est absent, par exemple sur une installation neuve.
+        """
+        entree = cfg.get(role)
+        if isinstance(entree, dict) and entree.get("name"):
+            return str(entree["name"])
+        return str(roles.get(role, {}).get("output", ""))
+
     def role_card(role, title):
-        selected_output = roles.get(role, {}).get("output", "")
+        selected_output = role_reel(role)
         selected_mode = roles.get(role, {}).get("mode", "")
         selected_rate = roles.get(role, {}).get("rate", "")
         sc = find_screen(screens, selected_output)
@@ -261,9 +305,24 @@ def screen_page():
           <label>Écran</label>
           <select name="{role}_output">{screen_options(screens, selected_output)}</select>
           <label style="margin-top:10px;display:block;">Résolution supportée</label>
-          <select name="{role}_mode">{mode_options(sc, selected_mode, selected_rate, role)}</select>
+          <select name="{role}_mode" data-role="{role}">{mode_options(sc, selected_mode, selected_rate, role)}</select>
         </div>
         """
+
+    # Les resolutions de chaque sortie, pour que le choix d'un ecran mette la
+    # liste a jour sans aller-retour serveur.
+    modes_par_sortie = json.dumps(
+        {
+            sc["output"]: [
+                {"valeur": f'{item["mode"]}@{r}' if r else item["mode"],
+                 "libelle": f'{item["mode"]} {r}Hz' if r else item["mode"]}
+                for item in sc.get("modes", [])
+                for r in item.get("rates", [""])
+            ]
+            for sc in screens
+        },
+        ensure_ascii=False,
+    )
 
     cab_checked = "checked" if cfg.get("cabinet_mode", True) else ""
     land_sel = "selected" if cfg.get("playfield_orientation", "landscape") == "landscape" else ""
@@ -276,6 +335,33 @@ def screen_page():
 
     <form method="post" action="/screen/save">
       <div class="grid">
+        <script id="pco-modes" type="application/json">{modes_par_sortie}</script>
+        <script>
+        // PINCABOS_SCREEN_PAGE_TRUTH_V1 — a la selection d'un ecran, on
+        // reconstruit la liste de ses resolutions. Le choix courant est
+        // conserve s'il existe encore sur la nouvelle sortie.
+        (function () {{
+          var modes = JSON.parse(document.getElementById('pco-modes').textContent);
+          function relier(role) {{
+            var sortie = document.querySelector('select[name="' + role + '_output"]');
+            var resolution = document.querySelector('select[name="' + role + '_mode"]');
+            if (!sortie || !resolution) return;
+            sortie.addEventListener('change', function () {{
+              var garde = resolution.value;
+              var liste = modes[sortie.value] || [];
+              resolution.innerHTML = '<option value="">-- Auto / inchangé --</option>';
+              liste.forEach(function (m) {{
+                var o = document.createElement('option');
+                o.value = m.valeur;
+                o.textContent = m.libelle;
+                if (m.valeur === garde) o.selected = true;
+                resolution.appendChild(o);
+              }});
+            }});
+          }}
+          ['playfield', 'backglass', 'fulldmd'].forEach(relier);
+        }})();
+        </script>
         {role_card("playfield", "Playfield / Primary")}
         {role_card("backglass", "Backglass / Secondary")}
         {role_card("fulldmd", "FullDMD / Tertiary")}
