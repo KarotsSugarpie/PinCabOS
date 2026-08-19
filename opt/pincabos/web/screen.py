@@ -159,7 +159,18 @@ def write_from_form(form) -> dict:
     # meme sans cette chaine.
     screens_courants = parse_xrandr(xrandr_query())
     for role, choix in roles.items():
-        sc = find_screen(screens_courants, choix.get("output", ""))
+        # PINCABOS_SCREEN_PAGE_NONE_ROLE_GUARD_V1
+        # find_screen() retombe volontairement sur le premier ecran pour
+        # l'affichage des menus. Cette tolerance ne doit jamais etre utilisee
+        # lors de l'ecriture : "-- Aucun --" doit reellement supprimer le role.
+        sortie = str(choix.get("output") or "")
+        if not sortie:
+            data.pop(role, None)
+            continue
+        sc = next(
+            (s for s in screens_courants if s.get("output") == sortie),
+            None,
+        )
         if not sc:
             continue
         largeur_hauteur = sc.get("current") or ""
