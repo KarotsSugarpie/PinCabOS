@@ -586,3 +586,180 @@
         min-width: 0 !important;
     }
 }
+
+
+/* PINCABOS_EXPLORER_CONTROLS_TWO_ROWS_V1_CSS
+ *
+ * Ligne 1 :
+ * GO | Play Legacy | Play PUPPack | Stop | VPS
+ *
+ * Ligne 2 :
+ * VPX | B2S | ROM | PuP | Serum | AltSound | AltColor
+ */
+
+/* Conteneur global dans le header Explorer */
+.pco-table-header-slot .pco-native-table-tools {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: auto auto !important;
+
+  align-items: stretch !important;
+  justify-content: stretch !important;
+
+  width: min(100%, 1120px) !important;
+  max-width: 1120px !important;
+  min-width: 0 !important;
+
+  margin: 0 !important;
+  padding: 6px 8px !important;
+
+  column-gap: 0 !important;
+  row-gap: 5px !important;
+
+  overflow: hidden !important;
+  white-space: normal !important;
+}
+
+
+/* ============================================================
+   LIGNE 1 — BOUTONS
+   ============================================================ */
+
+.pco-table-header-slot .pco-native-controls-line {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+
+  display: flex !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  flex-wrap: nowrap !important;
+
+  gap: 5px !important;
+  margin: 0 !important;
+
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+
+  white-space: nowrap !important;
+}
+
+
+/* Play Legacy */
+.pco-table-header-slot
+.pco-native-play-legacy:not(:disabled) {
+  border-color: rgba(255, 154, 0, .95) !important;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffad19 0%,
+      #ff7900 100%
+    ) !important;
+
+  color: #160b00 !important;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.14),
+    0 0 10px rgba(255,126,0,.16) !important;
+}
+
+
+/* Play PUPPack */
+.pco-table-header-slot
+.pco-native-play-pup:not(:disabled) {
+  border-color: rgba(255, 154, 0, .95) !important;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffad19 0%,
+      #ff7900 100%
+    ) !important;
+
+  color: #160b00 !important;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.14),
+    0 0 10px rgba(255,126,0,.18) !important;
+}
+
+
+/* ============================================================
+   LIGNE 2 — INVENTAIRE
+   ============================================================ */
+
+.pco-table-header-slot .pco-native-summary {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+
+  display: block !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+
+  margin: 0 !important;
+  padding: 5px 2px 0 !important;
+
+  border-top:
+    1px solid rgba(255,176,0,.18);
+
+  overflow: hidden !important;
+
+  white-space: nowrap !important;
+}
+
+
+.pco-table-header-slot .pco-native-inventory {
+  display: flex !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  align-items: center !important;
+
+  flex-wrap: nowrap !important;
+
+  gap: 4px 10px !important;
+
+  overflow: hidden !important;
+
+  white-space: nowrap !important;
+}
+
+
+.pco-table-header-slot .pco-native-inventory-text,
+.pco-table-header-slot .pco-native-indexing {
+  display: block !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  overflow: hidden !important;
+
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+
+/* Garde exactement 2 lignes sur petit affichage */
+@media (max-width: 760px) {
+
+  .pco-table-header-slot
+  .pco-native-controls-line {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+  }
+
+  .pco-table-header-slot
+  .pco-native-status,
+
+  .pco-table-header-slot
+  .pco-native-button {
+    flex: 0 0 auto !important;
+  }
+}

@@ -2056,9 +2056,7 @@ def native_controls_html(
             + ("1" if play_disabled else "0")
             + '"'
             + play_disabled_attr
-            + ">▶ Play PuP</button>"
-            if pup_available
-            else ""
+            + ">▶ Play PUPPack</button>"
         )
         + '<button type="button" class="pco-native-button pco-native-stop" '
         + 'data-pco-action="stop" data-pco-rel="'
@@ -2122,7 +2120,7 @@ def _wrap_commander(app: Any) -> str:
             body = response.get_data(as_text=True)
             body = _inject_assets(
                 body,
-                "/static/pincabos-explorer-table-test-v1.css?v=38",
+                "/static/pincabos-explorer-table-test-v1.css?v=39",
                 "/static/pincabos-explorer-table-test-v1.js?v=41",
             )
             response.set_data(body)
@@ -2287,18 +2285,10 @@ def register(app: Any, detect_batch: Any = None) -> None:
 
             vpx = _resolve_rel(str(health["main_vpx"]))
 
-            if (
-                launch_mode == "pup"
-                and not _pco_local_pup_available(folder)
-            ):
-                return jsonify({
-                    "ok": False,
-                    "error": (
-                        "Aucun PuP-Pack valide détecté "
-                        "pour cette table."
-                    ),
-                    "health": health,
-                }), 400
+            # PINCABOS_EXPLORER_PUPPACK_MANUAL_OVERRIDE_V1
+            # Le bouton Play PUPPack est une commande manuelle.
+            # La detection PuP reste informative dans l'inventaire
+            # mais ne bloque pas un lancement demande explicitement.
 
             state = {
                 "phase": "starting",
