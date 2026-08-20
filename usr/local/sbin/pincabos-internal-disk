@@ -95,6 +95,14 @@ fstab_nettoie() {
     sed -i "\|$MARQUE|d" /etc/fstab
 }
 
+# PINCABOS_INTERNAL_DISK_FSTAB_V2
+# fstab separe ses champs par des espaces : un chemin comme
+# « Visual Pinball » y produit une ligne invalide, sans erreur visible
+# jusqu'au prochain demarrage. La convention est d'ecrire \040.
+fstab_echappe() {
+    printf '%s' "$1" | sed 's/ /\\040/g'
+}
+
 fstab_ajoute() {  # $1 = ligne
     printf '%s  %s\n' "$1" "$MARQUE" >> /etc/fstab
 }
@@ -150,22 +158,85 @@ sys.exit(0 if any(d.get("uuid") == voulu for d in candidats) else 1)
     fi
 
     python3 - "$POINT" <<'PY'
+# PINCABOS_INTERNAL_DISK_ARBRE_V1
 import json, os, sys
+
 racine = sys.argv[1]
-dossiers = []
-try:
-    for e in sorted(os.scandir(racine), key=lambda x: x.name.lower()):
-        if not e.is_dir(follow_symlinks=False) or e.name.startswith(("$", ".")):
+IGNORES = ("$", ".", "System Volume Information", "msdownld.tmp")
+PROFONDEUR_MAX = 3
+BUDGET = 4000          # garde-fou sur un disque tres fourni
+
+
+def heberge(chemin):
+    """Tables reellement portees par ce dossier.
+
+    Deux dispositions coexistent : les .vpx poses a plat — l'habitude
+    Windows — et un sous-dossier par table, celle de PinCabOS. Compter
+    recursivement melangeait les deux et designait un dossier parent qui
+    ne contient, lui, aucune table.
+    """
+    directes = 0
+    en_sous_dossier = 0
+    try:
+        for e in os.scandir(chemin):
+            if e.is_file(follow_symlinks=False) and e.name.lower().endswith(".vpx"):
+                directes += 1
+            elif e.is_dir(follow_symlinks=False) and not e.name.startswith((".", "$")):
+                try:
+                    if any(
+                        f.is_file(follow_symlinks=False) and f.name.lower().endswith(".vpx")
+                        for f in os.scandir(e.path)
+                    ):
+                        en_sous_dossier += 1
+                except OSError:
+                    pass
+    except OSError:
+        return 0
+    return directes + en_sous_dossier
+
+
+candidats = []
+premiers = []
+vus = [0]
+
+
+def explorer(chemin, relatif, profondeur):
+    if profondeur > PROFONDEUR_MAX or vus[0] > BUDGET:
+        return
+    try:
+        entrees = sorted(os.scandir(chemin), key=lambda x: x.name.lower())
+    except OSError:
+        return
+    for e in entrees:
+        if not e.is_dir(follow_symlinks=False) or e.name.startswith(IGNORES):
             continue
-        try:
-            vpx = sum(1 for r, _, f in os.walk(e.path)
-                      for n in f if n.lower().endswith(".vpx"))
-        except OSError:
-            vpx = 0
-        dossiers.append({"nom": e.name, "tables": vpx})
+        vus[0] += 1
+        if vus[0] > BUDGET:
+            return
+        chemin_relatif = e.name if not relatif else relatif + "/" + e.name
+        nombre = heberge(e.path)
+        if profondeur == 1:
+            premiers.append({"nom": chemin_relatif, "tables": nombre})
+        if nombre:
+            candidats.append({"nom": chemin_relatif, "tables": nombre})
+        explorer(e.path, chemin_relatif, profondeur + 1)
+
+
+try:
+    explorer(racine, "", 1)
 except OSError as err:
-    print(json.dumps({"erreur": str(err)}, ensure_ascii=False)); raise SystemExit(0)
-print(json.dumps({"racine": racine, "dossiers": dossiers}, ensure_ascii=False, indent=2))
+    print(json.dumps({"erreur": str(err)}, ensure_ascii=False))
+    raise SystemExit(0)
+
+# Sans aucun dossier porteur, on montre quand meme le premier niveau : le
+# proprietaire sait ou il range ses tables mieux que nous.
+dossiers = candidats or premiers
+dossiers.sort(key=lambda d: (-d["tables"], d["nom"].lower()))
+
+print(json.dumps(
+    {"racine": racine, "racine_tables": heberge(racine), "dossiers": dossiers},
+    ensure_ascii=False, indent=2,
+))
 PY
 }
 
@@ -255,8 +326,8 @@ cmd_adopt() {
 
     fstab_nettoie
     if [ "$boot" = "--boot" ]; then
-        fstab_ajoute "UUID=$uuid  $POINT  $fstype  $opts  0 0"
-        fstab_ajoute "$source  $TABLES  none  bind,nofail  0 0"
+        fstab_ajoute "UUID=$uuid  $(fstab_echappe "$POINT")  $fstype  $opts  0 0"
+        fstab_ajoute "$(fstab_echappe "$source")  $(fstab_echappe "$TABLES")  none  bind,nofail  0 0"
         echo "montage automatique au demarrage : active"
     else
         echo "montage automatique au demarrage : desactive (valable jusqu'au redemarrage)"
