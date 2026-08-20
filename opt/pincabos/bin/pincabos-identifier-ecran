@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# PINCABOS_IDENTIFIER_ECRAN_V1
+#
+# Affiche sur un ecran physique le nom de sa sortie et son role.
+#
+# Rien, dans les fichiers, ne dit quel connecteur correspond a quel ecran du
+# cabinet : DP-0 peut etre le fronton chez l'un et le FullDMD chez l'autre.
+# Le proprietaire est le seul a pouvoir le dire, encore faut-il lui montrer
+# de quel ecran on parle.
+#
+# Deux signaux valent mieux qu'un : un panneau lisible depuis l'autre bout
+# de la piece, et un clignotement — qui reste visible meme si l'image ne
+# peut pas s'afficher.
+#
+#   pincabos-identifier-ecran DP-2 [duree]
+#
+# Aucun privilege : la session X appartient a pinball, comme la webapp.
+
+set -uo pipefail
+
+export DISPLAY="${DISPLAY:-:0}"
+export XAUTHORITY="${XAUTHORITY:-/home/pinball/.Xauthority}"
+
+SORTIE="${1:-}"
+DUREE="${2:-6}"
+CONFIG=/opt/pincabos/config/screens/screens.json
+
+[ -n "$SORTIE" ] || { echo "NOGO [X] Nom de sortie attendu." >&2; exit 2; }
+case "$DUREE" in ''|*[!0-9]*) DUREE=6 ;; esac
+[ "$DUREE" -gt 30 ] && DUREE=30
+
+# ------------------------------------------------------------- geometrie
+LIGNE="$(xrandr --query 2>/dev/null | grep -E "^${SORTIE} connected" | head -1)"
+[ -n "$LIGNE" ] || { echo "NOGO [X] Sortie inconnue ou debranchee : $SORTIE" >&2; exit 2; }
+
+GEO="$(printf '%s' "$LIGNE" | grep -oE '[0-9]+x[0-9]+\+[0-9-]+\+[0-9-]+' | head -1)"
+[ -n "$GEO" ] || { echo "NOGO [X] Cette sortie n'a pas de geometrie active." >&2; exit 2; }
+
+L="${GEO%%x*}"
+RESTE="${GEO#*x}"
+H="${RESTE%%+*}"
+POS="${GEO#*+}"
+X="${POS%%+*}"
+Y="${POS#*+}"
+
+# ------------------------------------------------------------------ role
+ROLE="$(python3 - "$CONFIG" "$SORTIE" <<'PY' 2>/dev/null
+import json, sys
+try:
+    donnees = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    raise SystemExit(0)
+etiquettes = {
+    "playfield": "Plateau",
+    "backglass": "Fronton",
+    "fulldmd": "FullDMD",
+    "topper": "Topper",
+}
+for cle, libelle in etiquettes.items():
+    objet = donnees.get(cle)
+    if isinstance(objet, dict) and str(objet.get("name", "")).strip() == sys.argv[2]:
+        print(libelle)
+        break
+PY
+)"
+[ -n "$ROLE" ] || ROLE="role non attribue"
+
+# ------------------------------------------------- panneau, si possible
+IMAGE="$(mktemp --suffix=.png 2>/dev/null || echo /tmp/pincabos-identification.png)"
+if convert -size "${L}x${H}" xc:'#160a1e' \
+      -gravity center \
+      -fill '#ff9d3d' -pointsize "$((H / 5))" -annotate "+0-$((H / 9))" "$SORTIE" \
+      -fill '#f0e6f4' -pointsize "$((H / 13))" -annotate "+0+$((H / 7))" "$ROLE" \
+      -fill '#8b7697' -pointsize "$((H / 26))" -annotate "+0+$((H / 3))" "${L}x${H} a la position ${X},${Y}" \
+      "$IMAGE" 2>/dev/null && [ -s "$IMAGE" ]; then
+
+    feh -x --hide-pointer -g "${L}x${H}+${X}+${Y}" "$IMAGE" >/dev/null 2>&1 &
+    FEH=$!
+
+    # Le gestionnaire de fenetres peut poser le panneau sous une autre
+    # fenetre : sur un cabinet, le plateau est occupe en permanence.
+    ( sleep 0.6
+      xdotool search --pid "$FEH" 2>/dev/null | while read -r fenetre; do
+          xdotool windowmove "$fenetre" "$X" "$Y" 2>/dev/null
+          xdotool windowraise "$fenetre" 2>/dev/null
+          wmctrl -i -r "$fenetre" -b add,above 2>/dev/null
+      done ) &
+
+    ( sleep "$DUREE"; kill "$FEH" 2>/dev/null; rm -f "$IMAGE" ) &
+    echo "GO [√] Panneau affiche sur $SORTIE ($ROLE) pendant ${DUREE}s."
+else
+    rm -f "$IMAGE"
+    echo "INFO [=] Panneau indisponible ; identification par clignotement seul."
+fi
+
+# ------------------------------------------------------- clignotement
+# Signal de repli, et confirmation utile meme quand le panneau s'affiche.
+# On releve la luminosite courante pour la rendre telle quelle : un ecran
+# volontairement attenue ne doit pas se retrouver a 1.0 apres coup.
+ORIGINE="$(xrandr --verbose --query 2>/dev/null \
+    | awk -v sortie="$SORTIE" '
+        $1 == sortie { dans = 1 }
+        dans && $1 == "Brightness:" { print $2; exit }
+        dans && / connected/ && $1 != sortie { exit }
+      ')"
+case "$ORIGINE" in ''|*[!0-9.]*) ORIGINE=1.0 ;; esac
+
+(
+  for _ in 1 2 3; do
+      xrandr --output "$SORTIE" --brightness 0.3 2>/dev/null
+      sleep 0.3
+      xrandr --output "$SORTIE" --brightness "$ORIGINE" 2>/dev/null
+      sleep 0.3
+  done
+) >/dev/null 2>&1 &
+
+exit 0
