@@ -1,0 +1,391 @@
+#!/usr/bin/env python3
+# PINCABOS_LIBRARY_V1
+#
+# Une bibliotheque, plusieurs sources, aucune copie.
+#
+# Un cabinet reel a ses tables reparties : le disque interne, un disque
+# repris d'un cabinet Windows, parfois un partage. VPinFE, lui, ne lit qu'un
+# dossier et n'y voit que des DOSSIERS — un .vpx pose a plat, comme le fait
+# l'arborescence Windows classique, n'apparait pas.
+#
+# On construit donc un arbre de PRESENTATION sur le disque systeme : un vrai
+# dossier par table, contenant des liens vers les fichiers la ou ils sont.
+# Rien n'est copie, rien n'est deplace, et l'installation d'origine reste
+# utilisable telle quelle.
+#
+#   sources                 sources declarees et ce qu'elles apportent
+#   add CHEMIN [--defaut]   declarer une source
+#   remove CHEMIN           retirer une source
+#   default CHEMIN          designer la source qui recoit les nouvelles tables
+#   build                   (re)construire l'arbre de presentation
+#   status                  etat courant
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+BIBLIOTHEQUE = Path("/home/pinball/Tables")
+CONFIG = Path("/opt/pincabos/config/library.json")
+MARQUEUR = ".pincabos-presentation"
+
+# Dossiers d'une installation VPX qui ne sont pas des tables.
+NON_TABLES = {
+    "pinmame", "music", "scripts", "user", "logs", "cache", "extras",
+    "medias", "media", "pupvideos", "pinupvideo", "altsound", "altcolor",
+    "system volume information", "msdownld.tmp", "$recycle.bin",
+    "documentation", "docs", "vpinmame", "b2s", "backglass",
+}
+
+# Extensions qui accompagnent une table posee a plat.
+COMPAGNONS = {".directb2s", ".ini", ".vbs", ".pov", ".res", ".txt", ".nv", ".png", ".jpg"}
+
+
+def identite_pinball() -> tuple[int, int]:
+    import pwd
+
+    entree = pwd.getpwnam("pinball")
+    return entree.pw_uid, entree.pw_gid
+
+
+# ------------------------------------------------------------ configuration
+
+
+def lire_config() -> dict:
+    try:
+        donnees = json.loads(CONFIG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"sources": []}
+    if not isinstance(donnees, dict):
+        return {"sources": []}
+    donnees.setdefault("sources", [])
+    return donnees
+
+
+def ecrire_config(donnees: dict) -> None:
+    CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    temporaire = CONFIG.with_suffix(".json.tmp")
+    temporaire.write_text(json.dumps(donnees, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporaire.replace(CONFIG)
+    uid, gid = identite_pinball()
+    try:
+        os.chown(CONFIG, uid, gid)
+    except OSError:
+        pass
+
+
+def sources_declarees() -> list[dict]:
+    return [s for s in lire_config().get("sources", []) if isinstance(s, dict) and s.get("chemin")]
+
+
+# ------------------------------------------------------------- inventaire
+
+
+def tables_dune_source(racine: Path) -> list[dict]:
+    """Tables portees par une source, quelle que soit sa disposition.
+
+    Deux dispositions coexistent. Celle de PinCabOS place un dossier par
+    table, avec le .vpx dedans. Celle de Windows pose les .vpx a plat, a
+    cote de dossiers de service — pinmame, music, scripts — qui ne sont pas
+    des tables et qu'il faut ecarter, sans quoi le carrousel se remplit de
+    fausses entrees.
+    """
+    tables: list[dict] = []
+    if not racine.is_dir():
+        return tables
+
+    try:
+        entrees = sorted(os.scandir(racine), key=lambda e: e.name.casefold())
+    except OSError:
+        return tables
+
+    for entree in entrees:
+        chemin = Path(entree.path)
+
+        if entree.is_dir(follow_symlinks=False):
+            if entree.name.casefold() in NON_TABLES or entree.name.startswith((".", "$")):
+                continue
+            try:
+                vpx = [f for f in os.scandir(chemin) if f.is_file() and f.name.casefold().endswith(".vpx")]
+            except OSError:
+                continue
+            if vpx:
+                tables.append({"nom": entree.name, "dossier": chemin, "vpx": Path(vpx[0].path), "plat": False})
+            continue
+
+        if entree.is_file(follow_symlinks=False) and entree.name.casefold().endswith(".vpx"):
+            tables.append(
+                {"nom": Path(entree.name).stem, "dossier": None, "vpx": chemin, "plat": True}
+            )
+
+    return tables
+
+
+def inventaire() -> tuple[list[dict], list[tuple[str, Path, Path]]]:
+    retenues: dict[str, dict] = {}
+    doublons: list[tuple[str, Path, Path]] = []
+
+    for source in sources_declarees():
+        racine = Path(source["chemin"])
+        for table in tables_dune_source(racine):
+            cle = table["nom"].casefold()
+            table["source"] = str(racine)
+            if cle in retenues:
+                doublons.append((table["nom"], retenues[cle]["vpx"], table["vpx"]))
+                continue
+            retenues[cle] = table
+
+    return [retenues[k] for k in sorted(retenues)], doublons
+
+
+# ------------------------------------------------------------ construction
+
+
+def est_presentation(dossier: Path) -> bool:
+    return (dossier / MARQUEUR).is_file()
+
+
+def poser_table(table: dict, uid: int, gid: int) -> bool:
+    """Un vrai dossier, des liens dedans. Rien n'est copie."""
+    cible = BIBLIOTHEQUE / table["nom"]
+
+    if cible.exists() and not est_presentation(cible):
+        # Une vraie table posee la par un import : elle prime, on n'y touche pas.
+        return False
+
+    if cible.exists():
+        shutil.rmtree(cible, ignore_errors=True)
+
+    cible.mkdir(parents=True, exist_ok=True)
+    (cible / MARQUEUR).write_text(
+        "Dossier construit par PinCabOS a partir d'une source declaree.\n"
+        f"Source : {table['source']}\n"
+        "Il ne contient que des liens : supprimer ce dossier ne supprime aucune table.\n",
+        encoding="utf-8",
+    )
+
+    if table["plat"]:
+        # Disposition Windows : le .vpx et ses compagnons portent le meme nom.
+        base = table["vpx"].with_suffix("")
+        for voisin in table["vpx"].parent.iterdir():
+            if voisin.name.startswith(base.name) and (
+                voisin.suffix.casefold() in COMPAGNONS or voisin.suffix.casefold() == ".vpx"
+            ):
+                lien = cible / voisin.name
+                if not lien.exists():
+                    try:
+                        lien.symlink_to(voisin)
+                    except OSError:
+                        pass
+    else:
+        for element in table["dossier"].iterdir():
+            lien = cible / element.name
+            if lien.exists():
+                continue
+            try:
+                lien.symlink_to(element)
+            except OSError:
+                pass
+
+    # Les medias sont ecrits par PinCabOS : ils restent locaux, sur ext4,
+    # meme lorsque la source est en lecture difficile.
+    medias = cible / "medias"
+    if not medias.exists():
+        medias.mkdir(exist_ok=True)
+
+    for chemin in (cible, medias):
+        try:
+            os.chown(chemin, uid, gid)
+        except OSError:
+            pass
+
+    return True
+
+
+def construire() -> tuple[int, int, int]:
+    tables, _ = inventaire()
+    voulus = {t["nom"] for t in tables}
+    uid, gid = identite_pinball()
+
+    BIBLIOTHEQUE.mkdir(parents=True, exist_ok=True)
+
+    retires = 0
+    for entree in list(os.scandir(BIBLIOTHEQUE)):
+        chemin = Path(entree.path)
+        if not entree.is_dir(follow_symlinks=False):
+            continue
+        if est_presentation(chemin) and entree.name not in voulus:
+            shutil.rmtree(chemin, ignore_errors=True)
+            retires += 1
+
+    poses = 0
+    ignores = 0
+    for table in tables:
+        if poser_table(table, uid, gid):
+            poses += 1
+        else:
+            ignores += 1
+
+    return poses, retires, ignores
+
+
+# ------------------------------------------------------------------ sorties
+
+
+def taille_lisible(octets: float) -> str:
+    for unite in ("o", "Ko", "Mo", "Go", "To"):
+        if octets < 1000 or unite == "To":
+            return f"{octets:.0f} {unite}" if unite == "o" else f"{octets:.1f} {unite}"
+        octets /= 1000
+    return ""
+
+
+def cmd_sources(json_sortie: bool) -> int:
+    declarees = sources_declarees()
+    detail = []
+    for source in declarees:
+        racine = Path(source["chemin"])
+        tables = tables_dune_source(racine)
+        detail.append(
+            {
+                "chemin": str(racine),
+                "libelle": source.get("libelle", ""),
+                "defaut": bool(source.get("defaut")),
+                "presente": racine.is_dir(),
+                "tables": len(tables),
+                "disposition": "plate" if tables and tables[0]["plat"] else "un dossier par table",
+            }
+        )
+
+    if json_sortie:
+        print(json.dumps(detail, ensure_ascii=False, indent=2))
+        return 0
+
+    if not detail:
+        print("INFO [=] Aucune source declaree.")
+        print("         pincabos-library add /chemin/vers/vos/tables")
+        return 0
+
+    for source in detail:
+        marques = []
+        if source["defaut"]:
+            marques.append("DEFAUT")
+        if not source["presente"]:
+            marques.append("absente")
+        suffixe = f"   [{' / '.join(marques)}]" if marques else ""
+        print(f"  {source['tables']:4} table(s)   {source['chemin']}{suffixe}")
+        print(f"                   disposition : {source['disposition']}")
+    return 0
+
+
+def cmd_add(chemin: str, defaut: bool) -> int:
+    racine = Path(chemin).expanduser()
+    if not racine.is_dir():
+        print(f"NOGO [X] Dossier introuvable : {racine}", file=sys.stderr)
+        return 2
+
+    donnees = lire_config()
+    for source in donnees["sources"]:
+        if Path(source.get("chemin", "")) == racine:
+            print(f"INFO [=] Source deja declaree : {racine}")
+            return 0
+
+    if defaut:
+        for source in donnees["sources"]:
+            source["defaut"] = False
+
+    donnees["sources"].append(
+        {"chemin": str(racine), "libelle": racine.name, "defaut": bool(defaut) or not donnees["sources"]}
+    )
+    ecrire_config(donnees)
+
+    tables = tables_dune_source(racine)
+    print(f"GO [√] Source declaree : {racine}")
+    print(f"       {len(tables)} table(s) detectee(s).")
+    return 0
+
+
+def cmd_remove(chemin: str) -> int:
+    racine = Path(chemin).expanduser()
+    donnees = lire_config()
+    avant = len(donnees["sources"])
+    donnees["sources"] = [s for s in donnees["sources"] if Path(s.get("chemin", "")) != racine]
+    if len(donnees["sources"]) == avant:
+        print(f"INFO [=] Cette source n'etait pas declaree : {racine}")
+        return 0
+    if donnees["sources"] and not any(s.get("defaut") for s in donnees["sources"]):
+        donnees["sources"][0]["defaut"] = True
+    ecrire_config(donnees)
+    print(f"GO [√] Source retiree : {racine}")
+    return 0
+
+
+def cmd_default(chemin: str) -> int:
+    racine = Path(chemin).expanduser()
+    donnees = lire_config()
+    trouve = False
+    for source in donnees["sources"]:
+        est = Path(source.get("chemin", "")) == racine
+        source["defaut"] = est
+        trouve = trouve or est
+    if not trouve:
+        print(f"NOGO [X] Source non declaree : {racine}", file=sys.stderr)
+        return 2
+    ecrire_config(donnees)
+    print(f"GO [√] Les nouvelles tables iront sur : {racine}")
+    return 0
+
+
+def cmd_status() -> int:
+    tables, doublons = inventaire()
+    declarees = sources_declarees()
+    defaut = next((s["chemin"] for s in declarees if s.get("defaut")), "")
+
+    print(f"bibliotheque   : {BIBLIOTHEQUE}")
+    print(f"sources        : {len(declarees)}")
+    print(f"tables         : {len(tables)}")
+    print(f"disque defaut  : {defaut or '(aucun)'}")
+    if doublons:
+        print(f"doublons       : {len(doublons)}")
+        for nom, retenu, ignore in doublons[:5]:
+            print(f"  {nom}\n      retenu : {retenu}\n      ignore : {ignore}")
+    return 0
+
+
+def main() -> int:
+    analyseur = argparse.ArgumentParser(description="Bibliotheque de tables multi-sources.")
+    analyseur.add_argument(
+        "action", choices=("sources", "add", "remove", "default", "build", "status")
+    )
+    analyseur.add_argument("chemin", nargs="?")
+    analyseur.add_argument("--defaut", action="store_true")
+    analyseur.add_argument("--json", action="store_true")
+    arguments = analyseur.parse_args()
+
+    if arguments.action == "sources":
+        return cmd_sources(arguments.json)
+    if arguments.action == "status":
+        return cmd_status()
+
+    if arguments.action == "build":
+        poses, retires, ignores = construire()
+        print(f"GO [√] {poses} table(s) presentee(s), {retires} retiree(s), {ignores} laissee(s) en place.")
+        return 0
+
+    if not arguments.chemin:
+        print("NOGO [X] Chemin attendu.", file=sys.stderr)
+        return 64
+
+    if arguments.action == "add":
+        return cmd_add(arguments.chemin, arguments.defaut)
+    if arguments.action == "remove":
+        return cmd_remove(arguments.chemin)
+    return cmd_default(arguments.chemin)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
