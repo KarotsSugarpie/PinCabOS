@@ -50,17 +50,28 @@ systeme = sys.argv[1] if len(sys.argv) > 1 else ""
 data = json.load(sys.stdin)
 sorties = []
 
-def parcours(noeuds, parent=""):
+def parcours(noeuds, parent="", herite=None):
+    # PINCABOS_INTERNAL_DISK_PROBE_V2
+    # TRAN et RM ne sont renseignes que sur le disque ; ses partitions les
+    # laissent vides. Sans transmettre ces attributs, une cle USB passait
+    # le filtre et se retrouvait proposee comme disque interne.
+    herite = herite or {}
     for n in noeuds:
         nom = n.get("name", "")
-        parcours(n.get("children", []) or [], nom)
+        courant = {
+            "tran": (n.get("tran") or herite.get("tran") or "").lower(),
+            "rm": n.get("rm") if n.get("rm") is not None else herite.get("rm"),
+        }
+        parcours(n.get("children", []) or [], nom, courant)
         if n.get("type") != "part":
             continue
         pk = n.get("pkname") or parent
         if pk and pk == systeme:
             continue                      # disque systeme : hors de question
-        if n.get("rm"):
+        if courant["rm"]:
             continue                      # amovible : releve de la page USB
+        if courant["tran"] in ("usb", "ieee1394"):
+            continue                      # branche a chaud : page USB aussi
         if not n.get("fstype"):
             continue                      # pas de systeme de fichiers
         if not n.get("uuid"):
@@ -72,7 +83,7 @@ def parcours(noeuds, parent=""):
             "label": n.get("label") or "",
             "size": n.get("size") or 0,
             "mountpoint": n.get("mountpoint") or "",
-            "transport": n.get("tran") or "",
+            "transport": courant["tran"],
         })
 
 parcours(data.get("blockdevices", []))
@@ -99,8 +110,27 @@ cmd_probe() {
     local fstype; fstype="$(lsblk -no FSTYPE "$(readlink -f "$dev")" | head -1)"
     [ "$fstype" = "ntfs" ] && fstype=ntfs3
     mkdir -p "$POINT"
-    mountpoint -q "$POINT" || mount -t "$fstype" -o "$(options_montage "$fstype")" "$dev" "$POINT" \
-        || { echo "Montage impossible ($fstype)." >&2; exit 3; }
+
+    # Le point de travail peut deja porter un autre disque, sonde juste
+    # avant. Se contenter de « monte ou monter » revenait a lister le
+    # contenu du precedent en pretendant decrire celui qu'on demande.
+    local attendu monte
+    attendu="$(readlink -f "$dev")"
+    monte="$(findmnt -no SOURCE "$POINT" 2>/dev/null | head -1)"
+
+    if [ -n "$monte" ] && [ "$(readlink -f "$monte")" != "$attendu" ]; then
+        if findmnt -no SOURCE "$TABLES" >/dev/null 2>&1; then
+            echo "Un disque est deja adopte comme bibliotheque. Liberez-le avant d'en sonder un autre." >&2
+            exit 4
+        fi
+        umount "$POINT" || { echo "Le point de montage est occupe et ne peut etre libere." >&2; exit 3; }
+        monte=""
+    fi
+
+    if [ -z "$monte" ]; then
+        mount -t "$fstype" -o "$(options_montage "$fstype")" "$dev" "$POINT" \
+            || { echo "Montage impossible ($fstype)." >&2; exit 3; }
+    fi
 
     python3 - "$POINT" <<'PY'
 import json, os, sys
