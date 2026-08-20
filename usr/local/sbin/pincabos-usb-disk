@@ -27,6 +27,15 @@ from pathlib import Path
 # La racine est celle que l'Explorateur presente sous « Stockage USB ».
 # Monter ailleurs donnait un montage reussi et invisible.
 RACINE_MONTAGE = Path("/mnt/pincab-usb")
+
+# Racines heritees : un support monte par une version anterieure de cet
+# outil doit rester liberable. On ne monte que sous RACINE_MONTAGE, mais on
+# accepte de demonter ce qui se trouve sous l'une de ces racines.
+RACINES_ACCEPTEES = [
+    RACINE_MONTAGE,
+    Path("/media/pinball"),
+    Path("/run/media/pinball"),
+]
 UTILISATEUR = "pinball"
 
 # Systemes de fichiers acceptes, et options propres a chacun. Les formats
@@ -188,10 +197,18 @@ def demonter(uuid: str) -> int:
         return 0
 
     point = Path(support["montage"])
-    try:
-        point.resolve(strict=True).relative_to(RACINE_MONTAGE.resolve())
-    except (OSError, ValueError):
-        return echec(f"Point de montage hors de {RACINE_MONTAGE} : refus.")
+    accepte = False
+    for racine in RACINES_ACCEPTEES:
+        try:
+            point.resolve(strict=True).relative_to(racine.resolve())
+        except (OSError, ValueError):
+            continue
+        accepte = True
+        break
+
+    if not accepte:
+        lieux = ", ".join(str(r) for r in RACINES_ACCEPTEES)
+        return echec(f"Point de montage hors des emplacements geres ({lieux}) : refus.")
 
     resultat = subprocess.run(["umount", str(point)], capture_output=True, text=True, timeout=60)
     if resultat.returncode != 0:
