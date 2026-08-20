@@ -224,14 +224,35 @@ def adopter():
 
     titre = "Disque adopté" if rc == 0 else "Adoption refusée"
     suite = ("""<p>Le frontend doit être redémarré pour relire sa bibliothèque.</p>
-      <form method="post" action="/service-control">
-        <input type="hidden" name="service" value="pincabos-vpinfe.service">
-        <input type="hidden" name="action" value="restart">
+      <form method="post" action="/tools/internal-disk/restart-frontend">
         <button class="button" type="submit">Redémarrer le frontend</button>
       </form>""" if rc == 0 else "")
 
     return page("Disque interne", f"""<div class="card"><h2>{esc(titre)}</h2>
       <pre>{esc(sortie.strip())}</pre>{suite}</div>"""), (200 if rc == 0 else 500)
+
+
+# PINCABOS_INTERNAL_DISK_RESTART_V1
+#
+# /service-control se termine par redirect(request.referrer). Appele depuis
+# une page nee d'un POST, il y renvoyait le navigateur en GET — methode que
+# cette route refuse, d'ou un « Method Not Allowed » alors que le service
+# redemarrait correctement. On redirige donc vers une page consultable.
+@internal_disk_bp.route("/tools/internal-disk/restart-frontend", methods=["POST"])
+def redemarrer_frontend():
+    import subprocess as _sp
+
+    from flask import redirect as _redirect
+
+    try:
+        _sp.Popen(
+            ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "pincabos-vpinfe.service"],
+            stdout=_sp.DEVNULL,
+            stderr=_sp.DEVNULL,
+        )
+    except Exception:
+        pass
+    return _redirect("/tools/internal-disk")
 
 
 @internal_disk_bp.route("/tools/internal-disk/release", methods=["POST"])

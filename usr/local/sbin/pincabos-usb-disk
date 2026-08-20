@@ -24,7 +24,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-RACINE_MONTAGE = Path("/media/pinball")
+# La racine est celle que l'Explorateur presente sous « Stockage USB ».
+# Monter ailleurs donnait un montage reussi et invisible.
+RACINE_MONTAGE = Path("/mnt/pincab-usb")
 UTILISATEUR = "pinball"
 
 # Systemes de fichiers acceptes, et options propres a chacun. Les formats

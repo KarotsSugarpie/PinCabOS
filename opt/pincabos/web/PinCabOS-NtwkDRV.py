@@ -414,8 +414,8 @@ def _external_disks_page(page, esc):
 </div>
 
 <div class="card" style="margin-top:20px;">
-  <h2>Clés USB</h2>
-  <p>Les clés USB montées automatiquement apparaissent ici et dans <strong>PinCab Explorer → Clés USB</strong>.</p>
+  <h2>Stockage USB</h2>
+  <p>Les supports USB branchés apparaissent ici — clés comme disques durs. Une fois montés, ils sont accessibles dans <strong>PinCab Explorer → Stockage USB</strong>.</p>
   <ul>
     {usb_list}
   </ul>

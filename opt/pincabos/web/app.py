@@ -12148,7 +12148,7 @@ def pincabos_commander_roots():
         "Imports temporaires": Path("/home/pinball/Downloads"),
         "Home Pinball": Path("/home/pinball"),
         "Partage PinCabOS": Path("/home/pinball/Share"),
-        "Clés USB": Path("/mnt/pincab-usb"),
+        "Stockage USB": Path("/mnt/pincab-usb"),
         "Lecteurs SMB": Path("/home/pinball/NetworkDrives"),
     }
 
@@ -12333,11 +12333,11 @@ def tools_external_disks():
 </div>
 
 <div class="card" style="margin-top:20px;">
-  <h2>Clés USB</h2>
+  <h2>Stockage USB</h2>
 
   <p>
     Les clés USB montées automatiquement apparaissent ici et dans
-    <strong>PinCab Explorer → Clés USB</strong>.
+    <strong>PinCab Explorer → Stockage USB</strong>.
   </p>
 
   <ul>
@@ -12596,7 +12596,7 @@ def pcx_roots():
         "Backups": Path("/opt/pincabos/backups"),
         "Medias": Path("/opt/pincabos/media"),
         "PinCabShare": Path("/home/pinball/Share"),
-        "Clés USB": Path("/mnt/pincab-usb"),
+        "Stockage USB": Path("/mnt/pincab-usb"),
         "Lecteurs SMB": Path("/home/pinball/NetworkDrives"),
     }
 
