@@ -58,6 +58,25 @@ def taille_lisible(octets) -> str:
 
 
 def page(titre: str, corps: str) -> str:
+    # PINCABOS_INTERNAL_DISK_THEME_V1
+    #
+    # L'application expose son propre gabarit : menu, entete, pied de page.
+    # S'en passer donnait une page correcte mais visiblement etrangere au
+    # reste de l'interface. On l'emprunte quand il existe, et on garde le
+    # rendu autonome ci-dessous pour les appels hors application.
+    import sys as _sys
+
+    for _nom in ("app", "__main__"):
+        _module = _sys.modules.get(_nom)
+        _gabarit = getattr(_module, "page", None) if _module else None
+        if callable(_gabarit):
+            try:
+                return _gabarit(titre, corps)
+            except TypeError:
+                pass
+            except Exception:
+                pass
+
     return f"""<!doctype html><html><head><meta charset="utf-8">
 <title>PinCabOS — {esc(titre)}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -109,22 +128,28 @@ def page_disque():
           clés USB — et les partitions sans système de fichiers ou sans identifiant stable.</p></div>"""
         return page("Disque interne", corps)
 
+    # PINCABOS_INTERNAL_DISK_MOTS_V1
     lignes = "".join(
         f"""<tr><td><strong>{esc(p.get('label') or p['device'])}</strong><br>
              <small>{esc(p['device'])} — {esc(p['fstype'])} — {esc(taille_lisible(p.get('size')))}</small></td>
-            <td>{'<em>déjà monté sur ' + esc(p['mountpoint']) + '</em>' if p.get('mountpoint') else ''}</td>
+            <td>{'<span style="color:#6ec98d">monté</span><br><small>' + esc(p['mountpoint']) + '</small>' if p.get('mountpoint') else '<span style="opacity:.6">non monté</span>'}</td>
             <td><form method="post" action="/tools/internal-disk/probe">
                   <input type="hidden" name="uuid" value="{esc(p['uuid'])}">
-                  <button class="button" type="submit">Explorer</button>
+                  <button class="button" type="submit">{'Choisir le dossier' if p.get('mountpoint') else 'Monter et choisir le dossier'}</button>
                 </form></td></tr>"""
         for p in partitions
     )
 
     corps = bloc_etat() + f"""<div class="card"><h2>Disques internes détectés</h2>
-      <p>Choisis le disque qui contient tes tables, puis le dossier à utiliser.
-      Le NTFS est pris en charge&nbsp;: il sera monté aux droits du compte du cabinet,
-      sans quoi le frontend ne pourrait rien y écrire.</p>
-      <table><tbody>{lignes}</tbody></table></div>"""
+      <p>Choisissez le disque qui contient vos tables. Le bouton le monte s'il ne
+      l'est pas encore, puis vous présente ses dossiers avec le nombre de tables
+      que chacun contient, pour désigner le bon.</p>
+      <p>Le NTFS est pris en charge&nbsp;: il est monté aux droits du compte du
+      cabinet, sans quoi le frontend ne pourrait rien y écrire.</p>
+      <table>
+        <thead><tr><th>Disque</th><th>État</th><th>Action</th></tr></thead>
+        <tbody>{lignes}</tbody>
+      </table></div>"""
     return page("Disque interne", corps)
 
 
@@ -153,10 +178,20 @@ def explorer():
         )
 
     tables_presentes = any(TABLES.iterdir()) if TABLES.is_dir() else False
-    avertissement = ("""<p class="avert"><strong>Attention&nbsp;:</strong> le dossier de tables
-      actuel n'est pas vide. L'adoption sera refusée tant que son contenu n'aura pas été
-      déplacé vers le disque — un montage lié le rendrait invisible sans l'effacer, et
-      mieux vaut refuser que de laisser croire à une perte.</p>""" if tables_presentes else "")
+    # PINCABOS_INTERNAL_DISK_DEPLACER_V1
+    # Une installation fraiche livre des tables d'exemple : le dossier n'est
+    # donc presque jamais vide, et refuser sans proposer d'issue renvoyait
+    # chaque proprietaire a la ligne de commande.
+    combien = len(list(TABLES.iterdir())) if TABLES.is_dir() else 0
+    avertissement = (f"""<p class="avert"><strong>Attention&nbsp;:</strong> le dossier de tables
+      actuel contient déjà {combien} élément(s). Un montage lié les rendrait invisibles
+      sans les effacer, ce qui laisserait croire à une perte&nbsp;: l'adoption les déplace
+      donc vers le disque, ou refuse.</p>
+      <p><label><input type="checkbox" name="deplacer" value="1" required>
+      <strong>Déplacer ces {combien} élément(s) vers le disque</strong></label><br>
+      <small>Ils sont transférés dans le dossier choisi ci-dessus, sans copie ni
+      suppression. Si un nom existe déjà des deux côtés, rien n'est déplacé et
+      l'opération s'interrompt.</small></p>""" if tables_presentes else "")
 
     corps = f"""<div class="card"><h2>Choix du dossier</h2>
       <p>Les dossiers de ce disque sont listés avec le nombre de tables qu'ils contiennent,
@@ -189,18 +224,41 @@ def adopter():
     args = ["adopt", uuid, sous]
     if boot:
         args.append("--boot")
+    if request.form.get("deplacer"):
+        args.append("--deplacer")
     rc, sortie = aide(*args, timeout=120)
 
     titre = "Disque adopté" if rc == 0 else "Adoption refusée"
     suite = ("""<p>Le frontend doit être redémarré pour relire sa bibliothèque.</p>
-      <form method="post" action="/service-control">
-        <input type="hidden" name="service" value="pincabos-vpinfe.service">
-        <input type="hidden" name="action" value="restart">
+      <form method="post" action="/tools/internal-disk/restart-frontend">
         <button class="button" type="submit">Redémarrer le frontend</button>
       </form>""" if rc == 0 else "")
 
     return page("Disque interne", f"""<div class="card"><h2>{esc(titre)}</h2>
       <pre>{esc(sortie.strip())}</pre>{suite}</div>"""), (200 if rc == 0 else 500)
+
+
+# PINCABOS_INTERNAL_DISK_RESTART_V1
+#
+# /service-control se termine par redirect(request.referrer). Appele depuis
+# une page nee d'un POST, il y renvoyait le navigateur en GET — methode que
+# cette route refuse, d'ou un « Method Not Allowed » alors que le service
+# redemarrait correctement. On redirige donc vers une page consultable.
+@internal_disk_bp.route("/tools/internal-disk/restart-frontend", methods=["POST"])
+def redemarrer_frontend():
+    import subprocess as _sp
+
+    from flask import redirect as _redirect
+
+    try:
+        _sp.Popen(
+            ["/usr/bin/sudo", "/usr/bin/systemctl", "restart", "pincabos-vpinfe.service"],
+            stdout=_sp.DEVNULL,
+            stderr=_sp.DEVNULL,
+        )
+    except Exception:
+        pass
+    return _redirect("/tools/internal-disk")
 
 
 @internal_disk_bp.route("/tools/internal-disk/release", methods=["POST"])

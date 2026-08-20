@@ -460,7 +460,7 @@ def tools_hub_html():
         <p class="pco-tools-family-kicker">Système · fichiers · administration</p>
         <h2>Outils PinCabOS</h2>
         <p class="pco-tools-family-intro">
-          Import, export, exploration de fichiers, console, disques externes et apparence.
+          Import, export, exploration de fichiers, console, stockage et apparence.
         </p>
       </div>
 
@@ -566,10 +566,10 @@ def tools_hub_html():
 <a class="tool-card" href="/tools/external-disks">
           <div class="pco-tool-art">
             <img src="/static/pincabos-assets/PCOSDisquesExternes.png?v=toolsart1"
-                 alt="Gestion disques externes" loading="lazy">
+                 alt="Gestion du stockage" loading="lazy">
           </div>
           <div class="pco-tool-body">
-            <strong>Gestion disques externes</strong>
+            <strong>Gestion du stockage</strong>
             <span class="pco-tool-description">USB, SMB, montages, détection et accès aux médias externes.</span>
             <div class="pco-tool-footer"><span>Gérer les disques</span><span class="pco-tool-open">→</span></div>
           </div>

@@ -1,0 +1,6 @@
+# PinCabOS — montage des supports USB depuis l'interface.
+# L'outil valide lui-meme l'identifiant, refuse tout ce qui n'est pas un
+# support USB amovible, et ne monte que sous /media/pinball.
+pinball ALL=(root) NOPASSWD: \
+  /usr/local/sbin/pincabos-usb-disk mount *, \
+  /usr/local/sbin/pincabos-usb-disk unmount *

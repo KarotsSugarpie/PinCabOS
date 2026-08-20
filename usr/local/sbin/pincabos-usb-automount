@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# PINCABOS_USB_AUTOMOUNT_V1
+#
+# Monte les supports USB des qu'ils sont branches, et nettoie a l'arrachage.
+#
+# Un cabinet n'a pas d'environnement de bureau : rien n'y monte les cles.
+# Un testeur branche la sienne, ouvre l'Explorateur, ne la voit pas, et
+# conclut que la fonction manque. Le bouton « Monter » de la page de
+# stockage repond a qui le trouve ; ce service repond a tout le monde.
+#
+# Tout le travail de fond — filtrage des supports, options de montage,
+# droits — reste dans pincabos-usb-disk : une seule autorite, deux
+# declencheurs.
+#
+#   pincabos-usb-automount ajout sdb1     appele par udev au branchement
+#   pincabos-usb-automount nettoyage      appele par udev au retrait
+set -uo pipefail
+
+OUTIL=/usr/local/sbin/pincabos-usb-disk
+RACINE=/mnt/pincab-usb
+JOURNAL=/var/log/pincabos/usb-automount.log
+
+mkdir -p "$(dirname "$JOURNAL")"
+exec >>"$JOURNAL" 2>&1
+
+ACTION="${1:-}"
+NOM="${2:-}"
+
+horodate() { date '+%F %T'; }
+
+case "$ACTION" in
+  ajout)
+    [ -n "$NOM" ] || exit 2
+    [ -x "$OUTIL" ] || exit 0
+
+    # udev peut nous reveiller avant que l'UUID soit lisible.
+    UUID=""
+    for _ in 1 2 3 4 5; do
+      UUID="$(lsblk -no UUID "/dev/$NOM" 2>/dev/null | head -1)"
+      [ -n "$UUID" ] && break
+      sleep 1
+    done
+    [ -n "$UUID" ] || { echo "$(horodate) $NOM : aucun UUID lisible, ignore"; exit 0; }
+
+    # L'outil refuse de lui-meme tout ce qui n'est pas un support USB
+    # amovible : pas besoin de refaire le tri ici.
+    echo "$(horodate) $NOM ($UUID) : montage automatique"
+    "$OUTIL" mount "$UUID" || echo "$(horodate) $NOM : montage refuse (voir ci-dessus)"
+    ;;
+
+  nettoyage)
+    # Un support arrache laisse un montage mort et un dossier vide. On les
+    # retire pour que l'Explorateur ne montre pas des entrees fantomes.
+    [ -d "$RACINE" ] || exit 0
+    while IFS= read -r point; do
+      [ -n "$point" ] || continue
+      source_bloc="$(findmnt -no SOURCE "$point" 2>/dev/null)"
+      if [ -n "$source_bloc" ] && [ ! -b "$source_bloc" ]; then
+        echo "$(horodate) $point : support disparu, demontage"
+        umount -l "$point" 2>/dev/null || true
+        rmdir "$point" 2>/dev/null || true
+      fi
+    done < <(findmnt -rno TARGET | grep -F "$RACINE/" || true)
+
+    # Dossiers vides restes d'un montage precedent.
+    for dossier in "$RACINE"/*/; do
+      [ -d "$dossier" ] || continue
+      mountpoint -q "$dossier" && continue
+      rmdir "$dossier" 2>/dev/null || true
+    done
+    ;;
+
+  *)
+    echo "Usage : $0 ajout NOM_NOYAU | nettoyage" >&2
+    exit 64
+    ;;
+esac

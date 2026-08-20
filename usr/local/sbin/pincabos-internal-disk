@@ -50,17 +50,28 @@ systeme = sys.argv[1] if len(sys.argv) > 1 else ""
 data = json.load(sys.stdin)
 sorties = []
 
-def parcours(noeuds, parent=""):
+def parcours(noeuds, parent="", herite=None):
+    # PINCABOS_INTERNAL_DISK_PROBE_V2
+    # TRAN et RM ne sont renseignes que sur le disque ; ses partitions les
+    # laissent vides. Sans transmettre ces attributs, une cle USB passait
+    # le filtre et se retrouvait proposee comme disque interne.
+    herite = herite or {}
     for n in noeuds:
         nom = n.get("name", "")
-        parcours(n.get("children", []) or [], nom)
+        courant = {
+            "tran": (n.get("tran") or herite.get("tran") or "").lower(),
+            "rm": n.get("rm") if n.get("rm") is not None else herite.get("rm"),
+        }
+        parcours(n.get("children", []) or [], nom, courant)
         if n.get("type") != "part":
             continue
         pk = n.get("pkname") or parent
         if pk and pk == systeme:
             continue                      # disque systeme : hors de question
-        if n.get("rm"):
+        if courant["rm"]:
             continue                      # amovible : releve de la page USB
+        if courant["tran"] in ("usb", "ieee1394"):
+            continue                      # branche a chaud : page USB aussi
         if not n.get("fstype"):
             continue                      # pas de systeme de fichiers
         if not n.get("uuid"):
@@ -72,7 +83,7 @@ def parcours(noeuds, parent=""):
             "label": n.get("label") or "",
             "size": n.get("size") or 0,
             "mountpoint": n.get("mountpoint") or "",
-            "transport": n.get("tran") or "",
+            "transport": courant["tran"],
         })
 
 parcours(data.get("blockdevices", []))
@@ -82,6 +93,14 @@ print(json.dumps(sorties, ensure_ascii=False, indent=2))
 
 fstab_nettoie() {
     sed -i "\|$MARQUE|d" /etc/fstab
+}
+
+# PINCABOS_INTERNAL_DISK_FSTAB_V2
+# fstab separe ses champs par des espaces : un chemin comme
+# « Visual Pinball » y produit une ligne invalide, sans erreur visible
+# jusqu'au prochain demarrage. La convention est d'ecrire \040.
+fstab_echappe() {
+    printf '%s' "$1" | sed 's/ /\\040/g'
 }
 
 fstab_ajoute() {  # $1 = ligne
@@ -96,34 +115,144 @@ cmd_probe() {
     [ -n "$uuid" ] || { echo "UUID manquant." >&2; exit 2; }
     local dev="/dev/disk/by-uuid/$uuid"
     [ -b "$dev" ] || { echo "Aucune partition avec cet UUID." >&2; exit 2; }
+
+    # PINCABOS_INTERNAL_DISK_CANDIDAT_V1
+    # Sonder revient a monter : on ne le fait que pour un disque que l'on
+    # accepterait d'adopter. Sans ce controle, sonder une cle USB demontait
+    # le disque interne pour prendre sa place sur le point de travail.
+    if ! cmd_list | python3 -c '
+import json, sys
+voulu = sys.argv[1]
+try:
+    candidats = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+sys.exit(0 if any(d.get("uuid") == voulu for d in candidats) else 1)
+' "$uuid"; then
+        echo "Ce support n'est pas un disque interne adoptable : amovible, disque systeme, ou sans systeme de fichiers exploitable." >&2
+        exit 2
+    fi
     local fstype; fstype="$(lsblk -no FSTYPE "$(readlink -f "$dev")" | head -1)"
     [ "$fstype" = "ntfs" ] && fstype=ntfs3
     mkdir -p "$POINT"
-    mountpoint -q "$POINT" || mount -t "$fstype" -o "$(options_montage "$fstype")" "$dev" "$POINT" \
-        || { echo "Montage impossible ($fstype)." >&2; exit 3; }
+
+    # Le point de travail peut deja porter un autre disque, sonde juste
+    # avant. Se contenter de « monte ou monter » revenait a lister le
+    # contenu du precedent en pretendant decrire celui qu'on demande.
+    local attendu monte
+    attendu="$(readlink -f "$dev")"
+    monte="$(findmnt -no SOURCE "$POINT" 2>/dev/null | head -1)"
+
+    if [ -n "$monte" ] && [ "$(readlink -f "$monte")" != "$attendu" ]; then
+        if findmnt -no SOURCE "$TABLES" >/dev/null 2>&1; then
+            echo "Un disque est deja adopte comme bibliotheque. Liberez-le avant d'en sonder un autre." >&2
+            exit 4
+        fi
+        umount "$POINT" || { echo "Le point de montage est occupe et ne peut etre libere." >&2; exit 3; }
+        monte=""
+    fi
+
+    if [ -z "$monte" ]; then
+        mount -t "$fstype" -o "$(options_montage "$fstype")" "$dev" "$POINT" \
+            || { echo "Montage impossible ($fstype)." >&2; exit 3; }
+    fi
 
     python3 - "$POINT" <<'PY'
+# PINCABOS_INTERNAL_DISK_ARBRE_V1
 import json, os, sys
+
 racine = sys.argv[1]
-dossiers = []
-try:
-    for e in sorted(os.scandir(racine), key=lambda x: x.name.lower()):
-        if not e.is_dir(follow_symlinks=False) or e.name.startswith(("$", ".")):
+IGNORES = ("$", ".", "System Volume Information", "msdownld.tmp")
+PROFONDEUR_MAX = 3
+BUDGET = 4000          # garde-fou sur un disque tres fourni
+
+
+def heberge(chemin):
+    """Tables reellement portees par ce dossier.
+
+    Deux dispositions coexistent : les .vpx poses a plat — l'habitude
+    Windows — et un sous-dossier par table, celle de PinCabOS. Compter
+    recursivement melangeait les deux et designait un dossier parent qui
+    ne contient, lui, aucune table.
+    """
+    directes = 0
+    en_sous_dossier = 0
+    try:
+        for e in os.scandir(chemin):
+            if e.is_file(follow_symlinks=False) and e.name.lower().endswith(".vpx"):
+                directes += 1
+            elif e.is_dir(follow_symlinks=False) and not e.name.startswith((".", "$")):
+                try:
+                    if any(
+                        f.is_file(follow_symlinks=False) and f.name.lower().endswith(".vpx")
+                        for f in os.scandir(e.path)
+                    ):
+                        en_sous_dossier += 1
+                except OSError:
+                    pass
+    except OSError:
+        return 0
+    return directes + en_sous_dossier
+
+
+candidats = []
+premiers = []
+vus = [0]
+
+
+def explorer(chemin, relatif, profondeur):
+    if profondeur > PROFONDEUR_MAX or vus[0] > BUDGET:
+        return
+    try:
+        entrees = sorted(os.scandir(chemin), key=lambda x: x.name.lower())
+    except OSError:
+        return
+    for e in entrees:
+        if not e.is_dir(follow_symlinks=False) or e.name.startswith(IGNORES):
             continue
-        try:
-            vpx = sum(1 for r, _, f in os.walk(e.path)
-                      for n in f if n.lower().endswith(".vpx"))
-        except OSError:
-            vpx = 0
-        dossiers.append({"nom": e.name, "tables": vpx})
+        vus[0] += 1
+        if vus[0] > BUDGET:
+            return
+        chemin_relatif = e.name if not relatif else relatif + "/" + e.name
+        nombre = heberge(e.path)
+        if profondeur == 1:
+            premiers.append({"nom": chemin_relatif, "tables": nombre})
+        if nombre:
+            candidats.append({"nom": chemin_relatif, "tables": nombre})
+        explorer(e.path, chemin_relatif, profondeur + 1)
+
+
+try:
+    explorer(racine, "", 1)
 except OSError as err:
-    print(json.dumps({"erreur": str(err)}, ensure_ascii=False)); raise SystemExit(0)
-print(json.dumps({"racine": racine, "dossiers": dossiers}, ensure_ascii=False, indent=2))
+    print(json.dumps({"erreur": str(err)}, ensure_ascii=False))
+    raise SystemExit(0)
+
+# Sans aucun dossier porteur, on montre quand meme le premier niveau : le
+# proprietaire sait ou il range ses tables mieux que nous.
+dossiers = candidats or premiers
+dossiers.sort(key=lambda d: (-d["tables"], d["nom"].lower()))
+
+print(json.dumps(
+    {"racine": racine, "racine_tables": heberge(racine), "dossiers": dossiers},
+    ensure_ascii=False, indent=2,
+))
 PY
 }
 
 cmd_adopt() {
-    local uuid="${1:-}" sous="${2:-}" boot="${3:-}"
+    # PINCABOS_INTERNAL_DISK_DEPLACER_V1
+    # Les options sont lues sans ordre impose : --boot et --deplacer peuvent
+    # arriver dans un sens ou dans l'autre selon l'appelant.
+    local uuid="${1:-}" sous="${2:-}" boot="" deplacer=""
+    shift 2 2>/dev/null || true
+    local option
+    for option in "$@"; do
+        case "$option" in
+            --boot)     boot="--boot" ;;
+            --deplacer) deplacer="oui" ;;
+        esac
+    done
     [ -n "$uuid" ] || { echo "UUID manquant." >&2; exit 2; }
     local dev="/dev/disk/by-uuid/$uuid"
     [ -b "$dev" ] || { echo "Aucune partition avec cet UUID." >&2; exit 2; }
@@ -145,11 +274,79 @@ cmd_adopt() {
     # Le dossier d'origine doit etre vide, sinon son contenu devient
     # invisible sans etre efface — on refuse plutot que de surprendre.
     mkdir -p "$TABLES"
-    if ! mountpoint -q "$TABLES" && [ -n "$(ls -A "$TABLES" 2>/dev/null)" ]; then
-        echo "ATTENTION: $TABLES n'est pas vide." >&2
-        echo "Deplacez son contenu vers $source, puis relancez." >&2
-        umount "$POINT" 2>/dev/null || true
-        exit 4
+    # Un dossier qui ne contient que des tables de demonstration n'a rien a
+    # proteger : elles sont jetables par construction.
+    local reste_utile=0 candidat
+    if ! mountpoint -q "$TABLES"; then
+        for candidat in "$TABLES"/* "$TABLES"/.[!.]*; do
+            [ -e "$candidat" ] || continue
+            [ -e "$candidat/.pincabos-sample-table" ] && continue
+            reste_utile=1
+        done
+    fi
+
+    if ! mountpoint -q "$TABLES" && [ "$reste_utile" = "1" ]; then
+        if [ "$deplacer" != "oui" ]; then
+            echo "ATTENTION: $TABLES n'est pas vide." >&2
+            echo "Relancez avec --deplacer pour transferer son contenu vers $source," >&2
+            echo "ou videz le dossier vous-meme." >&2
+            umount "$POINT" 2>/dev/null || true
+            exit 4
+        fi
+
+        # PINCABOS_INTERNAL_DISK_ECHANTILLONS_V1
+        # Les tables de demonstration portent un marqueur et sont retirees
+        # par pincabos-sample-tables des qu'une vraie table existe. Les
+        # emporter sur le disque de l'utilisateur revenait a y deposer du
+        # contenu qu'un autre mecanisme viendrait effacer ensuite.
+        local MARQUEUR_ECHANTILLON=".pincabos-sample-table"
+        est_echantillon() {
+            [ -e "$1/$MARQUEUR_ECHANTILLON" ]
+        }
+
+        # Un nom deja pris des deux cotes signifierait ecraser ou fusionner
+        # sans que personne ne l'ait demande. On s'arrete avant d'y toucher.
+        local entree base collision=""
+        for entree in "$TABLES"/* "$TABLES"/.[!.]*; do
+            [ -e "$entree" ] || continue
+            est_echantillon "$entree" && continue
+            base="$(basename "$entree")"
+            [ -e "$source/$base" ] && collision="$collision $base"
+        done
+        if [ -n "$collision" ]; then
+            echo "ATTENTION: ces noms existent deja sur le disque :$collision" >&2
+            echo "Rien n'a ete deplace. Renommez ou retirez ces elements, puis relancez." >&2
+            umount "$POINT" 2>/dev/null || true
+            exit 5
+        fi
+
+        # PINCABOS_INTERNAL_DISK_CHOWN_V2
+        # Les droits ne sont ajustes que sur ce que l'on vient de deplacer.
+        # Un chown recursif sur le dossier entier aurait aussi reecrit le
+        # proprietaire des tables deja presentes — invisible sur NTFS, bien
+        # reel sur ext4, et jamais demande.
+        local deplaces=0 ignores=0
+        for entree in "$TABLES"/* "$TABLES"/.[!.]*; do
+            [ -e "$entree" ] || continue
+            if est_echantillon "$entree"; then
+                ignores=$((ignores + 1))
+                continue
+            fi
+            base="$(basename "$entree")"
+            if mv -- "$entree" "$source/"; then
+                chown -R "$PINBALL_UID:$PINBALL_GID" "$source/$base" 2>/dev/null || true
+                deplaces=$((deplaces + 1))
+            else
+                echo "Deplacement interrompu sur $base." >&2
+                echo "Les elements deja transferes se trouvent dans $source." >&2
+                umount "$POINT" 2>/dev/null || true
+                exit 5
+            fi
+        done
+        echo "$deplaces element(s) deplace(s) vers $source"
+        if [ "$ignores" -gt 0 ]; then
+            echo "$ignores table(s) de demonstration laissee(s) sur place : PinCabOS les retire lui-meme."
+        fi
     fi
 
     mountpoint -q "$TABLES" || mount --bind "$source" "$TABLES" \
@@ -158,8 +355,8 @@ cmd_adopt() {
 
     fstab_nettoie
     if [ "$boot" = "--boot" ]; then
-        fstab_ajoute "UUID=$uuid  $POINT  $fstype  $opts  0 0"
-        fstab_ajoute "$source  $TABLES  none  bind,nofail  0 0"
+        fstab_ajoute "UUID=$uuid  $(fstab_echappe "$POINT")  $fstype  $opts  0 0"
+        fstab_ajoute "$(fstab_echappe "$source")  $(fstab_echappe "$TABLES")  none  bind,nofail  0 0"
         echo "montage automatique au demarrage : active"
     else
         echo "montage automatique au demarrage : desactive (valable jusqu'au redemarrage)"

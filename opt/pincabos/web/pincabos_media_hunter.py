@@ -1240,7 +1240,7 @@ def _index_folder(source: dict[str, Any]) -> dict[str, list[str]]:
     if raw_path.startswith("file://"):
         raw_path = urllib.parse.unquote(urllib.parse.urlparse(raw_path).path)
     if raw_path.startswith("\\\\") or raw_path.startswith("smb://"):
-        raise RuntimeError("Chemin SMB/UNC non monté. Monte le partage dans Disques externes, puis utilise son chemin Linux.")
+        raise RuntimeError("Chemin SMB/UNC non monté. Monte le partage dans Stockage, puis utilise son chemin Linux.")
     root = Path(os.path.expanduser(raw_path))
     if not root.is_dir():
         raise RuntimeError(f"Dossier inaccessible: {root}")
@@ -1546,7 +1546,7 @@ def _source_test(source: dict[str, Any]) -> tuple[bool, str]:
     if source_type == "folder":
         raw_path = str(source.get("path") or source.get("location") or "").strip()
         if raw_path.startswith("\\\\") or raw_path.startswith("smb://"):
-            return False, "Monte d'abord le partage SMB dans Disques externes et utilise le chemin Linux monté."
+            return False, "Monte d'abord le partage SMB dans Stockage et utilise le chemin Linux monté."
         root = Path(os.path.expanduser(raw_path.replace("file://", "")))
         if not root.is_dir():
             return False, f"Dossier inaccessible: {root}"
@@ -1796,7 +1796,7 @@ def _page_html() -> str:
         <div><label>Priorité</label><input id="mhSourcePriority" type="number" min="1" max="9999" value="100"></div><div><label>Types de médias</label><div id="mhSourceMedia" class="mh-media-box">{media_options}</div></div>
         <label class="mh-check"><input id="mhSourceEnabled" type="checkbox" checked> Source activée</label><label class="mh-check" id="mhRecursiveWrap"><input id="mhSourceRecursive" type="checkbox" checked> Recherche récursive</label>
         <div class="mh-actions"><button class="mh-btn" type="submit">Enregistrer la source</button><button class="mh-btn secondary" type="button" id="mhSourceReset">Nouvelle source</button></div>
-        <small class="mh-warn">Les chemins SMB/UNC doivent être montés avec Disques externes. Pour PinballX, le serveur officiel est ftp.gameex.com sur le port 21; aucune source FTP ni aucun compte n'est créé automatiquement.</small>
+        <small class="mh-warn">Les chemins SMB/UNC doivent être montés depuis Stockage. Pour PinballX, le serveur officiel est ftp.gameex.com sur le port 21; aucune source FTP ni aucun compte n'est créé automatiquement.</small>
       </form>
     </section>
     <section class="mh-panel"><h2>Tables et médias manquants</h2><div class="mh-status" id="mhStatus">Chargement…<div class="mh-progress"><i id="mhProgress"></i></div></div>

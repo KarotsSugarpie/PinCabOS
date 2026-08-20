@@ -1,0 +1,268 @@
+#!/usr/bin/env python3
+# PINCABOS_USB_DISK_V1
+#
+# Montage des supports USB depuis l'interface.
+#
+# La page de stockage ne listait que les dossiers deja montes sous
+# /media/pinball. Or rien ne monte les cles USB sur un cabinet : il n'y a pas
+# d'environnement de bureau pour le faire. La page restait donc vide en
+# permanence, et un support branche paraissait « non reconnu » alors que le
+# noyau le voyait parfaitement.
+#
+# Cet outil enumere les supports USB, qu'ils soient montes ou non, et permet
+# de les monter et demonter. Il refuse tout ce qui n'est pas un support USB
+# amovible, et ne monte que sous /media/pinball.
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+# La racine est celle que l'Explorateur presente sous « Stockage USB ».
+# Monter ailleurs donnait un montage reussi et invisible.
+RACINE_MONTAGE = Path("/mnt/pincab-usb")
+
+# Racines heritees : un support monte par une version anterieure de cet
+# outil doit rester liberable. On ne monte que sous RACINE_MONTAGE, mais on
+# accepte de demonter ce qui se trouve sous l'une de ces racines.
+RACINES_ACCEPTEES = [
+    RACINE_MONTAGE,
+    Path("/media/pinball"),
+    Path("/run/media/pinball"),
+]
+UTILISATEUR = "pinball"
+
+# Systemes de fichiers acceptes, et options propres a chacun. Les formats
+# sans droits Unix ont besoin d'un proprietaire explicite, sinon le contenu
+# appartient a root et le lanceur ne peut rien lire.
+SANS_DROITS_UNIX = {"vfat", "exfat", "ntfs", "ntfs3"}
+SYSTEMES_CONNUS = SANS_DROITS_UNIX | {"ext2", "ext3", "ext4", "btrfs", "xfs", "f2fs"}
+
+MOTIF_UUID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{2,63}$")
+
+
+def echec(message: str) -> int:
+    print(f"NOGO [X] {message}", file=sys.stderr)
+    return 1
+
+
+def identite_pinball() -> tuple[int, int]:
+    import pwd
+
+    entree = pwd.getpwnam(UTILISATEUR)
+    return entree.pw_uid, entree.pw_gid
+
+
+def arbre_blocs() -> list[dict]:
+    try:
+        brut = subprocess.run(
+            [
+                "lsblk", "-J", "-b", "-o",
+                "NAME,PATH,SIZE,FSTYPE,LABEL,UUID,MOUNTPOINT,TRAN,TYPE,RM,HOTPLUG",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        ).stdout
+        return json.loads(brut).get("blockdevices", [])
+    except Exception:
+        return []
+
+
+def supports_usb() -> list[dict]:
+    """Partitions portees par un peripherique USB.
+
+    Le champ TRAN n'est renseigne que sur le disque parent ; les partitions
+    en heritent. On descend donc l'arbre en conservant le transport du pere.
+    """
+    trouves: list[dict] = []
+
+    def descendre(noeud: dict, transport: str, disque: str) -> None:
+        transport = (noeud.get("tran") or transport or "").lower()
+        if noeud.get("type") == "disk":
+            disque = noeud.get("path") or disque
+
+        enfants = noeud.get("children") or []
+        if noeud.get("type") == "part" and transport == "usb":
+            trouves.append(
+                {
+                    "nom": noeud.get("name", ""),
+                    "peripherique": noeud.get("path", ""),
+                    "disque": disque,
+                    "taille": noeud.get("size") or 0,
+                    "systeme": (noeud.get("fstype") or "").lower(),
+                    "etiquette": noeud.get("label") or "",
+                    "uuid": noeud.get("uuid") or "",
+                    "montage": noeud.get("mountpoint") or "",
+                }
+            )
+        for enfant in enfants:
+            descendre(enfant, transport, disque)
+
+    for noeud in arbre_blocs():
+        descendre(noeud, "", "")
+
+    # Un support sans UUID ne peut pas etre designe sans ambiguite ; on le
+    # montre quand meme, en signalant pourquoi il n'est pas montable.
+    for support in trouves:
+        support["montable"] = bool(
+            support["uuid"] and support["systeme"] in SYSTEMES_CONNUS
+        )
+        if not support["uuid"]:
+            support["raison"] = "sans identifiant lisible"
+        elif support["systeme"] not in SYSTEMES_CONNUS:
+            support["raison"] = f"systeme de fichiers non pris en charge ({support['systeme'] or 'inconnu'})"
+        else:
+            support["raison"] = ""
+
+    return sorted(trouves, key=lambda s: s["nom"])
+
+
+def par_uuid(uuid: str) -> dict | None:
+    for support in supports_usb():
+        if support["uuid"] == uuid:
+            return support
+    return None
+
+
+def nom_de_dossier(support: dict) -> str:
+    brut = support["etiquette"] or support["uuid"] or support["nom"]
+    propre = re.sub(r"[^A-Za-z0-9._-]+", "_", brut).strip("._-")
+    return propre or support["nom"]
+
+
+def monter(uuid: str) -> int:
+    if not MOTIF_UUID.match(uuid):
+        return echec("Identifiant refuse.")
+
+    support = par_uuid(uuid)
+    if support is None:
+        return echec("Aucun support USB ne porte cet identifiant.")
+    if support["montage"]:
+        print(f"GO [√] Deja monte : {support['montage']}")
+        return 0
+    if not support["montable"]:
+        return echec(f"Support non montable : {support['raison']}.")
+
+    cible = RACINE_MONTAGE / nom_de_dossier(support)
+    if cible.exists() and any(cible.iterdir()):
+        return echec(f"Le dossier {cible} existe et n'est pas vide.")
+
+    uid, gid = identite_pinball()
+    options = ["nosuid", "nodev", "noatime"]
+    systeme = support["systeme"]
+    if systeme in SANS_DROITS_UNIX:
+        # Ces formats ne portent aucun droit Unix : sans proprietaire
+        # explicite le contenu appartient a root et pinball ne peut rien y
+        # lire, ce qui donne un montage reussi mais inutilisable.
+        options += [f"uid={uid}", f"gid={gid}", "umask=002"]
+
+    type_mount = "ntfs3" if systeme in ("ntfs", "ntfs3") else systeme
+
+    cible.mkdir(parents=True, exist_ok=True)
+    os.chown(cible, uid, gid)
+
+    resultat = subprocess.run(
+        ["mount", "-t", type_mount, "-o", ",".join(options), support["peripherique"], str(cible)],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if resultat.returncode != 0:
+        try:
+            cible.rmdir()
+        except OSError:
+            pass
+        return echec((resultat.stderr or resultat.stdout).strip() or "Montage refuse par le noyau.")
+
+    print(f"GO [√] Monte : {cible}")
+    return 0
+
+
+def demonter(uuid: str) -> int:
+    if not MOTIF_UUID.match(uuid):
+        return echec("Identifiant refuse.")
+
+    support = par_uuid(uuid)
+    if support is None:
+        return echec("Aucun support USB ne porte cet identifiant.")
+    if not support["montage"]:
+        print("GO [√] Deja demonte.")
+        return 0
+
+    point = Path(support["montage"])
+    accepte = False
+    for racine in RACINES_ACCEPTEES:
+        try:
+            point.resolve(strict=True).relative_to(racine.resolve())
+        except (OSError, ValueError):
+            continue
+        accepte = True
+        break
+
+    if not accepte:
+        lieux = ", ".join(str(r) for r in RACINES_ACCEPTEES)
+        return echec(f"Point de montage hors des emplacements geres ({lieux}) : refus.")
+
+    resultat = subprocess.run(["umount", str(point)], capture_output=True, text=True, timeout=60)
+    if resultat.returncode != 0:
+        message = (resultat.stderr or resultat.stdout).strip()
+        if "target is busy" in message or "occupe" in message:
+            message = "Le support est en cours d'utilisation. Fermez ce qui l'emploie, puis reessayez."
+        return echec(message or "Demontage refuse.")
+
+    try:
+        point.rmdir()
+    except OSError:
+        pass
+
+    print(f"GO [√] Demonte : {point}")
+    return 0
+
+
+def main() -> int:
+    analyseur = argparse.ArgumentParser(description="Supports USB du cabinet.")
+    analyseur.add_argument("action", choices=("list", "mount", "unmount"))
+    analyseur.add_argument("uuid", nargs="?")
+    analyseur.add_argument("--json", action="store_true")
+    arguments = analyseur.parse_args()
+
+    if arguments.action == "list":
+        supports = supports_usb()
+        if arguments.json:
+            print(json.dumps(supports, ensure_ascii=False, indent=2))
+            return 0
+        if not supports:
+            print("INFO [=] Aucun support USB detecte.")
+            return 0
+        for support in supports:
+            etat = f"monte sur {support['montage']}" if support["montage"] else "non monte"
+            if not support["montable"] and not support["montage"]:
+                etat = support["raison"]
+            taille = int(support["taille"]) / (1000 ** 3)
+            print(
+                f"  {support['nom']:<10} {taille:7.1f} Go  {support['systeme'] or '?':<6} "
+                f"{support['etiquette'] or '(sans etiquette)':<20} {etat}"
+            )
+        return 0
+
+    if not arguments.uuid:
+        return echec("Identifiant de support attendu.")
+
+    if os.geteuid() != 0:
+        return echec("Cette action demande les droits root.")
+
+    if shutil.which("mount") is None:
+        return echec("Commande mount introuvable.")
+
+    return monter(arguments.uuid) if arguments.action == "mount" else demonter(arguments.uuid)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
