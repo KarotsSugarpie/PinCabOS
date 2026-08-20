@@ -170,7 +170,18 @@ PY
 }
 
 cmd_adopt() {
-    local uuid="${1:-}" sous="${2:-}" boot="${3:-}"
+    # PINCABOS_INTERNAL_DISK_DEPLACER_V1
+    # Les options sont lues sans ordre impose : --boot et --deplacer peuvent
+    # arriver dans un sens ou dans l'autre selon l'appelant.
+    local uuid="${1:-}" sous="${2:-}" boot="" deplacer=""
+    shift 2 2>/dev/null || true
+    local option
+    for option in "$@"; do
+        case "$option" in
+            --boot)     boot="--boot" ;;
+            --deplacer) deplacer="oui" ;;
+        esac
+    done
     [ -n "$uuid" ] || { echo "UUID manquant." >&2; exit 2; }
     local dev="/dev/disk/by-uuid/$uuid"
     [ -b "$dev" ] || { echo "Aucune partition avec cet UUID." >&2; exit 2; }
@@ -193,10 +204,43 @@ cmd_adopt() {
     # invisible sans etre efface — on refuse plutot que de surprendre.
     mkdir -p "$TABLES"
     if ! mountpoint -q "$TABLES" && [ -n "$(ls -A "$TABLES" 2>/dev/null)" ]; then
-        echo "ATTENTION: $TABLES n'est pas vide." >&2
-        echo "Deplacez son contenu vers $source, puis relancez." >&2
-        umount "$POINT" 2>/dev/null || true
-        exit 4
+        if [ "$deplacer" != "oui" ]; then
+            echo "ATTENTION: $TABLES n'est pas vide." >&2
+            echo "Relancez avec --deplacer pour transferer son contenu vers $source," >&2
+            echo "ou videz le dossier vous-meme." >&2
+            umount "$POINT" 2>/dev/null || true
+            exit 4
+        fi
+
+        # Un nom deja pris des deux cotes signifierait ecraser ou fusionner
+        # sans que personne ne l'ait demande. On s'arrete avant d'y toucher.
+        local entree base collision=""
+        for entree in "$TABLES"/* "$TABLES"/.[!.]*; do
+            [ -e "$entree" ] || continue
+            base="$(basename "$entree")"
+            [ -e "$source/$base" ] && collision="$collision $base"
+        done
+        if [ -n "$collision" ]; then
+            echo "ATTENTION: ces noms existent deja sur le disque :$collision" >&2
+            echo "Rien n'a ete deplace. Renommez ou retirez ces elements, puis relancez." >&2
+            umount "$POINT" 2>/dev/null || true
+            exit 5
+        fi
+
+        local deplaces=0
+        for entree in "$TABLES"/* "$TABLES"/.[!.]*; do
+            [ -e "$entree" ] || continue
+            if mv -- "$entree" "$source/"; then
+                deplaces=$((deplaces + 1))
+            else
+                echo "Deplacement interrompu sur $(basename "$entree")." >&2
+                echo "Les elements deja transferes se trouvent dans $source." >&2
+                umount "$POINT" 2>/dev/null || true
+                exit 5
+            fi
+        done
+        chown -R "$PINBALL_UID:$PINBALL_GID" "$source" 2>/dev/null || true
+        echo "$deplaces element(s) deplace(s) vers $source"
     fi
 
     mountpoint -q "$TABLES" || mount --bind "$source" "$TABLES" \

@@ -172,10 +172,20 @@ def explorer():
         )
 
     tables_presentes = any(TABLES.iterdir()) if TABLES.is_dir() else False
-    avertissement = ("""<p class="avert"><strong>Attention&nbsp;:</strong> le dossier de tables
-      actuel n'est pas vide. L'adoption sera refusée tant que son contenu n'aura pas été
-      déplacé vers le disque — un montage lié le rendrait invisible sans l'effacer, et
-      mieux vaut refuser que de laisser croire à une perte.</p>""" if tables_presentes else "")
+    # PINCABOS_INTERNAL_DISK_DEPLACER_V1
+    # Une installation fraiche livre des tables d'exemple : le dossier n'est
+    # donc presque jamais vide, et refuser sans proposer d'issue renvoyait
+    # chaque proprietaire a la ligne de commande.
+    combien = len(list(TABLES.iterdir())) if TABLES.is_dir() else 0
+    avertissement = (f"""<p class="avert"><strong>Attention&nbsp;:</strong> le dossier de tables
+      actuel contient déjà {combien} élément(s). Un montage lié les rendrait invisibles
+      sans les effacer, ce qui laisserait croire à une perte&nbsp;: l'adoption les déplace
+      donc vers le disque, ou refuse.</p>
+      <p><label><input type="checkbox" name="deplacer" value="1" required>
+      <strong>Déplacer ces {combien} élément(s) vers le disque</strong></label><br>
+      <small>Ils sont transférés dans le dossier choisi ci-dessus, sans copie ni
+      suppression. Si un nom existe déjà des deux côtés, rien n'est déplacé et
+      l'opération s'interrompt.</small></p>""" if tables_presentes else "")
 
     corps = f"""<div class="card"><h2>Choix du dossier</h2>
       <p>Les dossiers de ce disque sont listés avec le nombre de tables qu'ils contiennent,
@@ -208,6 +218,8 @@ def adopter():
     args = ["adopt", uuid, sous]
     if boot:
         args.append("--boot")
+    if request.form.get("deplacer"):
+        args.append("--deplacer")
     rc, sortie = aide(*args, timeout=120)
 
     titre = "Disque adopté" if rc == 0 else "Adoption refusée"
