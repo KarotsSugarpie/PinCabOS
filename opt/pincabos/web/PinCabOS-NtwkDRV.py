@@ -321,8 +321,23 @@ def _external_disks_page(page, esc):
         smb_list = "<li>Aucun lecteur SMB monté/configuré.</li>"
 
     body = f"""
+<!-- PINCABOS_STOCKAGE_INTERNE_V1 -->
 <div class="card">
-  <h2>Gestion du stockage</h2>
+  <h2>Disque interne</h2>
+
+  <p>
+    Héberger la bibliothèque de tables sur un second disque interne, y compris
+    un disque NTFS repris d'un ancien cabinet Windows. Le dossier des tables
+    reste au choix, et le montage au démarrage est optionnel.
+  </p>
+
+  <p>
+    <a class="button" href="/tools/internal-disk">Gérer le disque interne</a>
+  </p>
+</div>
+
+<div class="card" style="margin-top:20px;">
+  <h2>Partages réseau</h2>
 
   <p>
     Ajoute un partage SMB / NAS / Windows à PinCabOS.
