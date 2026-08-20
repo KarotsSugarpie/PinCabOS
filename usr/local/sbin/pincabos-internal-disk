@@ -121,7 +121,7 @@ except Exception:
     sys.exit(1)
 sys.exit(0 if any(d.get("uuid") == voulu for d in candidats) else 1)
 ' "$uuid"; then
-        echo "Ce support n'\''est pas un disque interne adoptable : amovible, disque systeme, ou sans systeme de fichiers exploitable." >&2
+        echo "Ce support n'est pas un disque interne adoptable : amovible, disque systeme, ou sans systeme de fichiers exploitable." >&2
         exit 2
     fi
     local fstype; fstype="$(lsblk -no FSTYPE "$(readlink -f "$dev")" | head -1)"
