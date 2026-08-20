@@ -15,6 +15,7 @@ NETWORK_ROOT = Path("/home/pinball/NetworkDrives")
 SMB_CRED_ROOT = Path("/home/pinball/.config/pincabos/smb")
 SMB_DISCONNECTED_ROOT = Path("/home/pinball/.config/pincabos/smb-disconnected")
 SMB_UMOUNT_HELPER = "/usr/local/sbin/pincabos-smb-umount"
+USB_HELPER = "/usr/local/sbin/pincabos-usb-disk"
 
 USB_ROOTS = [
     Path("/media/pinball"),
@@ -130,23 +131,36 @@ def _smb_entries():
 
 
 def _usb_entries():
-    items = {}
+    # PINCABOS_USB_MOUNT_V1
+    #
+    # On enumere les supports USB qu'ils soient montes ou non. L'ancienne
+    # version ne parcourait que /media/pinball : comme rien ne monte les
+    # cles sur un cabinet, la liste etait vide en permanence et un support
+    # branche passait pour non reconnu.
+    try:
+        sortie = subprocess.run(
+            [USB_HELPER, "list", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        ).stdout
+        supports = json.loads(sortie)
+    except Exception:
+        supports = []
 
-    for root in USB_ROOTS:
-        if not root.exists():
-            continue
+    return supports if isinstance(supports, list) else []
 
-        try:
-            for d in root.iterdir():
-                if d.is_dir() and _is_mountpoint(d):
-                    items[d.name] = {
-                        "name": d.name,
-                        "path": d,
-                    }
-        except Exception:
-            pass
 
-    return [items[k] for k in sorted(items.keys(), key=lambda x: x.lower())]
+def _usb_taille(octets) -> str:
+    try:
+        valeur = float(octets)
+    except (TypeError, ValueError):
+        return ""
+    for unite in ("o", "Ko", "Mo", "Go", "To"):
+        if valeur < 1000 or unite == "To":
+            return f"{valeur:.0f} {unite}" if unite == "o" else f"{valeur:.1f} {unite}"
+        valeur /= 1000
+    return ""
 
 
 def _result_page(page, esc, title, ok, message):
@@ -261,20 +275,42 @@ def _disconnect_view(page, esc):
 def _external_disks_page(page, esc):
     usb_list = ""
     for item in _usb_entries():
+        nom = item.get("etiquette") or item.get("nom") or "support"
+        details = " — ".join(
+            p for p in (
+                _usb_taille(item.get("taille")),
+                (item.get("systeme") or "").upper(),
+                item.get("peripherique", ""),
+            ) if p
+        )
+
+        if item.get("montage"):
+            etat = f'<span class="ok">Monté</span> — <code>{esc(item["montage"])}</code>'
+            action = f"""
+  <form action="/tools/external-disks/usb/unmount" method="post" style="display:inline; margin-left:10px;">
+    <input type="hidden" name="uuid" value="{esc(item.get("uuid", ""))}">
+    <button class="button secondary" type="submit">Démonter</button>
+  </form>"""
+        elif item.get("montable"):
+            etat = '<span class="avert">Non monté</span>'
+            action = f"""
+  <form action="/tools/external-disks/usb/mount" method="post" style="display:inline; margin-left:10px;">
+    <input type="hidden" name="uuid" value="{esc(item.get("uuid", ""))}">
+    <button class="button" type="submit">Monter</button>
+  </form>"""
+        else:
+            etat = f'<span class="bad">Inutilisable</span> — {esc(item.get("raison", ""))}'
+            action = ""
+
         usb_list += f"""
 <li style="margin-bottom:10px;">
-  <strong>{esc(item["name"])}</strong> —
-  <span class="ok">Monté</span> —
-  <code>{esc(str(item["path"]))}</code>
-  <form action="/tools/external-disks/usb/unmount" method="post" style="display:inline; margin-left:10px;">
-    <input type="hidden" name="drive_name" value="{esc(item["name"])}">
-    <button class="button secondary" type="submit">Démonter</button>
-  </form>
+  <strong>{esc(nom)}</strong> — {etat}<br>
+  <small>{esc(details)}</small>{action}
 </li>
 """
 
     if not usb_list:
-        usb_list = "<li>Aucune clé USB montée.</li>"
+        usb_list = "<li>Aucun support USB détecté. Branchez-en un, puis rafraîchissez cette page.</li>"
 
     smb_list = ""
     for item in _smb_entries():
@@ -436,4 +472,39 @@ def register(app, page, esc, shlex_quote=None):
         smb_disconnect_view,
     )
 
-    print(f"GO: PinCabOS-NtwkDRV module loaded page={page_mode} disconnect={disconnect_mode}")
+    def _usb_action(action):
+        uuid = (request.form.get("uuid") or "").strip()
+        if not uuid:
+            return _result_page(page, esc, "Support non précisé", False,
+                                "Aucun identifiant de support n'a été transmis.")
+        resultat = _run(["/usr/bin/sudo", "-n", USB_HELPER, action, uuid], timeout=90)
+        sortie = (resultat.stdout or "") + (resultat.stderr or "")
+        reussi = resultat.returncode == 0
+        titre = "Support monté" if action == "mount" else "Support démonté"
+        return _result_page(
+            page, esc,
+            titre if reussi else "Opération refusée",
+            reussi,
+            sortie.strip() or ("Terminé." if reussi else "Échec sans message."),
+        )
+
+    usb_mount_mode = _replace_or_add_route(
+        app,
+        "/tools/external-disks/usb/mount",
+        ["POST"],
+        "pincabos_ntwkdrv_usb_mount",
+        lambda: _usb_action("mount"),
+    )
+
+    usb_umount_mode = _replace_or_add_route(
+        app,
+        "/tools/external-disks/usb/unmount",
+        ["POST"],
+        "pincabos_ntwkdrv_usb_unmount",
+        lambda: _usb_action("unmount"),
+    )
+
+    print(
+        f"GO: PinCabOS-NtwkDRV module loaded page={page_mode} disconnect={disconnect_mode} "
+        f"usb_mount={usb_mount_mode} usb_umount={usb_umount_mode}"
+    )
