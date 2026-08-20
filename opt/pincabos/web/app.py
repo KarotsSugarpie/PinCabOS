@@ -415,6 +415,7 @@ def pincabos_webapp_secret_key():
         raise RuntimeError("Impossible de charger ou créer le secret de session PinCabOS.") from exc
 
 
+# PINCABOS_STOCKAGE_LIBELLE_V1
 app = Flask(__name__)
 # === PINCABOS DASHBOARD V7 CONTROL ROUTES ===
 pco_register_dashboard_control_routes(app)
@@ -12275,8 +12276,23 @@ def tools_external_disks():
         smb_list = "<li>Aucun lecteur SMB monté/configuré.</li>"
 
     body = f"""
+<!-- PINCABOS_STOCKAGE_INTERNE_V1 -->
 <div class="card">
-  <h2>Gestion des disques externes</h2>
+  <h2>Disque interne</h2>
+
+  <p>
+    Heberger la bibliotheque de tables sur un second disque interne, y compris
+    un disque NTFS repris d'un ancien cabinet Windows. Le dossier des tables
+    reste au choix, et le montage au demarrage est optionnel.
+  </p>
+
+  <p>
+    <a class="button" href="/tools/internal-disk">Gerer le disque interne</a>
+  </p>
+</div>
+
+<div class="card">
+  <h2>Partages reseau</h2>
 
   <p>
     Ajoute un partage SMB / NAS / Windows à PinCabOS.
@@ -12336,7 +12352,7 @@ def tools_external_disks():
   </ul>
 </div>
 """
-    return page("Gestion disques externes", body)
+    return page("Gestion du stockage", body)
 
 
 @app.route("/tools/external-disks/smb/detect", methods=["POST"])
@@ -12355,7 +12371,7 @@ def tools_external_disks_smb_detect():
     domain = request.form.get("domain", "").strip() or "WORKGROUP"
 
     if not server or not username:
-        return page("Gestion disques externes", """
+        return page("Gestion du stockage", """
 <div class="card">
   <h2>Erreur SMB</h2>
   <p class="bad">Serveur/IP et login requis.</p>
@@ -12472,7 +12488,7 @@ def tools_external_disks_smb_mount():
     session_file = Path("/home/pinball/.config/pincabos/smb-sessions") / (session_id + ".json")
 
     if not session_id or not share or not session_file.exists():
-        return page("Gestion disques externes", """
+        return page("Gestion du stockage", """
 <div class="card">
   <h2>Erreur SMB</h2>
   <p class="bad">Session SMB invalide ou expirée.</p>
@@ -12549,7 +12565,7 @@ def tools_external_disks_smb_mount():
   </p>
 </div>
 """
-        return page("Gestion disques externes", body)
+        return page("Gestion du stockage", body)
 
     body = f"""
 <div class="card">
@@ -12563,11 +12579,11 @@ def tools_external_disks_smb_mount():
 
   <p>
     <a class="button" href="/tools/commander?root=Lecteurs%20SMB">Ouvrir dans PinCab Explorer</a>
-    <a class="button secondary" href="/tools/external-disks">Retour Gestion disques externes</a>
+    <a class="button secondary" href="/tools/external-disks">Retour Gestion du stockage</a>
   </p>
 </div>
 """
-    return page("Gestion disques externes", body)
+    return page("Gestion du stockage", body)
 
 
 def pcx_roots():
@@ -15485,8 +15501,8 @@ def pincabos_external_disks_menu_link(response):
             '\n<a class="' + css_class + '" '
             'href="/tools/external-disks" '
             'data-pcx-external-disks-menu="1" '
-            'title="Gerer les disques externes, USB et SMB">'
-            '💾 Disques externes</a>'
+            'title="Gerer le stockage : disque interne, cles USB et partages SMB">'
+            '💾 Stockage</a>'
         )
 
         response.set_data(body[:match.end()] + link + body[match.end():])
@@ -15602,7 +15618,7 @@ def _pincabos_replace_unmount_route(rule_path, form_key, root_path, helper_path,
 
         if target is None:
             return _pincabos_external_disk_result(
-                "Gestion disques externes",
+                "Gestion du stockage",
                 False,
                 f"Nom de lecteur {label} invalide.",
                 "/tools/external-disks",
@@ -15625,14 +15641,14 @@ def _pincabos_replace_unmount_route(rule_path, form_key, root_path, helper_path,
 
         except subprocess.TimeoutExpired:
             return _pincabos_external_disk_result(
-                "Gestion disques externes",
+                "Gestion du stockage",
                 False,
                 f"Le démontage {label} a dépassé le délai.",
                 "/tools/external-disks",
             )
 
         if result.returncode != 0:
-            return page("Gestion disques externes", f"""
+            return page("Gestion du stockage", f"""
 <div class="card">
   <h2>Démontage {esc(label)} échoué</h2>
   <p class="bad">Le lecteur est peut-être encore utilisé.</p>
@@ -15654,7 +15670,7 @@ def _pincabos_replace_unmount_route(rule_path, form_key, root_path, helper_path,
                 pass
 
         return _pincabos_external_disk_result(
-            "Gestion disques externes",
+            "Gestion du stockage",
             True,
             output or f"Lecteur {label} démonté.",
             "/tools/external-disks",
@@ -15687,7 +15703,7 @@ def pincabos_tools_smb_disconnect_button_v1():
 
     if target is None:
         return _pincabos_external_disk_result(
-            "Gestion disques externes",
+            "Gestion du stockage",
             False,
             "Nom de lecteur SMB invalide.",
             "/tools/external-disks",
@@ -15721,14 +15737,14 @@ def pincabos_tools_smb_disconnect_button_v1():
             output = (result.stdout + "\n" + result.stderr).strip()
         except subprocess.TimeoutExpired:
             return _pincabos_external_disk_result(
-                "Gestion disques externes",
+                "Gestion du stockage",
                 False,
                 "La déconnexion SMB a dépassé le délai pendant le démontage.",
                 "/tools/external-disks",
             )
 
         if result.returncode != 0:
-            return page("Gestion disques externes", f"""
+            return page("Gestion du stockage", f"""
 <div class="card">
   <h2>Déconnexion SMB échouée</h2>
   <p class="bad">Le lecteur est peut-être encore utilisé.</p>
@@ -15759,7 +15775,7 @@ def pincabos_tools_smb_disconnect_button_v1():
 
             if still_mounted:
                 return _pincabos_external_disk_result(
-                    "Gestion disques externes",
+                    "Gestion du stockage",
                     False,
                     "Le lecteur SMB est encore monté, entrée conservée.",
                     "/tools/external-disks",
@@ -15777,14 +15793,14 @@ def pincabos_tools_smb_disconnect_button_v1():
                 messages.append(f"Dossier local non vide déplacé vers {archive_target}.")
     except Exception as e:
         return _pincabos_external_disk_result(
-            "Gestion disques externes",
+            "Gestion du stockage",
             False,
             f"Déconnexion partielle: {e}",
             "/tools/external-disks",
         )
 
     return _pincabos_external_disk_result(
-        "Gestion disques externes",
+        "Gestion du stockage",
         True,
         "\n".join(messages) or "Lecteur SMB déconnecté.",
         "/tools/external-disks",

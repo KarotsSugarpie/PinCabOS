@@ -1,5 +1,5 @@
 # PinCabOS-NtwkDRV.py
-# Module externe pour Gestion des disques externes / SMB.
+# Module externe pour Gestion du stockage / SMB.
 # Garde la mise en page PinCabOS, mais évite le vieux scan silencieux de app.py.
 
 from pathlib import Path
@@ -151,7 +151,7 @@ def _usb_entries():
 
 def _result_page(page, esc, title, ok, message):
     cls = "ok" if ok else "bad"
-    return page("Gestion disques externes", f"""
+    return page("Gestion du stockage", f"""
 <div class="card">
   <h2>{esc(title)}</h2>
   <pre class="{cls}">{esc(message or "")}</pre>
@@ -199,7 +199,7 @@ def _disconnect_view(page, esc):
             )
 
         if result.returncode != 0:
-            return page("Gestion disques externes", f"""
+            return page("Gestion du stockage", f"""
 <div class="card">
   <h2>Déconnexion SMB échouée</h2>
   <p class="bad">Le lecteur est peut-être encore utilisé.</p>
@@ -322,7 +322,7 @@ def _external_disks_page(page, esc):
 
     body = f"""
 <div class="card">
-  <h2>Gestion des disques externes</h2>
+  <h2>Gestion du stockage</h2>
 
   <p>
     Ajoute un partage SMB / NAS / Windows à PinCabOS.
@@ -378,7 +378,7 @@ def _external_disks_page(page, esc):
 </div>
 """
 
-    return page("Gestion des disques externes", body)
+    return page("Gestion du stockage", body)
 
 
 def _replace_or_add_route(app, rule_path, methods, endpoint_name, view_func):
