@@ -291,7 +291,7 @@ TOOL_SPECS = (
     ("explorer", "PinCab Explorer", "Fichiers et médias PinCabOS", "/tools/commander", "PCOSExplorer.png"),
     ("import", "Import Table", "Importer une table", "/import", "PCOSImport.png"),
     ("export", "Export Table", "Exporter une table", "/tools/export-table", "PCOSExport.png"),
-    ("external_disks", "Disques externes", "USB et partages réseau", "/external-disks", "PCOSDisquesExternes.png"),
+    ("external_disks", "Stockage", "Disque interne, USB et partages réseau", "/external-disks", "PCOSDisquesExternes.png"),
     ("tables", "Tables VPinFE", "Bibliothèque Pinball", "/tables", "PCOSTablesVPinFE.png"),
     ("network", "Réseau", "Réseau et connectivité", "/network", "PCOSNetwork.png"),
     ("appearance", "Apparence", "Style et personnalisation", "/tools/appearance", "PCOSApparence.png"),
