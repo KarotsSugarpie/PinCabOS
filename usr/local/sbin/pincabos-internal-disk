@@ -274,7 +274,18 @@ cmd_adopt() {
     # Le dossier d'origine doit etre vide, sinon son contenu devient
     # invisible sans etre efface — on refuse plutot que de surprendre.
     mkdir -p "$TABLES"
-    if ! mountpoint -q "$TABLES" && [ -n "$(ls -A "$TABLES" 2>/dev/null)" ]; then
+    # Un dossier qui ne contient que des tables de demonstration n'a rien a
+    # proteger : elles sont jetables par construction.
+    local reste_utile=0 candidat
+    if ! mountpoint -q "$TABLES"; then
+        for candidat in "$TABLES"/* "$TABLES"/.[!.]*; do
+            [ -e "$candidat" ] || continue
+            [ -e "$candidat/.pincabos-sample-table" ] && continue
+            reste_utile=1
+        done
+    fi
+
+    if ! mountpoint -q "$TABLES" && [ "$reste_utile" = "1" ]; then
         if [ "$deplacer" != "oui" ]; then
             echo "ATTENTION: $TABLES n'est pas vide." >&2
             echo "Relancez avec --deplacer pour transferer son contenu vers $source," >&2
@@ -283,11 +294,22 @@ cmd_adopt() {
             exit 4
         fi
 
+        # PINCABOS_INTERNAL_DISK_ECHANTILLONS_V1
+        # Les tables de demonstration portent un marqueur et sont retirees
+        # par pincabos-sample-tables des qu'une vraie table existe. Les
+        # emporter sur le disque de l'utilisateur revenait a y deposer du
+        # contenu qu'un autre mecanisme viendrait effacer ensuite.
+        local MARQUEUR_ECHANTILLON=".pincabos-sample-table"
+        est_echantillon() {
+            [ -e "$1/$MARQUEUR_ECHANTILLON" ]
+        }
+
         # Un nom deja pris des deux cotes signifierait ecraser ou fusionner
         # sans que personne ne l'ait demande. On s'arrete avant d'y toucher.
         local entree base collision=""
         for entree in "$TABLES"/* "$TABLES"/.[!.]*; do
             [ -e "$entree" ] || continue
+            est_echantillon "$entree" && continue
             base="$(basename "$entree")"
             [ -e "$source/$base" ] && collision="$collision $base"
         done
@@ -303,9 +325,13 @@ cmd_adopt() {
         # Un chown recursif sur le dossier entier aurait aussi reecrit le
         # proprietaire des tables deja presentes — invisible sur NTFS, bien
         # reel sur ext4, et jamais demande.
-        local deplaces=0
+        local deplaces=0 ignores=0
         for entree in "$TABLES"/* "$TABLES"/.[!.]*; do
             [ -e "$entree" ] || continue
+            if est_echantillon "$entree"; then
+                ignores=$((ignores + 1))
+                continue
+            fi
             base="$(basename "$entree")"
             if mv -- "$entree" "$source/"; then
                 chown -R "$PINBALL_UID:$PINBALL_GID" "$source/$base" 2>/dev/null || true
@@ -318,6 +344,9 @@ cmd_adopt() {
             fi
         done
         echo "$deplaces element(s) deplace(s) vers $source"
+        if [ "$ignores" -gt 0 ]; then
+            echo "$ignores table(s) de demonstration laissee(s) sur place : PinCabOS les retire lui-meme."
+        fi
     fi
 
     mountpoint -q "$TABLES" || mount --bind "$source" "$TABLES" \
