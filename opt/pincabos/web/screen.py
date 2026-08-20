@@ -305,6 +305,21 @@ def screen_page():
             return str(entree["name"])
         return str(roles.get(role, {}).get("output", ""))
 
+    # PINCABOS_SCREEN_IDENTIFY_V1
+    # Un lien plutot qu'un bouton : ces cartes vivent a l'interieur du
+    # formulaire de reglages, et un formulaire imbrique n'est pas valide.
+    # L'action n'ecrit rien — elle affiche un panneau quelques secondes.
+    def identification(sortie: str) -> str:
+        if not sortie:
+            return ""
+        return (
+            "<a class='button secondary' style='margin-top:12px;display:inline-block'"
+            f" href='/screen/identify?output={esc(sortie)}'>Identifier cet écran</a>"
+            "<div style='opacity:.6;font-size:.85em;margin-top:6px'>"
+            "Affiche le nom de la sortie sur l'écran concerné, et le fait clignoter."
+            "</div>"
+        )
+
     def role_card(role, title):
         selected_output = role_reel(role)
         selected_mode = roles.get(role, {}).get("mode", "")
@@ -317,6 +332,7 @@ def screen_page():
           <select name="{role}_output">{screen_options(screens, selected_output)}</select>
           <label style="margin-top:10px;display:block;">Résolution supportée</label>
           <select name="{role}_mode" data-role="{role}">{mode_options(sc, selected_mode, selected_rate, role)}</select>
+          {identification(selected_output)}
         </div>
         """
 
@@ -423,6 +439,27 @@ def screen_page():
     </div>
     """
     return page_wrap("Assignation écrans", body)
+
+
+# PINCABOS_SCREEN_IDENTIFY_V1
+IDENTIFIER = Path("/opt/pincabos/bin/pincabos-identifier-ecran")
+
+
+@screen_bp.route("/screen/identify", methods=["GET", "POST"])
+def identifier_ecran():
+    """Affiche son nom sur un ecran physique.
+
+    Aucun privilege : la session X appartient a pinball, comme la webapp.
+    La sortie demandee est confrontee a celles que le systeme declare, pour
+    ne jamais transmettre une valeur venue telle quelle de l'exterieur.
+    """
+    sortie = (request.args.get("output") or request.form.get("output") or "").strip()
+    connues = {sc["output"] for sc in parse_xrandr(xrandr_query())}
+
+    if sortie in connues and IDENTIFIER.is_file():
+        run_cmd([str(IDENTIFIER), sortie], timeout=10)
+
+    return redirect(url_for("screen.screen_page"))
 
 
 @screen_bp.route("/screen/save", methods=["POST"])
