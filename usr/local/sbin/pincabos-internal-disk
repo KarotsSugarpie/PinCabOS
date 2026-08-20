@@ -227,19 +227,25 @@ cmd_adopt() {
             exit 5
         fi
 
+        # PINCABOS_INTERNAL_DISK_CHOWN_V2
+        # Les droits ne sont ajustes que sur ce que l'on vient de deplacer.
+        # Un chown recursif sur le dossier entier aurait aussi reecrit le
+        # proprietaire des tables deja presentes — invisible sur NTFS, bien
+        # reel sur ext4, et jamais demande.
         local deplaces=0
         for entree in "$TABLES"/* "$TABLES"/.[!.]*; do
             [ -e "$entree" ] || continue
+            base="$(basename "$entree")"
             if mv -- "$entree" "$source/"; then
+                chown -R "$PINBALL_UID:$PINBALL_GID" "$source/$base" 2>/dev/null || true
                 deplaces=$((deplaces + 1))
             else
-                echo "Deplacement interrompu sur $(basename "$entree")." >&2
+                echo "Deplacement interrompu sur $base." >&2
                 echo "Les elements deja transferes se trouvent dans $source." >&2
                 umount "$POINT" 2>/dev/null || true
                 exit 5
             fi
         done
-        chown -R "$PINBALL_UID:$PINBALL_GID" "$source" 2>/dev/null || true
         echo "$deplaces element(s) deplace(s) vers $source"
     fi
 
