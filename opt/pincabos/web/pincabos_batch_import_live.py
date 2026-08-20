@@ -71,6 +71,118 @@ def _install_observers() -> None:
     _PATCHED = True
 
 
+# PINCABOS_SMART_BATCH_STAGING_FIX_V31
+def _save_raw_upload(
+    job_id: str,
+    stream: Any,
+    filename: str,
+    index: int,
+    expected_size: int = 0,
+) -> dict[str, Any]:
+    # Écrit un upload application/octet-stream directement dans le staging.
+    # Le multipart historique peut provoquer un second SpooledTemporaryFile
+    # côté Werkzeug. Le chemin RAW évite ce deuxième spool.
+    shown = _safe_name(str(filename or ""), f"package-{index}.PinCabOS")
+    suffix = Path(shown).suffix.lower()
+    if suffix not in {".pincabos", ".zip"}:
+        raise ValueError(
+            f"Extension refusée pour {shown}. Utilise .PinCabOS ou .zip."
+        )
+
+    root = queue.upload_dir(job_id)
+    root.mkdir(parents=True, exist_ok=True, mode=0o750)
+
+    stored = root / f"{index:04d}--{shown}"
+    temp = root / f".{stored.name}.{uuid.uuid4().hex}.raw-upload"
+    size = 0
+
+    try:
+        with temp.open("wb") as output:
+            while True:
+                chunk = stream.read(2 * 1024 * 1024)
+                if not chunk:
+                    break
+                output.write(chunk)
+                size += len(chunk)
+
+            output.flush()
+            os.fsync(output.fileno())
+
+        if expected_size > 0 and size != expected_size:
+            raise IOError(
+                f"Taille reçue invalide pour {shown}: "
+                f"{size} octets reçus / {expected_size} attendus."
+            )
+
+        os.replace(temp, stored)
+
+    except Exception:
+        try:
+            temp.unlink()
+        except FileNotFoundError:
+            pass
+        raise
+
+    with queue.state_lock(True):
+        job = queue.load_job_unlocked(job_id)
+
+        if not job:
+            stored.unlink(missing_ok=True)
+            raise RuntimeError("Job introuvable.")
+
+        if (
+            str(job.get("state"))
+            not in {"uploading", "running", "queued", "paused", "pausing"}
+            or job.get("uploads_complete")
+        ):
+            stored.unlink(missing_ok=True)
+            raise RuntimeError("Ce job n’accepte plus de packages.")
+
+        total = int(job.get("total_archives", 0) or 0)
+
+        if index < 1 or index > total:
+            stored.unlink(missing_ok=True)
+            raise ValueError("Position de package invalide.")
+
+        uploads = [
+            item
+            for item in (job.get("uploads") or [])
+            if int(item.get("index", 0) or 0) != index
+        ]
+
+        uploads.append({
+            "index": index,
+            "name": shown,
+            "path": str(stored),
+            "size": size,
+            "state": "queued",
+            "detail": "Téléversé",
+        })
+
+        uploads.sort(
+            key=lambda item: int(item.get("index", 0) or 0)
+        )
+
+        job["uploads"] = uploads
+        job["uploaded_archives"] = len(uploads)
+        job["last_upload_at"] = queue.utc_now()
+        job["accepting_uploads"] = True
+        job["current_item"] = shown
+
+        queue.add_event(
+            job,
+            f"Téléversement {len(uploads)}/{total} terminé : {shown}",
+        )
+        queue.refresh_progress(
+            job,
+            f"Téléversement {len(uploads)}/{total}",
+            shown,
+        )
+        queue.save_job_unlocked(job)
+
+        return job
+
+
 def _save_one_upload(job_id: str, upload: FileStorage, index: int) -> dict[str, Any]:
     if not upload or not upload.filename:
         raise ValueError("Aucun package reçu.")
@@ -285,8 +397,8 @@ _PAGE_UI = r'''
     done:     ["\u2705", "install\u00e9", "#7ec97e"],
     success:  ["\u2705", "install\u00e9", "#7ec97e"],
     warning:  ["\u26a0\ufe0f", "avertissement", "#ffd27e"],
-    skipped:  ["\u26a0\ufe0f", "ignor\u00e9 (d\u00e9j\u00e0 install\u00e9)", "#ffd27e"],
-    failed:   ["\u274c", "\u00e9chec", "#f08080"],
+    skipped:  ["\u23ed\ufe0f", "ignor\u00e9 automatiquement", "#ffd27e"],
+    failed:   ["\u23ed\ufe0f", "erreur ignor\u00e9e — suite du Batch", "#f08080"],
     error:    ["\u274c", "\u00e9chec", "#f08080"],
   };
 
@@ -316,9 +428,10 @@ _PAGE_UI = r'''
       if (progress.current_item) bits.push(progress.current_item);
       if (progress.total) bits.push(`${progress.completed || 0}/${progress.total} trait\u00e9s`);
       const counters = [];
-      if (progress.successful) counters.push(progress.successful + " ok");
+      if (progress.successful) counters.push(progress.successful + " import\u00e9e(s)");
+      if (progress.skipped) counters.push(progress.skipped + " ignor\u00e9e(s)");
+      if (progress.failed) counters.push(progress.failed + " erreur(s) ignor\u00e9e(s)");
       if (progress.warnings) counters.push(progress.warnings + " avert.");
-      if (progress.failed) counters.push(progress.failed + " \u00e9chec(s)");
       if (counters.length) bits.push(counters.join(", "));
       setWorkerLine("Worker : " + (bits.join(" \u2014 ") || job.state || ""));
       const state = String(job.state || "");
@@ -350,6 +463,7 @@ _PAGE_UI = r'''
 
   async function submitQueue(target) {
     /* PINCABOS_BATCH_STAGE_ALL_V33 */
+    /* PINCABOS_SMART_BATCH_STAGING_FIX_V31 */
 
     const input = target.querySelector(
       'input[name="archives"]'
@@ -365,68 +479,248 @@ _PAGE_UI = r'''
       );
     }
 
-    const conflict = (
-      target.querySelector(
-        'input[name="conflict_mode"]:checked'
-      )?.value
-      || "skip"
+    const conflict = "skip";
+    const wait = ms => new Promise(
+      resolve => window.setTimeout(resolve, ms)
     );
+
+    const humanSize = bytes => {
+      const value = Number(bytes || 0);
+      if (value >= 1024 ** 3) {
+        return `${(value / (1024 ** 3)).toFixed(2)} Go`;
+      }
+      return `${(value / (1024 ** 2)).toFixed(1)} Mo`;
+    };
+
+    async function sendOne(
+      jobId,
+      file,
+      index,
+      total
+    ) {
+      let lastError = null;
+
+      for (
+        let attempt = 1;
+        attempt <= 5;
+        attempt += 1
+      ) {
+        try {
+          const url =
+            `/api/batch-import/live/upload-raw/`
+            + `${encodeURIComponent(jobId)}/${index}`
+            + `?name=${encodeURIComponent(file.name)}`
+            + `&size=${encodeURIComponent(String(file.size))}`;
+
+          await json(
+            url,
+            {
+              method: "POST",
+              headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/octet-stream"
+              },
+              body: file
+            }
+          );
+
+          return;
+
+        } catch (error) {
+          lastError = error;
+
+          setMessage(
+            `Téléversement ${index}/${total} en erreur : `
+            + `${file.name} (${humanSize(file.size)}). `
+            + `Tentative ${attempt}/5.`,
+            true
+          );
+
+          if (attempt < 5) {
+            await wait(
+              Math.min(15000, 2500 * attempt)
+            );
+          }
+        }
+      }
+
+      throw new Error(
+        `Téléversement ${index}/${total} impossible après 5 tentatives : `
+        + `${lastError?.message || "erreur inconnue"}`
+      );
+    }
 
     disable(target, true);
 
-    setMessage(
-      `Préparation de ${files.length} package(s). `
-      + `Ne quitte pas cette page avant `
-      + `${files.length}/${files.length} téléversés.`
-    );
+    let jobId = "";
+    let startIndex = 0;
+    let stagingCompleted = false;
 
-    const created = await json(
-      "/api/batch-import/live/create",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          total: files.length,
-          conflict_mode: conflict
-        })
-      }
-    );
-
-    const jobId = created.job.id;
-
-    pcosStagingTransfer = {
-      jobId: jobId,
-      total: files.length
-    };
-
-    emit(
-      "pcos-batch-import-started",
-      created.job
-    );
+    let activePacket = null;
 
     try {
+      activePacket = await json(
+        "/api/batch-import/live/active"
+      );
+    } catch (_) {
+      activePacket = null;
+    }
 
-      /*
-       * Important:
-       * on STAGE tous les fichiers sur le cab AVANT de
-       * dépendre du worker.
-       *
-       * Aucune attente de processed_archives ici.
-       */
+    const activeJob = activePacket?.job || null;
+    const activeState = String(
+      activeJob?.state || ""
+    ).toLowerCase();
+    const activeTotal = Number(
+      activeJob?.total_archives || 0
+    );
+    const activeUploaded = Number(
+      activeJob?.uploaded_archives || 0
+    );
+    const activeComplete = Boolean(
+      activeJob?.uploads_complete
+    );
+
+    if (
+      activeJob?.id
+      && ["uploading", "queued"].includes(activeState)
+      && !activeComplete
+    ) {
+      if (activeTotal !== files.length) {
+        disable(target, false);
+        throw new Error(
+          `Un staging incomplet existe déjà `
+          + `(${activeUploaded}/${activeTotal}). `
+          + `Sélection actuelle : ${files.length}. `
+          + `Resélectionne exactement les mêmes `
+          + `${activeTotal} packages.`
+        );
+      }
+
+      const received = Array.from(
+        activeJob.uploads || []
+      )
+        .filter(
+          item => item
+            && Number(item.index || 0) > 0
+        )
+        .sort(
+          (a, b) =>
+            Number(a.index || 0)
+            - Number(b.index || 0)
+        );
+
+      let contiguous = 0;
+
+      for (const item of received) {
+        const idx = Number(item.index || 0);
+
+        if (idx !== contiguous + 1) {
+          break;
+        }
+
+        const local = files[idx - 1];
+        const remoteName = String(
+          item.name || ""
+        );
+
+        if (
+          !local
+          || local.name !== remoteName
+        ) {
+          disable(target, false);
+          throw new Error(
+            `La sélection ne correspond pas `
+            + `au staging au package ${idx}. `
+            + `Attendu : ${remoteName || "?"}. `
+            + `Reçu : ${local?.name || "?"}.`
+          );
+        }
+
+        contiguous = idx;
+      }
+
+      if (contiguous !== activeUploaded) {
+        disable(target, false);
+        throw new Error(
+          `Staging non continu : `
+          + `${contiguous}/${activeUploaded}.`
+        );
+      }
+
+      jobId = String(activeJob.id);
+      startIndex = contiguous;
+
+      pcosStagingTransfer = {
+        jobId,
+        total: files.length
+      };
+
+      setMessage(
+        `Reprise du téléversement : `
+        + `${startIndex}/${files.length} déjà reçu(s). `
+        + `Reprise au package ${startIndex + 1}.`
+      );
+
+      emit(
+        "pcos-batch-import-started",
+        activeJob
+      );
+
+    } else if (activeJob?.id) {
+      disable(target, false);
+
+      throw new Error(
+        `Un Smart Batch est déjà présent `
+        + `(état ${activeState || "inconnu"}).`
+      );
+
+    } else {
+      setMessage(
+        `Préparation de ${files.length} package(s). `
+        + `Ne quitte pas cette page avant `
+        + `${files.length}/${files.length} téléversés.`
+      );
+
+      const created = await json(
+        "/api/batch-import/live/create",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify({
+            total: files.length,
+            conflict_mode: conflict
+          })
+        }
+      );
+
+      jobId = String(created.job.id);
+
+      pcosStagingTransfer = {
+        jobId,
+        total: files.length
+      };
+
+      emit(
+        "pcos-batch-import-started",
+        created.job
+      );
+    }
+
+    try {
       for (
-        let index = 0;
+        let index = startIndex;
         index < files.length;
         index += 1
       ) {
-
         const file = files[index];
+        const humanIndex = index + 1;
 
         setMessage(
-          `Téléversement ${index + 1}/${files.length} : `
-          + `${file.name} · `
+          `Téléversement ${humanIndex}/${files.length} : `
+          + `${file.name} (${humanSize(file.size)}) · `
           + `garde cette page ouverte`
         );
 
@@ -434,48 +728,30 @@ _PAGE_UI = r'''
           "pcos-batch-import-uploading",
           {
             job_id: jobId,
-            index: index + 1,
+            index: humanIndex,
             total: files.length,
-            name: file.name
+            name: file.name,
+            size: file.size
           }
         );
 
-        const body = new FormData();
-
-        body.append(
-          "archive",
+        await sendOne(
+          jobId,
           file,
-          file.name
-        );
-
-        body.append(
-          "index",
-          String(index + 1)
-        );
-
-        await json(
-          `/api/batch-import/live/upload/`
-          + encodeURIComponent(jobId),
-          {
-            method: "POST",
-            body
-          }
+          humanIndex,
+          files.length
         );
 
         setMessage(
-          `Téléversement ${index + 1}/${files.length} terminé. `
+          `Téléversement ${humanIndex}/${files.length} terminé. `
           + (
-            index + 1 === files.length
+            humanIndex === files.length
               ? "Préparation du traitement en arrière-plan…"
               : "Envoi du package suivant…"
           )
         );
       }
 
-      /*
-       * Tous les fichiers sont maintenant physiquement
-       * stockés sur le cab.
-       */
       const finished = await json(
         `/api/batch-import/live/finish/`
         + encodeURIComponent(jobId),
@@ -484,11 +760,12 @@ _PAGE_UI = r'''
         }
       );
 
+      stagingCompleted = true;
+
       setMessage(
         `${files.length}/${files.length} packages téléversés. `
         + `Import en arrière-plan actif. `
-        + `Tu peux maintenant quitter cette page et contrôler `
-        + `le Batch depuis le widget Services.`
+        + `Tu peux maintenant quitter cette page.`
       );
 
       emit(
@@ -497,24 +774,6 @@ _PAGE_UI = r'''
       );
 
     } catch (error) {
-
-      /*
-       * Une erreur de TRANSMISSION est différente d'une
-       * erreur d'import.
-       *
-       * On arrête la file incomplète : les fichiers locaux
-       * non envoyés ne sont pas récupérables par le serveur.
-       */
-      try {
-        await json(
-          `/api/batch-import/live/stop/`
-          + encodeURIComponent(jobId),
-          {
-            method: "POST"
-          }
-        );
-      } catch (_) {}
-
       emit(
         "pcos-batch-import-upload-failed",
         {
@@ -523,10 +782,19 @@ _PAGE_UI = r'''
         }
       );
 
-      throw error;
+      throw new Error(
+        `${error.message}. `
+        + `Aucun STOP automatique n'a été envoyé. `
+        + `Les packages déjà reçus restent sur le cab. `
+        + `Resélectionne les mêmes ${files.length} packages `
+        + `et reclique Lancer pour reprendre.`
+      );
 
     } finally {
-      pcosStagingTransfer = null;
+      if (stagingCompleted) {
+        pcosStagingTransfer = null;
+      }
+
       disable(target, false);
     }
   }
@@ -552,133 +820,244 @@ _PAGE_UI = r'''
 </script>
 
 <!-- PINCABOS_BATCH_RESUME_PANEL_V1 -->
+<!-- PINCABOS_SMART_BATCH_PRO_V2 -->
 <style>
-/* PINCABOS_BATCH_RESUME_PANEL_V3 : le panneau reprend le langage visuel des
-   cartes de la page (fond translucide, grands arrondis, marges aerees) au
-   lieu du rectangle opaque qui detonnait. */
-#pco-bi-resume{margin:16px 0;padding:16px 18px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(255,255,255,.035);font-size:13px}
-#pco-bi-resume[data-floating="1"]{position:fixed;right:16px;bottom:16px;z-index:9998;width:min(340px,calc(100vw - 32px));background:rgba(24,20,32,.96);box-shadow:0 12px 34px rgba(0,0,0,.5)}
-#pco-bi-resume h3{margin:0 0 10px;font-size:14px;font-weight:700;color:rgb(255,143,28);letter-spacing:.2px}
-#pco-bi-resume .pco-r-detail{color:rgba(255,255,255,.72);margin-bottom:12px;line-height:1.45}
-#pco-bi-resume .pco-r-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden;margin-bottom:14px}
-#pco-bi-resume .pco-r-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#ffb000,#ff7a00);transition:width .3s ease}
-#pco-bi-resume .pco-r-actions{display:flex;gap:10px;flex-wrap:wrap}
-#pco-bi-resume button{border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:8px 16px;font:inherit;font-weight:700;cursor:pointer;background:rgba(255,255,255,.05);color:rgba(255,255,255,.9);transition:background .15s ease}
-#pco-bi-resume button:hover{background:rgba(255,255,255,.11)}
-#pco-bi-resume .pco-r-pause{border-color:rgba(255,176,0,.4);color:#ffd79b}
-#pco-bi-resume .pco-r-resume{border-color:rgba(88,214,141,.42);color:#b9f5d0}
-#pco-bi-resume .pco-r-stop{border-color:rgba(215,55,70,.42);color:#ffbec5}
-#pco-bi-resume .pco-r-log{margin-top:14px;max-height:104px;overflow:auto;border-top:1px solid rgba(255,255,255,.09);padding-top:10px;color:rgba(255,255,255,.5);font-size:11.5px;line-height:1.6}
-#pco-bi-resume .pco-r-log div{padding:1px 0}
-#pco-bi-resume button[hidden]{display:none}
+/*
+ * Smart Batch Import PRO V2
+ * Une seule carte de pilotage : staging, import, compteurs, journal,
+ * packages et historique. Les jobs stoppés ne sont jamais présentés
+ * comme des jobs actifs/reprenables.
+ */
+#pco-bi-resume{
+  --sb-bg:rgba(17,15,24,.82);
+  --sb-panel:rgba(255,255,255,.045);
+  --sb-border:rgba(255,255,255,.12);
+  --sb-text:rgba(255,255,255,.92);
+  --sb-muted:rgba(255,255,255,.58);
+  --sb-orange:#ff9a24;
+  --sb-green:#6fdda0;
+  --sb-yellow:#ffd27e;
+  --sb-red:#ff8e98;
+  --sb-blue:#81b9ff;
+  box-sizing:border-box;
+  width:100%;
+  margin:18px 0;
+  padding:0;
+  overflow:hidden;
+  border:1px solid var(--sb-border);
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(30,24,39,.94),var(--sb-bg));
+  box-shadow:0 18px 44px rgba(0,0,0,.22);
+  color:var(--sb-text);
+  font-size:13px;
+}
+#pco-bi-resume *,#pco-bi-resume *::before,#pco-bi-resume *::after{box-sizing:border-box}
+#pco-bi-resume[data-floating="1"]{
+  position:fixed;right:18px;bottom:18px;z-index:9998;
+  width:min(760px,calc(100vw - 36px));max-height:calc(100vh - 36px);overflow:auto;
+  background:rgba(20,16,28,.98);box-shadow:0 18px 50px rgba(0,0,0,.52)
+}
+#pco-bi-resume .sb-head{display:flex;gap:16px;align-items:flex-start;padding:18px 20px 16px;border-bottom:1px solid var(--sb-border)}
+#pco-bi-resume .sb-title-wrap{min-width:0;flex:1}
+#pco-bi-resume .sb-kicker{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--sb-orange);opacity:.9}
+#pco-bi-resume h3{margin:4px 0 0;font-size:18px;line-height:1.2;color:#fff;font-weight:850;letter-spacing:.1px}
+#pco-bi-resume .sb-job{margin-top:5px;color:var(--sb-muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pco-bi-resume .sb-badge{flex:0 0 auto;border:1px solid var(--sb-border);border-radius:999px;padding:7px 10px;font-size:11px;font-weight:850;color:#fff;background:rgba(255,255,255,.06)}
+#pco-bi-resume[data-tone="active"] .sb-badge{border-color:rgba(255,154,36,.34);color:#ffd2a1;background:rgba(255,154,36,.10)}
+#pco-bi-resume[data-tone="ok"] .sb-badge{border-color:rgba(111,221,160,.34);color:#baf3d2;background:rgba(111,221,160,.10)}
+#pco-bi-resume[data-tone="warn"] .sb-badge{border-color:rgba(255,210,126,.35);color:#ffe2a8;background:rgba(255,210,126,.10)}
+#pco-bi-resume[data-tone="bad"] .sb-badge{border-color:rgba(255,142,152,.38);color:#ffc4c9;background:rgba(255,142,152,.10)}
+#pco-bi-resume .sb-body{padding:18px 20px 20px}
+#pco-bi-resume .sb-alert{display:none;margin-bottom:14px;padding:11px 13px;border:1px solid rgba(255,210,126,.28);border-radius:12px;background:rgba(255,210,126,.07);color:#ffe4b7;line-height:1.45}
+#pco-bi-resume .sb-alert[data-visible="1"]{display:block}
+#pco-bi-resume .sb-progress-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px}
+#pco-bi-resume .sb-progress-card{padding:12px 13px;border:1px solid var(--sb-border);border-radius:13px;background:var(--sb-panel)}
+#pco-bi-resume .sb-progress-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+#pco-bi-resume .sb-progress-label{font-size:11px;font-weight:800;color:var(--sb-muted);text-transform:uppercase;letter-spacing:.06em}
+#pco-bi-resume .sb-progress-value{font-size:12px;font-weight:900;color:#fff}
+#pco-bi-resume .sb-bar{height:7px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+#pco-bi-resume .sb-fill{height:100%;width:0;border-radius:inherit;transition:width .25s ease}
+#pco-bi-resume .sb-upload-fill{background:linear-gradient(90deg,#5e99ff,#81b9ff)}
+#pco-bi-resume .sb-process-fill{background:linear-gradient(90deg,#ffb000,#ff7a00)}
+#pco-bi-resume .sb-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-bottom:12px}
+#pco-bi-resume .sb-stat{padding:11px 10px;border:1px solid var(--sb-border);border-radius:12px;background:var(--sb-panel);min-width:0}
+#pco-bi-resume .sb-stat strong{display:block;font-size:20px;line-height:1;color:#fff;font-variant-numeric:tabular-nums}
+#pco-bi-resume .sb-stat span{display:block;margin-top:5px;font-size:10px;line-height:1.25;color:var(--sb-muted)}
+#pco-bi-resume .sb-current{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 14px;align-items:center;padding:12px 13px;margin-bottom:12px;border:1px solid var(--sb-border);border-radius:13px;background:rgba(0,0,0,.13)}
+#pco-bi-resume .sb-current-label{font-size:10px;font-weight:850;color:var(--sb-muted);text-transform:uppercase;letter-spacing:.06em}
+#pco-bi-resume .sb-current-name{min-width:0;font-weight:750;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pco-bi-resume .sb-current-detail{grid-column:1/-1;color:var(--sb-muted);font-size:11.5px;line-height:1.45;overflow-wrap:anywhere}
+#pco-bi-resume .sb-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+#pco-bi-resume button{border:1px solid var(--sb-border);border-radius:10px;padding:8px 12px;background:rgba(255,255,255,.055);color:#fff;cursor:pointer;font:inherit;font-weight:800;transition:background .15s ease,border-color .15s ease,transform .05s ease}
+#pco-bi-resume button:hover{background:rgba(255,255,255,.10)}
+#pco-bi-resume button:active{transform:translateY(1px)}
+#pco-bi-resume button[hidden]{display:none!important}
+#pco-bi-resume .sb-pause{border-color:rgba(255,210,126,.30);color:#ffe0a5}
+#pco-bi-resume .sb-resume{border-color:rgba(111,221,160,.32);color:#baf3d2}
+#pco-bi-resume .sb-stop{border-color:rgba(255,142,152,.32);color:#ffc4c9}
+#pco-bi-resume .sb-tabs{display:flex;gap:6px;flex-wrap:wrap;padding-top:2px;border-top:1px solid var(--sb-border)}
+#pco-bi-resume .sb-tab{margin-top:12px;padding:7px 10px;border-radius:9px;color:var(--sb-muted)}
+#pco-bi-resume .sb-tab[data-selected="1"]{background:rgba(255,154,36,.12);border-color:rgba(255,154,36,.26);color:#ffd2a1}
+#pco-bi-resume .sb-section{display:none;margin-top:10px}
+#pco-bi-resume .sb-section[data-visible="1"]{display:block}
+#pco-bi-resume .sb-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px;color:var(--sb-muted);font-size:11px}
+#pco-bi-resume .sb-log,#pco-bi-resume .sb-packages,#pco-bi-resume .sb-history{border:1px solid var(--sb-border);border-radius:12px;background:rgba(0,0,0,.16);overflow:auto}
+#pco-bi-resume .sb-log{height:min(410px,42vh);padding:5px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;line-height:1.45}
+#pco-bi-resume .sb-log-row{display:grid;grid-template-columns:68px 78px minmax(0,1fr);gap:8px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.045)}
+#pco-bi-resume .sb-log-time{color:rgba(255,255,255,.38)}
+#pco-bi-resume .sb-log-level{font-weight:900;font-size:10px}
+#pco-bi-resume .sb-log-msg{color:rgba(255,255,255,.72);overflow-wrap:anywhere}
+#pco-bi-resume .sb-log-row[data-level="warning"] .sb-log-level{color:var(--sb-yellow)}
+#pco-bi-resume .sb-log-row[data-level="error"] .sb-log-level{color:var(--sb-red)}
+#pco-bi-resume .sb-log-row[data-level="info"] .sb-log-level{color:var(--sb-blue)}
+#pco-bi-resume .sb-packages{max-height:420px}
+#pco-bi-resume .sb-package-row{display:grid;grid-template-columns:52px minmax(160px,1.4fr) 145px minmax(180px,1fr);gap:10px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.045);align-items:center;font-size:11px}
+#pco-bi-resume .sb-package-row.sb-package-head{position:sticky;top:0;z-index:2;background:rgba(28,23,36,.98);font-size:10px;font-weight:900;color:var(--sb-muted);text-transform:uppercase;letter-spacing:.04em}
+#pco-bi-resume .sb-package-name,#pco-bi-resume .sb-package-detail{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pco-bi-resume .sb-package-state{font-weight:850}
+#pco-bi-resume .sb-package-row[data-state="success"] .sb-package-state{color:var(--sb-green)}
+#pco-bi-resume .sb-package-row[data-state="skipped"] .sb-package-state{color:var(--sb-yellow)}
+#pco-bi-resume .sb-package-row[data-state="failed"],#pco-bi-resume .sb-package-row[data-state="error"] .sb-package-state{color:var(--sb-red)}
+#pco-bi-resume .sb-package-row[data-state="running"] .sb-package-state{color:var(--sb-orange)}
+#pco-bi-resume .sb-history{max-height:340px}
+#pco-bi-resume .sb-history-row{display:grid;grid-template-columns:minmax(150px,.9fr) 160px minmax(220px,1.7fr);gap:10px;padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.045);font-size:11px;align-items:center}
+#pco-bi-resume .sb-history-id{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.68);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#pco-bi-resume .sb-history-state{font-weight:850;color:#fff}
+#pco-bi-resume .sb-history-detail{color:var(--sb-muted);overflow-wrap:anywhere}
+#pco-bi-resume .sb-empty{padding:18px;text-align:center;color:var(--sb-muted)}
+/* Harmonise aussi la file de téléversement existante avec la nouvelle carte. */
+#pco-bi-queue{border:1px solid rgba(255,255,255,.12)!important;border-radius:14px!important;background:rgba(17,15,24,.70)!important;padding:12px 13px!important}
+#pco-bi-upwrap{height:8px!important;border-radius:999px!important;background:rgba(255,255,255,.08)!important}
+#pco-bi-upbar{border-radius:999px!important}
+@media(max-width:850px){
+  #pco-bi-resume .sb-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #pco-bi-resume .sb-progress-grid{grid-template-columns:1fr}
+  #pco-bi-resume .sb-package-row{grid-template-columns:44px minmax(130px,1fr) 125px}
+  #pco-bi-resume .sb-package-detail{display:none}
+  #pco-bi-resume .sb-history-row{grid-template-columns:1fr 130px}
+  #pco-bi-resume .sb-history-detail{grid-column:1/-1}
+}
 </style>
 <script>
 (() => {
   "use strict";
-  if (window.__pcosBatchResumePanelV1) return;
-  window.__pcosBatchResumePanelV1 = true;
+  if (window.__pcosSmartBatchProV2) return;
+  window.__pcosSmartBatchProV2 = true;
 
   let current = null;
+  let historyCache = [];
+  let selectedTab = "journal";
+
+  const FINAL_STATES = new Set(["completed", "completed_with_warning", "stopped", "cancelled", "failed"]);
+  const ACTIVE_STATES = new Set(["uploading", "queued", "running", "stopping", "pausing"]);
 
   async function api(url, options = {}) {
-    const response = await fetch(url, {cache: "no-store", credentials: "same-origin",
-      headers: {"Accept": "application/json"}, ...options});
-    if (!response.ok && response.status !== 202) throw new Error(response.status);
-    return response.json();
+    const response = await fetch(url, {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: {"Accept": "application/json", ...(options.headers || {})},
+      ...options
+    });
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok && response.status !== 202) {
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+    return data;
   }
 
-  // Le suivi doit vivre AVEC la zone d'import, pas en tete de page.
   function anchor() {
     return document.getElementById("pco-bi-queue")
-        || document.getElementById("pco-bi-upwrap")
-        || document.querySelector("form[enctype]");
+      || document.getElementById("pco-bi-upwrap")
+      || document.querySelector("form[enctype]");
   }
 
   function panel() {
     let node = document.getElementById("pco-bi-resume");
     if (node) return node;
-    node = document.createElement("div");
+
+    node = document.createElement("section");
     node.id = "pco-bi-resume";
-    node.hidden = true;
-    node.innerHTML = '<h3>Transfert en cours</h3>'
-      + '<div class="pco-r-detail">—</div>'
-      + '<div class="pco-r-bar"><div class="pco-r-fill"></div></div>'
-      + '<div class="pco-r-actions">'
-      + '<button class="pco-r-pause" type="button">Pause</button>'
-      + '<button class="pco-r-resume" type="button">Reprendre</button>'
-      + '<button class="pco-r-stop" type="button">Arrêter</button>'
-      + '</div>'
-      + '<div class="pco-r-log"></div>';
+    node.setAttribute("aria-live", "polite");
+    node.dataset.tone = "active";
+    node.innerHTML = `
+      <div class="sb-head">
+        <div class="sb-title-wrap">
+          <div class="sb-kicker">Smart Batch Import</div>
+          <h3>Prêt</h3>
+          <div class="sb-job">Aucun job actif</div>
+        </div>
+        <div class="sb-badge">PRÊT</div>
+      </div>
+      <div class="sb-body">
+        <div class="sb-alert"></div>
+        <div class="sb-progress-grid">
+          <div class="sb-progress-card">
+            <div class="sb-progress-top"><span class="sb-progress-label">Téléversement</span><span class="sb-progress-value sb-upload-value">0 / 0</span></div>
+            <div class="sb-bar"><div class="sb-fill sb-upload-fill"></div></div>
+          </div>
+          <div class="sb-progress-card">
+            <div class="sb-progress-top"><span class="sb-progress-label">Traitement</span><span class="sb-progress-value sb-process-value">0 / 0</span></div>
+            <div class="sb-bar"><div class="sb-fill sb-process-fill"></div></div>
+          </div>
+        </div>
+        <div class="sb-stats">
+          <div class="sb-stat"><strong data-stat="success">0</strong><span>Importées</span></div>
+          <div class="sb-stat"><strong data-stat="skipped">0</strong><span>Déjà présentes / ignorées</span></div>
+          <div class="sb-stat"><strong data-stat="failed">0</strong><span>Erreurs ignorées</span></div>
+          <div class="sb-stat"><strong data-stat="warnings">0</strong><span>Avertissements</span></div>
+          <div class="sb-stat"><strong data-stat="remaining">0</strong><span>Restantes</span></div>
+        </div>
+        <div class="sb-current">
+          <div class="sb-current-label">Table actuelle</div>
+          <div class="sb-current-name">—</div>
+          <div class="sb-current-detail">Worker prêt.</div>
+        </div>
+        <div class="sb-actions">
+          <button class="sb-pause" type="button">Pause</button>
+          <button class="sb-resume" type="button">Reprendre</button>
+          <button class="sb-stop" type="button">Arrêter</button>
+          <button class="sb-copy" type="button">Copier le journal</button>
+          <button class="sb-download" type="button">Télécharger le journal</button>
+          <button class="sb-dismiss" type="button">Masquer le résultat</button>
+        </div>
+        <div class="sb-tabs">
+          <button class="sb-tab" data-tab="journal" data-selected="1" type="button">Journal</button>
+          <button class="sb-tab" data-tab="packages" type="button">Packages</button>
+          <button class="sb-tab" data-tab="history" type="button">Historique</button>
+        </div>
+        <div class="sb-section" data-section="journal" data-visible="1">
+          <div class="sb-section-head"><span class="sb-log-count">0 événement</span><span>Journal complet conservé par le job</span></div>
+          <div class="sb-log"></div>
+        </div>
+        <div class="sb-section" data-section="packages">
+          <div class="sb-section-head"><span class="sb-package-count">0 package</span><span>État individuel des packages</span></div>
+          <div class="sb-packages"></div>
+        </div>
+        <div class="sb-section" data-section="history">
+          <div class="sb-section-head"><span>Derniers Smart Batch</span><span class="sb-history-count">0 job</span></div>
+          <div class="sb-history"></div>
+        </div>
+      </div>`;
+
     const ref = anchor();
     if (ref && ref.parentNode) {
       ref.parentNode.insertBefore(node, ref.nextSibling);
     } else {
-      // Aucune zone d'import sur cette page : vignette discrete en bas a
-      // droite, jamais un bloc pose en haut du document.
       node.dataset.floating = "1";
       document.body.appendChild(node);
     }
-    node.querySelector(".pco-r-pause").addEventListener("click", () => act("pause"));
-    node.querySelector(".pco-r-resume").addEventListener("click", () => act("resume"));
-    node.querySelector(".pco-r-stop").addEventListener("click", () => act("stop"));
-    return node;
-  }
 
-  const LABELS = {uploading:"Téléversement", queued:"En file", running:"Import actif",
-    stopping:"Arrêt demandé", paused:"En pause", completed:"Terminé",
-    completed_with_warning:"Terminé avec avertissement", failed:"Interrompu",
-    stopped:"Arrêté", cancelled:"Annulé"};
-
-  async function act(action) {
-    if (!current?.id) return;
-    try {
-      await api(`/api/batch-import/live/${action}/${encodeURIComponent(current.id)}`, {method: "POST"});
-    } catch (_) {}
-    refresh();
-  }
-
-  function render(data) {
-    const job = data?.job || null;
-    const node = panel();
-    current = job;
-    if (!job) { node.hidden = true; return; }
-
-    const state = String(job.state || "").toLowerCase();
-    const progress = job.progress || {};
-    const total = Number(progress.total ?? job.total_archives ?? 0);
-    const done = Number(progress.completed ?? job.processed_archives ?? 0);
-    const remaining = Number(data.remaining || 0);
-    const finished = ["completed", "completed_with_warning", "stopped", "cancelled"].includes(state);
-
-    // Un travail termine sans reste n'a rien a reprendre : on n'encombre pas la page.
-    if (finished && !remaining) { node.hidden = true; return; }
-
-    node.hidden = false;
-    node.querySelector("h3").textContent = `Transfert — ${LABELS[state] || state}`;
-    node.querySelector(".pco-r-detail").textContent =
-      [`${done}/${total} paquet(s) traité(s)`,
-       remaining ? `${remaining} restant(s)` : "",
-       String(progress.current_item || job.current_item || ""),
-       String(job.error || "")].filter(Boolean).join(" · ");
-    node.querySelector(".pco-r-fill").style.width =
-      `${Math.max(0, Math.min(100, Number(progress.percent || 0)))}%`;
-
-    const active = ["uploading", "queued", "running"].includes(state);
-    node.querySelector(".pco-r-pause").hidden = !active;
-    const resumeButton = node.querySelector(".pco-r-resume");
-    resumeButton.hidden = !(data.resumable || state === "paused");
-    resumeButton.textContent = remaining ? `Reprendre (${remaining})` : "Reprendre";
-    node.querySelector(".pco-r-stop").hidden = !(active || state === "paused");
-
-    const log = node.querySelector(".pco-r-log");
-    log.innerHTML = "";
-    (job.events || []).slice(-8).forEach(event => {
-      const line = document.createElement("div");
-      line.textContent = `${String(event.at || "").slice(11, 19)} — ${event.message || ""}`;
-      if (event.level === "warning") line.style.color = "#ffd27e";
-      if (event.level === "error") line.style.color = "#f08080";
-      log.appendChild(line);
+    node.querySelector(".sb-pause").addEventListener("click", () => act("pause"));
+    node.querySelector(".sb-resume").addEventListener("click", () => act("resume"));
+    node.querySelector(".sb-stop").addEventListener("click", () => act("stop"));
+    node.querySelector(".sb-copy").addEventListener("click", copyLog);
+    node.querySelector(".sb-download").addEventListener("click", downloadLog);
+    node.querySelector(".sb-dismiss").addEventListener("click", dismissCurrent);
+    node.querySelectorAll(".sb-tab").forEach(button => {
+      button.addEventListener("click", () => selectTab(button.dataset.tab || "journal"));
     });
+    return node;
   }
 
   function reseat() {
@@ -691,18 +1070,320 @@ _PAGE_UI = r'''
     }
   }
 
-  async function refresh() {
+  function selectTab(name) {
+    selectedTab = name;
+    const node = panel();
+    node.querySelectorAll(".sb-tab").forEach(button => {
+      button.dataset.selected = button.dataset.tab === name ? "1" : "0";
+    });
+    node.querySelectorAll(".sb-section").forEach(section => {
+      section.dataset.visible = section.dataset.section === name ? "1" : "0";
+    });
+  }
+
+  function stateInfo(job) {
+    if (!job) return {title:"Prêt", badge:"PRÊT", tone:"ok", detail:"Aucun Smart Batch actif."};
+    const state = String(job.state || "").toLowerCase();
+    const total = Number(job.total_archives || 0);
+    const uploaded = Number(job.uploaded_archives ?? (job.uploads || []).length ?? 0);
+    const done = Number(job.processed_archives || 0);
+    const complete = Boolean(job.uploads_complete);
+
+    if (!complete && ["uploading", "queued", "paused"].includes(state)) {
+      return {
+        title:"Téléversement incomplet",
+        badge:"STAGING",
+        tone:"warn",
+        detail:`${uploaded}/${total} package(s) reçus · ${Math.max(0,total-uploaded)} non reçu(s) · import non démarré.`
+      };
+    }
+    if (state === "uploading") return {title:"Téléversement en cours", badge:"UPLOAD", tone:"active", detail:"Garde cette page ouverte jusqu’à N/N téléversés."};
+    if (state === "queued") return {title:"Prêt pour le worker", badge:"EN FILE", tone:"active", detail:"Tous les packages sont sur le cab. Le worker va commencer."};
+    if (state === "running") return {title:"Import en cours", badge:"ACTIF", tone:"active", detail:"Traitement séquentiel en arrière-plan."};
+    if (state === "stopping") return {title:"Arrêt demandé", badge:"ARRÊT…", tone:"warn", detail:"Le package courant se termine proprement."};
+    if (state === "paused" && job.error) return {title:"Pause de sécurité", badge:"PAUSE", tone:"bad", detail:String(job.error)};
+    if (state === "paused") return {title:"En pause", badge:"PAUSE", tone:"warn", detail:"Le Batch peut être repris sans retransmettre les packages déjà stockés."};
+    if (state === "completed") return {title:"Terminé", badge:"TERMINÉ", tone:"ok", detail:"Smart Batch terminé sans erreur."};
+    if (state === "completed_with_warning") return {title:"Terminé avec avertissements", badge:"TERMINÉ", tone:"warn", detail:"Le Batch est terminé. Consulte les compteurs et le journal."};
+    if (state === "stopped") return {title:"Arrêté", badge:"ARRÊTÉ", tone:"warn", detail:done ? "Batch arrêté volontairement." : `Téléversement interrompu : ${uploaded}/${total} reçus · import non démarré.`};
+    if (state === "failed") return {title:"Erreur", badge:"ERREUR", tone:"bad", detail:String(job.error || "Erreur du Batch.")};
+    return {title:state || "État inconnu", badge:(state || "—").toUpperCase(), tone:"warn", detail:"État du Smart Batch."};
+  }
+
+  function packetLabel(state) {
+    return ({
+      queued:"En attente", running:"En cours", success:"Importée", done:"Importée",
+      skipped:"Ignorée", failed:"Erreur ignorée", warning:"Avertissement", error:"Erreur système"
+    })[state] || state || "—";
+  }
+
+  function eventLevel(event) {
+    const level = String(event?.level || "info").toLowerCase();
+    return level === "warning" || level === "error" ? level : "info";
+  }
+
+  function eventText(events) {
+    return (events || []).map(event => {
+      const time = String(event.at || "").replace("T", " ").replace("Z", " UTC");
+      return `${time} [${eventLevel(event).toUpperCase()}] ${event.message || ""}`;
+    }).join("\n");
+  }
+
+  function safeFileName(value) {
+    return String(value || "smart-batch").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "smart-batch";
+  }
+
+  async function copyLog() {
+    const events = current?.events || [];
+    if (!events.length) return;
     try {
-      render(await api("/api/batch-import/live/active"));
-      reseat();
+      await navigator.clipboard.writeText(eventText(events));
+      const button = panel().querySelector(".sb-copy");
+      const old = button.textContent;
+      button.textContent = "Copié ✓";
+      window.setTimeout(() => { button.textContent = old; }, 1400);
     } catch (_) {}
   }
 
+  function downloadLog() {
+    const events = current?.events || [];
+    if (!events.length) return;
+    const blob = new Blob([eventText(events) + "\n"], {type:"text/plain;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeFileName(current?.id)}-smart-batch.log.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function dismissCurrent() {
+    if (!current?.id) return;
+    localStorage.setItem(`pcos-smart-batch-pro-v2-dismissed-${current.id}`, "1");
+    current = null;
+    renderCurrent({job:null}, historyCache);
+  }
+
+  async function act(action) {
+    if (!current?.id) return;
+    if (action === "stop") {
+      const ok = window.confirm("Arrêter ce Smart Batch ? Les packages non traités seront supprimés. Cette action ne désinstalle aucune table déjà importée.");
+      if (!ok) return;
+    }
+    try {
+      await api(`/api/batch-import/live/${action}/${encodeURIComponent(current.id)}`, {method:"POST"});
+    } catch (error) {
+      const alert = panel().querySelector(".sb-alert");
+      alert.dataset.visible = "1";
+      alert.textContent = `Action impossible : ${error.message}`;
+    }
+    await refresh();
+  }
+
+  function renderLog(job) {
+    const node = panel();
+    const log = node.querySelector(".sb-log");
+    const events = job?.events || [];
+    node.querySelector(".sb-log-count").textContent = `${events.length} événement(s)`;
+
+    const same = log.dataset.jobId === String(job?.id || "");
+    let rendered = same ? Number(log.dataset.count || 0) : 0;
+    if (!same || rendered > events.length) {
+      log.innerHTML = "";
+      rendered = 0;
+    }
+
+    const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 50;
+    events.slice(rendered).forEach(event => {
+      const row = document.createElement("div");
+      const level = eventLevel(event);
+      row.className = "sb-log-row";
+      row.dataset.level = level;
+      row.innerHTML = '<span class="sb-log-time"></span><span class="sb-log-level"></span><span class="sb-log-msg"></span>';
+      row.querySelector(".sb-log-time").textContent = String(event.at || "").slice(11,19);
+      row.querySelector(".sb-log-level").textContent = level.toUpperCase();
+      row.querySelector(".sb-log-msg").textContent = String(event.message || "");
+      log.appendChild(row);
+    });
+
+    if (!events.length) log.innerHTML = '<div class="sb-empty">Aucun événement pour ce job.</div>';
+    log.dataset.jobId = String(job?.id || "");
+    log.dataset.count = String(events.length);
+    if (nearBottom || rendered === 0) log.scrollTop = log.scrollHeight;
+  }
+
+  function renderPackages(job) {
+    const node = panel();
+    const host = node.querySelector(".sb-packages");
+    const items = Array.isArray(job?.uploads) ? [...job.uploads] : [];
+    items.sort((a,b) => Number(a.index || 0) - Number(b.index || 0));
+    node.querySelector(".sb-package-count").textContent = `${items.length} package(s)`;
+
+    if (!items.length) {
+      host.innerHTML = '<div class="sb-empty">Aucun package dans ce job.</div>';
+      return;
+    }
+
+    host.innerHTML = '<div class="sb-package-row sb-package-head"><span>#</span><span>Package</span><span>Statut</span><span>Détail</span></div>';
+    items.forEach(item => {
+      const state = String(item.state || "").toLowerCase();
+      const row = document.createElement("div");
+      row.className = "sb-package-row";
+      row.dataset.state = state;
+      row.innerHTML = '<span></span><span class="sb-package-name"></span><span class="sb-package-state"></span><span class="sb-package-detail"></span>';
+      row.children[0].textContent = String(item.index || "");
+      row.querySelector(".sb-package-name").textContent = String(item.name || "Package");
+      row.querySelector(".sb-package-state").textContent = packetLabel(state);
+      row.querySelector(".sb-package-detail").textContent = String(item.detail || "");
+      row.title = [item.name, packetLabel(state), item.detail].filter(Boolean).join(" — ");
+      host.appendChild(row);
+    });
+  }
+
+  function historyInfo(job) {
+    const state = String(job?.state || "").toLowerCase();
+    const total = Number(job?.total_archives || 0);
+    const uploaded = Number(job?.uploaded_archives ?? (job?.uploads || []).length ?? 0);
+    const done = Number(job?.processed_archives || 0);
+    const p = job?.progress || {};
+    if (state === "stopped" && done === 0 && uploaded < total) {
+      return ["Téléversement interrompu", `${uploaded}/${total} téléversés · import non démarré`];
+    }
+    const label = stateInfo(job).title;
+    const detail = [
+      `${done}/${total} traités`,
+      `${Number(p.successful || 0)} importées`,
+      `${Number(p.skipped || 0)} ignorées`,
+      `${Number(p.failed || 0)} erreurs ignorées`
+    ].join(" · ");
+    return [label, detail];
+  }
+
+  function renderHistory(jobs) {
+    const node = panel();
+    const host = node.querySelector(".sb-history");
+    const rows = Array.isArray(jobs) ? jobs.slice(0,40) : [];
+    node.querySelector(".sb-history-count").textContent = `${rows.length} job(s)`;
+    if (!rows.length) {
+      host.innerHTML = '<div class="sb-empty">Aucun historique.</div>';
+      return;
+    }
+    host.innerHTML = "";
+    rows.forEach(job => {
+      const [label, detail] = historyInfo(job);
+      const row = document.createElement("div");
+      row.className = "sb-history-row";
+      row.innerHTML = '<span class="sb-history-id"></span><span class="sb-history-state"></span><span class="sb-history-detail"></span>';
+      row.querySelector(".sb-history-id").textContent = String(job.id || "");
+      row.querySelector(".sb-history-state").textContent = label;
+      row.querySelector(".sb-history-detail").textContent = detail;
+      host.appendChild(row);
+    });
+  }
+
+  function renderCurrent(data, jobs) {
+    const node = panel();
+    let job = data?.job || null;
+
+    if (job?.id && localStorage.getItem(`pcos-smart-batch-pro-v2-dismissed-${job.id}`) === "1") {
+      job = null;
+    }
+    current = job;
+
+    const info = stateInfo(job);
+    node.dataset.tone = info.tone;
+    node.querySelector("h3").textContent = info.title;
+    node.querySelector(".sb-badge").textContent = info.badge;
+    node.querySelector(".sb-job").textContent = job?.id ? `Job ${job.id}` : "Aucun job actif";
+    node.querySelector(".sb-job").title = job?.id || "";
+
+    const progress = job?.progress || {};
+    const total = Number(progress.total ?? job?.total_archives ?? 0);
+    const uploaded = Number(job?.uploaded_archives ?? (job?.uploads || []).length ?? 0);
+    const done = Number(progress.completed ?? job?.processed_archives ?? 0);
+    const success = Number(progress.successful || 0);
+    const skipped = Number(progress.skipped || 0);
+    const failed = Number(progress.failed || 0);
+    const warnings = Number(progress.warnings || 0);
+    const remaining = Math.max(0, total - done);
+    const uploadPct = total ? Math.max(0,Math.min(100,uploaded * 100 / total)) : 0;
+    const processPct = total ? Math.max(0,Math.min(100,done * 100 / total)) : 0;
+
+    node.querySelector(".sb-upload-value").textContent = `${uploaded} / ${total}`;
+    node.querySelector(".sb-process-value").textContent = `${done} / ${total}`;
+    node.querySelector(".sb-upload-fill").style.width = `${uploadPct}%`;
+    node.querySelector(".sb-process-fill").style.width = `${processPct}%`;
+    node.querySelector('[data-stat="success"]').textContent = String(success);
+    node.querySelector('[data-stat="skipped"]').textContent = String(skipped);
+    node.querySelector('[data-stat="failed"]').textContent = String(failed);
+    node.querySelector('[data-stat="warnings"]').textContent = String(warnings);
+    node.querySelector('[data-stat="remaining"]').textContent = String(remaining);
+
+    const currentName = String(progress.current_item || job?.current_item || "");
+    node.querySelector(".sb-current-name").textContent = currentName || "—";
+    node.querySelector(".sb-current-name").title = currentName;
+    const currentDetail = [progress.label, info.detail, job?.error].filter(Boolean).join(" · ");
+    node.querySelector(".sb-current-detail").textContent = currentDetail || "Worker prêt.";
+
+    const alert = node.querySelector(".sb-alert");
+    const state = String(job?.state || "").toLowerCase();
+    const uploadsComplete = Boolean(job?.uploads_complete);
+    if (job && !uploadsComplete && ["uploading", "queued", "paused"].includes(state)) {
+      alert.dataset.visible = "1";
+      alert.textContent = `Téléversement incomplet : ${uploaded}/${total} reçu(s). Le worker ne doit pas commencer avant ${total}/${total}. Si le navigateur n’a plus les fichiers locaux, arrête ce brouillon et relance une nouvelle sélection.`;
+    } else if (job?.error) {
+      alert.dataset.visible = "1";
+      alert.textContent = String(job.error);
+    } else {
+      alert.dataset.visible = "0";
+      alert.textContent = "";
+    }
+
+    const active = ACTIVE_STATES.has(state);
+    const pauseAllowed = uploadsComplete && ["queued", "running"].includes(state);
+    const resumeAllowed = uploadsComplete && state === "paused" && Boolean(data?.resumable);
+    node.querySelector(".sb-pause").hidden = !pauseAllowed;
+    node.querySelector(".sb-resume").hidden = !resumeAllowed;
+    node.querySelector(".sb-stop").hidden = !(active || state === "paused");
+    node.querySelector(".sb-copy").hidden = !(job?.events || []).length;
+    node.querySelector(".sb-download").hidden = !(job?.events || []).length;
+    node.querySelector(".sb-dismiss").hidden = !(job && ["completed", "completed_with_warning"].includes(state));
+
+    renderLog(job);
+    renderPackages(job);
+    renderHistory(jobs);
+    selectTab(selectedTab);
+  }
+
+  async function refresh() {
+    try {
+      const [active, history] = await Promise.all([
+        api("/api/batch-import/live/active"),
+        api("/api/batch-import/live/history")
+      ]);
+      historyCache = history.jobs || [];
+      renderCurrent(active, historyCache);
+      reseat();
+    } catch (error) {
+      const node = panel();
+      node.dataset.tone = "bad";
+      node.querySelector("h3").textContent = "État indisponible";
+      node.querySelector(".sb-badge").textContent = "API";
+      const alert = node.querySelector(".sb-alert");
+      alert.dataset.visible = "1";
+      alert.textContent = `Impossible de lire l’état Smart Batch : ${error.message}`;
+    }
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", refresh, {once: true});
+    document.addEventListener("DOMContentLoaded", refresh, {once:true});
   } else {
     refresh();
   }
+  window.addEventListener("pcos-batch-import-started", refresh);
+  window.addEventListener("pcos-batch-import-finished", refresh);
   window.setInterval(refresh, 2500);
 })();
 </script>
@@ -1044,6 +1725,53 @@ def register_batch_import_live(app: Any) -> None:
             return jsonify({"ok": False, "error": str(exc), "active_job_id": queue.active_job_id()}), 409
         return jsonify({"ok": True, "job": queue.public_job(job)}), 201
 
+    # PINCABOS_SMART_BATCH_STAGING_FIX_V31
+    @app.route(
+        "/api/batch-import/live/upload-raw/<job_id>/<int:index>",
+        methods=["POST"],
+    )
+    def pincabos_batch_import_v31_upload_raw(
+        job_id: str,
+        index: int,
+    ) -> Any:
+        filename = str(request.args.get("name", "") or "")
+        try:
+            expected_size = int(
+                request.args.get("size", "0") or 0
+            )
+        except (TypeError, ValueError):
+            expected_size = 0
+
+        try:
+            job = _save_raw_upload(
+                job_id,
+                request.stream,
+                filename,
+                index,
+                expected_size,
+            )
+        except ValueError as exc:
+            return jsonify({
+                "ok": False,
+                "error": str(exc),
+            }), 400
+        except RuntimeError as exc:
+            return jsonify({
+                "ok": False,
+                "error": str(exc),
+            }), 409
+        except Exception as exc:
+            return jsonify({
+                "ok": False,
+                "error": f"Téléversement RAW impossible : {exc}",
+            }), 500
+
+        return jsonify({
+            "ok": True,
+            "job": queue.public_job(job),
+        }), 202
+
+
     @app.route("/api/batch-import/live/upload/<job_id>", methods=["POST"])
     def pincabos_batch_import_v2_upload(job_id: str) -> Any:
         try:
@@ -1199,39 +1927,58 @@ def register_batch_import_live(app: Any) -> None:
 
     @app.route("/api/batch-import/live/active", methods=["GET"])
     def pincabos_batch_import_v2_active() -> Any:
-        """Travail a reprendre en charge quand on (re)vient sur la page.
+        """Retourne uniquement un Smart Batch réellement pertinent à piloter.
 
-        Sans cela, quitter la page de transfert faisait perdre le suivi : on
-        revenait sur un ecran vierge alors que l'import continuait.
+        Priorité :
+        1) slot actif ;
+        2) dernier job en pause et réellement reprenable ;
+        Aucun ancien résultat terminé n'est injecté à la place du job courant.
+
+        Un job stopped/cancelled/failed ou un staging incomplet stoppé reste dans
+        /history, mais n'est jamais présenté comme actif ou reprenable.
         """
         job_id = queue.active_job_id()
         job = queue.load_job(job_id) if job_id else None
 
+        history = queue.list_jobs()
+
         if not job:
-            # Rien d'actif : on propose le travail le plus recent qui reste
-            # reprenable (en pause, ou interrompu avec des paquets restants).
-            for candidate in reversed(queue.list_jobs()):
+            for candidate in history:
                 state = str(candidate.get("state", ""))
+                if state != queue.PAUSED_STATE:
+                    continue
+                if not bool(candidate.get("uploads_complete")):
+                    continue
                 remaining = any(
-                    isinstance(item, dict) and str(item.get("state")) in {"queued", "running", "error"}
+                    isinstance(item, dict)
+                    and str(item.get("state")) in {"queued", "running", "error"}
                     for item in (candidate.get("uploads") or [])
                 )
-                if state == queue.PAUSED_STATE or (remaining and state not in {"completed", "completed_with_warning"}):
+                if remaining:
                     job = candidate
                     break
 
+        # PINCABOS_SMART_BATCH_STAGING_FIX_V31
+        # Aucun fallback vers une ancienne job terminée.
+        # L'historique reste disponible via /history.
         if not job:
-            return jsonify({"ok": True, "job": None})
+            return jsonify({"ok": True, "job": None, "resumable": False, "paused": False, "remaining": 0})
 
         state = str(job.get("state", ""))
         remaining = sum(
             1 for item in (job.get("uploads") or [])
-            if isinstance(item, dict) and str(item.get("state")) in {"queued", "running", "error"}
+            if isinstance(item, dict)
+            and str(item.get("state")) in {"queued", "running", "error"}
+        )
+        resumable = (
+            state == queue.PAUSED_STATE
+            and bool(job.get("uploads_complete"))
+            and remaining > 0
         )
         return jsonify({
             "ok": True,
             "job": queue.public_job(job),
-            "resumable": bool(remaining) and state != "running",
+            "resumable": resumable,
             "paused": state == queue.PAUSED_STATE,
             "remaining": remaining,
         })

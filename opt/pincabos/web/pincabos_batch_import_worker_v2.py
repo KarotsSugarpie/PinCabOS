@@ -73,32 +73,63 @@ def cleanup_new_engine_dirs(before: set[Path]) -> list[str]:
 
 
 def classify_response(status: int, body: str, curl_code: int) -> tuple[str, str, str]:
+    # PINCABOS_SMART_BATCH_BEST_EFFORT_V1
     excerpt = compact_html(body)
     folded = excerpt.casefold()
 
-    # PINCABOS_ARCHIVE_INVALID_MESSAGE_V1
-    # Archive tronquee ou corrompue : le motif exact ne vivait que dans un
-    # journal serveur, l'utilisateur ne voyait qu'une erreur generique et
-    # soupconnait son installation.
+    # Erreur propre au package : on l'ignore et on continue.
     if "pincabos_archive_invalide" in folded or "not a zip file" in folded or "badzipfile" in folded:
         return (
             "failed",
             "Archive invalide ou incomplète (ce n'est pas une archive ZIP lisible)",
             "Le fichier reçu n'est pas une archive ZIP exploitable : "
-            "téléchargement ou copie incomplète. Récupérez à nouveau ce paquet "
-            "avant de le réimporter.",
+            "téléchargement ou copie incomplète. Le package sera ignoré et "
+            "le Batch poursuivra avec le suivant.",
         )
 
+    # Une table déjà présente n'est pas une erreur.
+    already_present_tokens = (
+        "table déjà installée",
+        "table deja installee",
+        "existe déjà",
+        "existe deja",
+        "import skip",
+    )
+    if any(token in folded for token in already_present_tokens):
+        return "skipped", "Table déjà installée — ignorée automatiquement", excerpt
+
+    # Une archive temporaire manquante ne doit pas bloquer les suivantes.
+    if "archive temporaire introuvable" in folded:
+        return "failed", "Archive temporaire introuvable — package ignoré", excerpt
+
+    # Erreurs globales : continuer ferait probablement échouer toute la file.
+    fatal_tokens = (
+        "no space left on device",
+        "disk quota exceeded",
+        "quota exceeded",
+        "read-only file system",
+        "filesystem full",
+        "file system full",
+        "input/output error",
+    )
     if curl_code != 0:
-        return "failed", "Erreur de communication WebApp", excerpt
+        return "fatal", "Erreur de communication WebApp", excerpt
+    if status in {502, 503, 504, 507}:
+        return "fatal", f"HTTP {status} — service ou stockage indisponible", excerpt
+    if any(token in folded for token in fatal_tokens):
+        return "fatal", "Erreur système ou stockage indisponible", excerpt
+
+    # Les autres erreurs appartiennent au package courant : auto-skip.
     if status < 200 or status >= 300:
         return "failed", f"HTTP {status}", excerpt
     if "batch import interrompu" in folded or "batch import impossible" in folded:
-        return "failed", "Moteur Import interrompu", excerpt
+        return "failed", "Moteur Import interrompu pour ce package", excerpt
     if " erreur " in f" {folded} " or "class=bad" in folded:
         return "failed", "Erreur signalée par le moteur", excerpt
-    if "refusé" in folded or "ignoré" in folded or "vérification" in folded:
+    if "refusé" in folded or "vérification" in folded:
         return "warning", "Package terminé avec avertissement", excerpt
+    if "ignoré" in folded or "ignore" in folded:
+        return "skipped", "Package ignoré automatiquement", excerpt
     if "succès" in folded or "batch import terminé" in folded:
         return "success", "Package importé", excerpt
     return "warning", "Réponse terminée à vérifier", excerpt
@@ -206,15 +237,14 @@ def finish_item(
     excerpt: str,
     removed: list[str],
 ) -> dict[str, Any] | None:
-    # PINCABOS_BATCH_CONTROLS_V3
+    # PINCABOS_SMART_BATCH_BEST_EFFORT_V1
     index = int(item.get("index", 0) or 0)
     name = str(item.get("name", "Package"))
     source = Path(str(item.get("path", "")))
 
-    # Une erreur est maintenant REPRENABLE.
-    # L'archive source reste sur disque afin que Reprendre puisse retenter
-    # exactement le meme package.
-    if outcome == "failed":
+    # Une vraie panne globale met la file en pause et CONSERVE l'archive.
+    # L'utilisateur peut corriger le stockage/service puis Reprendre.
+    if outcome == "fatal":
         with queue.state_lock(True):
             job = queue.load_job_unlocked(job_id)
             if not job:
@@ -239,23 +269,21 @@ def finish_item(
                 f"; temporaires moteur supprimés: {', '.join(removed)}"
                 if removed else ""
             )
-
             queue.add_event(
                 job,
-                f"{name} : {detail}{cleanup_text} — "
-                "Batch mis automatiquement en pause. "
-                "Utilise Reprendre pour retenter ou Skip pour ignorer.",
+                f"PAUSE SÉCURITÉ — {name} : {detail}{cleanup_text}. "
+                "Les packages restants sont conservés. Corrige le problème "
+                "système puis utilise Reprendre.",
                 "error",
             )
-            queue.refresh_progress(job, "Erreur — en pause", name)
+            queue.refresh_progress(job, "Erreur système — en pause", name)
             queue.save_job_unlocked(job)
 
             if queue.active_job_id_unlocked() == job_id:
                 queue.set_active_unlocked(None)
-
             return job
 
-    # Succes / warning : le package a ete consomme et peut etre supprime.
+    # Success / warning / skipped / failed local : le package est consommé.
     try:
         source.unlink()
     except FileNotFoundError:
@@ -281,14 +309,16 @@ def finish_item(
         )
 
         if outcome == "success":
-            job["successful_archives"] = (
-                int(job.get("successful_archives", 0) or 0) + 1
-            )
+            job["successful_archives"] = int(job.get("successful_archives", 0) or 0) + 1
             level = "info"
+        elif outcome == "skipped":
+            job["skipped_archives"] = int(job.get("skipped_archives", 0) or 0) + 1
+            level = "warning"
+        elif outcome == "failed":
+            job["failed_archives"] = int(job.get("failed_archives", 0) or 0) + 1
+            level = "error"
         else:
-            job["warning_archives"] = (
-                int(job.get("warning_archives", 0) or 0) + 1
-            )
+            job["warning_archives"] = int(job.get("warning_archives", 0) or 0) + 1
             level = "warning"
 
         job["error"] = ""
@@ -299,14 +329,24 @@ def finish_item(
             if removed else ""
         )
 
-        queue.add_event(
-            job,
-            f"{name} : {detail}{cleanup_text}",
-            level,
-        )
+        if outcome == "failed":
+            message = (
+                f"ERREUR IGNORÉE AUTOMATIQUEMENT — {index}/{job.get('total_archives', 0)} "
+                f"{name} : {detail}{cleanup_text}. Passage au package suivant."
+            )
+        elif outcome == "skipped":
+            message = (
+                f"SKIP AUTOMATIQUE — {index}/{job.get('total_archives', 0)} "
+                f"{name} : {detail}{cleanup_text}. Passage au package suivant."
+            )
+        else:
+            message = f"{name} : {detail}{cleanup_text}"
+
+        queue.add_event(job, message, level)
         queue.refresh_progress(job, detail, name)
         queue.save_job_unlocked(job)
         return job
+
 
 def finalize_job(job_id: str, stopped: bool = False) -> None:
     with queue.state_lock(True):
@@ -314,24 +354,35 @@ def finalize_job(job_id: str, stopped: bool = False) -> None:
         if not job:
             queue.set_active_unlocked(None)
             return
+
+        ok_count = int(job.get("successful_archives", 0) or 0)
+        skipped_count = int(job.get("skipped_archives", 0) or 0)
+        failed_count = int(job.get("failed_archives", 0) or 0)
+        warning_count = int(job.get("warning_archives", 0) or 0)
+        summary = (
+            f"{ok_count} importé(s) · {skipped_count} ignoré(s) · "
+            f"{failed_count} erreur(s) ignorée(s) · {warning_count} avertissement(s)"
+        )
+
         job["current_item"] = ""
         job["finished_at"] = queue.utc_now()
         if stopped or job.get("stop_requested"):
             job["state"] = "stopped"
             label = "Arrêté proprement"
-            queue.add_event(job, "Import arrêté; les packages non traités ont été supprimés.", "warning")
-        elif (
-            int(job.get("failed_archives", 0) or 0)
-            or int(job.get("warning_archives", 0) or 0)
-            or int(job.get("skipped_archives", 0) or 0)
-        ):
+            queue.add_event(
+                job,
+                f"Import arrêté — {summary}. Les packages non traités ont été supprimés.",
+                "warning",
+            )
+        elif failed_count or warning_count or skipped_count:
             job["state"] = "completed_with_warning"
             label = "Terminé avec avertissement"
-            queue.add_event(job, "File terminée; consulte les compteurs et le journal.", "warning")
+            queue.add_event(job, f"SMART BATCH TERMINÉ — {summary}.", "warning")
         else:
             job["state"] = "completed"
             label = "Terminé"
-            queue.add_event(job, "Tous les packages ont été traités et nettoyés.")
+            queue.add_event(job, f"SMART BATCH TERMINÉ — {summary}.")
+
         queue.refresh_progress(job, label, "")
         queue.cleanup_uploads(job)
         queue.save_job_unlocked(job)
@@ -340,64 +391,50 @@ def finalize_job(job_id: str, stopped: bool = False) -> None:
 
 
 def fail_job(job_id: str, error: str) -> None:
+    # Une exception interne du worker est une panne globale potentielle.
+    # On conserve donc la file au lieu de supprimer les uploads restants.
     with queue.state_lock(True):
         job = queue.load_job_unlocked(job_id)
         if not job:
             queue.set_active_unlocked(None)
             return
-        job["state"] = "failed"
+        job["state"] = queue.PAUSED_STATE
+        job["pause_requested"] = False
+        job["paused_at"] = queue.utc_now()
+        job["finished_at"] = None
         job["error"] = error
-        job["finished_at"] = queue.utc_now()
-        queue.add_event(job, error, "error")
-        queue.refresh_progress(job, "Erreur du worker")
-        queue.cleanup_uploads(job)
+        queue.add_event(
+            job,
+            f"PAUSE SÉCURITÉ — {error}. Les packages restants sont conservés; "
+            "corrige le problème puis utilise Reprendre.",
+            "error",
+        )
+        queue.refresh_progress(job, "Erreur système — en pause")
         queue.save_job_unlocked(job)
         if queue.active_job_id_unlocked() == job_id:
             queue.set_active_unlocked(None)
 
 
-
 def process_job(job_id: str) -> None:
-    # PINCABOS_BATCH_WAIT_FULL_STAGE_V33
+    # PINCABOS_SMART_BATCH_PIPELINE_V321
     #
-    # Le navigateur commence par déposer TOUS les packages.
-    # Le worker ne démarre aucun import avant uploads_complete.
+    # PIPELINE PRODUCTEUR / CONSOMMATEUR :
+    # le navigateur téléverse les packages pendant que le worker traite
+    # immédiatement ceux qui sont déjà complètement reçus.
     #
-    # Une fois ce drapeau positionné, le navigateur n'est plus
-    # nécessaire et le Batch peut vivre entièrement en arrière-plan.
+    # Il n'est PLUS nécessaire d'attendre uploads_complete=True.
+    # L'absence temporaire de package est gérée plus bas par
+    # "En attente du package suivant".
     staging = queue.load_job(job_id)
 
     if not staging:
         return
 
-    if not bool(staging.get("uploads_complete")):
-        uploaded = int(
-            staging.get("uploaded_archives", 0) or 0
-        )
+    uploaded = int(staging.get("uploaded_archives", 0) or 0)
+    total = int(staging.get("total_archives", 0) or 0)
 
-        total = int(
-            staging.get("total_archives", 0) or 0
-        )
-
-        def waiting_for_stage(job: dict[str, Any]) -> None:
-            queue.refresh_progress(
-                job,
-                f"Téléversement vers le cab "
-                f"{uploaded}/{total}",
-                str(job.get("current_item", "") or ""),
-            )
-
-        queue.update_job(
-            job_id,
-            waiting_for_stage,
-        )
-
-        heartbeat(
-            "waiting-upload",
-            job_id,
-            f"{uploaded}/{total}",
-        )
-
+    if uploaded <= 0 and not bool(staging.get("uploads_complete")):
+        heartbeat("waiting-upload", job_id, f"0/{total}")
         return
 
     job = mark_running(job_id)
@@ -405,10 +442,8 @@ def process_job(job_id: str) -> None:
     if not job:
         return
 
-    conflict_mode = str(
-        job.get("conflict_mode", "skip")
-        or "skip"
-    )
+    # PINCABOS_SMART_BATCH_BEST_EFFORT_V1 : le Live est toujours non destructif.
+    conflict_mode = "skip"
 
     while RUNNING:
         current = queue.load_job(job_id)
@@ -517,8 +552,9 @@ def process_job(job_id: str) -> None:
             f"{item.get('name')}: {detail}"
         )
 
-        # Une erreur est maintenant une pause automatique.
-        if outcome == "failed":
+        # Seule une panne système globale arrête la boucle. Une erreur de
+        # table/package est enregistrée puis le worker passe au suivant.
+        if outcome == "fatal":
             return
 
         current = queue.load_job(job_id)

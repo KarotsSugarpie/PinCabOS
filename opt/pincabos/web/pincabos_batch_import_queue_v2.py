@@ -17,6 +17,9 @@ STATE_LOCK_PATH = RUN_DIR / "state.lock"
 SHARED_ENGINE_LOCK = Path(os.environ.get("PINCABOS_BATCH_LIVE_SHARED_LOCK", "/var/lib/pincabos/batch-live/export.lock"))
 MAX_HISTORY = 40
 MAX_ARCHIVES = 1200
+# PINCABOS_SMART_BATCH_BEST_EFFORT_V1
+# Un gros Smart Batch peut générer plusieurs événements par package.
+MAX_EVENTS = int(os.environ.get("PINCABOS_BATCH_MAX_EVENTS", "5000"))
 ACTIVE_STATES = {"uploading", "queued", "running", "stopping", "pausing"}
 FINAL_STATES = {"completed", "completed_with_warning", "failed", "stopped", "cancelled"}
 
@@ -133,8 +136,8 @@ def set_active_unlocked(job_id: str | None) -> None:
 def add_event(job: dict[str, Any], message: str, level: str = "info") -> None:
     events = job.setdefault("events", [])
     events.append({"at": utc_now(), "level": str(level), "message": str(message)})
-    if len(events) > 240:
-        del events[:-240]
+    if len(events) > MAX_EVENTS:
+        del events[:-MAX_EVENTS]
 
 
 
@@ -189,7 +192,9 @@ def public_job(job: dict[str, Any]) -> dict[str, Any]:
             "state": item.get("state"),
             "detail": item.get("detail", ""),
         })
-    result["uploads"] = items[-40:]
+    # Smart Batch: conserver tous les états de packages dans l'API.
+    # MAX_ARCHIVES borne déjà la taille à 1200 éléments.
+    result["uploads"] = items
     result.pop("upload_dir", None)
     return result
 
@@ -210,8 +215,10 @@ def create_job(total: int, conflict_mode: str) -> dict[str, Any]:
     total = int(total)
     if total < 1 or total > MAX_ARCHIVES:
         raise ValueError(f"Le nombre de packages doit être entre 1 et {MAX_ARCHIVES}.")
-    if conflict_mode not in {"skip", "rename", "replace"}:
-        conflict_mode = "skip"
+    # Smart Batch est volontairement non destructif : une table déjà
+    # installée est toujours ignorée. Rename/replace restent au Batch
+    # Import classique mais pas à la file Live.
+    conflict_mode = "skip"
     ensure_dirs()
     with state_lock(True):
         current = active_job_id_unlocked()
@@ -237,6 +244,7 @@ def create_job(total: int, conflict_mode: str) -> dict[str, Any]:
             "successful_archives": 0,
             "warning_archives": 0,
             "failed_archives": 0,
+            "skipped_archives": 0,
             "current_index": 0,
             "current_item": "",
             "conflict_mode": conflict_mode,
