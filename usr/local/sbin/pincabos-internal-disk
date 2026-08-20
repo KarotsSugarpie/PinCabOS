@@ -107,6 +107,23 @@ cmd_probe() {
     [ -n "$uuid" ] || { echo "UUID manquant." >&2; exit 2; }
     local dev="/dev/disk/by-uuid/$uuid"
     [ -b "$dev" ] || { echo "Aucune partition avec cet UUID." >&2; exit 2; }
+
+    # PINCABOS_INTERNAL_DISK_CANDIDAT_V1
+    # Sonder revient a monter : on ne le fait que pour un disque que l'on
+    # accepterait d'adopter. Sans ce controle, sonder une cle USB demontait
+    # le disque interne pour prendre sa place sur le point de travail.
+    if ! cmd_list | python3 -c '
+import json, sys
+voulu = sys.argv[1]
+try:
+    candidats = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+sys.exit(0 if any(d.get("uuid") == voulu for d in candidats) else 1)
+' "$uuid"; then
+        echo "Ce support n'\''est pas un disque interne adoptable : amovible, disque systeme, ou sans systeme de fichiers exploitable." >&2
+        exit 2
+    fi
     local fstype; fstype="$(lsblk -no FSTYPE "$(readlink -f "$dev")" | head -1)"
     [ "$fstype" = "ntfs" ] && fstype=ntfs3
     mkdir -p "$POINT"
