@@ -128,22 +128,28 @@ def page_disque():
           clés USB — et les partitions sans système de fichiers ou sans identifiant stable.</p></div>"""
         return page("Disque interne", corps)
 
+    # PINCABOS_INTERNAL_DISK_MOTS_V1
     lignes = "".join(
         f"""<tr><td><strong>{esc(p.get('label') or p['device'])}</strong><br>
              <small>{esc(p['device'])} — {esc(p['fstype'])} — {esc(taille_lisible(p.get('size')))}</small></td>
-            <td>{'<em>déjà monté sur ' + esc(p['mountpoint']) + '</em>' if p.get('mountpoint') else ''}</td>
+            <td>{'<span style="color:#6ec98d">monté</span><br><small>' + esc(p['mountpoint']) + '</small>' if p.get('mountpoint') else '<span style="opacity:.6">non monté</span>'}</td>
             <td><form method="post" action="/tools/internal-disk/probe">
                   <input type="hidden" name="uuid" value="{esc(p['uuid'])}">
-                  <button class="button" type="submit">Explorer</button>
+                  <button class="button" type="submit">{'Choisir le dossier' if p.get('mountpoint') else 'Monter et choisir le dossier'}</button>
                 </form></td></tr>"""
         for p in partitions
     )
 
     corps = bloc_etat() + f"""<div class="card"><h2>Disques internes détectés</h2>
-      <p>Choisis le disque qui contient tes tables, puis le dossier à utiliser.
-      Le NTFS est pris en charge&nbsp;: il sera monté aux droits du compte du cabinet,
-      sans quoi le frontend ne pourrait rien y écrire.</p>
-      <table><tbody>{lignes}</tbody></table></div>"""
+      <p>Choisissez le disque qui contient vos tables. Le bouton le monte s'il ne
+      l'est pas encore, puis vous présente ses dossiers avec le nombre de tables
+      que chacun contient, pour désigner le bon.</p>
+      <p>Le NTFS est pris en charge&nbsp;: il est monté aux droits du compte du
+      cabinet, sans quoi le frontend ne pourrait rien y écrire.</p>
+      <table>
+        <thead><tr><th>Disque</th><th>État</th><th>Action</th></tr></thead>
+        <tbody>{lignes}</tbody>
+      </table></div>"""
     return page("Disque interne", corps)
 
 
