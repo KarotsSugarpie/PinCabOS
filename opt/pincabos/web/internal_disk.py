@@ -58,6 +58,25 @@ def taille_lisible(octets) -> str:
 
 
 def page(titre: str, corps: str) -> str:
+    # PINCABOS_INTERNAL_DISK_THEME_V1
+    #
+    # L'application expose son propre gabarit : menu, entete, pied de page.
+    # S'en passer donnait une page correcte mais visiblement etrangere au
+    # reste de l'interface. On l'emprunte quand il existe, et on garde le
+    # rendu autonome ci-dessous pour les appels hors application.
+    import sys as _sys
+
+    for _nom in ("app", "__main__"):
+        _module = _sys.modules.get(_nom)
+        _gabarit = getattr(_module, "page", None) if _module else None
+        if callable(_gabarit):
+            try:
+                return _gabarit(titre, corps)
+            except TypeError:
+                pass
+            except Exception:
+                pass
+
     return f"""<!doctype html><html><head><meta charset="utf-8">
 <title>PinCabOS — {esc(titre)}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
