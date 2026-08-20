@@ -165,6 +165,14 @@ cmd_adopt() {
         echo "montage automatique au demarrage : desactive (valable jusqu'au redemarrage)"
     fi
     systemctl daemon-reload 2>/dev/null || true
+
+    # PINCABOS_ROMS_APRES_ADOPTION_V1
+    # Un disque qui arrive apporte souvent ses ROMs. On reconstruit l'index
+    # sous l'identite de pinball, pour que les liens lui appartiennent.
+    if [ -x /opt/pincabos/bin/pincabos-roms-index ]; then
+        sortie_roms="$(runuser -u pinball -- /opt/pincabos/bin/pincabos-roms-index --appliquer 2>&1 | tail -3)"
+        [ -n "$sortie_roms" ] && printf '%s\n' "$sortie_roms"
+    fi
 }
 
 cmd_release() {

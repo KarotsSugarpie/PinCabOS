@@ -1,0 +1,20 @@
+[Unit]
+# PINCABOS_ROMS_INDEX_V1
+# Les ROMs disponibles changent quand un disque est monte : on reconstruit
+# l'index une fois les systemes de fichiers en place, avant le frontend.
+Description=PinCabOS — index des ROMs VPinMAME
+After=local-fs.target
+Before=pincabos-vpinfe.service
+Wants=local-fs.target
+
+[Service]
+Type=oneshot
+User=pinball
+Group=pinball
+ExecStart=/opt/pincabos/bin/pincabos-roms-index --appliquer
+# Un index qui echoue ne doit jamais empecher le cabinet de demarrer.
+SuccessExitStatus=0 1
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

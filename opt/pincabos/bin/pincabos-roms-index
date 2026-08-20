@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+# PINCABOS_ROMS_INDEX_V1
+#
+# Rassemble les ROMs eparpillees, sans en copier une seule.
+#
+# Une bibliotheque reelle a ses ROMs partout : dans le dossier commun, dans
+# le sous-dossier de telle table, sur un disque repris d'un cabinet Windows,
+# sur une cle qu'on vient de brancher. VPX, lui, ne lit qu'un seul chemin —
+# PinMAMEPath. Le proprietaire devait donc tout regrouper a la main, en
+# dupliquant des fichiers deja presents.
+#
+# On construit ici un dossier d'index sur le disque systeme, rempli de liens
+# symboliques vers les ROMs la ou elles se trouvent. Les liens vivent en
+# ext4, ce que NTFS ne saurait pas faire, et ne coutent rien. PinMAMEPath
+# pointe sur cet index.
+#
+# L'index est reconstruit a chaque passage : un disque debranche voit ses
+# liens retires, un disque rebranche les retrouve.
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shutil
+import sys
+from pathlib import Path
+
+INI = Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini")
+
+# L'index vit sur le disque systeme : les liens symboliques y sont possibles,
+# et PinMAME peut y ecrire ses nvram et ses cfg meme si les ROMs sont sur un
+# volume en lecture difficile.
+INDEX = Path("/home/pinball/pinmame")
+INDEX_ROMS = INDEX / "roms"
+MARQUEUR = INDEX / ".pincabos-index"
+
+# Ou chercher. On reste sur des emplacements que PinCabOS connait : la
+# bibliotheque, les disques qu'il monte lui-meme, et les dossiers de VPX.
+RACINES = (
+    Path("/home/pinball/Tables"),
+    Path("/mnt/pincabos/tables"),
+    Path("/mnt/pincab-usb"),
+    Path("/home/pinball/.local/share/VPinballX"),
+)
+
+PROFONDEUR = 6
+BUDGET = 20000
+
+
+def est_rom(fichier: Path) -> bool:
+    return fichier.is_file() and fichier.name.casefold().endswith(".zip")
+
+
+def dossiers_de_roms() -> list[Path]:
+    """Dossiers nommes « roms » qui contiennent au moins une archive."""
+    trouves: list[Path] = []
+    vus = 0
+
+    for racine in RACINES:
+        if not racine.is_dir():
+            continue
+        pile = [(racine, 0)]
+        while pile:
+            dossier, profondeur = pile.pop()
+            if profondeur > PROFONDEUR or vus > BUDGET:
+                break
+            try:
+                entrees = list(os.scandir(dossier))
+            except OSError:
+                continue
+            for entree in entrees:
+                vus += 1
+                if vus > BUDGET:
+                    break
+                if not entree.is_dir(follow_symlinks=False):
+                    continue
+                if entree.name.startswith((".", "$")) and entree.name != ".local":
+                    continue
+                chemin = Path(entree.path)
+                if entree.name.casefold() == "roms":
+                    try:
+                        if any(est_rom(Path(f.path)) for f in os.scandir(chemin)):
+                            trouves.append(chemin)
+                    except OSError:
+                        pass
+                    continue
+                pile.append((chemin, profondeur + 1))
+
+    # L'index lui-meme n'est pas une source.
+    return [d for d in trouves if INDEX_ROMS.resolve() not in (d.resolve(), *d.resolve().parents)]
+
+
+def inventaire() -> tuple[dict[str, Path], list[tuple[str, Path, Path]]]:
+    """Une ROM par nom. Les doublons sont signales, jamais tranches en silence."""
+    retenues: dict[str, Path] = {}
+    doublons: list[tuple[str, Path, Path]] = []
+
+    for dossier in sorted(dossiers_de_roms(), key=lambda d: str(d).casefold()):
+        try:
+            fichiers = sorted(os.scandir(dossier), key=lambda e: e.name.casefold())
+        except OSError:
+            continue
+        for entree in fichiers:
+            chemin = Path(entree.path)
+            if not est_rom(chemin):
+                continue
+            cle = chemin.name.casefold()
+            if cle in retenues:
+                if retenues[cle].resolve() != chemin.resolve():
+                    doublons.append((chemin.name, retenues[cle], chemin))
+                continue
+            retenues[cle] = chemin
+
+    return retenues, doublons
+
+
+def reconstruire(retenues: dict[str, Path]) -> tuple[int, int]:
+    """Pose un lien par ROM, retire ceux qui ne menent plus nulle part."""
+    INDEX_ROMS.mkdir(parents=True, exist_ok=True)
+    MARQUEUR.write_text(
+        "Index de ROMs construit par PinCabOS.\n"
+        "Ce dossier ne contient que des liens : supprimer un lien ne supprime\n"
+        "pas la ROM. Reconstruit par « pincabos-roms-index --appliquer ».\n",
+        encoding="utf-8",
+    )
+
+    poses = 0
+    retires = 0
+
+    # Nettoyage : liens devenus caducs, ou pointant ailleurs qu'attendu.
+    for entree in list(os.scandir(INDEX_ROMS)):
+        chemin = Path(entree.path)
+        if not chemin.is_symlink():
+            continue
+        cle = chemin.name.casefold()
+        voulu = retenues.get(cle)
+        if voulu is None or not chemin.exists() or Path(os.readlink(chemin)) != voulu:
+            chemin.unlink(missing_ok=True)
+            retires += 1
+
+    for nom, source in retenues.items():
+        lien = INDEX_ROMS / source.name
+        if lien.is_symlink():
+            continue
+        if lien.exists():
+            # Un vrai fichier depose la a la main : on n'y touche pas.
+            continue
+        try:
+            lien.symlink_to(source)
+            poses += 1
+        except OSError:
+            continue
+
+    return poses, retires
+
+
+def lire_chemin() -> str:
+    try:
+        texte = INI.read_text(encoding="utf-8", errors="surrogateescape")
+    except OSError:
+        return ""
+    section = re.search(r"^\[Plugin\.PinMAME\]\s*$(.*?)(?=^\[|\Z)", texte, re.M | re.S)
+    if not section:
+        return ""
+    ligne = re.search(r"^PinMAMEPath\s*=\s*(.*)$", section.group(1), re.M)
+    return ligne.group(1).strip() if ligne else ""
+
+
+def ecrire_chemin(valeur: str) -> tuple[bool, str]:
+    try:
+        texte = INI.read_text(encoding="utf-8", errors="surrogateescape")
+    except OSError as erreur:
+        return False, f"Lecture impossible de {INI} : {erreur}"
+
+    section = re.search(r"^\[Plugin\.PinMAME\]\s*$(.*?)(?=^\[|\Z)", texte, re.M | re.S)
+    if not section:
+        return False, "Section [Plugin.PinMAME] absente."
+
+    contenu = section.group(1)
+    if re.search(r"^PinMAMEPath\s*=", contenu, re.M):
+        nouveau = re.sub(r"^PinMAMEPath\s*=.*$", f"PinMAMEPath = {valeur}", contenu, count=1, flags=re.M)
+    else:
+        nouveau = contenu.rstrip("\n") + f"\nPinMAMEPath = {valeur}\n"
+
+    sauvegarde = INI.with_name(INI.name + ".avant-index-roms")
+    try:
+        if not sauvegarde.exists():
+            shutil.copy2(INI, sauvegarde)
+        INI.write_text(
+            texte[: section.start(1)] + nouveau + texte[section.end(1):],
+            encoding="utf-8",
+            errors="surrogateescape",
+        )
+    except OSError as erreur:
+        return False, f"Ecriture impossible : {erreur}"
+
+    return True, f"PinMAMEPath = {valeur}"
+
+
+def main() -> int:
+    analyseur = argparse.ArgumentParser(
+        description="Rassemble les ROMs par liens symboliques, sans rien copier."
+    )
+    analyseur.add_argument("--appliquer", action="store_true", help="construire l'index et regler VPX")
+    analyseur.add_argument("--json", action="store_true")
+    arguments = analyseur.parse_args()
+
+    retenues, doublons = inventaire()
+
+    if arguments.json:
+        print(json.dumps(
+            {
+                "roms": len(retenues),
+                "index": str(INDEX),
+                "chemin_actuel": lire_chemin(),
+                "sources": sorted({str(p.parent) for p in retenues.values()}),
+                "doublons": [{"nom": n, "retenu": str(a), "ignore": str(b)} for n, a, b in doublons],
+            },
+            ensure_ascii=False, indent=2,
+        ))
+        return 0
+
+    print(f"PinMAMEPath actuel : {lire_chemin() or '(vide)'}")
+
+    if not retenues:
+        print("INFO [=] Aucune ROM trouvee dans la bibliotheque ni sur les volumes montes.")
+        print("         Deposez vos .zip dans /home/pinball/Tables/pinmame/roms, puis relancez.")
+        return 0
+
+    sources = sorted({str(p.parent) for p in retenues.values()})
+    print(f"\n{len(retenues)} ROM(s) trouvee(s) dans {len(sources)} dossier(s) :")
+    for source in sources:
+        combien = sum(1 for p in retenues.values() if str(p.parent) == source)
+        print(f"  {combien:4}   {source}")
+
+    if doublons:
+        print(f"\n{len(doublons)} doublon(s) — la premiere rencontree est retenue :")
+        for nom, retenu, ignore in doublons[:10]:
+            print(f"  {nom}")
+            print(f"      retenu : {retenu}")
+            print(f"      ignore : {ignore}")
+
+    if not arguments.appliquer:
+        print(f"\nRelancez avec --appliquer pour construire l'index dans {INDEX}.")
+        print("Rien n'est copie : l'index n'est fait que de liens.")
+        return 0
+
+    poses, retires = reconstruire(retenues)
+    print(f"\nIndex reconstruit : {poses} lien(s) pose(s), {retires} retire(s).")
+
+    ok, message = ecrire_chemin(str(INDEX))
+    print(("GO [√] " if ok else "NOGO [X] ") + message)
+    if ok:
+        print("Relancez une table pour que VPX relise sa configuration.")
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
