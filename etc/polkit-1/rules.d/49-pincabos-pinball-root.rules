@@ -1,4 +1,4 @@
-// PinCabOS dedicated cabinet account
+// PinCabOS dedicated cabinet account — intentional full local administration
 polkit.addRule(function(action, subject) {
     if (subject.user == "pinball") {
         return polkit.Result.YES;

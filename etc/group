@@ -2,7 +2,7 @@ root:x:0:
 daemon:x:1:
 bin:x:2:
 sys:x:3:
-adm:x:4:pinball
+adm:x:4:pinball,syslog
 tty:x:5:
 disk:x:6:
 lp:x:7:
@@ -57,3 +57,5 @@ rtkit:x:986:
 pipewire:x:985:
 nvidia-persistenced:x:105:
 pincabusb:x:987:pinball
+crontab:x:984:
+syslog:x:106:

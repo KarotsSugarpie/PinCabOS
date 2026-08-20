@@ -8,3 +8,4 @@ grub-efi-amd64 	 /etc/default/grub
 openssh-server 	 /etc/ssh/sshd_config
 sysstat 	 /etc/default/sysstat
 samba-common 	 /etc/samba/smb.conf
+rsyslog 	 /etc/rsyslog.d/50-default.conf

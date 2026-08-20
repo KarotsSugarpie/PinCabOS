@@ -1,6 +1,6 @@
 {
   "name": "PinCabOS",
-  "version": "Alpha 2.0",
+  "version": "Alpha 2.1",
   "build": "dev",
   "channel": "ins.pincabos.cc",
   "codename": "Stark",
@@ -9,5 +9,5 @@
   "update_base_url": "",
   "latest_json_url": "",
   "managed_by": "PinCabOS",
-  "updated_at": "2026-07-05 11:29:04"
+  "updated_at": "2026-08-19 16:43:36"
 }

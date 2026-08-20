@@ -1,5 +1,4 @@
 [stream-properties]
-Audio/Sink:node.name:auto_null={"mute":false, "volume":1.000000, "channelMap":["FL", "FR"], "channelVolumes":[1.000000, 1.000000]}
-Output/Audio:media.role:Game={"mute":false, "volume":1.000000, "channelMap":["FL", "FR"], "channelVolumes":[1.000000, 1.000000]}
-Output/Audio:application.name:Google\sChrome={"channelVolumes":[1.000000, 1.000000], "channelMap":["FL", "FR"], "mute":false, "volume":1.000000}
-Output/Audio:application.name:python3.14={"mute":false, "volume":1.000000, "channelMap":[], "channelVolumes":[1.000000, 1.000000]}
+Audio/Sink:node.name:auto_null={"volume":1.000000, "channelMap":["FL", "FR"], "channelVolumes":[1.000000, 1.000000], "mute":false}
+Output/Audio:media.role:Game={"volume":1.000000, "channelMap":["FL", "FR"], "channelVolumes":[1.000000, 1.000000], "mute":false}
+Output/Audio:application.name:python3.14={"channelMap":[], "mute":false, "channelVolumes":[1.000000, 1.000000], "volume":1.000000}

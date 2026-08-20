@@ -1,23 +1,23 @@
 /* PinCabOS Appearance Variables
- * Generated from: PinCabOS Classic
- * Source: /opt/pincabos/config/webapp-appearance/presets/PinCabOS Classic.json
+ * Generated from: PinCabOS Classic Copie 1
+ * Source: /opt/pincabos/config/webapp-appearance/custom/PinCabOS Classic Copie 1.json
  * Created by Karots Sugarpie
  * Safe layer: visual variables only, no layout change.
  */
 
 :root {
-  --pco-appearance-accent: #ffb000;
-  --pco-appearance-accent2: #ff7a00;
+  --pco-appearance-accent: #ffae00;
+  --pco-appearance-accent2: #ff4314;
   --pco-appearance-purple: #5f2a91;
   --pco-appearance-page-text: #ffffff;
   --pco-appearance-muted-text: #d8b8ff;
   --pco-appearance-card-bg: rgba(29, 11, 46, 0.76);
   --pco-appearance-card-border: #ff7a00;
-  --pco-appearance-card-radius: 18px;
+  --pco-appearance-card-radius: 2px;
   --pco-appearance-card-shadow: 0 0 25px rgba(255, 122, 0, 0.25);
   --pco-appearance-button-bg: #ff7a00;
   --pco-appearance-button-text: #160020;
-  --pco-appearance-button-radius: 10px;
+  --pco-appearance-button-radius: 2px;
   --pco-appearance-secondary-bg: #5f2a91;
   --pco-appearance-secondary-text: #ffffff;
   --pco-appearance-nav-active-bg: #ff7a00;

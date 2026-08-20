@@ -1,1 +1,1 @@
-../pincabos-sample-tables.service
+/etc/systemd/system/pincabos-sample-tables.service

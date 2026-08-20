@@ -1,3 +1,2 @@
-# PinCabOS dedicated cabinet account
-# pinball remains UID 1000 but may become root without password.
+# PinCabOS dedicated cabinet account — intentional full local administration
 pinball ALL=(ALL:ALL) NOPASSWD: ALL

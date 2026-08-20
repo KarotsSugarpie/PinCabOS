@@ -1,6 +1,5 @@
-# Managed by PinCabOS Keyboard widget.
 XKBMODEL="pc105"
-XKBLAYOUT="us"
+XKBLAYOUT="ca"
 XKBVARIANT=""
 XKBOPTIONS=""
 BACKSPACE="guess"

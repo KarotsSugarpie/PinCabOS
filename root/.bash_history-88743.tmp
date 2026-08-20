@@ -1,0 +1,500 @@
+        );
+    }
+
+    return data;
+}
+
+async function getJob() {
+
+    const data = await json(
+        `/api/batch-import/live/status/${encodeURIComponent(JOB_ID)}`
+    );
+
+    if (!data.job) {
+        throw new Error("Job introuvable.");
+    }
+
+    return data.job;
+}
+
+function updateProgress(job) {
+
+    const done = Number(job.processed_archives || 0);
+    const total = Number(job.total_archives || EXPECTED_TOTAL);
+
+    progress.max = total;
+    progress.value = done;
+
+    progressText.textContent =
+        `${done} / ${total}` +
+        (job.current_item ? ` — ${job.current_item}` : "");
+
+    serverState.textContent =
+        `État : ${job.state} — ${done}/${total} traité(s) — ` +
+        `${job.uploaded_archives || 0}/${total} téléversé(s)`;
+
+    if (done >= total) {
+        serverState.className = "big ok";
+    }
+}
+
+function sortedUploads(job) {
+
+    return Array.from(job.uploads || [])
+        .filter(item => item && Number(item.index) > 0)
+        .sort(
+            (a, b) =>
+                Number(a.index) - Number(b.index)
+        );
+}
+
+function verifySelection(job, files) {
+
+    if (files.length !== EXPECTED_TOTAL) {
+        throw new Error(
+            `Tu as sélectionné ${files.length} fichier(s); ` +
+            `${EXPECTED_TOTAL} sont requis.`
+        );
+    }
+
+    const processed =
+        Number(job.processed_archives || 0);
+
+    const uploads = sortedUploads(job);
+
+    for (let index = 1; index <= processed; index++) {
+
+        const saved = uploads.find(
+            item => Number(item.index) === index
+        );
+
+        if (!saved) {
+            throw new Error(
+                `Le job ne contient plus les métadonnées du package ${index}.`
+            );
+        }
+
+        const local = files[index - 1];
+
+        if (String(local.name) !== String(saved.name)) {
+            throw new Error(
+                `Ordre différent au package ${index}.\n` +
+                `Attendu : ${saved.name}\n` +
+                `Sélectionné : ${local.name}`
+            );
+        }
+
+        const expectedSize =
+            Number(saved.size || 0);
+
+        if (
+            expectedSize > 0 &&
+            Number(local.size) !== expectedSize
+        ) {
+            throw new Error(
+                `Taille différente au package ${index} : ${local.name}`
+            );
+        }
+    }
+
+    return true;
+}
+
+async function validateFiles() {
+
+    resumeButton.disabled = true;
+    validatedFiles = null;
+
+    const files =
+        Array.from(filesInput.files || []);
+
+    if (!files.length) {
+        validation.textContent = "";
+        return;
+    }
+
+    validation.className = "warn";
+    validation.textContent =
+        `Validation de ${files.length} fichier(s)...`;
+
+    try {
+
+        const job = await getJob();
+
+        updateProgress(job);
+
+        if (Number(job.total_archives || 0) !== EXPECTED_TOTAL) {
+            throw new Error(
+                `Le job serveur indique ${job.total_archives} packages.`
+            );
+        }
+
+        if (job.stop_requested) {
+            throw new Error(
+                "stop_requested est encore actif dans le job."
+            );
+        }
+
+        if (
+            ["completed",
+             "completed_with_warning",
+             "failed",
+             "stopped",
+             "cancelled"
+            ].includes(String(job.state || ""))
+        ) {
+            throw new Error(
+                `Le job est dans l'état ${job.state}.`
+            );
+        }
+
+        verifySelection(job, files);
+
+        validatedFiles = files;
+
+        const next =
+            Number(job.processed_archives || 0) + 1;
+
+        validation.className = "ok";
+        validation.textContent =
+            `GO [√] Sélection validée. ` +
+            `Les ${job.processed_archives} premiers correspondent. ` +
+            `Reprise prévue au package ${next}/${EXPECTED_TOTAL}.`;
+
+        resumeButton.disabled = false;
+
+        log(
+            `Sélection validée : ${files.length} packages.`
+        );
+
+        log(
+            `Reprise prévue après ${job.processed_archives} package(s) déjà traités.`
+        );
+
+    } catch (error) {
+
+        validation.className = "bad";
+        validation.textContent =
+            "NOGO [X] " + error.message;
+
+        log(
+            "ERREUR validation : " +
+            error.message
+        );
+    }
+}
+
+async function uploadOne(index, file) {
+
+    const body = new FormData();
+
+    body.append(
+        "archive",
+        file,
+        file.name
+    );
+
+    body.append(
+        "index",
+        String(index)
+    );
+
+    log(
+        `UPLOAD ${index}/${EXPECTED_TOTAL} : ${file.name}`
+    );
+
+    await json(
+        `/api/batch-import/live/upload/${encodeURIComponent(JOB_ID)}`,
+        {
+            method: "POST",
+            body
+        }
+    );
+}
+
+async function waitProcessed(index) {
+
+    while (true) {
+
+        await sleep(900);
+
+        const job = await getJob();
+
+        updateProgress(job);
+
+        const state =
+            String(job.state || "");
+
+        if (
+            ["failed",
+             "stopped",
+             "cancelled"
+            ].includes(state)
+        ) {
+            throw new Error(
+                job.error ||
+                `Job arrêté à ${index}/${EXPECTED_TOTAL}.`
+            );
+        }
+
+        if (
+            Number(job.processed_archives || 0) >= index
+        ) {
+            return job;
+        }
+    }
+}
+
+async function resumeBatch() {
+
+    if (busy || !validatedFiles) {
+        return;
+    }
+
+    busy = true;
+    resumeButton.disabled = true;
+    filesInput.disabled = true;
+
+    window.onbeforeunload = () =>
+        "Le Batch Import est en cours.";
+
+    try {
+
+        let job = await getJob();
+
+        updateProgress(job);
+
+        verifySelection(
+            job,
+            validatedFiles
+        );
+
+        let processed =
+            Number(job.processed_archives || 0);
+
+        log(
+            `REPRISE DU JOB ${JOB_ID}`
+        );
+
+        log(
+            `Départ serveur : ${processed}/${EXPECTED_TOTAL}`
+        );
+
+        for (
+            let index = processed + 1;
+            index <= EXPECTED_TOTAL;
+            index++
+        ) {
+
+            job = await getJob();
+
+            updateProgress(job);
+
+            if (job.stop_requested) {
+                throw new Error(
+                    "Une demande STOP est active."
+                );
+            }
+
+            const uploads =
+                sortedUploads(job);
+
+            const existing =
+                uploads.find(
+                    item =>
+                        Number(item.index) === index
+                );
+
+            if (!existing) {
+
+                const file =
+                    validatedFiles[index - 1];
+
+                if (!file) {
+                    throw new Error(
+                        `Fichier local ${index} introuvable.`
+                    );
+                }
+
+                await uploadOne(
+                    index,
+                    file
+                );
+
+            } else {
+
+                log(
+                    `Package ${index} déjà présent côté serveur ` +
+                    `(${existing.state || "?"}), pas de double upload.`
+                );
+            }
+
+            job = await waitProcessed(index);
+
+            log(
+                `GO [√] ${index}/${EXPECTED_TOTAL} traité.`
+            );
+        }
+
+        log(
+            "Tous les packages ont été traités."
+        );
+
+        log(
+            "Fermeture logique de la file..."
+        );
+
+        const finished = await json(
+            `/api/batch-import/live/finish/${encodeURIComponent(JOB_ID)}`,
+            {
+                method: "POST"
+            }
+        );
+
+        updateProgress(finished.job);
+
+        log(
+            "GO [√] Batch terminé."
+        );
+
+        validation.className = "ok";
+        validation.textContent =
+            "GO [√] Batch Import terminé.";
+
+    } catch (error) {
+
+        /*
+         * IMPORTANT :
+         * contrairement au code V2 original,
+         * cette page N'APPELLE JAMAIS /stop automatiquement.
+         *
+         * Le job reste récupérable.
+         */
+
+        validation.className = "bad";
+
+        validation.textContent =
+            "PAUSE/ERREUR : " + error.message;
+
+        log(
+            "PAUSE/ERREUR : " +
+            error.message
+        );
+
+        log(
+            "Aucun STOP automatique n'a été envoyé."
+        );
+
+        log(
+            "Tu peux recharger cette page, resélectionner les 824 fichiers " +
+            "et reprendre au dernier package terminé."
+        );
+
+    } finally {
+
+        busy = false;
+        filesInput.disabled = false;
+
+        window.onbeforeunload = null;
+
+        try {
+
+            const job = await getJob();
+
+            updateProgress(job);
+
+            if (
+                Number(job.processed_archives || 0) <
+                EXPECTED_TOTAL
+            ) {
+                resumeButton.disabled =
+                    !validatedFiles;
+            }
+
+        } catch (_) {}
+    }
+}
+
+filesInput.addEventListener(
+    "change",
+    validateFiles
+);
+
+resumeButton.addEventListener(
+    "click",
+    resumeBatch
+);
+
+(async () => {
+
+    try {
+
+        const job = await getJob();
+
+        updateProgress(job);
+
+        log(
+            `Job trouvé : ${job.id}`
+        );
+
+        log(
+            `État initial : ${job.state}`
+        );
+
+        log(
+            `Traité : ${job.processed_archives}/${job.total_archives}`
+        );
+
+        log(
+            `Téléversé : ${job.uploaded_archives}/${job.total_archives}`
+        );
+
+    } catch (error) {
+
+        serverState.className = "big bad";
+        serverState.textContent =
+            "ERREUR : " + error.message;
+    }
+
+})();
+</script>
+
+</body>
+</html>
+HTML
+
+sudo sed -i     "s/__JOB_ID__/$JOB_ID/g; s/__TOTAL__/$TOTAL/g"     "$PAGE"
+sudo chmod 0644 "$PAGE"
+echo "GO [√] Page créée : $PAGE"
+echo
+echo "=== 5. Validation HTTP ==="
+if curl -fsS     "http://127.0.0.1/static/pincabos-batch-resume-824.html"     | grep -q "PINCABOS_BATCH_RESUME_824"; then     echo "GO [√] Page accessible par la WebApp."; else     echo "NOGO [X] Page non accessible.";     exit 1; fi
+echo
+echo "=== 6. État du Batch — AUCUN RESTART ==="
+curl -fsS     "http://127.0.0.1/api/batch-import/live/status/$JOB_ID"     | python3 -c '
+import json,sys
+j=json.load(sys.stdin)["job"]
+print("ID       :",j.get("id"))
+print("STATE    :",j.get("state"))
+print("PROGRESS :",str(j.get("processed_archives"))+"/"+str(j.get("total_archives")))
+print("UPLOADED :",str(j.get("uploaded_archives"))+"/"+str(j.get("total_archives")))
+print("STOP     :",j.get("stop_requested"))
+print("COMPLETE :",j.get("uploads_complete"))
+'
+echo
+echo "==============================================================="
+echo " PAGE DE REPRISE PRÊTE"
+echo "==============================================================="
+echo
+echo "Ouvre :"
+echo "http://192.168.254.237/static/pincabos-batch-resume-824.html"
+echo
+echo "Puis resélectionne exactement les mêmes 824 fichiers."
+echo "La page vérifiera les 20 premiers avant d'autoriser REPRENDRE."
+echo
+echo "AUCUN restart du worker."
+echo "AUCUN stop automatique."
+echo "AUCUN retraitement volontaire des packages 1 à 20."
+echo
+echo "Backup : $BACKUP"
+echo "==============================================================="

@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+set -u
+
+TMP_ROOT="/var/tmp/pincabos-vpinfe"
+PINBALL_UID="$(id -u pinball)"
+
+echo "=== PinCabOS VPinFE Chrome prestart guard ==="
+
+install -d \
+  -o pinball \
+  -g pinball \
+  -m 0700 \
+  "$TMP_ROOT"
+
+find_vpinfe_chrome_pids() {
+  local proc pid owner comm cmdline
+
+  for proc in /proc/[0-9]*; do
+    [ -d "$proc" ] || continue
+
+    pid="${proc##*/}"
+    owner="$(stat -c %u "$proc" 2>/dev/null || true)"
+
+    [ "$owner" = "$PINBALL_UID" ] || continue
+    [ -r "$proc/comm" ] || continue
+    [ -r "$proc/cmdline" ] || continue
+
+    comm="$(cat "$proc/comm" 2>/dev/null || true)"
+    cmdline="$(tr '\0' ' ' < "$proc/cmdline" 2>/dev/null || true)"
+
+    case "$comm" in
+      chrome|google-chrome|chromium|chromium-browser)
+        ;;
+      *)
+        continue
+        ;;
+    esac
+
+    case "$cmdline" in
+      *"--user-data-dir=/tmp/vpinfe_chromium_"*|\
+      *"--user-data-dir=/var/tmp/pincabos-vpinfe/vpinfe_chromium_"*)
+        printf '%s\n' "$pid"
+        ;;
+    esac
+  done
+}
+
+mapfile -t stale_pids < <(find_vpinfe_chrome_pids)
+
+if [ "${#stale_pids[@]}" -gt 0 ]; then
+  echo "Stopping stale VPinFE Chrome processes: ${stale_pids[*]}"
+  kill -TERM "${stale_pids[@]}" 2>/dev/null || true
+
+  for attempt in $(seq 1 8); do
+    remaining=()
+
+    for pid in "${stale_pids[@]}"; do
+      [ -d "/proc/$pid" ] && remaining+=("$pid")
+    done
+
+    [ "${#remaining[@]}" -eq 0 ] && break
+    sleep 1
+  done
+
+  remaining=()
+
+  for pid in "${stale_pids[@]}"; do
+    [ -d "/proc/$pid" ] && remaining+=("$pid")
+  done
+
+  if [ "${#remaining[@]}" -gt 0 ]; then
+    echo "Forcing stale VPinFE Chrome processes: ${remaining[*]}"
+    kill -KILL "${remaining[@]}" 2>/dev/null || true
+    sleep 1
+  fi
+fi
+
+echo "Removing stale VPinFE temporary profiles"
+
+find /tmp \
+  -mindepth 1 \
+  -maxdepth 1 \
+  -type d \
+  -name 'vpinfe_chromium_*' \
+  -print \
+  -exec rm -rf -- {} + \
+  2>/dev/null || true
+
+find "$TMP_ROOT" \
+  -mindepth 1 \
+  -maxdepth 1 \
+  -type d \
+  -name 'vpinfe_chromium_*' \
+  -print \
+  -exec rm -rf -- {} + \
+  2>/dev/null || true
+
+CHROME_RUNNING=0
+
+for proc in /proc/[0-9]*; do
+  [ -r "$proc/comm" ] || continue
+
+  [ "$(stat -c %u "$proc" 2>/dev/null || true)" = "$PINBALL_UID" ] \
+    || continue
+
+  comm="$(cat "$proc/comm" 2>/dev/null || true)"
+
+  case "$comm" in
+    chrome|google-chrome|chromium|chromium-browser)
+      CHROME_RUNNING=1
+      break
+      ;;
+  esac
+done
+
+if [ "$CHROME_RUNNING" -eq 0 ] && \
+   [ -d /home/pinball/.config/google-chrome ]; then
+
+  echo "Removing stale Singleton locks from inactive Chrome profile"
+
+  find /home/pinball/.config/google-chrome \
+    -maxdepth 2 \
+    \( \
+      -name SingletonLock -o \
+      -name SingletonCookie -o \
+      -name SingletonSocket \
+    \) \
+    -print \
+    -delete \
+    2>/dev/null || true
+fi
+
+install -d \
+  -o pinball \
+  -g pinball \
+  -m 0700 \
+  "$TMP_ROOT"
+
+echo "VPinFE Chrome prestart guard completed"
+exit 0

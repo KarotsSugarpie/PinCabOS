@@ -1,10 +1,11 @@
 {
   "version": 1,
-  "bound_at": "2026-07-09T22:40:24.395226+00:00",
+  "bound_at": "2026-08-18T19:31:43.429817+00:00",
   "source": "PinCabOS Screens explicit selection",
   "roles": {
     "playfield": "03c6f96680a1ccfdf88597df093c706cf70edaf0d266e53c3c6fda4334205d9c",
     "backglass": "e0f728f6af073c8b94368e17e16976545c40e54aa8e9430120737c71766c307a",
     "fulldmd": "80ebb7c900a6700aedf8dc503729e75a5d5991d6e466f4b3686617bcaba5a1aa"
-  }
+  },
+  "disabled_roles": []
 }

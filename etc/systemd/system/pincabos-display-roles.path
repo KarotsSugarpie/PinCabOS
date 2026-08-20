@@ -1,9 +1,1 @@
-[Unit]
-Description=PinCabOS display role watcher for screens.json
-
-[Path]
-PathChanged=/opt/pincabos/config/screens/screens.json
-Unit=pincabos-display-roles.service
-
-[Install]
-WantedBy=multi-user.target
+/dev/null

@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>PinCabOS — Reprise Batch Import</title>
+
+<style>
+body {
+    font-family: sans-serif;
+    max-width: 1050px;
+    margin: 35px auto;
+    padding: 0 20px;
+    background: #111;
+    color: #eee;
+}
+
+.card {
+    background: #1b1b1b;
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 18px;
+}
+
+h1 {
+    margin-top: 0;
+}
+
+.ok {
+    color: #69db7c;
+}
+
+.warn {
+    color: #ffd43b;
+}
+
+.bad {
+    color: #ff6b6b;
+}
+
+button {
+    font-size: 18px;
+    padding: 12px 20px;
+    margin-top: 15px;
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+input[type=file] {
+    display: block;
+    width: 100%;
+    margin-top: 15px;
+    font-size: 16px;
+}
+
+progress {
+    width: 100%;
+    height: 28px;
+}
+
+#log {
+    white-space: pre-wrap;
+    background: #090909;
+    border: 1px solid #333;
+    padding: 15px;
+    min-height: 250px;
+    max-height: 500px;
+    overflow: auto;
+}
+
+.big {
+    font-size: 22px;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<!-- PINCABOS_BATCH_RESUME_824 -->
+
+<div class="card">
+    <h1>PinCabOS — Reprise Batch Import</h1>
+
+    <p>
+        Job :
+        <strong id="jobId"></strong>
+    </p>
+
+    <p id="serverState" class="big">
+        Lecture du job...
+    </p>
+
+    <p>
+        Cette page conserve les 20 packages déjà traités et reprend
+        directement au package suivant.
+    </p>
+</div>
+
+<div class="card">
+
+    <h2>1. Resélectionner les packages</h2>
+
+    <p>
+        Sélectionne exactement les <strong>mêmes 824 fichiers</strong>
+        que lors du lancement original.
+    </p>
+
+    <p>
+        Les 20 premiers seront vérifiés par nom et taille.
+        Ils ne seront PAS réimportés.
+    </p>
+
+    <input
+        id="files"
+        type="file"
+        multiple
+    >
+
+    <p id="validation"></p>
+
+    <button id="resume" disabled>
+        Reprendre le Batch
+    </button>
+
+</div>
+
+<div class="card">
+
+    <h2>2. Progression</h2>
+
+    <progress
+        id="progress"
+        max="824"
+        value="20">
+    </progress>
+
+    <p id="progressText" class="big">
+        20 / 824
+    </p>
+
+</div>
+
+<div class="card">
+
+    <h2>Journal</h2>
+
+    <div id="log"></div>
+
+</div>
+
+<script>
+"use strict";
+
+const JOB_ID = "9936110650224cf087f702f6b8adaa92";
+const EXPECTED_TOTAL = 824;
+
+const filesInput = document.getElementById("files");
+const resumeButton = document.getElementById("resume");
+const validation = document.getElementById("validation");
+const serverState = document.getElementById("serverState");
+const progress = document.getElementById("progress");
+const progressText = document.getElementById("progressText");
+const logNode = document.getElementById("log");
+
+document.getElementById("jobId").textContent = JOB_ID;
+
+let validatedFiles = null;
+let busy = false;
+
+function log(message) {
+    const now = new Date().toLocaleTimeString();
+    logNode.textContent += `[${now}] ${message}\n`;
+    logNode.scrollTop = logNode.scrollHeight;
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function json(url, options = {}) {
+
+    const response = await fetch(url, {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: {
+            "Accept": "application/json",
+            ...(options.headers || {})
+        },
+        ...options
+    });
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (_) {}
+
+    if (!response.ok || data.ok === false) {
+        throw new Error(
+            data.error ||
+            `HTTP ${response.status}`
+        );
+    }
+
+    return data;
+}
+
+async function getJob() {
+
+    const data = await json(
+        `/api/batch-import/live/status/${encodeURIComponent(JOB_ID)}`
+    );
+
+    if (!data.job) {
+        throw new Error("Job introuvable.");
+    }
+
+    return data.job;
+}
+
+function updateProgress(job) {
+
+    const done = Number(job.processed_archives || 0);
+    const total = Number(job.total_archives || EXPECTED_TOTAL);
+
+    progress.max = total;
+    progress.value = done;
+
+    progressText.textContent =
+        `${done} / ${total}` +
+        (job.current_item ? ` — ${job.current_item}` : "");
+
+    serverState.textContent =
+        `État : ${job.state} — ${done}/${total} traité(s) — ` +
+        `${job.uploaded_archives || 0}/${total} téléversé(s)`;
+
+    if (done >= total) {
+        serverState.className = "big ok";
+    }
+}
+
+function sortedUploads(job) {
+
+    return Array.from(job.uploads || [])
+        .filter(item => item && Number(item.index) > 0)
+        .sort(
+            (a, b) =>
+                Number(a.index) - Number(b.index)
+        );
+}
+
+function safePinCabName(value) {
+
+    /*
+     * Copie JS exacte de _safe_name() côté PinCabOS.
+     *
+     * Python :
+     * re.sub(
+     *   r"[^A-Za-z0-9À-ÿ._ ()\-\[\]]+",
+     *   "_",
+     *   raw
+     * ).strip(" ._")
+     */
+
+    let raw = String(value || "");
+
+    raw = raw
+        .replace(/^.*[\\\/]/, "")
+        .trim();
+
+    raw = raw.replace(
+        /[^A-Za-z0-9À-ÿ._ ()\-\[\]]+/g,
+        "_"
+    );
+
+    raw = raw.replace(
+        /^[ ._]+|[ ._]+$/g,
+        ""
+    );
+
+    return raw;
+}
+
+
+function verifySelection(job, files) {
+
+    if (files.length !== EXPECTED_TOTAL) {
+        throw new Error(
+            `Tu as sélectionné ${files.length} fichier(s); ` +
+            `${EXPECTED_TOTAL} sont requis.`
+        );
+    }
+
+    const processed =
+        Number(job.processed_archives || 0);
+
+    const uploads = sortedUploads(job);
+
+    for (let index = 1; index <= processed; index++) {
+
+        const saved = uploads.find(
+            item => Number(item.index) === index
+        );
+
+        if (!saved) {
+            throw new Error(
+                `Le job ne contient plus les métadonnées du package ${index}.`
+            );
+        }
+
+        const local = files[index - 1];
+
+        const normalizedLocalName =
+            safePinCabName(local.name);
+
+        const normalizedSavedName =
+            safePinCabName(saved.name);
+
+        if (normalizedLocalName !== normalizedSavedName) {
+            throw new Error(
+                `Ordre réellement différent au package ${index}.\n` +
+                `Attendu : ${saved.name}\n` +
+                `Sélectionné : ${local.name}\n` +
+                `Normalisé serveur : ${normalizedSavedName}\n` +
+                `Normalisé local : ${normalizedLocalName}`
+            );
+        }
+
+        const expectedSize =
+            Number(saved.size || 0);
+
+        if (
+            expectedSize > 0 &&
+            Number(local.size) !== expectedSize
+        ) {
+            throw new Error(
+                `Taille différente au package ${index} : ${local.name}`
+            );
+        }
+    }
+
+    return true;
+}
+
+async function validateFiles() {
+
+    resumeButton.disabled = true;
+    validatedFiles = null;
+
+    const files =
+        Array.from(filesInput.files || []);
+
+    if (!files.length) {
+        validation.textContent = "";
+        return;
+    }
+
+    validation.className = "warn";
+    validation.textContent =
+        `Validation de ${files.length} fichier(s)...`;
+
+    try {
+
+        const job = await getJob();
+
+        updateProgress(job);
+
+        if (Number(job.total_archives || 0) !== EXPECTED_TOTAL) {
+            throw new Error(
+                `Le job serveur indique ${job.total_archives} packages.`
+            );
+        }
+
+        if (job.stop_requested) {
+            throw new Error(
+                "stop_requested est encore actif dans le job."
+            );
+        }
+
+        if (
+            ["completed",
+             "completed_with_warning",
+             "failed",
+             "stopped",
+             "cancelled"
+            ].includes(String(job.state || ""))
+        ) {
+            throw new Error(
+                `Le job est dans l'état ${job.state}.`
+            );
+        }
+
+        verifySelection(job, files);
+
+        validatedFiles = files;
+
+        const next =
+            Number(job.processed_archives || 0) + 1;
+
+        validation.className = "ok";
+        validation.textContent =
+            `GO [√] Sélection validée. ` +
+            `Les ${job.processed_archives} premiers correspondent. ` +
+            `Reprise prévue au package ${next}/${EXPECTED_TOTAL}.`;
+
+        resumeButton.disabled = false;
+
+        log(
+            `Sélection validée : ${files.length} packages.`
+        );
+
+        log(
+            `Reprise prévue après ${job.processed_archives} package(s) déjà traités.`
+        );
+
+    } catch (error) {
+
+        validation.className = "bad";
+        validation.textContent =
+            "NOGO [X] " + error.message;
+
+        log(
+            "ERREUR validation : " +
+            error.message
+        );
+    }
+}
+
+async function uploadOne(index, file) {
+
+    const body = new FormData();
+
+    body.append(
+        "archive",
+        file,
+        file.name
+    );
+
+    body.append(
+        "index",
+        String(index)
+    );
+
+    log(
+        `UPLOAD ${index}/${EXPECTED_TOTAL} : ${file.name}`
+    );
+
+    await json(
+        `/api/batch-import/live/upload/${encodeURIComponent(JOB_ID)}`,
+        {
+            method: "POST",
+            body
+        }
+    );
+}
+
+async function waitProcessed(index) {
+
+    while (true) {
+
+        await sleep(900);
+
+        const job = await getJob();
+
+        updateProgress(job);
+
+        const state =
+            String(job.state || "");
+
+        if (
+            ["failed",
+             "stopped",
+             "cancelled"
+            ].includes(state)
+        ) {
+            throw new Error(
+                job.error ||
+                `Job arrêté à ${index}/${EXPECTED_TOTAL}.`
+            );
+        }
+
+        if (
+            Number(job.processed_archives || 0) >= index
+        ) {
+            return job;
+        }
+    }
+}
+
+async function resumeBatch() {
+
+    if (busy || !validatedFiles) {
+        return;
+    }
+
+    busy = true;
+    resumeButton.disabled = true;
+    filesInput.disabled = true;
+
+    window.onbeforeunload = () =>
+        "Le Batch Import est en cours.";
+
+    try {
+
+        let job = await getJob();
+
+        updateProgress(job);
+
+        verifySelection(
+            job,
+            validatedFiles
+        );
+
+        let processed =
+            Number(job.processed_archives || 0);
+
+        log(
+            `REPRISE DU JOB ${JOB_ID}`
+        );
+
+        log(
+            `Départ serveur : ${processed}/${EXPECTED_TOTAL}`
+        );
+
+        for (
+            let index = processed + 1;
+            index <= EXPECTED_TOTAL;
+            index++
+        ) {
+
+            job = await getJob();
+
+            updateProgress(job);
+
+            if (job.stop_requested) {
+                throw new Error(
+                    "Une demande STOP est active."
+                );
+            }
+
+            const uploads =
+                sortedUploads(job);
+
+            const existing =
+                uploads.find(
+                    item =>
+                        Number(item.index) === index
+                );
+
+            if (!existing) {
+
+                const file =
+                    validatedFiles[index - 1];
+
+                if (!file) {
+                    throw new Error(
+                        `Fichier local ${index} introuvable.`
+                    );
+                }
+
+                await uploadOne(
+                    index,
+                    file
+                );
+
+            } else {
+
+                log(
+                    `Package ${index} déjà présent côté serveur ` +
+                    `(${existing.state || "?"}), pas de double upload.`
+                );
+            }
+
+            job = await waitProcessed(index);
+
+            log(
+                `GO [√] ${index}/${EXPECTED_TOTAL} traité.`
+            );
+        }
+
+        log(
+            "Tous les packages ont été traités."
+        );
+
+        log(
+            "Fermeture logique de la file..."
+        );
+
+        const finished = await json(
+            `/api/batch-import/live/finish/${encodeURIComponent(JOB_ID)}`,
+            {
+                method: "POST"
+            }
+        );
+
+        updateProgress(finished.job);
+
+        log(
+            "GO [√] Batch terminé."
+        );
+
+        validation.className = "ok";
+        validation.textContent =
+            "GO [√] Batch Import terminé.";
+
+    } catch (error) {
+
+        /*
+         * IMPORTANT :
+         * contrairement au code V2 original,
+         * cette page N'APPELLE JAMAIS /stop automatiquement.
+         *
+         * Le job reste récupérable.
+         */
+
+        validation.className = "bad";
+
+        validation.textContent =
+            "PAUSE/ERREUR : " + error.message;
+
+        log(
+            "PAUSE/ERREUR : " +
+            error.message
+        );
+
+        log(
+            "Aucun STOP automatique n'a été envoyé."
+        );
+
+        log(
+            "Tu peux recharger cette page, resélectionner les 824 fichiers " +
+            "et reprendre au dernier package terminé."
+        );
+
+    } finally {
+
+        busy = false;
+        filesInput.disabled = false;
+
+        window.onbeforeunload = null;
+
+        try {
+
+            const job = await getJob();
+
+            updateProgress(job);
+
+            if (
+                Number(job.processed_archives || 0) <
+                EXPECTED_TOTAL
+            ) {
+                resumeButton.disabled =
+                    !validatedFiles;
+            }
+
+        } catch (_) {}
+    }
+}
+
+filesInput.addEventListener(
+    "change",
+    validateFiles
+);
+
+resumeButton.addEventListener(
+    "click",
+    resumeBatch
+);
+
+(async () => {
+
+    try {
+
+        const job = await getJob();
+
+        updateProgress(job);
+
+        log(
+            `Job trouvé : ${job.id}`
+        );
+
+        log(
+            `État initial : ${job.state}`
+        );
+
+        log(
+            `Traité : ${job.processed_archives}/${job.total_archives}`
+        );
+
+        log(
+            `Téléversé : ${job.uploaded_archives}/${job.total_archives}`
+        );
+
+    } catch (error) {
+
+        serverState.className = "big bad";
+        serverState.textContent =
+            "ERREUR : " + error.message;
+    }
+
+})();
+</script>
+
+</body>
+</html>

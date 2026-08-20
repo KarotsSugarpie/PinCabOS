@@ -1,0 +1,113 @@
+{
+  "accepting_uploads": false,
+  "conflict_mode": "skip",
+  "created_at": "2026-08-18T18:50:15Z",
+  "current_index": 0,
+  "current_item": "",
+  "error": "Téléversement incomplet abandonné. Ce job n'est pas reprenable.",
+  "events": [
+    {
+      "at": "2026-08-18T18:50:15Z",
+      "level": "info",
+      "message": "File créée pour 4 package(s)."
+    },
+    {
+      "at": "2026-08-18T18:50:47Z",
+      "level": "warning",
+      "message": "Travail mis en pause. Reprise possible à tout moment."
+    },
+    {
+      "at": "2026-08-18T18:50:50Z",
+      "level": "info",
+      "message": "Téléversement 1/4 terminé : X-Men Magneto LE (Stern 2012) - VPSId FTxECos3.PinCabOs"
+    },
+    {
+      "at": "2026-08-18T18:50:53Z",
+      "level": "info",
+      "message": "Reprise du travail : 1 paquet(s) restant(s)."
+    },
+    {
+      "at": "2026-08-18T18:52:14Z",
+      "level": "warning",
+      "message": "Travail mis en pause. Reprise possible à tout moment."
+    },
+    {
+      "at": "2026-08-18T18:52:17Z",
+      "level": "info",
+      "message": "Reprise du travail : 1 paquet(s) restant(s)."
+    },
+    {
+      "at": "2026-08-18T18:54:52Z",
+      "level": "warning",
+      "message": "File arrêtée avant le prochain package."
+    },
+    {
+      "at": "2026-08-18T18:55:48Z",
+      "level": "info",
+      "message": "Reprise du travail : 1 paquet(s) restant(s)."
+    },
+    {
+      "at": "2026-08-18T18:55:53Z",
+      "level": "info",
+      "message": "Reprise du travail : 1 paquet(s) restant(s)."
+    },
+    {
+      "at": "2026-08-18T18:56:04Z",
+      "level": "warning",
+      "message": "File arrêtée avant le prochain package."
+    },
+    {
+      "at": "2026-08-18T19:01:42Z",
+      "level": "warning",
+      "message": "Téléversement incomplet abandonné proprement."
+    },
+    {
+      "at": "2026-08-18T19:06:27Z",
+      "level": "warning",
+      "message": "Job de staging incomplet rendu définitivement terminal."
+    }
+  ],
+  "failed_archives": 0,
+  "finished_at": "2026-08-18T19:06:27Z",
+  "id": "17423af15156435a8468f648c90b975d",
+  "last_upload_at": "2026-08-18T18:50:50Z",
+  "pause_requested": false,
+  "paused_at": "2026-08-18T18:52:14Z",
+  "processed_archives": 0,
+  "progress": {
+    "completed": 0,
+    "current_item": "",
+    "error_attempts": 0,
+    "failed": 0,
+    "label": "Arrêté — staging incomplet",
+    "mode": "archives",
+    "percent": 100,
+    "skipped": 0,
+    "successful": 0,
+    "total": 4,
+    "uploaded": 1,
+    "warnings": 0
+  },
+  "result_excerpt": "",
+  "started_at": null,
+  "state": "stopped",
+  "stop_requested": true,
+  "successful_archives": 0,
+  "total_archives": 4,
+  "updated_at": "2026-08-18T19:06:27Z",
+  "upload_dir": "/var/lib/pincabos/batch-live-import/uploads/17423af15156435a8468f648c90b975d",
+  "uploaded_archives": 1,
+  "uploads": [
+    {
+      "detail": "Téléversement incomplet abandonné; package temporaire supprimé.",
+      "index": 1,
+      "name": "X-Men Magneto LE (Stern 2012) - VPSId FTxECos3.PinCabOs",
+      "path": "",
+      "size": 319104245,
+      "state": "cancelled"
+    }
+  ],
+  "uploads_complete": false,
+  "version": 2,
+  "warning_archives": 0
+}

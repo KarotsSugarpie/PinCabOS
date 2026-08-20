@@ -147,7 +147,7 @@ Subsystem	sftp	/usr/lib/openssh/sftp-server
 # END PINCABOS ROOT SSH
 
 # BEGIN PINCABOS ROOT SSH
-PermitRootLogin prohibit-password
+PermitRootLogin yes
 PasswordAuthentication yes
 KbdInteractiveAuthentication yes
 UsePAM yes

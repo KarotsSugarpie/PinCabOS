@@ -1,0 +1,50 @@
+{
+  "accepting_uploads": true,
+  "conflict_mode": "skip",
+  "created_at": "2026-08-17T23:03:16Z",
+  "current_index": 0,
+  "current_item": "",
+  "error": "",
+  "events": [
+    {
+      "at": "2026-08-17T23:03:16Z",
+      "level": "info",
+      "message": "File créée pour 716 package(s)."
+    },
+    {
+      "at": "2026-08-17T23:09:48Z",
+      "level": "warning",
+      "message": "File arrêtée avant le prochain package."
+    }
+  ],
+  "failed_archives": 0,
+  "finished_at": "2026-08-17T23:09:48Z",
+  "id": "1c02bf196f874d26898f086ddde8a3b7",
+  "last_upload_at": "2026-08-17T23:03:16Z",
+  "processed_archives": 0,
+  "progress": {
+    "completed": 0,
+    "current_item": "",
+    "failed": 0,
+    "label": "Arrêté",
+    "mode": "archives",
+    "percent": 100,
+    "successful": 0,
+    "total": 716,
+    "uploaded": 0,
+    "warnings": 0
+  },
+  "result_excerpt": "",
+  "started_at": null,
+  "state": "stopped",
+  "stop_requested": true,
+  "successful_archives": 0,
+  "total_archives": 716,
+  "updated_at": "2026-08-17T23:09:48Z",
+  "upload_dir": "/var/lib/pincabos/batch-live-import/uploads/1c02bf196f874d26898f086ddde8a3b7",
+  "uploaded_archives": 0,
+  "uploads": [],
+  "uploads_complete": false,
+  "version": 2,
+  "warning_archives": 0
+}

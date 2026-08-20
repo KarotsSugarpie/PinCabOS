@@ -93,13 +93,30 @@
     }
   ],
   "xrandr_raw": "Screen 0: minimum 8 x 8, current 7680 x 2160, maximum 32767 x 32767\nHDMI-0 connected primary 3840x2160+0+0 (normal left inverted right x axis y axis) 708mm x 398mm\n   3840x2160     60.00*+  59.94    50.00    29.97    25.00    23.98  \n   1920x1080     60.00    60.00    59.94    50.00    23.98  \n   1680x1050     59.95  \n   1280x1024     60.02  \n   1280x960      60.00  \n   1280x800      59.81  \n   1280x720      60.00    59.94    50.00  \n   1024x768      60.00  \n   800x600       60.32    56.25  \n   720x576       50.00  \n   720x480       59.94  \n   640x480       59.94    59.93  \nDP-0 disconnected (normal left inverted right x axis y axis)\nDP-1 connected 1920x1080+3840+0 (normal left inverted right x axis y axis) 600mm x 340mm\n   1920x1080     60.00*+\n   1680x1050     59.95  \n   1600x900      60.00  \n   1440x900      59.89  \n   1280x1024     60.02  \n   1280x720      60.00  \n   1024x768      60.00  \n   800x600       60.32  \n   640x480       59.94  \nDP-2 connected 1920x1200+5760+0 (normal left inverted right x axis y axis) 336mm x 210mm\n   1920x1200     59.95*+\n   1920x1080     60.00    60.00    59.94    50.00  \n   1680x1050     59.95  \n   1440x900      59.89  \n   1280x960      60.00  \n   1280x800      59.81  \n   1280x720      60.00    59.94    50.00    47.95  \n   1024x768      60.00  \n   800x600       60.32    56.25  \n   640x480       59.94  \nDP-3 disconnected (normal left inverted right x axis y axis)\nDP-4 disconnected (normal left inverted right x axis y axis)\nDP-5 disconnected (normal left inverted right x axis y axis)\n\n",
-  "roles_updated_at": "2026-07-05T20:30:40",
   "role_resolution": {
     "status": "ready",
     "screen_count": 3,
     "full_dmd_available": true,
     "extras": [],
     "binding_mode": "edid-bound",
-    "updated_at": "2026-08-02T15:14:15.981703+00:00"
-  }
+    "updated_at": "2026-08-18T19:48:15.781860+00:00"
+  },
+  "roles": {
+    "playfield": {
+      "output": "HDMI-0",
+      "mode": "",
+      "rate": ""
+    },
+    "backglass": {
+      "output": "DP-1",
+      "mode": "",
+      "rate": ""
+    },
+    "fulldmd": {
+      "output": "DP-2",
+      "mode": "",
+      "rate": ""
+    }
+  },
+  "updated_by": "PinCabOS WebApp screen.py"
 }

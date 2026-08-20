@@ -1,6 +1,19 @@
 {
   "selected": [
-    "0:Master",
-    "2:Master"
-  ]
+    "PCH:Master",
+    "CMI8738:Master"
+  ],
+  "soft_mute": {
+    "CMI8738:Master": 77
+  },
+  "levels": {
+    "PCH:Master": {
+      "volume": 57,
+      "muted": true
+    },
+    "CMI8738:Master": {
+      "volume": 0,
+      "muted": true
+    }
+  }
 }

@@ -1,0 +1,542 @@
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\===============================================================
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\ PINCABOS — AUDIT 3-WAY
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\ MAIN ORIGINAL vs CAB ACTUEL vs 21 PR
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\ AUCUNE MODIFICATION DU SYSTEME ACTIF
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\===============================================================
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\=== 1. VALIDATION DU STAGING ===
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\GO [OK] Staging : bb0f73b
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\GO [OK] Base    : 0ea18ec
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\=== 2. COMPARAISON 3-WAY ===
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+TYPE           ETAT                     PERM  FICHIER
+------------------------------------------------------------------------------------------------------------------------
+SSH_HOLD       SAFE_PR_UPDATE           0644  etc/ssh/sshd_config
+SSH_HOLD       SAFE_PR_UPDATE           0644  etc/ssh/sshd_config.d/90-pincabos-root-password.conf
+SSH_HOLD       SAFE_DELETE              0644  etc/ssh/sshd_config.d/99-isodev-root-login.conf
+SSH_HOLD       SAFE_DELETE              0644  etc/ssh/sshd_config.d/99-pincabos-root-login.conf
+RUNTIME        SAFE_NEW                 ----  etc/sudoers.d/pincabos-audio-state
+RUNTIME        ALREADY_APPLIED          0440  etc/sudoers.d/pincabos-screen-topology
+RUNTIME        ALREADY_APPLIED          0777  etc/systemd/system/multi-user.target.wants/pincabos-cpu-performance.service
+RUNTIME        ALREADY_APPLIED          0644  etc/systemd/system/pincabos-batch-import-worker.service.d/50-shared-lock.conf
+RUNTIME        ALREADY_APPLIED          0644  etc/systemd/system/pincabos-cpu-performance.service
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  etc/systemd/system/pincabos-gui-kiosk.service
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  etc/systemd/system/pincabos-gui-wizard.service
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  etc/systemd/system/pincabos-tui-fallback.service
+RUNTIME        SAFE_PR_UPDATE           0644  etc/xdg/openbox/rc.xml
+RUNTIME        SAFE_PR_UPDATE           0755  home/pinball/.config/openbox/autostart
+RUNTIME        ALREADY_APPLIED          0755  opt/pincabos/bin/pincabos-scoreview-router.sh
+ISO_BUILD_HOLD SAFE_PR_UPDATE           0755  opt/pincabos/install/.completed-final-20260620-020509/help-pincabos.sh
+ISO_BUILD_HOLD SAFE_PR_UPDATE           0644  opt/pincabos/install/.completed-final-20260620-020509/version.json
+ISO_BUILD_HOLD SAFE_PR_UPDATE           0755  opt/pincabos/install/03-install-check.sh
+ISO_BUILD_HOLD SAFE_PR_UPDATE           0755  opt/pincabos/install/help-pincabos.sh
+ISO_BUILD_HOLD SAFE_PR_UPDATE           0755  opt/pincabos/install/modules/system/mod-splash.sh
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  opt/pincabos/installer-gui/app.py
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  opt/pincabos/installer-gui/i18n.json
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  opt/pincabos/installer-gui/static/pincabos-logo-alpha.png
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  opt/pincabos/installer-gui/templates/wizard.html
+ISO_BUILD_HOLD SAFE_PR_UPDATE           0755  opt/pincabos/modules/system/mod-splash.sh
+ISO_BUILD_HOLD SAFE_NEW                 ----  opt/pincabos/script/build-master.sh
+ISO_BUILD_HOLD MERGE_REQUIRED           0755  opt/pincabos/script/iso.sh
+RUNTIME        ALREADY_APPLIED          0755  opt/pincabos/scripts/pincabos-screen-topology.py
+RUNTIME        SAFE_PR_UPDATE           0755  opt/pincabos/tools/network-current-mode.sh
+RUNTIME        SAFE_PR_UPDATE           0755  opt/pincabos/tools/network-set-dhcp.sh
+RUNTIME        SAFE_PR_UPDATE           0755  opt/pincabos/tools/network-set-static.sh
+RUNTIME        ALREADY_APPLIED          0755  opt/pincabos/tools/pincabos-screen-lightdm-safe.sh
+ISO_BUILD_HOLD SAFE_PR_UPDATE           0644  opt/pincabos/version.json
+RUNTIME        MERGE_REQUIRED           0644  opt/pincabos/web/app.py
+RUNTIME        SAFE_PR_UPDATE           0644  opt/pincabos/web/pincabos_audio_volume_widget.py
+RUNTIME        MERGE_REQUIRED           0644  opt/pincabos/web/pincabos_batch_import_live.py
+RUNTIME        SAFE_PR_UPDATE           0644  opt/pincabos/web/pincabos_batch_import_queue_v2.py
+RUNTIME        ALREADY_APPLIED          0644  opt/pincabos/web/pincabos_batch_transfer.py
+RUNTIME        ALREADY_APPLIED          0644  opt/pincabos/web/pincabos_impexp.py
+RUNTIME        SAFE_PR_UPDATE           0644  opt/pincabos/web/pincabos_webapp_dev_admin.py
+RUNTIME        ALREADY_APPLIED          0644  usr/lib/tmpfiles.d/pincabos.conf
+RUNTIME        SAFE_NEW                 ----  usr/local/bin/pincabos-admin-password
+RUNTIME        SAFE_NEW                 ----  usr/local/bin/pincabos-audio-restore
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  usr/local/bin/pincabos-kiosk-session
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  usr/local/bin/pincabos-kiosk.py
+RUNTIME        SAFE_NEW                 ----  usr/local/bin/pincabos-volume
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  usr/local/sbin/pincabos-gui-fallback
+ISO_BUILD_HOLD ALREADY_APPLIED          0755  usr/local/sbin/pincabos-installer-dispatch
+RUNTIME        ALREADY_APPLIED          0644  usr/share/plymouth/themes/pincabos/PCOLoading.png
+RUNTIME        ALREADY_APPLIED          0644  usr/share/plymouth/themes/pincabos/pincabos.plymouth
+RUNTIME        ALREADY_APPLIED          0644  usr/share/plymouth/themes/pincabos/pincabos.png
+RUNTIME        LOCAL_COLLISION_NEW      0644  usr/share/plymouth/themes/pincabos/pincabos.script
+RUNTIME        ALREADY_APPLIED          0644  usr/share/plymouth/themes/pincabos/progress_bar.png
+RUNTIME        ALREADY_APPLIED          0644  usr/share/plymouth/themes/pincabos/progress_box.png
+RUNTIME        ALREADY_APPLIED          0644  usr/share/xsessions/pincabos-openbox.desktop
+
+===============================================================
+ RUNTIME — APPLICATION AUTOMATIQUE POSSIBLE
+===============================================================
+SAFE_NEW                 etc/sudoers.d/pincabos-audio-state
+ALREADY_APPLIED          etc/sudoers.d/pincabos-screen-topology
+ALREADY_APPLIED          etc/systemd/system/multi-user.target.wants/pincabos-cpu-performance.service
+ALREADY_APPLIED          etc/systemd/system/pincabos-batch-import-worker.service.d/50-shared-lock.conf
+ALREADY_APPLIED          etc/systemd/system/pincabos-cpu-performance.service
+SAFE_PR_UPDATE           etc/xdg/openbox/rc.xml
+SAFE_PR_UPDATE           home/pinball/.config/openbox/autostart
+ALREADY_APPLIED          opt/pincabos/bin/pincabos-scoreview-router.sh
+ALREADY_APPLIED          opt/pincabos/scripts/pincabos-screen-topology.py
+SAFE_PR_UPDATE           opt/pincabos/tools/network-current-mode.sh
+SAFE_PR_UPDATE           opt/pincabos/tools/network-set-dhcp.sh
+SAFE_PR_UPDATE           opt/pincabos/tools/network-set-static.sh
+ALREADY_APPLIED          opt/pincabos/tools/pincabos-screen-lightdm-safe.sh
+SAFE_PR_UPDATE           opt/pincabos/web/pincabos_audio_volume_widget.py
+SAFE_PR_UPDATE           opt/pincabos/web/pincabos_batch_import_queue_v2.py
+ALREADY_APPLIED          opt/pincabos/web/pincabos_batch_transfer.py
+ALREADY_APPLIED          opt/pincabos/web/pincabos_impexp.py
+SAFE_PR_UPDATE           opt/pincabos/web/pincabos_webapp_dev_admin.py
+ALREADY_APPLIED          usr/lib/tmpfiles.d/pincabos.conf
+SAFE_NEW                 usr/local/bin/pincabos-admin-password
+SAFE_NEW                 usr/local/bin/pincabos-audio-restore
+SAFE_NEW                 usr/local/bin/pincabos-volume
+ALREADY_APPLIED          usr/share/plymouth/themes/pincabos/PCOLoading.png
+ALREADY_APPLIED          usr/share/plymouth/themes/pincabos/pincabos.plymouth
+ALREADY_APPLIED          usr/share/plymouth/themes/pincabos/pincabos.png
+ALREADY_APPLIED          usr/share/plymouth/themes/pincabos/progress_bar.png
+ALREADY_APPLIED          usr/share/plymouth/themes/pincabos/progress_box.png
+ALREADY_APPLIED          usr/share/xsessions/pincabos-openbox.desktop
+
+===============================================================
+ RUNTIME — MERGE / VERIFICATION NECESSAIRE
+===============================================================
+
+MERGE_REQUIRED : opt/pincabos/web/app.py
+    BASE  : c56a954a2b9e
+    LIVE  : 8a87a46d8804
+    PR    : 15cd4ae363ce
+    modes : base=100644 live=100644 (0644) PR=100644
+
+MERGE_REQUIRED : opt/pincabos/web/pincabos_batch_import_live.py
+    BASE  : 42639519e504
+    LIVE  : eaabd52c77c1
+    PR    : 473cd8523e35
+    modes : base=100644 live=100644 (0644) PR=100644
+
+LOCAL_COLLISION_NEW : usr/share/plymouth/themes/pincabos/pincabos.script
+    BASE  : -
+    LIVE  : 8df00622e9f1
+    PR    : 3cf49e0f8385
+    modes : base=------ live=100644 (0644) PR=100644
+
+===============================================================
+ DIFFERENCES DE PERMISSIONS
+===============================================================
+
+===============================================================
+ SSH — RETENU VOLONTAIREMENT
+===============================================================
+SAFE_PR_UPDATE           etc/ssh/sshd_config
+SAFE_PR_UPDATE           etc/ssh/sshd_config.d/90-pincabos-root-password.conf
+SAFE_DELETE              etc/ssh/sshd_config.d/99-isodev-root-login.conf
+SAFE_DELETE              etc/ssh/sshd_config.d/99-pincabos-root-login.conf
+
+===============================================================
+ ISO / BUILD — NON DEPLOYE DIRECTEMENT
+===============================================================
+ALREADY_APPLIED          etc/systemd/system/pincabos-gui-kiosk.service
+ALREADY_APPLIED          etc/systemd/system/pincabos-gui-wizard.service
+ALREADY_APPLIED          etc/systemd/system/pincabos-tui-fallback.service
+SAFE_PR_UPDATE           opt/pincabos/install/.completed-final-20260620-020509/help-pincabos.sh
+SAFE_PR_UPDATE           opt/pincabos/install/.completed-final-20260620-020509/version.json
+SAFE_PR_UPDATE           opt/pincabos/install/03-install-check.sh
+SAFE_PR_UPDATE           opt/pincabos/install/help-pincabos.sh
+SAFE_PR_UPDATE           opt/pincabos/install/modules/system/mod-splash.sh
+ALREADY_APPLIED          opt/pincabos/installer-gui/app.py
+ALREADY_APPLIED          opt/pincabos/installer-gui/i18n.json
+ALREADY_APPLIED          opt/pincabos/installer-gui/static/pincabos-logo-alpha.png
+ALREADY_APPLIED          opt/pincabos/installer-gui/templates/wizard.html
+SAFE_PR_UPDATE           opt/pincabos/modules/system/mod-splash.sh
+SAFE_NEW                 opt/pincabos/script/build-master.sh
+MERGE_REQUIRED           opt/pincabos/script/iso.sh
+SAFE_PR_UPDATE           opt/pincabos/version.json
+ALREADY_APPLIED          usr/local/bin/pincabos-kiosk-session
+ALREADY_APPLIED          usr/local/bin/pincabos-kiosk.py
+ALREADY_APPLIED          usr/local/sbin/pincabos-gui-fallback
+ALREADY_APPLIED          usr/local/sbin/pincabos-installer-dispatch
+
+===============================================================
+ SUDOERS — CONTROLE SPECIAL
+===============================================================
+etc/sudoers.d/pincabos-audio-state LIVE=---- GIT=100644
+etc/sudoers.d/pincabos-screen-topology LIVE=0440 GIT=100644
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\=== 3. VERIFICATION SUDOERS ===
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\/etc/sudoers: parsed OK
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\=== 4. SERVICES AVANT UPDATE ===
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\pincabos-webapp.service                    : active
+pincabos-vpinfe.service                    : inactive
+pincabos-scoreview-router.service          : active
+pincabos-batch-import-worker.service       : active
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\===============================================================
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\ AUDIT 3-WAY TERMINE
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\ AUCUN FICHIER DU CAB N'A ETE MODIFIE
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\===============================================================
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\Rapport : /root/pincabos-pr-threeway-20260817-171813.txt
+]3008;start=606056ff-3c44-47f7-abc8-4acf474e1433;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\===============================================================
+]3008;end=606056ff-3c44-47f7-abc8-4acf474e1433;exit=success\]3008;start=90e28839-9b2d-4a4f-bf99-f9866e8accbd;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=shell;cwd=/opt/pincabos/tmp/pr-integration\[?2004hroot@PinCabOs:/opt/pincabos/tmp/pr-integration# [H[2Jroot@PinCabOs:/opt/pincabos/tmp/pr-integration# clear
+
+set -u
+
+WORK="/opt/pincabos/tmp/pr-integration"
+BASE="0ea18ec063e382166bc555a5e27a324b75708e10"
+HEAD="bb0f73b"
+
+STAMP="$(date +%Y%m%d-%H%M%S)"
+OUT="/root/pincabos-merge-preview-$STAMP"
+REPORT="/root/pincabos-merge-preview-$STAMP.txt"
+
+mkdir -p "$OUT"
+
+exec > >(tee "$REPORT") 2>&1
+
+echo "==============================================================="
+echo " PINCABOS — PREVIEW MERGE LOCAL + PR"
+echo " AUCUNE MODIFICATION DU CAB ACTIF"
+echo "==============================================================="
+
+cd "$WORK"
+
+echo
+echo "=== 1. VALIDATION STAGING ==="
+
+if [ "$(git rev-parse --short HEAD)" != "$HEAD" ]; then
+    echo "NOGO [X] Mauvais HEAD."
+    exit 1
+fi
+
+if [ -n "$(git status --porcelain)" ]; then
+    echo "NOGO [X] Staging non propre."
+    git status --short
+    exit 1
+fi
+
+echo "GO [OK] Staging $HEAD propre."
+
+FILES=(
+    "opt/pincabos/web/app.py"
+    "opt/pincabos/web/pincabos_batch_import_live.py"
+)
+
+echo
+echo "==============================================================="
+echo " 2. MERGE 3-WAY DES DEUX FICHIERS"
+echo "==============================================================="
+
+for REL in "${FILES[@]}"; do
+
+    NAME="$(basename "$REL")"
+    TAG="$(echo "$REL" | tr '/' '_')"
+
+    BASE_FILE="$OUT/${TAG}.BASE"
+    LIVE_FILE="$OUT/${TAG}.LIVE"
+    PR_FILE="$OUT/${TAG}.PR"
+    MERGED_FILE="$OUT/${TAG}.MERGED"
+
+    echo
+    echo "###############################################################"
+    echo " $REL"
+    echo "###############################################################"
+
+    echo
+    echo "--- Extraction BASE ---"
+
+    if ! git show "$BASE:$REL" > "$BASE_FILE"; then
+        echo "NOGO [X] Impossible d'extraire BASE."
+        continue
+    fi
+
+    echo "GO [OK] $BASE_FILE"
+
+    echo
+    echo "--- Copie LIVE actuelle ---"
+
+    if [ ! -f "/$REL" ]; then
+        echo "NOGO [X] Fichier LIVE absent : /$REL"
+        continue
+    fi
+
+    cp -a "/$REL" "$LIVE_FILE"
+
+    echo "GO [OK] $LIVE_FILE"
+
+    echo
+    echo "--- Copie version PR ---"
+
+    cp -a "$WORK/$REL" "$PR_FILE"
+
+    echo "GO [OK] $PR_FILE"
+
+    echo
+    echo "--- Changements locaux depuis MAIN ---"
+
+    git diff \
+        --no-index \
+        --stat \
+        "$BASE_FILE" \
+        "$LIVE_FILE" \
+        2>/dev/null || true
+
+    echo
+    echo "--- Changements PR depuis MAIN ---"
+
+    git diff \
+        --no-index \
+        --stat \
+        "$BASE_FILE" \
+        "$PR_FILE" \
+        2>/dev/null || true
+
+    echo
+    echo "--- Tentative de merge 3-way ---"
+
+    git merge-file \
+        -p \
+        --diff3 \
+        "$LIVE_FILE" \
+        "$BASE_FILE" \
+        "$PR_FILE" \
+        > "$MERGED_FILE"
+
+    RC=$?
+
+    if [ "$RC" -eq 0 ]; then
+
+        echo "GO [OK] MERGE AUTOMATIQUE SANS CONFLIT"
+
+        echo
+        echo "--- Validation Python ---"
+
+        if python3 -m py_compile "$MERGED_FILE"; then
+            echo "GO [OK] Syntaxe Python valide."
+        else
+            echo "NOGO [X] Syntaxe Python invalide."
+        fi
+
+        find "$OUT" \
+            -type d \
+            -name __pycache__ \
+            -prune \
+            -exec rm -rf {} + \
+            2>/dev/null || true
+
+        echo
+        echo "--- Impact LIVE -> MERGED ---"
+
+        git diff \
+            --no-index \
+            --stat \
+            "$LIVE_FILE" \
+            "$MERGED_FILE" \
+            2>/dev/null || true
+
+        echo
+        echo "--- Marqueurs de conflit ---"
+
+        if grep -nE '^(<<<<<<<|=======|>>>>>>>|\|\|\|\|\|\|\|)' \
+            "$MERGED_FILE"
+        then
+            echo "NOGO [X] Marqueur inattendu."
+        else
+            echo "GO [OK] Aucun marqueur."
+        fi
+
+    else
+
+        echo "NOGO [X] MERGE AVEC CONFLIT — code=$RC"
+
+        echo
+        echo "--- Blocs de conflit ---"
+
+        python3 - "$MERGED_FILE" <<'PY'
+from pathlib import Path
+import sys
+
+p = Path(sys.argv[1])
+lines = p.read_text(errors="replace").splitlines()
+
+starts = [
+    i for i, line in enumerate(lines)
+    if line.startswith("<<<<<<<")
+]
+
+print(f"Nombre de conflits : {len(starts)}")
+
+for num, start in enumerate(starts, 1):
+    end = start
+
+    while end < len(lines) and not lines[end].startswith(">>>>>>>"):
+        end += 1
+
+    end = min(end + 1, len(lines))
+
+    a = max(0, start - 15)
+    b = min(len(lines), end + 15)
+
+    print()
+    print("===============================================================")
+    print(f" CONFLIT #{num}")
+    print("===============================================================")
+
+    for i in range(a, b):
+        flag = ">>" if start <= i < end else "  "
+        print(f"{flag} {i+1:6d} | {lines[i]}")
+PY
+
+[7m    fi[27m
+
+[7mdone[27m
+
+[7mecho[27m
+[7mecho "==============================================================="[27m
+[7mecho " 3. PLYMOUTH — COMPARAISON SEULEMENT"[27m
+[7mecho "==============================================================="[27m
+
+[7mPLY_REL="usr/share/plymouth/themes/pincabos/pincabos.script"[27m
+
+[7mLIVE_PLY="/$PLY_REL"[27m
+[7mPR_PLY="$WORK/$PLY_REL"[27m
+
+[7mif [ -f "$LIVE_PLY" ] && [ -f "$PR_PLY" ]; then[27m
+
+[7m    echo[27m
+[7m    echo "--- LIVE vs PR ---"[27m
+
+[7m    git diff \[27m
+[7m        --no-index \[27m
+[7m        --stat \[27m
+[7m        "$LIVE_PLY" \[27m
+[7m        "$PR_PLY" \[27m
+[7m        2>/dev/null || true[27m
+
+[7m    echo[27m
+[7m    echo "SHA256 LIVE:"[27m
+[7m    sha256sum "$LIVE_PLY"[27m
+
+[7m    echo[27m
+[7m    echo "SHA256 PR:"[27m
+[7m    sha256sum "$PR_PLY"[27m
+
+[7m    echo[27m
+[7m    echo "INFO : aucune modification Plymouth appliquee."[27m
+
+[7melse[27m
+[7m    echo "WARN : fichier Plymouth manquant."[27m
+[7mfi[27m
+
+[7mecho[27m
+[7mecho "==============================================================="[27m
+[7mecho " 4. RESULTATS"[27m
+[7mecho "==============================================================="[27m
+
+[7mecho[27m
+[7mecho "Preview : $OUT"[27m
+[7mecho "Rapport : $REPORT"[27m
+
+[7mecho[27m
+[7mecho "Fichiers produits :"[27m
+[7mfind "$OUT" -maxdepth 1 -type f -printf '  %f\n' | sort[27m
+
+[7mecho[27m
+[7mecho "==============================================================="[27m
+[7mecho " AUDIT TERMINE"[27m
+[7mecho " AUCUN FICHIER DANS /opt, /etc, /usr OU /home N'A ETE MODIFIE"[27m
+[7mecho "==============================================================="[27m[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A    fi
+
+done
+
+echo
+echo "==============================================================="
+echo " 3. PLYMOUTH — COMPARAISON SEULEMENT"
+echo "==============================================================="
+
+PLY_REL="usr/share/plymouth/themes/pincabos/pincabos.script"
+
+LIVE_PLY="/$PLY_REL"
+PR_PLY="$WORK/$PLY_REL"
+
+if [ -f "$LIVE_PLY" ] && [ -f "$PR_PLY" ]; then
+
+    echo
+    echo "--- LIVE vs PR ---"
+
+    git diff \
+        --no-index \
+        --stat \
+        "$LIVE_PLY" \
+        "$PR_PLY" \
+        2>/dev/null || true
+
+    echo
+    echo "SHA256 LIVE:"
+    sha256sum "$LIVE_PLY"
+
+    echo
+    echo "SHA256 PR:"
+    sha256sum "$PR_PLY"
+
+    echo
+    echo "INFO : aucune modification Plymouth appliquee."
+
+else
+    echo "WARN : fichier Plymouth manquant."
+fi
+
+echo
+echo "==============================================================="
+echo " 4. RESULTATS"
+echo "==============================================================="
+
+echo
+echo "Preview : $OUT"
+echo "Rapport : $REPORT"
+
+echo
+echo "Fichiers produits :"
+find "$OUT" -maxdepth 1 -type f -printf '  %f\n' | sort
+
+echo
+echo "==============================================================="
+echo " AUDIT TERMINE"
+echo " AUCUN FICHIER DANS /opt, /etc, /usr OU /home N'A ETE MODIFIE"
+echo "==============================================================="
+[?2004l]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\[H[2J[3J]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\===============================================================
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\ PINCABOS — PREVIEW MERGE LOCAL + PR
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\ AUCUNE MODIFICATION DU CAB ACTIF
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\===============================================================
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\=== 1. VALIDATION STAGING ===
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\GO [OK] Staging bb0f73b propre.
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\===============================================================
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\ 2. MERGE 3-WAY DES DEUX FICHIERS
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\===============================================================
+]3008;start=935ec2b6-f125-49d5-9f74-a35487aa5cd0;machineid=b241d706f920480999696ada01f56f8a;user=root;hostname=PinCabOs;bootid=67cb3364-8f55-4032-b567-5b63cfbef2cb;pid=00000000000003193764;type=command;cwd=/opt/pincabos/tmp/pr-integration\
+###############################################################
+ opt/pincabos/web/app.py
+###############################################################
+
+--- Extraction BASE ---
+GO [OK] /root/pincabos-merge-preview-20260817-171934/opt_pincabos_web_app.py.BASE
+
+--- Copie LIVE actuelle ---
+GO [OK] /root/pincabos-merge-preview-20260817-171934/opt_pincabos_web_app.py.LIVE
+
+--- Copie version PR ---
+GO [OK] /root/pincabos-merge-preview-20260817-171934/opt_pincabos_web_app.py.PR
+
+--- Changements locaux depuis MAIN ---
+ ...eb_app.py.BASE => opt_pincabos_web_app.py.LIVE} | 40 ++++++++++++++++++++--
+ 1 file changed, 37 insertions(+), 3 deletions(-)
+
+--- Changements PR depuis MAIN ---
+ ..._web_app.py.BASE => opt_pincabos_web_app.py.PR} | 116 +++++++++++++++++++--
+ 1 file changed, 106 insertions(+), 10 deletions(-)
+
+--- Tentative de merge 3-way ---

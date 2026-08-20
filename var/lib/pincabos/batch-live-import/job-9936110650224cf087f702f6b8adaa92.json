@@ -1,0 +1,626 @@
+{
+  "accepting_uploads": true,
+  "conflict_mode": "skip",
+  "created_at": "2026-08-16T21:12:54Z",
+  "current_index": 20,
+  "current_item": "",
+  "error": "",
+  "events": [
+    {
+      "at": "2026-08-16T21:12:54Z",
+      "level": "info",
+      "message": "File créée pour 824 package(s)."
+    },
+    {
+      "at": "2026-08-16T21:12:58Z",
+      "level": "info",
+      "message": "Téléversement 1/824 terminé : 1-2-3 (Automaticos 1973) - VPSId HhMnyw53.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:12:58Z",
+      "level": "info",
+      "message": "Worker systemd V2 démarré; traitement strictement séquentiel."
+    },
+    {
+      "at": "2026-08-16T21:12:58Z",
+      "level": "info",
+      "message": "Package 1/824 : 1-2-3 (Automaticos 1973) - VPSId HhMnyw53.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:12:59Z",
+      "level": "info",
+      "message": "Copie locale : 1-2-3 (Automaticos 1973) - VPSId HhMnyw53.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:12:59Z",
+      "level": "warning",
+      "message": "1-2-3 (Automaticos 1973) - VPSId HhMnyw53.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171259-2507"
+    },
+    {
+      "at": "2026-08-16T21:13:03Z",
+      "level": "info",
+      "message": "Téléversement 2/824 terminé : 2 in 1 (Bally 1964) - VPSId NuaJjZ2y.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:13:03Z",
+      "level": "info",
+      "message": "Package 2/824 : 2 in 1 (Bally 1964) - VPSId NuaJjZ2y.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:13:03Z",
+      "level": "info",
+      "message": "Copie locale : 2 in 1 (Bally 1964) - VPSId NuaJjZ2y.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:13:03Z",
+      "level": "warning",
+      "message": "2 in 1 (Bally 1964) - VPSId NuaJjZ2y.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171303-2507"
+    },
+    {
+      "at": "2026-08-16T21:13:09Z",
+      "level": "info",
+      "message": "Téléversement 3/824 terminé : 4 Queens (Bally 1970) - VPSId eHXaMJjh.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:13:09Z",
+      "level": "info",
+      "message": "Package 3/824 : 4 Queens (Bally 1970) - VPSId eHXaMJjh.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:13:10Z",
+      "level": "info",
+      "message": "Copie locale : 4 Queens (Bally 1970) - VPSId eHXaMJjh.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:13:10Z",
+      "level": "warning",
+      "message": "4 Queens (Bally 1970) - VPSId eHXaMJjh.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171310-2507"
+    },
+    {
+      "at": "2026-08-16T21:13:18Z",
+      "level": "info",
+      "message": "Téléversement 4/824 terminé : 4 Square (Gottlieb 1971) - VPSId HBj7RE1v.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:13:18Z",
+      "level": "info",
+      "message": "Package 4/824 : 4 Square (Gottlieb 1971) - VPSId HBj7RE1v.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:13:19Z",
+      "level": "info",
+      "message": "Copie locale : 4 Square (Gottlieb 1971) - VPSId HBj7RE1v.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:13:20Z",
+      "level": "warning",
+      "message": "4 Square (Gottlieb 1971) - VPSId HBj7RE1v.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171319-2507"
+    },
+    {
+      "at": "2026-08-16T21:13:26Z",
+      "level": "info",
+      "message": "Téléversement 5/824 terminé : 8 Ball (Williams 1966) - VPSId 4Ty-Lm_X.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:13:27Z",
+      "level": "info",
+      "message": "Package 5/824 : 8 Ball (Williams 1966) - VPSId 4Ty-Lm_X.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:13:27Z",
+      "level": "info",
+      "message": "Copie locale : 8 Ball (Williams 1966) - VPSId 4Ty-Lm_X.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:13:28Z",
+      "level": "warning",
+      "message": "8 Ball (Williams 1966) - VPSId 4Ty-Lm_X.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171327-2507"
+    },
+    {
+      "at": "2026-08-16T21:14:00Z",
+      "level": "info",
+      "message": "Téléversement 6/824 terminé : 24 (Stern 2009) - VPSId P15WeTaO.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:00Z",
+      "level": "info",
+      "message": "Package 6/824 : 24 (Stern 2009) - VPSId P15WeTaO.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:14:01Z",
+      "level": "info",
+      "message": "Copie locale : 24 (Stern 2009) - VPSId P15WeTaO.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:04Z",
+      "level": "warning",
+      "message": "24 (Stern 2009) - VPSId P15WeTaO.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171401-2507"
+    },
+    {
+      "at": "2026-08-16T21:14:14Z",
+      "level": "info",
+      "message": "Téléversement 7/824 terminé : 250 cc (Inder 1992) - VPSId bafGvcae.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:14Z",
+      "level": "info",
+      "message": "Package 7/824 : 250 cc (Inder 1992) - VPSId bafGvcae.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:14:15Z",
+      "level": "info",
+      "message": "Copie locale : 250 cc (Inder 1992) - VPSId bafGvcae.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:16Z",
+      "level": "warning",
+      "message": "250 cc (Inder 1992) - VPSId bafGvcae.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171415-2507"
+    },
+    {
+      "at": "2026-08-16T21:14:34Z",
+      "level": "info",
+      "message": "Téléversement 8/824 terminé : 300_ (Gottlieb 1975) - VPSId H2bL8wJ-.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:35Z",
+      "level": "info",
+      "message": "Package 8/824 : 300_ (Gottlieb 1975) - VPSId H2bL8wJ-.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:14:35Z",
+      "level": "info",
+      "message": "Copie locale : 300_ (Gottlieb 1975) - VPSId H2bL8wJ-.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:38Z",
+      "level": "warning",
+      "message": "300_ (Gottlieb 1975) - VPSId H2bL8wJ-.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171435-2507"
+    },
+    {
+      "at": "2026-08-16T21:14:41Z",
+      "level": "info",
+      "message": "Téléversement 9/824 terminé : 301 Bullseye (Grand Products 1986) - VPSId jJ-U4acSur.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:42Z",
+      "level": "info",
+      "message": "Package 9/824 : 301 Bullseye (Grand Products 1986) - VPSId jJ-U4acSur.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:14:42Z",
+      "level": "info",
+      "message": "Copie locale : 301 Bullseye (Grand Products 1986) - VPSId jJ-U4acSur.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:42Z",
+      "level": "warning",
+      "message": "301 Bullseye (Grand Products 1986) - VPSId jJ-U4acSur.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171442-2507"
+    },
+    {
+      "at": "2026-08-16T21:14:50Z",
+      "level": "info",
+      "message": "Téléversement 10/824 terminé : 2001 (Gottlieb 1971) - VPSId sMBqx5fp.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:50Z",
+      "level": "info",
+      "message": "Package 10/824 : 2001 (Gottlieb 1971) - VPSId sMBqx5fp.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:14:50Z",
+      "level": "info",
+      "message": "Copie locale : 2001 (Gottlieb 1971) - VPSId sMBqx5fp.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:51Z",
+      "level": "warning",
+      "message": "2001 (Gottlieb 1971) - VPSId sMBqx5fp.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171450-2507"
+    },
+    {
+      "at": "2026-08-16T21:14:59Z",
+      "level": "info",
+      "message": "Téléversement 11/824 terminé : ABBA (Original 2020) - VPSId R6AkHffs.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:14:59Z",
+      "level": "info",
+      "message": "Package 11/824 : ABBA (Original 2020) - VPSId R6AkHffs.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:14:59Z",
+      "level": "info",
+      "message": "Copie locale : ABBA (Original 2020) - VPSId R6AkHffs.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:15:00Z",
+      "level": "warning",
+      "message": "ABBA (Original 2020) - VPSId R6AkHffs.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171459-2507"
+    },
+    {
+      "at": "2026-08-16T21:15:08Z",
+      "level": "info",
+      "message": "Téléversement 12/824 terminé : Abra Ca Dabra (Gottlieb 1975) - VPSId OmWHC8EW.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:15:09Z",
+      "level": "info",
+      "message": "Package 12/824 : Abra Ca Dabra (Gottlieb 1975) - VPSId OmWHC8EW.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:15:09Z",
+      "level": "info",
+      "message": "Copie locale : Abra Ca Dabra (Gottlieb 1975) - VPSId OmWHC8EW.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:15:10Z",
+      "level": "warning",
+      "message": "Abra Ca Dabra (Gottlieb 1975) - VPSId OmWHC8EW.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171509-2507"
+    },
+    {
+      "at": "2026-08-16T21:16:01Z",
+      "level": "info",
+      "message": "Téléversement 13/824 terminé : AC DC (LUCI Premium) (Stern 2013) - VPSId kGBkVb-v.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:16:01Z",
+      "level": "info",
+      "message": "Package 13/824 : AC DC (LUCI Premium) (Stern 2013) - VPSId kGBkVb-v.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:16:03Z",
+      "level": "info",
+      "message": "Copie locale : AC DC (LUCI Premium) (Stern 2013) - VPSId kGBkVb-v.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:16:09Z",
+      "level": "warning",
+      "message": "AC DC (LUCI Premium) (Stern 2013) - VPSId kGBkVb-v.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171603-2507"
+    },
+    {
+      "at": "2026-08-16T21:16:32Z",
+      "level": "info",
+      "message": "Téléversement 14/824 terminé : AC DC Power Up (Original 2022) - VPSId culBDm0bJO.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:16:33Z",
+      "level": "info",
+      "message": "Package 14/824 : AC DC Power Up (Original 2022) - VPSId culBDm0bJO.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:16:34Z",
+      "level": "info",
+      "message": "Copie locale : AC DC Power Up (Original 2022) - VPSId culBDm0bJO.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:16:36Z",
+      "level": "warning",
+      "message": "AC DC Power Up (Original 2022) - VPSId culBDm0bJO.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171634-2507"
+    },
+    {
+      "at": "2026-08-16T21:16:58Z",
+      "level": "info",
+      "message": "Téléversement 15/824 terminé : Accept (Original 2019) - VPSId 5tq-eB6P.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:16:59Z",
+      "level": "info",
+      "message": "Package 15/824 : Accept (Original 2019) - VPSId 5tq-eB6P.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:17:00Z",
+      "level": "info",
+      "message": "Copie locale : Accept (Original 2019) - VPSId 5tq-eB6P.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:17:02Z",
+      "level": "warning",
+      "message": "Accept (Original 2019) - VPSId 5tq-eB6P.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171700-2507"
+    },
+    {
+      "at": "2026-08-16T21:17:28Z",
+      "level": "info",
+      "message": "Téléversement 16/824 terminé : Ace of Speed (Original 2019) - VPSId oeE2OvEi.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:17:28Z",
+      "level": "info",
+      "message": "Package 16/824 : Ace of Speed (Original 2019) - VPSId oeE2OvEi.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:17:29Z",
+      "level": "info",
+      "message": "Copie locale : Ace of Speed (Original 2019) - VPSId oeE2OvEi.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:17:33Z",
+      "level": "warning",
+      "message": "Ace of Speed (Original 2019) - VPSId oeE2OvEi.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171729-2507"
+    },
+    {
+      "at": "2026-08-16T21:17:49Z",
+      "level": "info",
+      "message": "Téléversement 17/824 terminé : Ace Ventura - Pet Detective (Original 2019) - VPSId DoQilHBe.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:17:50Z",
+      "level": "info",
+      "message": "Package 17/824 : Ace Ventura - Pet Detective (Original 2019) - VPSId DoQilHBe.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:17:50Z",
+      "level": "info",
+      "message": "Copie locale : Ace Ventura - Pet Detective (Original 2019) - VPSId DoQilHBe.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:17:53Z",
+      "level": "warning",
+      "message": "Ace Ventura - Pet Detective (Original 2019) - VPSId DoQilHBe.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171750-2507"
+    },
+    {
+      "at": "2026-08-16T21:17:57Z",
+      "level": "info",
+      "message": "Téléversement 18/824 terminé : Aces High (Bally 1965) - VPSId cCkpZwfG.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:17:58Z",
+      "level": "info",
+      "message": "Package 18/824 : Aces High (Bally 1965) - VPSId cCkpZwfG.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:17:58Z",
+      "level": "info",
+      "message": "Copie locale : Aces High (Bally 1965) - VPSId cCkpZwfG.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:17:58Z",
+      "level": "warning",
+      "message": "Aces High (Bally 1965) - VPSId cCkpZwfG.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171758-2507"
+    },
+    {
+      "at": "2026-08-16T21:18:03Z",
+      "level": "info",
+      "message": "Téléversement 19/824 terminé : Adventure Time - Rainy Day Daydream (Original 2022) - VPSId 7ElJqxPq.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:18:03Z",
+      "level": "info",
+      "message": "Package 19/824 : Adventure Time - Rainy Day Daydream (Original 2022) - VPSId 7ElJqxPq.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:18:04Z",
+      "level": "info",
+      "message": "Copie locale : Adventure Time - Rainy Day Daydream (Original 2022) - VPSId 7ElJqxPq.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:18:04Z",
+      "level": "warning",
+      "message": "Adventure Time - Rainy Day Daydream (Original 2022) - VPSId 7ElJqxPq.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171804-2507"
+    },
+    {
+      "at": "2026-08-16T21:18:43Z",
+      "level": "info",
+      "message": "Téléversement 20/824 terminé : Adventures of Rocky and Bullwinkle and Friends (Data East 1993) - VPSId DXehLyun.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:18:43Z",
+      "level": "info",
+      "message": "Package 20/824 : Adventures of Rocky and Bullwinkle and Friends (Data East 1993) - VPSId DXehLyun.PinCabOs — Validation, extraction, manifest et installation"
+    },
+    {
+      "at": "2026-08-16T21:18:45Z",
+      "level": "info",
+      "message": "Copie locale : Adventures of Rocky and Bullwinkle and Friends (Data East 1993) - VPSId DXehLyun.PinCabOs"
+    },
+    {
+      "at": "2026-08-16T21:18:50Z",
+      "level": "warning",
+      "message": "Adventures of Rocky and Bullwinkle and Friends (Data East 1993) - VPSId DXehLyun.PinCabOs : Package terminé avec avertissement; temporaires supprimés: 20260816-171845-2507"
+    },
+    {
+      "at": "2026-08-16T21:26:06Z",
+      "level": "warning",
+      "message": "Arrêt demandé; le package actuel se termine proprement."
+    },
+    {
+      "at": "2026-08-17T01:58:06Z",
+      "level": "warning",
+      "message": "Reprise manuelle depuis le shell après interruption VPX."
+    },
+    {
+      "at": "2026-08-17T12:38:19Z",
+      "level": "warning",
+      "message": "File arrêtée avant le prochain package."
+    }
+  ],
+  "failed_archives": 0,
+  "finished_at": "2026-08-17T12:38:19Z",
+  "id": "9936110650224cf087f702f6b8adaa92",
+  "last_upload_at": "2026-08-16T21:18:43Z",
+  "processed_archives": 20,
+  "progress": {
+    "completed": 20,
+    "current_item": "",
+    "failed": 0,
+    "label": "Arrêté",
+    "mode": "archives",
+    "percent": 100,
+    "successful": 0,
+    "total": 824,
+    "uploaded": 20,
+    "warnings": 20
+  },
+  "result_excerpt": "PinCabOS - Batch Import terminé Langue : Français English Español Italiano Deutsch Nederlands 📊 Tableau de bord 🎛️ Inputs 🧰 Outils PinCabOS ℹ️ À propos 📌 X Accès rapides Ouvrir VPinFE Ouvrir VPS PinCab Explorer PinCab Console Afficher PinCabOS WebApp sur : PlayField BackGlass Batch Import terminé Mode de conflit: skip Journal : /opt/pincabos/logs/batch-import-20260816-171845.log Élément Résultat Détail Adventures of Rocky and Bullwinkle and Friends (Data East 1993) Ignoré Table déjà installée. Retour Outils Soutenir PinCabOS QR Code PayPal PinCabOS Notes de version Nom : PinCabOS Version : Alpha 2.0 Build : dev Canal : ins.pincabos.cc Codename : Stark Auteur : Karots Sugarpie Site : pincabos.cc Si vous aimez PinCabOS, vous pouvez me le montrer en offrant ce que vous voulez. Merci pour votre soutien. Optimisé par ★ ★ Testeurs ★ / ★★ Soutiens Fondateurs ★★ ★ Merci aux personnes qui aident à tester PinCabOs, rapporter les problèmes, proposer des idées et soutenir le développement du projet. ★★ Karots Sugarpie ★★ ★ Strung Flo ★ ★ Yan Fox ★ ★ Andre Michi ★ ★ Nicolas Prou ★ ★ Olivier Chéron ★ 🚀 Bienvenue dans PinCabOS Avant d’utiliser PinCabOS, Jarvis recommande de compléter l’assistant Premier Démarrage. Checklist : accès WebApp réseau, GPU/pilotes, puis détection et assignation des écrans. 🚀 Démarrer l’assistant Plus tard Ne plus afficher automatiquement",
+  "started_at": "2026-08-16T21:12:58Z",
+  "state": "stopped",
+  "stop_requested": true,
+  "successful_archives": 0,
+  "total_archives": 824,
+  "updated_at": "2026-08-17T12:38:19Z",
+  "upload_dir": "/var/lib/pincabos/batch-live-import/uploads/9936110650224cf087f702f6b8adaa92",
+  "uploaded_archives": 20,
+  "uploads": [
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 1,
+      "name": "1-2-3 (Automaticos 1973) - VPSId HhMnyw53.PinCabOs",
+      "path": "",
+      "size": 36806488,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 2,
+      "name": "2 in 1 (Bally 1964) - VPSId NuaJjZ2y.PinCabOs",
+      "path": "",
+      "size": 30309574,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 3,
+      "name": "4 Queens (Bally 1970) - VPSId eHXaMJjh.PinCabOs",
+      "path": "",
+      "size": 48386132,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 4,
+      "name": "4 Square (Gottlieb 1971) - VPSId HBj7RE1v.PinCabOs",
+      "path": "",
+      "size": 65135512,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 5,
+      "name": "8 Ball (Williams 1966) - VPSId 4Ty-Lm_X.PinCabOs",
+      "path": "",
+      "size": 55455331,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 6,
+      "name": "24 (Stern 2009) - VPSId P15WeTaO.PinCabOs",
+      "path": "",
+      "size": 301410018,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 7,
+      "name": "250 cc (Inder 1992) - VPSId bafGvcae.PinCabOs",
+      "path": "",
+      "size": 80869181,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 8,
+      "name": "300_ (Gottlieb 1975) - VPSId H2bL8wJ-.PinCabOs",
+      "path": "",
+      "size": 141771500,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 9,
+      "name": "301 Bullseye (Grand Products 1986) - VPSId jJ-U4acSur.PinCabOs",
+      "path": "",
+      "size": 31294671,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 10,
+      "name": "2001 (Gottlieb 1971) - VPSId sMBqx5fp.PinCabOs",
+      "path": "",
+      "size": 61102333,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 11,
+      "name": "ABBA (Original 2020) - VPSId R6AkHffs.PinCabOs",
+      "path": "",
+      "size": 68495523,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 12,
+      "name": "Abra Ca Dabra (Gottlieb 1975) - VPSId OmWHC8EW.PinCabOs",
+      "path": "",
+      "size": 68503604,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 13,
+      "name": "AC DC (LUCI Premium) (Stern 2013) - VPSId kGBkVb-v.PinCabOs",
+      "path": "",
+      "size": 432901567,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 14,
+      "name": "AC DC Power Up (Original 2022) - VPSId culBDm0bJO.PinCabOs",
+      "path": "",
+      "size": 225042458,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 15,
+      "name": "Accept (Original 2019) - VPSId 5tq-eB6P.PinCabOs",
+      "path": "",
+      "size": 190609797,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 16,
+      "name": "Ace of Speed (Original 2019) - VPSId oeE2OvEi.PinCabOs",
+      "path": "",
+      "size": 222668622,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 17,
+      "name": "Ace Ventura - Pet Detective (Original 2019) - VPSId DoQilHBe.PinCabOs",
+      "path": "",
+      "size": 150125989,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 18,
+      "name": "Aces High (Bally 1965) - VPSId cCkpZwfG.PinCabOs",
+      "path": "",
+      "size": 37041306,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 19,
+      "name": "Adventure Time - Rainy Day Daydream (Original 2022) - VPSId 7ElJqxPq.PinCabOs",
+      "path": "",
+      "size": 35445564,
+      "state": "warning"
+    },
+    {
+      "detail": "Package terminé avec avertissement",
+      "index": 20,
+      "name": "Adventures of Rocky and Bullwinkle and Friends (Data East 1993) - VPSId DXehLyun.PinCabOs",
+      "path": "",
+      "size": 343747170,
+      "state": "warning"
+    }
+  ],
+  "uploads_complete": false,
+  "version": 2,
+  "warning_archives": 20
+}

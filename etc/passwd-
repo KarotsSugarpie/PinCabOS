@@ -29,4 +29,4 @@ sshd:x:987:65534:sshd user:/run/sshd:/usr/sbin/nologin
 lightdm:x:102:104:Light Display Manager:/var/lib/lightdm:/bin/false
 rtkit:x:986:986:RealtimeKit:/proc:/usr/sbin/nologin
 pipewire:x:985:985:system user for pipewire:/nonexistent:/usr/sbin/nologin
-nvidia-persistenced:x:103:105::/nonexistent:/usr/sbin/nologin
+nvidia-persistenced:x:103:105:NVIDIA Persistence Daemon:/nonexistent:/usr/sbin/nologin

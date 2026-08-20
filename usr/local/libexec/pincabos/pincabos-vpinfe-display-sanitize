@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+set -u
+
+INI="/home/pinball/.config/vpinfe/vpinfe.ini"
+SCREENS="/opt/pincabos/config/screens/screens.json"
+# PINCABOS_VPINFE_SANITIZER_TMP_FALLBACK_V2
+TMP_ROOT="${TMPDIR:-/tmp}"
+
+if [ ! -d "$TMP_ROOT" ] || [ ! -w "$TMP_ROOT" ]; then
+  TMP_ROOT="/tmp"
+fi
+
+XRANDR_TMP="$(
+  mktemp "$TMP_ROOT/pincabos-vpinfe-xrandr.XXXXXX"
+)" || exit 0
+
+trap 'rm -f "$XRANDR_TMP"' EXIT
+
+[ -f "$INI" ] || exit 0
+[ -f "$SCREENS" ] || exit 0
+
+/usr/sbin/runuser -u pinball -- \
+  /usr/bin/env \
+    DISPLAY=:0 \
+    XAUTHORITY=/home/pinball/.Xauthority \
+    /usr/bin/xrandr --query \
+    >"$XRANDR_TMP" 2>/dev/null || exit 0
+
+python3 - "$INI" "$SCREENS" "$XRANDR_TMP" <<'VPINFE_DISPLAY_PY'
+from pathlib import Path
+import json
+import os
+import pwd
+import re
+import sys
+import tempfile
+
+ini = Path(sys.argv[1])
+screens_file = Path(sys.argv[2])
+xrandr_file = Path(sys.argv[3])
+
+connected = []
+
+for line in xrandr_file.read_text(
+    encoding="utf-8",
+    errors="replace",
+).splitlines():
+    match = re.match(
+        r"^(\S+)\s+connected(?:\s+primary)?\s+"
+        r"\d+x\d+\+-?\d+\+-?\d+",
+        line,
+    )
+
+    if match:
+        connected.append(match.group(1))
+
+
+if not connected:
+    print("VPinFE sanitizer: aucun écran actif.")
+    raise SystemExit(0)
+
+
+try:
+    screens = json.loads(
+        screens_file.read_text(encoding="utf-8")
+    )
+except Exception as error:
+    print(f"VPinFE sanitizer: screens.json invalide: {error}")
+    raise SystemExit(0)
+
+
+def valid_role(role, already_used):
+    item = screens.get(role)
+
+    if not isinstance(item, dict):
+        return "", ""
+
+    name = str(item.get("name") or "").strip()
+
+    if (
+        not name
+        or name not in connected
+        or name in already_used
+    ):
+        return "", ""
+
+    try:
+        screen_id = int(item.get("id"))
+    except (TypeError, ValueError):
+        return "", ""
+
+    if screen_id < 0 or screen_id >= len(connected):
+        return "", ""
+
+    already_used.add(name)
+    return str(screen_id), name
+
+
+used = set()
+
+table_id, table_name = valid_role("playfield", used)
+
+if table_id == "":
+    table_id = "0"
+    table_name = connected[0]
+    used.add(table_name)
+
+bg_id, bg_name = valid_role("backglass", used)
+dmd_id, dmd_name = valid_role("fulldmd", used)
+
+updates = {
+    "tablescreenid": table_id,
+    "bgscreenid": bg_id,
+    "dmdscreenid": dmd_id,
+    "fulldmdscreenid": dmd_id,
+}
+
+if not bg_id:
+    updates["bgwindowoverride"] = ""
+
+if not dmd_id:
+    updates["dmdwindowoverride"] = ""
+
+
+original = ini.read_text(
+    encoding="utf-8",
+    errors="replace",
+)
+
+lines = original.splitlines()
+output = []
+section = ""
+found_displays = False
+written = set()
+
+
+def append_missing():
+    for key, value in updates.items():
+        if key not in written:
+            output.append(f"{key} = {value}")
+            written.add(key)
+
+
+for line in lines:
+    match = re.match(r"^\s*\[([^\]]+)\]\s*$", line)
+
+    if match:
+        if section == "displays":
+            append_missing()
+
+        section = match.group(1).strip().lower()
+
+        if section == "displays":
+            found_displays = True
+
+        output.append(line)
+        continue
+
+    if section == "displays" and "=" in line:
+        key = line.split("=", 1)[0].strip().lower()
+
+        if key in updates:
+            if key not in written:
+                output.append(f"{key} = {updates[key]}")
+                written.add(key)
+            continue
+
+    output.append(line)
+
+
+if found_displays:
+    if section == "displays":
+        append_missing()
+else:
+    if output and output[-1].strip():
+        output.append("")
+
+    output.append("[Displays]")
+    append_missing()
+
+
+content = "\n".join(output).rstrip() + "\n"
+
+if content != original:
+    fd, temporary = tempfile.mkstemp(
+        prefix=f".{ini.name}.",
+        dir=str(ini.parent),
+    )
+
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        stat = ini.stat()
+        os.chmod(temporary, stat.st_mode & 0o777)
+        os.chown(temporary, stat.st_uid, stat.st_gid)
+        os.replace(temporary, ini)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+try:
+    pinball = pwd.getpwnam("pinball")
+    os.chown(ini, pinball.pw_uid, pinball.pw_gid)
+except (KeyError, PermissionError):
+    pass
+
+
+print(
+    "VPinFE displays sanitized: "
+    f"PF={table_name}:{table_id} "
+    f"BG={bg_name or 'none'}:{bg_id or 'blank'} "
+    f"DMD={dmd_name or 'none'}:{dmd_id or 'blank'}"
+)
+VPINFE_DISPLAY_PY
+
+exit 0

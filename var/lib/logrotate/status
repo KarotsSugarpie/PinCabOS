@@ -1,0 +1,26 @@
+logrotate state -- version 2
+"/var/log/syslog" 2026-8-17-0:0:0
+"/var/log/dpkg.log" 2026-8-17-0:0:0
+"/var/log/unattended-upgrades/unattended-upgrades.log" 2026-8-17-0:0:0
+"/var/log/unattended-upgrades/unattended-upgrades-shutdown.log" 2026-8-17-0:0:0
+"/var/log/auth.log" 2026-8-17-0:0:0
+"/var/log/apt/term.log" 2026-8-17-0:0:0
+"/var/log/ppp-connect-errors" 2026-8-17-0:0:0
+"/var/log/apport.log" 2026-8-19-0:46:14
+"/var/log/ubuntu-advantage*.log" 2026-8-17-0:0:0
+"/var/log/apt/history.log" 2026-8-17-0:0:0
+"/var/log/boot.log" 2026-8-19-0:46:14
+"/var/log/alternatives.log" 2026-8-17-0:0:0
+"/var/log/mail.log" 2026-8-17-0:0:0
+"/var/log/dracut.log" 2026-8-17-0:0:0
+"/var/log/kern.log" 2026-8-17-0:0:0
+"/var/log/wtmp" 2026-8-17-0:0:0
+"/var/log/chrony/*.log" 2026-8-17-0:0:0
+"/var/log/lightdm/lightdm.log" 2026-8-19-0:46:14
+"/var/log/cloud-init*.log" 2026-8-17-0:0:0
+"/var/log/btmp" 2026-8-17-0:0:0
+"/var/log/lightdm/x-0.log" 2026-8-19-0:46:14
+"/var/log/unattended-upgrades/unattended-upgrades-dpkg.log" 2026-8-17-0:0:0
+"/var/log/user.log" 2026-8-17-0:0:0
+"/var/log/lightdm/seat0-greeter.log" 2026-8-19-0:46:14
+"/var/log/cron.log" 2026-8-17-0:0:0
