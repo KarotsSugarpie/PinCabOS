@@ -1,0 +1,10 @@
+[Unit]
+# PINCABOS_USB_AUTOMOUNT_V1
+Description=PinCabOS — montage automatique du support USB %i
+# udev interdit les montages durables depuis RUN : ils vivraient dans son
+# espace de montage prive et disparaitraient avec lui. D'ou ce detour par
+# une unite, qui monte dans l'espace du systeme.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-usb-automount ajout %i

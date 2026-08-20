@@ -1,0 +1,8 @@
+# PINCABOS_USB_AUTOMOUNT_V1
+# Un support USB branche est monte sans intervention ; un support arrache
+# voit son montage mort nettoye. Le tri — amovible ou non, systeme de
+# fichiers connu ou non — reste dans pincabos-usb-disk.
+ACTION=="add", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{ID_BUS}=="usb", \
+  RUN+="/bin/systemctl --no-block start pincabos-usb-automount@%k.service"
+ACTION=="remove", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", \
+  RUN+="/bin/systemctl --no-block start pincabos-usb-nettoyage.service"

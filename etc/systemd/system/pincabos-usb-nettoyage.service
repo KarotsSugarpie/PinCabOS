@@ -1,0 +1,7 @@
+[Unit]
+# PINCABOS_USB_AUTOMOUNT_V1
+Description=PinCabOS — nettoyage des montages USB disparus
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-usb-automount nettoyage
