@@ -274,33 +274,235 @@ BASE_REGISTRY = {
     "dof_usb": {"title": "DOF / USB", "subtitle": "Périphériques détectés — lecture seule", "category": "Pinball", "kind": "dof_usb", "w": 3, "h": 3},
 }
 
+# PINCABOS_DASHBOARD_TOOL_CATALOG_SYNC_V1
+# Catalogue synchronisé avec les cartes réelles
+# de la page Outils PinCabOS.
+#
+# On utilise les routes canoniques afin que
+# tool_registry() les détecte directement dans
+# current_app.url_map.
+
 TOOL_SPECS = (
-    ("keyboard", "Clavier système", "Disposition US, FR et internationale", "/keyboard", "PCOSKeyboard.png"),
-    ("inputs", "Map Commander", "Configuration des entrées", "/inputs", "PCOSMapInputs.png"),
-    ("outputs", "DOF Commander", "Sorties et contrôleurs DOF", "/outputs", "PCOSDOFOutpouts.png"),
-    ("audio", "Audio SSF", "Cartes audio et routage", "/audio", "PCOSAudioSSF.png"),
-    ("gpu", "GPU / Écrans", "GPU, affichages et VPX", "/gpu", "PCOSEcransGPUVPX.png"),
-    ("screens", "Écrans", "Détection et réglage des écrans", "/screens", "PCOSEcransGPUVPX.png"),
-    ("fulldmd", "FullDMD", "Affichage et configuration FullDMD", "/fulldmd", 'PCOSFullDMDConfigurator.png'),
-    ("dmd", "DMD", "Écran et calibrage DMD", "/dmd-screen", "PCOSEcransGPUVPX.png"),
-    ("auto_screens", "Auto-écrans", "Détection automatique", "/auto-screens", "PCOSEcransGPUVPX.png"),
-    ("ballcab", "VPX Ball Cabinet", "Réglages bille et cabinet", "/tools/vpx-ball-cabinet", "PCOSVPXBallCabinet.png"),
-    ("vpx_ini", "VPinballX INI", "Configuration VPX", "/tools/vpinball/ini", "PCOSConfigINIVPinballX.png"),
-    ("vpinfe_ini", "VPinFE INI", "Configuration VPinFE", "/tools/vpinfe/ini", "PCOSConfigINIVPinFE.png"),
-    ("console", "PinCab Console", "Console Web PinCabOS", "/console", "PCOSConsole.png"),
-    ("explorer", "PinCab Explorer", "Fichiers et médias PinCabOS", "/tools/commander", "PCOSExplorer.png"),
-    ("import", "Import Table", "Importer une table", "/import", "PCOSImport.png"),
-    ("export", "Export Table", "Exporter une table", "/tools/export-table", "PCOSExport.png"),
-    ("external_disks", "Stockage", "Disque interne, USB et partages réseau", "/external-disks", "PCOSDisquesExternes.png"),
-    ("tables", "Tables VPinFE", "Bibliothèque Pinball", "/tables", "PCOSTablesVPinFE.png"),
-    ("network", "Réseau", "Réseau et connectivité", "/network", "PCOSNetwork.png"),
-    ("appearance", "Apparence", "Style et personnalisation", "/tools/appearance", "PCOSApparence.png"),
+
+    (
+        "keyboard",
+        "Clavier système",
+        "Disposition US, FR et internationale",
+        "/keyboard",
+        "PCOSKeyboard.png",
+    ),
+
+    (
+        "inputs",
+        "Map Commander",
+        "Boutons, axes, nudge et plunger",
+        "/inputs/map-commander",
+        "PCOSMapInputs.png",
+    ),
+
+    (
+        "outputs",
+        "DOF Commander",
+        "Sorties, toys et contrôleurs DOF",
+        "/dof/commander",
+        "PCOSDOFOutpouts.png",
+    ),
+
+    (
+        "audio",
+        "Audio / SSF",
+        "Cartes ALSA, rôles et routage audio",
+        "/audio-ssf",
+        "PCOSAudioSSF.png",
+    ),
+
+    (
+        "gpu",
+        "GPU / Écrans",
+        "GPU, affichages et VPX",
+        "/gpu",
+        "PCOSEcransGPUVPX.png",
+    ),
+
+    (
+        "screens",
+        "Écrans",
+        "Détection et réglage des écrans",
+        "/gpu",
+        "PCOSEcransGPUVPX.png",
+    ),
+
+    (
+        "fulldmd",
+        "FullDMD",
+        "Affichage et configuration FullDMD",
+        "/fulldmd",
+        "PCOSFullDMDConfigurator.png",
+    ),
+
+    (
+        "dmd",
+        "DMD",
+        "Cadre, calibrage et affichage DMD",
+        "/fulldmd",
+        "PCOSFullDMDConfigurator.png",
+    ),
+
+    (
+        "auto_screens",
+        "Auto-écrans",
+        "Détection automatique",
+        "/auto-screens",
+        "PCOSEcransGPUVPX.png",
+    ),
+
+    (
+        "ballcab",
+        "VPX Ball Cabinet",
+        "Réglages bille et cabinet",
+        "/tools/vpx-ball-cabinet",
+        "PCOSVPXBallCabinet.png",
+    ),
+
+    (
+        "vpx_ini",
+        "VPinballX INI",
+        "Configuration du moteur VPinballX",
+        "/tools/vpinballx/ini",
+        "PCOSConfigINIVPinballX.png",
+    ),
+
+    (
+        "vpinfe_ini",
+        "VPinFE INI",
+        "Configuration VPinFE",
+        "/tools/vpinfe/ini",
+        "PCOSConfigINIVPinFE.png",
+    ),
+
+    (
+        "console",
+        "PinCab Console",
+        "Console Web PinCabOS",
+        "/console",
+        "PCOSConsole.png",
+    ),
+
+    (
+        "explorer",
+        "PinCab Explorer",
+        "Fichiers et médias PinCabOS",
+        "/tools/commander",
+        "PCOSExplorer.png",
+    ),
+
+    (
+        "import",
+        "Import de Tables Smart",
+        "Importer et analyser une table",
+        "/tools/import-table",
+        "PCOSImport.png",
+    ),
+
+    (
+        "export",
+        "Export de Tables Smart",
+        "Exporter table, médias et dépendances",
+        "/tools/export-table",
+        "PCOSExport.png",
+    ),
+
+    (
+        "external_disks",
+        "Gestion du stockage",
+        "Disque interne, USB et partages réseau",
+        "/tools/external-disks",
+        "PCOSDisquesExternes.png",
+    ),
+
+    (
+        "tables",
+        "Tables VPinFE",
+        "Bibliothèque et gestion des tables",
+        "/tools/vpinfe/tables",
+        "PCOSVPinFETablePage.png",
+    ),
+
+    (
+        "network",
+        "Réseau",
+        "Ethernet, Wi-Fi et connectivité",
+        "/network",
+        "PCOSNetwork.png",
+    ),
+
+    (
+        "appearance",
+        "Apparence",
+        "Style et personnalisation",
+        "/tools/appearance",
+        "PCOSApparence.png",
+    ),
+
+    (
+        "vpinfe_sample_tables",
+        "Tables de démonstration",
+        "Gérer les tables d’exemple VPX",
+        "/tools/vpinfe/sample-tables",
+        "PCOSTablesVPinFE.png",
+    ),
+
+    (
+        "vpinfe_collections",
+        "Collections VPinFE",
+        "Organiser les collections du frontend",
+        "/tools/vpinfe/collections",
+        "PCOSVPinFECollections.png",
+    ),
+
+    (
+        "vpinfe_media",
+        "Médias VPinFE",
+        "Gérer les images et médias VPinFE",
+        "/tools/vpinfe/media",
+        "PCOSVPinFEMediasPage.png",
+    ),
+
+    (
+        "media_recorder",
+        "PinCab Recorder",
+        "Créer les médias Playfield, Backglass, FullDMD et Topper",
+        "/tools/media-recorder",
+        "PCOSRecorder.png",
+    ),
+
+    (
+        "media_hunter",
+        "Medias Hunter",
+        "Chercher et compléter les médias manquants",
+        "/tools/vpinfe/media-hunter",
+        "PCOSMediaHunter.png",
+    ),
 )
 
+
 TOOL_CATEGORIES = {
-    "gpu": "Outils VPX", "screens": "Outils VPX", "fulldmd": "Outils VPX",
-    "dmd": "Outils VPX", "auto_screens": "Outils VPX", "ballcab": "Outils VPX",
-    "vpx_ini": "Outils VPX", "vpinfe_ini": "Outils VPX",
+
+    "gpu": "Outils VPX",
+    "screens": "Outils VPX",
+    "fulldmd": "Outils VPX",
+    "dmd": "Outils VPX",
+    "auto_screens": "Outils VPX",
+    "ballcab": "Outils VPX",
+    "vpx_ini": "Outils VPX",
+
+    "vpinfe_ini": "Outils VPinFE",
+    "tables": "Outils VPinFE",
+    "vpinfe_sample_tables": "Outils VPinFE",
+    "vpinfe_collections": "Outils VPinFE",
+    "vpinfe_media": "Outils VPinFE",
+    "media_recorder": "Outils VPinFE",
+    "media_hunter": "Outils VPinFE",
 }
 
 def available_paths():
@@ -1973,40 +2175,108 @@ def render_dashboard(page, esc, get_ip, service_status, pincabos_version):
 # Une destination est appliquée seulement si la route GET existe réellement.
 
 _PCO_DIRECT_FUNCTION_WIDGET_TARGETS_V1 = {
-    "tool_import": ("/tools/import-table",),
-    "tool_export": ("/tools/export-table",),
 
-    "tool_network": ("/network",),
-    "tool_appearance": ("/tools/appearance",),
-    "tool_console": ("/console",),
-    "tool_explorer": ("/tools/commander",),
-    "tool_external_disks": ("/external-disks",),
+    "tool_import":
+        ("/tools/import-table",),
 
-    "tool_inputs": ("/inputs",),
-    "tool_input_map": ("/inputs/map-commander",),
-    "tool_keyboard": ("/inputs/keyboard", "/keyboard"),
+    "tool_export":
+        ("/tools/export-table",),
 
-    "tool_audio": ("/audio-ssf",),
+    "tool_network":
+        ("/network",),
 
-    "tool_vpinfe_ini": ("/tools/vpinfe/ini",),
-    "tool_vpinfe_update": ("/tools/vpinfe/update",),
-    "tool_update_vpinfe": ("/tools/vpinfe/update",),
+    "tool_appearance":
+        ("/tools/appearance",),
 
-    "tool_tables": ("/tools/vpinfe/tables",),
-    "tool_vpinfe_tables": ("/tools/vpinfe/tables",),
-    "tool_collections": ("/tools/vpinfe/collections",),
-    "tool_vpinfe_collections": ("/tools/vpinfe/collections",),
-    "tool_media": ("/tools/vpinfe/media",),
-    "tool_vpinfe_media": ("/tools/vpinfe/media",),
+    "tool_console":
+        ("/console",),
 
-    "tool_vpx_ini": ("/tools/vpinballx/ini", "/tools/vpinball/ini"),
-    "tool_vpinballx_ini": ("/tools/vpinballx/ini", "/tools/vpinball/ini"),
-    "tool_gpu": ("/gpu",),
-    "tool_screens": ("/gpu",),
-    "tool_auto_screens": ("/auto-screens",),
-    "tool_ballcab": ("/tools/vpx-ball-cabinet",),
-    "tool_fulldmd": ("/fulldmd",),
-    "tool_dmd": ("/fulldmd",),
+    "tool_explorer":
+        ("/tools/commander",),
+
+    "tool_external_disks":
+        (
+            "/tools/external-disks",
+            "/external-disks",
+        ),
+
+    "tool_inputs":
+        (
+            "/inputs/map-commander",
+            "/inputs",
+        ),
+
+    "tool_outputs":
+        (
+            "/dof/commander",
+            "/outputs",
+        ),
+
+    "tool_keyboard":
+        (
+            "/inputs/keyboard",
+            "/keyboard",
+        ),
+
+    "tool_audio":
+        (
+            "/audio-ssf",
+            "/audio",
+        ),
+
+    "tool_vpinfe_ini":
+        ("/tools/vpinfe/ini",),
+
+    "tool_vpinfe_update":
+        ("/tools/vpinfe/update",),
+
+    "tool_tables":
+        ("/tools/vpinfe/tables",),
+
+    "tool_vpinfe_sample_tables":
+        ("/tools/vpinfe/sample-tables",),
+
+    "tool_vpinfe_collections":
+        ("/tools/vpinfe/collections",),
+
+    "tool_vpinfe_media":
+        ("/tools/vpinfe/media",),
+
+    "tool_media_recorder":
+        ("/tools/media-recorder",),
+
+    "tool_media_hunter":
+        ("/tools/vpinfe/media-hunter",),
+
+    "tool_vpx_ini":
+        (
+            "/tools/vpinballx/ini",
+            "/tools/vpinball/ini",
+        ),
+
+    "tool_gpu":
+        ("/gpu",),
+
+    "tool_screens":
+        (
+            "/gpu",
+            "/screens",
+        ),
+
+    "tool_auto_screens":
+        ("/auto-screens",),
+
+    "tool_ballcab":
+        ("/tools/vpx-ball-cabinet",),
+
+    "tool_fulldmd":
+        ("/fulldmd",),
+
+    "tool_dmd":
+        (
+            "/fulldmd",
+            "/dmd-screen",
+        ),
 }
 
 try:
