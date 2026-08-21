@@ -18,6 +18,7 @@ ALLOWED_SERVICES = {
     "vpinfe": {"start", "stop", "restart", "freeze", "thaw"},
     "webapp": {"restart"},
     "chrony": {"start", "restart"},
+    "media_recorder": {"start", "stop", "restart"},
     "vpx": {"stop", "restart"},  # PINCABOS_DASHBOARD_VPX_SERVICE_V1
     "screens": {"apply"},
 }
@@ -166,7 +167,13 @@ def register_dashboard_control_routes(app):
         if action not in ALLOWED_SERVICES.get(service, set()):
             return notice("Action de service refusée.")
         ok, output = helper("service", service, action)
-        label = {"vpinfe": "VPinFE", "vpx": "Visual Pinball X", "webapp": "WebApp", "chrony": "Chrony"}.get(service, service)
+        label = {
+            "vpinfe": "VPinFE",
+            "vpx": "Visual Pinball X",
+            "webapp": "WebApp",
+            "chrony": "Chrony",
+            "media_recorder": "PinCab Recorder Worker",
+        }.get(service, service)
         return notice(f"{label} : {action} demandé." if ok else f"Échec {label}/{action} : {output[-140:]}")
 
     def time_action(action):

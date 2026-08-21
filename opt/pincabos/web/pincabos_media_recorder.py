@@ -17,13 +17,114 @@ CONTROL_FILE = STATE_DIR / 'control.json'
 TABLES_ROOT = Path('/home/pinball/Tables').resolve()
 
 ALLOWED_SCREENS = {'playfield', 'backglass', 'fulldmd', 'topper'}
-ALLOWED_TYPES = {'image', 'video'}
+ALLOWED_TYPES = {'image', 'video', 'both'}
 ALLOWED_MODES = {'auto', 'original', 'pup'}
 ALLOWED_SOURCES = {'auto', 'screen', 'window'}
 ALLOWED_QUALITIES = {'low', 'medium', 'high', 'max'}
 ALLOWED_ENCODERS = {'auto', 'nvenc', 'x264'}
 ALLOWED_FPS = {15, 24, 25, 30, 50, 60}
 ACTIVE_STATES = {'queued', 'running', 'pausing', 'paused', 'stopping'}
+
+# PINCABOS_MEDIA_RECORDER_UI_V2_1
+MR_MEDIA_VARIANTS = {
+    "playfield": {
+        "image": ("table.png", "table.jpg", "table.jpeg", "table.webp"),
+        "video": ("table.mp4", "table.webm", "table.mkv", "table.avi"),
+    },
+    "backglass": {
+        "image": ("bg.png", "bg.jpg", "bg.jpeg", "bg.webp"),
+        "video": ("bg.mp4", "bg.webm", "bg.mkv", "bg.avi"),
+    },
+    "fulldmd": {
+        "image": ("dmd.png", "dmd.jpg", "dmd.jpeg", "dmd.webp"),
+        "video": ("dmd.mp4", "dmd.webm", "dmd.mkv", "dmd.avi"),
+    },
+    "topper": {
+        "image": ("topper.png", "topper.jpg", "topper.jpeg", "topper.webp"),
+        "video": ("topper.mp4", "topper.webm", "topper.mkv", "topper.avi"),
+    },
+}
+
+
+def _mr_media_presence(table_dir: Path) -> dict:
+    media_dir = table_dir / "medias"
+
+    result = {
+        role: {
+            "image": False,
+            "video": False,
+        }
+        for role in MR_MEDIA_VARIANTS
+    }
+
+    if not media_dir.is_dir():
+        return result
+
+    try:
+        existing = {
+            item.name.casefold()
+            for item in media_dir.iterdir()
+            if item.is_file()
+        }
+    except Exception:
+        return result
+
+    for role, kinds in MR_MEDIA_VARIANTS.items():
+        for kind, filenames in kinds.items():
+            result[role][kind] = any(
+                name.casefold() in existing
+                for name in filenames
+            )
+
+    return result
+
+
+def _mr_presence_badges(presence: dict) -> str:
+    labels = (
+        ("playfield", "PF"),
+        ("backglass", "BG"),
+        ("fulldmd", "DMD"),
+        ("topper", "TOP"),
+    )
+
+    output = []
+
+    for role, label in labels:
+        state = presence.get(role) or {}
+
+        image = bool(state.get("image"))
+        video = bool(state.get("video"))
+
+        if image and video:
+            level = "full"
+        elif image or video:
+            level = "partial"
+        else:
+            level = "none"
+
+        image_mark = "✓" if image else "·"
+        video_mark = "✓" if video else "·"
+
+        output.append(
+            '<span class="mr-pres-chip '
+            + level
+            + '" title="'
+            + label
+            + ' — Image '
+            + ("présente" if image else "absente")
+            + ' / Vidéo '
+            + ("présente" if video else "absente")
+            + '">'
+            + label
+            + ' <b>I'
+            + image_mark
+            + '</b> <b>V'
+            + video_mark
+            + '</b></span>'
+        )
+
+    return "".join(output)
+
 
 
 def _atomic_json(path: Path, payload: dict) -> None:
@@ -68,7 +169,7 @@ def _table_inventory():
             rp.relative_to(TABLES_ROOT)
         except Exception:
             continue
-        out.append({'name': p.parent.name, 'file': p.name, 'path': str(rp)})
+        out.append({'name': p.parent.name, 'file': p.name, 'path': str(rp), 'presence': _mr_media_presence(p.parent)})
     return out
 
 
@@ -125,19 +226,25 @@ def _page_body():
     options = ''.join(
         '<label class="mr-table-row" data-search="' + html.escape((t['name'] + ' ' + t['file']).lower(), quote=True) + '">'
         '<input type="checkbox" name="table" value="' + html.escape(t['path'], quote=True) + '">'
-        '<span><strong>' + html.escape(t['name']) + '</strong><small>' + html.escape(t['file']) + '</small></span>'
+        '<span class="mr-table-main"><strong>' + html.escape(t['name']) + '</strong><small>' + html.escape(t['file']) + '</small></span>'
+        '<span class="mr-presence">' + _mr_presence_badges(t.get('presence') or {}) + '</span>'
         '</label>'
         for t in tables
     )
     return f'''
 <style>
-.mr-wrap{{max-width:1500px;margin:0 auto}} .mr-grid{{display:grid;grid-template-columns:minmax(420px,1.15fr) minmax(360px,.85fr);gap:18px}}
+.mr-wrap{{max-width:none;width:100%;margin:0 auto}} .mr-grid{{display:grid;grid-template-columns:minmax(420px,1.15fr) minmax(360px,.85fr);gap:18px}}
 .mr-card{{background:rgba(20,10,34,.82);border:1px solid rgba(202,132,255,.24);border-radius:18px;padding:18px;box-shadow:0 14px 32px rgba(0,0,0,.22)}}
 .mr-card h2{{margin-top:0}} .mr-toolbar{{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}}
 .mr-search{{flex:1;min-width:240px;padding:10px 12px;border-radius:10px;border:1px solid #624080;background:#0b0711;color:#fff}}
 .mr-table-list{{height:470px;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#08050d;padding:5px}}
 .mr-table-row{{display:flex;align-items:flex-start;gap:10px;padding:9px;border-radius:9px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer}}
-.mr-table-row:hover{{background:rgba(151,69,230,.12)}} .mr-table-row input{{margin-top:3px}} .mr-table-row span{{display:flex;flex-direction:column;gap:2px}}
+.mr-table-row:hover{{background:rgba(151,69,230,.12)}} .mr-table-row input{{margin-top:3px;flex:0 0 auto}} .mr-table-row>.mr-table-main{{display:flex;flex:1 1 auto;min-width:0;flex-direction:column;gap:2px}}
+.mr-presence{{margin-left:auto;display:flex;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:55%}}
+.mr-pres-chip{{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:999px;font-size:10px;line-height:1.25;font-weight:800;white-space:nowrap;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#9d92aa}}
+.mr-pres-chip.full{{border-color:rgba(118,227,154,.45);background:rgba(118,227,154,.12);color:#9cf0ba}}
+.mr-pres-chip.partial{{border-color:rgba(255,148,31,.50);background:rgba(255,148,31,.12);color:#ffc06e}}
+.mr-pres-chip.none{{opacity:.52}}
 .mr-table-row small{{color:#a99ab8;word-break:break-all}} .mr-fields{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
 .mr-field label,.mr-field>span{{display:block;color:#d5c5e3;font-size:12px;font-weight:800;margin-bottom:5px}} .mr-field input,.mr-field select{{width:100%;padding:10px;border-radius:10px;border:1px solid #63427e;background:#0b0711;color:#fff}}
 .mr-checks{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 14px}} .mr-check{{padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.03)}}
@@ -164,7 +271,7 @@ def _page_body():
         <label class="mr-check"><input type="checkbox" class="mr-screen" value="topper"> Topper</label>
       </div>
       <div class="mr-fields">
-        <div class="mr-field"><span>Type</span><select id="mr-type"><option value="image">Image PNG</option><option value="video">Vidéo MP4</option></select></div>
+        <div class="mr-field"><span>Type</span><select id="mr-type"><option value="image">Image PNG</option><option value="video">Vidéo MP4</option><option value="both">Les deux — PNG + MP4</option></select></div>
         <div class="mr-field"><span>Attente après VPX</span><input id="mr-wait" type="number" min="0" max="300" step="1" value="20"></div>
         <div class="mr-field"><span>Durée vidéo</span><input id="mr-duration" type="number" min="1" max="120" step="1" value="10"></div>
         <div class="mr-field"><span>FPS</span><select id="mr-fps"><option>15</option><option>24</option><option>25</option><option selected>30</option><option>50</option><option>60</option></select></div>
@@ -192,6 +299,18 @@ def _page_body():
  q('#mr-search').addEventListener('input',e=>{{const s=e.target.value.trim().toLowerCase();qa('.mr-table-row').forEach(r=>r.style.display=!s||r.dataset.search.includes(s)?'flex':'none');}});
  q('#mr-all').onclick=()=>qa('.mr-table-row').filter(r=>r.style.display!=='none').forEach(r=>r.querySelector('input').checked=true);
  q('#mr-none').onclick=()=>qa('.mr-table-row input').forEach(x=>x.checked=false);
+ const mrSyncType=()=>{{
+   const both=q('#mr-type').value==='both';
+   const keep=q('#mr-keep-other');
+   if(both){{
+     keep.checked=true;
+     keep.disabled=true;
+   }}else{{
+     keep.disabled=false;
+   }}
+ }};
+ q('#mr-type').addEventListener('change',mrSyncType);
+ mrSyncType();
  async function post(url,data){{const r=await fetch(url,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});const j=await r.json().catch(()=>({{ok:false,error:'Réponse invalide'}}));if(!r.ok||j.ok===false)throw new Error(j.error||('HTTP '+r.status));return j;}}
  q('#mr-start').onclick=async()=>{{try{{msg('Création du job...');const tables=qa('.mr-table-row input:checked').map(x=>x.value);const screens=qa('.mr-screen:checked').map(x=>x.value);await post('/api/media-recorder/start',{{tables,screens,type:q('#mr-type').value,wait:q('#mr-wait').value,duration:q('#mr-duration').value,fps:q('#mr-fps').value,quality:q('#mr-quality').value,encoder:q('#mr-encoder').value,source:q('#mr-source').value,mode:q('#mr-mode').value,keep_other_type:q('#mr-keep-other').checked}});msg('Job envoyé au worker.');refresh();}}catch(e){{msg(e.message,true);}}}};
  q('#mr-pause').onclick=()=>post('/api/media-recorder/control',{{action:'pause'}}).then(()=>msg('Pause demandée après la table courante.')).catch(e=>msg(e.message,true));
@@ -248,7 +367,7 @@ def register(app, page):
                 'encoder': encoder,
                 'source': source,
                 'mode': mode,
-                'keep_other_type': bool(payload.get('keep_other_type', False)),
+                'keep_other_type': (media_type == 'both') or bool(payload.get('keep_other_type', False)),
             }
             LOG_DIR.mkdir(parents=True, exist_ok=True)
             log_file = LOG_DIR / f'{job_id}.log'

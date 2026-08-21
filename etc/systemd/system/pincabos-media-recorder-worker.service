@@ -1,7 +1,6 @@
 [Unit]
 Description=PinCabOS Media Recorder Worker
-After=network.target graphical.target
-Wants=graphical.target
+After=network.target
 
 [Service]
 Type=simple

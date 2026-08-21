@@ -13,6 +13,11 @@ service_action(){
     vpinfe:thaw) log 'vpinfe thaw'; exec systemctl thaw pincabos-vpinfe.service ;;
     webapp:restart) log 'webapp restart scheduled'; systemd-run --quiet --collect --unit="pincabos-dashboard-webapp-restart-$(date +%s)" /bin/sh -c 'sleep 2; exec systemctl restart pincabos-webapp.service'; echo 'WebApp restart scheduled.' ;;
     chrony:start|chrony:restart) log "chrony ${action}"; exec systemctl "$action" chrony.service ;;
+    # PINCABOS_DASHBOARD_MEDIA_RECORDER_SERVICE_V1
+    media_recorder:start|media_recorder:stop|media_recorder:restart)
+      log "media_recorder ${action}"
+      exec systemctl "$action" pincabos-media-recorder-worker.service
+      ;;
     # PINCABOS_DASHBOARD_VPX_SERVICE_V1
     vpx:stop) log 'vpx stop'; /usr/bin/pkill -TERM -u pinball -f '(^|/)VPinballX(_BGFX)?([[:space:]]|$)' || true; echo 'Arrêt VPX demandé.' ;;
     vpx:restart) log 'vpx restart'; /usr/bin/pkill -TERM -u pinball -f '(^|/)VPinballX(_BGFX)?([[:space:]]|$)' || true; sleep 1; exec systemctl restart pincabos-vpinfe.service ;;

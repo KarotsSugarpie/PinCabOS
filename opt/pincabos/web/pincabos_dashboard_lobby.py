@@ -1058,6 +1058,7 @@ def status_snapshot(force=False):
         services = {key: service_state(unit) for key, unit in {
             "webapp": "pincabos-webapp.service", "vpinfe": "pincabos-vpinfe.service", "chrony": "chrony.service",
             "network": "NetworkManager.service", "ssh": "ssh.service",
+            "media_recorder": "pincabos-media-recorder-worker.service",
         }.items()}
         services["vpx"] = vpx_process_state()
         vpinfe_info = vpinfe_update_info()
@@ -1151,6 +1152,38 @@ def widget_content(widget_id, meta, data, csrf):
         html_out += service_line("WebApp", "webapp", data) + action("/dashboard/control/service/webapp/restart", "Redémarrer WebApp", csrf, "warn", "Le Dashboard sera indisponible quelques secondes.")
         html_out += service_line("VPinFE", "vpinfe", data)
         html_out += '<div class="pco-actions">' + action("/dashboard/control/service/vpinfe/start", "Démarrer", csrf, "good") + action("/dashboard/control/service/vpinfe/stop", "Arrêter", csrf, "danger", "Arrêter VPinFE? Aucun jeu ne doit être actif.") + action("/dashboard/control/service/vpinfe/restart", "Restart", csrf, "warn", "Redémarrer VPinFE?") + action("/dashboard/control/service/vpinfe/freeze", "Pause", csrf, "warn", "Mettre VPinFE en pause?") + action("/dashboard/control/service/vpinfe/thaw", "Reprendre", csrf, "good") + '</div>'
+        # PINCABOS_DASHBOARD_MEDIA_RECORDER_SERVICE_V1
+        html_out += service_line(
+            "PinCab Recorder Worker",
+            "media_recorder",
+            data,
+        )
+        html_out += (
+            '<div class="pco-actions">'
+            + action(
+                "/dashboard/control/service/media_recorder/start",
+                "Démarrer",
+                csrf,
+                "good",
+            )
+            + action(
+                "/dashboard/control/service/media_recorder/stop",
+                "Arrêter",
+                csrf,
+                "danger",
+                "Arrêter le worker PinCab Recorder ? "
+                "Les nouveaux jobs resteront en attente.",
+            )
+            + action(
+                "/dashboard/control/service/media_recorder/restart",
+                "Restart",
+                csrf,
+                "warn",
+                "Redémarrer le worker PinCab Recorder ?",
+            )
+            + '</div>'
+        )
+
         # PINCABOS_DASHBOARD_VPX_SERVICE_V1
         html_out += service_line("Visual Pinball X", "vpx", data)
         html_out += '<div class="pco-actions">' + action("/dashboard/control/service/vpx/stop", "Arrêter la table", csrf, "danger", "Arrêter la table Visual Pinball X en cours ? VPinFE restera ouvert.") + action("/dashboard/control/service/vpx/restart", "Retour VPinFE", csrf, "warn", "Fermer la table puis redémarrer VPinFE ?") + '</div>'

@@ -1356,20 +1356,65 @@ def process_table(table: Path, args: argparse.Namespace, encoder: str) -> dict:
                     )
                 time.sleep(min(0.5, max(0.05, deadline - time.monotonic())))
 
-        result = capture_selected(
-            table,
-            args.screens_list,
-            media_type=args.media_type,
-            duration=args.duration,
-            fps=args.fps,
-            quality=args.quality,
-            source_mode=args.source,
-            encoder=encoder,
-            backup=not args.no_backup,
-            keep_other_type=args.keep_other_type,
-            dry_run=args.dry_run,
-            resolved_sources=resolved_sources,
-        )
+        if args.media_type == "both":
+            LOG.info("Capture BOTH: PNG puis MP4 sans relancer VPX.")
+
+            image_result = capture_selected(
+                table,
+                args.screens_list,
+                media_type="image",
+                duration=args.duration,
+                fps=args.fps,
+                quality=args.quality,
+                source_mode=args.source,
+                encoder="png",
+                backup=not args.no_backup,
+                keep_other_type=True,
+                dry_run=args.dry_run,
+                resolved_sources=resolved_sources,
+            )
+
+            video_result = capture_selected(
+                table,
+                args.screens_list,
+                media_type="video",
+                duration=args.duration,
+                fps=args.fps,
+                quality=args.quality,
+                source_mode=args.source,
+                encoder=encoder,
+                backup=not args.no_backup,
+                keep_other_type=True,
+                dry_run=args.dry_run,
+                resolved_sources=resolved_sources,
+            )
+
+            result = {
+                "ok": True,
+                "table": str(table),
+                "type": "both",
+                "captures": {
+                    "image": image_result,
+                    "video": video_result,
+                },
+            }
+
+        else:
+            result = capture_selected(
+                table,
+                args.screens_list,
+                media_type=args.media_type,
+                duration=args.duration,
+                fps=args.fps,
+                quality=args.quality,
+                source_mode=args.source,
+                encoder=encoder,
+                backup=not args.no_backup,
+                keep_other_type=args.keep_other_type,
+                dry_run=args.dry_run,
+                resolved_sources=resolved_sources,
+            )
+
         result["mode"] = mode
         result["elapsed"] = round(time.monotonic() - start, 3)
         append_table_log(table, f"GO {json.dumps(result, ensure_ascii=False)}")
@@ -1413,7 +1458,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--type",
         dest="media_type",
-        choices=("image", "video"),
+        choices=("image", "video", "both"),
         default="image",
         help="Type de média créé.",
     )
@@ -1570,7 +1615,8 @@ def preflight(args: argparse.Namespace) -> str:
         if not VPX_LAUNCHER.is_file():
             raise RecorderError(f"Launcher absent: {VPX_LAUNCHER}")
 
-    if args.media_type == "video":
+    # PINCABOS_RECORDER_BOTH_V2_1
+    if args.media_type in {"video", "both"}:
         encoder = select_encoder(args.encoder)
     else:
         encoder = "png"
@@ -1580,7 +1626,7 @@ def preflight(args: argparse.Namespace) -> str:
     LOG.info("Tables: %d", len(args.tables))
     LOG.info("Écrans: %s", ", ".join(args.screens_list))
     LOG.info("Type: %s", args.media_type)
-    if args.media_type == "video":
+    if args.media_type in {"video", "both"}:
         LOG.info(
             "Vidéo: %.1fs @ %dfps, qualité=%s, encodeur=%s",
             args.duration,
@@ -1588,6 +1634,8 @@ def preflight(args: argparse.Namespace) -> str:
             args.quality,
             encoder,
         )
+    if args.media_type == "both":
+        LOG.info("Mode BOTH: création PNG + MP4 sur le même lancement VPX.")
     return encoder
 
 

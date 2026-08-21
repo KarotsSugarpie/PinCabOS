@@ -29,15 +29,87 @@ else
     RUNTIME_DIR="/tmp/pincabos-hybrid-launcher-${CALLER_UID}"
 fi
 
+# PINCABOS_HYBRID_LOG_PERMISSION_FIX_V2
 SHARED_LOG_DIR="/var/log/pincabos-hybrid-launcher"
+FALLBACK_LOG_DIR="${RUNTIME_DIR}/logs"
+
+mkdir -p "$RUNTIME_DIR"
+
+LOG_DIR="$FALLBACK_LOG_DIR"
+
+#
+# Le dossier partagé ne suffit pas :
+# launcher.log peut avoir été créé auparavant par root.
+#
+# On utilise le log partagé seulement si le FICHIER est
+# réellement inscriptible par l'utilisateur courant.
+#
 if [[ -d "$SHARED_LOG_DIR" && -w "$SHARED_LOG_DIR" ]]; then
-    LOG_DIR="$SHARED_LOG_DIR"
-else
-    LOG_DIR="${RUNTIME_DIR}/logs"
+
+    SHARED_LOG_FILE="${SHARED_LOG_DIR}/launcher.log"
+
+    #
+    # Création coopérative du fichier.
+    #
+    if [[ ! -e "$SHARED_LOG_FILE" ]]; then
+
+        OLD_UMASK="$(umask)"
+        umask 0002
+
+        touch "$SHARED_LOG_FILE" \
+            2>/dev/null \
+            || true
+
+        umask "$OLD_UMASK"
+
+    fi
+
+    #
+    # Si le launcher tourne en root, il normalise lui-même
+    # le fichier afin de ne pas casser le prochain lancement
+    # exécuté par pinball.
+    #
+    if [[ "$EUID" -eq 0 && -e "$SHARED_LOG_FILE" ]]; then
+
+        chown pinball:pinball \
+            "$SHARED_LOG_FILE" \
+            2>/dev/null \
+            || true
+
+        chmod 0664 \
+            "$SHARED_LOG_FILE" \
+            2>/dev/null \
+            || true
+
+    fi
+
+    if [[ -w "$SHARED_LOG_FILE" ]]; then
+
+        LOG_DIR="$SHARED_LOG_DIR"
+
+    fi
+
 fi
 
-mkdir -p "$RUNTIME_DIR" "$LOG_DIR"
+
+#
+# Repli sûr par utilisateur.
+#
+mkdir -p "$LOG_DIR"
+
 LOG="${LOG_DIR}/launcher.log"
+
+if [[ ! -e "$LOG" ]]; then
+
+    OLD_UMASK="$(umask)"
+    umask 0002
+
+    touch "$LOG"
+
+    umask "$OLD_UMASK"
+
+fi
+
 LOCK="${RUNTIME_DIR}/launcher.lock"
 
 if ! exec 8>"$LOCK"; then
