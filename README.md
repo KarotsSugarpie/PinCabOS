@@ -4,7 +4,7 @@ English will follow 🇬🇧
 
 PinCabOS est la couche système du pincab. Il relie le matériel du cabinet, Visual Pinball X (VPX), VPinFE et les outils de configuration dans une interface cohérente pensée pour l’installation, l’utilisation, le diagnostic et la maintenance d’un pincab.
 
-État du projet : Alpha 2.0 — build de développement
+État du projet : Alpha 2.xx — build de développement
 
 🇫🇷 Français
 
@@ -301,7 +301,7 @@ A complete environment for your virtual pinball cabinet
 
 PinCabOS is the system layer of the pinball cabinet. It connects the cabinet hardware, Visual Pinball X (VPX), VPinFE, and the configuration tools into a coherent environment designed for setup, daily use, diagnostics, and maintenance.
 
-Project status: Alpha 2.0 — development build
+Project status: Alpha 2.xx — development build
 
 PinCabOS does not replace VPX or VPinFE:
 
