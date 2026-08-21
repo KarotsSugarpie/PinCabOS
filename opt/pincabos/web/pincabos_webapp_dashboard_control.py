@@ -10,6 +10,10 @@ from urllib.parse import quote
 from flask import abort, jsonify, redirect, request, send_file, session
 
 from pincabos_dashboard_lobby import default_layout, load_layout, registry_for_request, save_layout, status_snapshot, network_traffic_snapshot
+# PINCABOS_DASHBOARD_MODES_V1
+from pincabos_dashboard_lobby import (
+    MODE_LABELS, layout_for_mode, load_mode, mode_layout_path, preset_layout, save_mode, save_mode_layout,
+)
 
 HELPER = "/usr/local/sbin/pincabos-dashboard-admin"
 LIVE_DIR = Path("/run/pincabos-dashboard-live")
@@ -71,14 +75,41 @@ def register_dashboard_control_routes(app):
             return jsonify({"ok": False, "error": "Session Dashboard invalide."}), 403
         payload = request.get_json(silent=True) or {}
         layout = save_layout(payload.get("layout", []), registry)
-        return jsonify({"ok": True, "layout": layout})
+        # La grille rangee appartient a la vue courante : on la memorise
+        # pour elle, et pour elle seule.
+        mode = load_mode()
+        save_mode_layout(mode, layout, registry)
+        return jsonify({"ok": True, "layout": layout, "mode": mode})
 
     def default_api():
         if not csrf_ok():
             return jsonify({"ok": False, "error": "Session Dashboard invalide."}), 403
         registry = registry_for_request()
-        layout = save_layout(default_layout(registry), registry)
-        return jsonify({"ok": True, "layout": layout})
+        # « Disposition par defaut » ne touche qu'a la vue courante : elle
+        # retrouve son gabarit, l'autre vue garde sa grille.
+        mode = load_mode()
+        layout = save_layout(preset_layout(mode, registry), registry)
+        save_mode_layout(mode, layout, registry)
+        return jsonify({"ok": True, "layout": layout, "mode": mode})
+
+    def mode_api():
+        # PINCABOS_DASHBOARD_MODES_V1
+        if not csrf_ok():
+            return jsonify({"ok": False, "error": "Session Dashboard invalide."}), 403
+        payload = request.get_json(silent=True) or {}
+        mode = str(payload.get("mode", "")).strip()
+        if mode not in MODE_LABELS:
+            return jsonify({"ok": False, "error": "Vue inconnue."}), 400
+        registry = registry_for_request()
+        # Avant de partir, la vue que l'on quitte memorise sa grille si elle
+        # ne l'avait jamais fait : une disposition rangee avant l'arrivee des
+        # vues devient ainsi la grille Pro du proprietaire, pas un oubli.
+        courant = load_mode()
+        if not mode_layout_path(courant).exists():
+            save_mode_layout(courant, load_layout(registry), registry)
+        layout = save_layout(layout_for_mode(mode, registry), registry)
+        save_mode(mode)
+        return jsonify({"ok": True, "layout": layout, "mode": mode, "label": MODE_LABELS[mode]})
 
     def status_api():
         return jsonify(status_snapshot())
@@ -195,6 +226,7 @@ def register_dashboard_control_routes(app):
     for rule, endpoint, view, methods in (
         ("/dashboard/lobby/layout", "pco_lobby_layout", layout_api, ["GET", "POST"]),
         ("/dashboard/lobby/default", "pco_lobby_default", default_api, ["POST"]),
+        ("/dashboard/lobby/mode", "pco_lobby_mode", mode_api, ["POST"]),
         ("/dashboard/lobby/status", "pco_lobby_status", status_api, ["GET"]),
         ("/dashboard/lobby/network/traffic", "pco_lobby_network_traffic", network_traffic_api, ["GET"]),
         ("/dashboard/lobby/live/heartbeat", "pco_lobby_live_heartbeat", live_heartbeat, ["POST"]),

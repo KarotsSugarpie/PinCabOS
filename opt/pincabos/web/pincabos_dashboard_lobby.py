@@ -724,6 +724,115 @@ def save_layout(layout, registry=None):
     return safe
 
 
+# === PINCABOS_DASHBOARD_MODES_V1 START ===
+#
+# Deux vues, chacune avec sa grille. Les libelles sont ici et nulle part
+# ailleurs.
+MODE_PATH = Path("/home/pinball/.config/pincabos/dashboard-mode.json")
+MODE_DEFAUT = "pro"
+MODE_LABELS = {
+    "simple": "Simple",
+    "pro": "Pro",
+}
+
+
+def mode_layout_path(mode: str) -> Path:
+    return LAYOUT_PATH.with_name(f"dashboard-layout-{mode}.json")
+
+
+def simple_layout(registry=None):
+    """Gabarit Simple : ce qu'un proprietaire regarde la premiere semaine.
+
+    Ses ecrans, et les six outils du quotidien. Rien sur la charge
+    processeur ni les services : une vue simple se voit a l'oeil nu.
+    """
+    registry = registry or registry_for_request()
+    wanted = [
+        ("live_0", 0, 0, 6, 6), ("live_1", 6, 0, 3, 5), ("live_2", 9, 0, 3, 5),
+        ("tool_import", 0, 6, 2, 4), ("tool_tables", 2, 6, 2, 4), ("tool_screens", 4, 6, 2, 4),
+        ("tool_external_disks", 6, 6, 2, 4), ("tool_network", 8, 6, 2, 4), ("tool_audio", 10, 6, 2, 4),
+    ]
+    result = []
+    for widget_id, x, y, w, h in wanted:
+        if widget_id in registry:
+            result.append({"id": widget_id, "x": x, "y": y, "w": w, "h": h})
+    return result or default_layout(registry)
+
+
+def preset_layout(mode, registry=None):
+    """Le gabarit d'origine d'une vue — ce que « Disposition par defaut » retablit."""
+    registry = registry or registry_for_request()
+    if mode == "simple":
+        return simple_layout(registry)
+    return default_layout(registry)
+
+
+def _meme_disposition(a, b) -> bool:
+    cle = lambda d: sorted((x["id"], x["x"], x["y"], x["w"], x["h"]) for x in d)
+    try:
+        return cle(a) == cle(b)
+    except Exception:
+        return False
+
+
+def load_mode() -> str:
+    try:
+        value = json.loads(MODE_PATH.read_text(encoding="utf-8")).get("mode", "")
+    except Exception:
+        value = ""
+    if value in MODE_LABELS:
+        return value
+    # Pas de fichier de mode : on reconnait la vue a sa disposition. Une
+    # grille deja rangee a la main, sans etre un gabarit, est une vue Pro
+    # personnalisee — on ne remplace jamais ce que le proprietaire a range.
+    if LAYOUT_PATH.exists():
+        registry = registry_for_request()
+        actuelle = load_layout(registry)
+        for mode in MODE_LABELS:
+            if _meme_disposition(actuelle, preset_layout(mode, registry)):
+                return mode
+    return MODE_DEFAUT
+
+
+def _ecrire_json_pinball(chemin: Path, contenu) -> None:
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    temporary = chemin.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(contenu, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    os.chmod(temporary, 0o640)
+    try:
+        shutil.chown(temporary, user="pinball", group="pinball")
+    except Exception:
+        pass
+    os.replace(temporary, chemin)
+
+
+def save_mode(mode: str) -> str:
+    if mode not in MODE_LABELS:
+        mode = MODE_DEFAUT
+    _ecrire_json_pinball(MODE_PATH, {"mode": mode})
+    return mode
+
+
+def save_mode_layout(mode: str, layout, registry=None) -> None:
+    """Memorise la grille d'une vue, pour la retrouver au prochain passage."""
+    registry = registry or registry_for_request()
+    _ecrire_json_pinball(mode_layout_path(mode), sanitize_layout(layout, registry))
+
+
+def layout_for_mode(mode: str, registry=None):
+    """La grille d'une vue : celle que le proprietaire a rangee, sinon le gabarit."""
+    registry = registry or registry_for_request()
+    try:
+        return sanitize_layout(json.loads(mode_layout_path(mode).read_text(encoding="utf-8")), registry)
+    except Exception:
+        return preset_layout(mode, registry)
+
+
+def modes_public():
+    return [{"id": key, "label": label} for key, label in MODE_LABELS.items()]
+# === PINCABOS_DASHBOARD_MODES_V1 END ===
+
+
 def uptime() -> str:
     try:
         seconds = int(float(Path("/proc/uptime").read_text().split()[0]))
@@ -2134,7 +2243,7 @@ def render_dashboard(page, esc, get_ip, service_status, pincabos_version):
     data = status_snapshot()
     templates = "".join(widget_template(widget_id, meta, data, csrf) for widget_id, meta in registry.items())
     public_registry = {key: {**{field: value.get(field, "") for field in ("title", "subtitle", "category", "w", "h", "kind", "href")}, "image_url": asset(value.get("image", ""))} for key, value in registry.items()}
-    config = json.dumps({"marker": MARKER, "csrf": csrf, "layout": layout, "registry": public_registry}, ensure_ascii=False)
+    config = json.dumps({"marker": MARKER, "csrf": csrf, "layout": layout, "registry": public_registry, "mode": load_mode(), "modes": modes_public()}, ensure_ascii=False)
     notice_html = f'<div class="pco-toast server">{html.escape(notice)}</div>' if notice else ''
     # PINCABOS_AUDIO_VOLUME_DASHBOARD_WIDGET_V2_1B_TEMPLATE_FORCE START
     # Force le vrai template audio_volume et retire le fallback générique.
@@ -2151,7 +2260,7 @@ def render_dashboard(page, esc, get_ip, service_status, pincabos_version):
             pass
     # PINCABOS_AUDIO_VOLUME_DASHBOARD_WIDGET_V2_1B_TEMPLATE_FORCE END
 
-    body = f'''<link rel="stylesheet" href="/static/pincabos-dashboard-lobby.css?v=network-truechart-v1"><link rel="stylesheet" href="/static/pincabos-live-jpeg-x11-v16.css?v=jpeg-x11-v16"><section id="pco-lobby" data-marker="{MARKER}"><header class="pco-lobby-head"><div><h1>Dashboard</h1><p>Widgets PinCabOS indépendants · ajoute, déplace, redimensionne et sauvegarde.</p></div><div class="pco-lobby-actions"><button id="pco-lobby-edit" type="button">Modifier le Dashboard</button><button id="pco-lobby-add" class="pco-edit-only" type="button">Ajouter un widget</button><button id="pco-lobby-save" class="pco-edit-only pco-good" type="button">Appliquer et enregistrer</button><button id="pco-lobby-cancel" class="pco-edit-only" type="button">Annuler</button><button id="pco-lobby-default" class="pco-edit-only pco-warn" type="button">Disposition par défaut</button><button id="pco-lobby-refresh" type="button">Actualiser</button></div></header>{notice_html}<div id="pco-lobby-board" class="pco-board" aria-label="Widgets PinCabOS"></div><div id="pco-lobby-catalog" class="pco-modal" hidden><div class="pco-modal-panel" role="dialog" aria-modal="true" aria-label="Ajouter un widget"><header><div><h2>Ajouter un widget</h2><p>Choisis ou glisse un widget directement sur le Dashboard. Les widgets retirés reviennent ici; les widgets présents ne sont pas listés.</p></div><button id="pco-lobby-catalog-close" class="pco-modal-close" type="button" aria-label="Fermer le catalogue"><span aria-hidden="true">×</span><span>Fermer</span></button></header><div id="pco-lobby-catalog-list"></div></div></div>{templates}<script>window.PCO_LOBBY={config};</script><script>
+    body = f'''<link rel="stylesheet" href="/static/pincabos-dashboard-lobby.css?v=dashboard-modes-v1"><link rel="stylesheet" href="/static/pincabos-live-jpeg-x11-v16.css?v=jpeg-x11-v16"><section id="pco-lobby" data-marker="{MARKER}"><header class="pco-lobby-head"><div><h1>Dashboard</h1><p>Widgets PinCabOS indépendants · ajoute, déplace, redimensionne et sauvegarde.</p></div><div class="pco-lobby-actions"><div class="pco-lobby-mode" role="group" aria-label="Vue du Dashboard" title="Deux vues, chacune avec sa grille : modifiez celle que vous utilisez.">{''.join(f'<button type="button" data-pco-mode="{k}">{html.escape(v)}</button>' for k, v in MODE_LABELS.items())}</div><button id="pco-lobby-edit" type="button">Modifier le Dashboard</button><button id="pco-lobby-add" class="pco-edit-only" type="button">Ajouter un widget</button><button id="pco-lobby-save" class="pco-edit-only pco-good" type="button">Appliquer et enregistrer</button><button id="pco-lobby-cancel" class="pco-edit-only" type="button">Annuler</button><button id="pco-lobby-default" class="pco-edit-only pco-warn" type="button">Disposition par défaut</button><button id="pco-lobby-refresh" type="button">Actualiser</button></div></header>{notice_html}<div id="pco-lobby-board" class="pco-board" aria-label="Widgets PinCabOS"></div><div id="pco-lobby-catalog" class="pco-modal" hidden><div class="pco-modal-panel" role="dialog" aria-modal="true" aria-label="Ajouter un widget"><header><div><h2>Ajouter un widget</h2><p>Choisis ou glisse un widget directement sur le Dashboard. Les widgets retirés reviennent ici; les widgets présents ne sont pas listés.</p></div><button id="pco-lobby-catalog-close" class="pco-modal-close" type="button" aria-label="Fermer le catalogue"><span aria-hidden="true">×</span><span>Fermer</span></button></header><div id="pco-lobby-catalog-list"></div></div></div>{templates}<script>window.PCO_LOBBY={config};</script><script>
 (function() {{
   function drawClock(node) {{
     var zone = node.dataset.pcoTimezone || "Etc/UTC";
@@ -2200,7 +2309,7 @@ def render_dashboard(page, esc, get_ip, service_status, pincabos_version):
   refreshClocks();
   window.setInterval(refreshClocks, 250);
 }})();
-</script><script src="/static/pincabos-dashboard-lobby.js?v=dashboard-removed-slot-resize-v2-20260708005411" defer></script><script src="/static/pincabos-live-jpeg-x11-v16.js?v=jpeg-x11-v16" defer></script></section>'''
+</script><script src="/static/pincabos-dashboard-lobby.js?v=dashboard-modes-v1" defer></script><script src="/static/pincabos-live-jpeg-x11-v16.js?v=jpeg-x11-v16" defer></script></section>'''
     return page("Dashboard", body)
 
 # === PINCABOS_DASHBOARD_DIRECT_FUNCTION_LINKS_V1 START ===
