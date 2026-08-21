@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>VPinFE - PinCabOS</title>
+  <link rel="stylesheet" href="/web/common/vpinfe-style.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="/web/common/vpinfe-core.js"></script>
+  <script src="theme.js"></script>
+</head>
+<body>
+  <div id="fadeContainer">
+    <div class="table-screen">
+      <div id="fsMediaContainer" class="table-media-layer">
+        <img id="fsMedia" src="" alt="Table media" class="fullscreen">
+      </div>
+
+      <section class="wheel-overlay" aria-label="Table wheel carousel">
+        <div class="wheel-arc-glow"></div>
+        <div id="wheelCarousel" class="wheel-carousel"></div>
+      </section>
+
+      <section class="table-meta-panel" aria-label="Selected table metadata">
+        <h1 id="tableTitle" class="table-meta-title">Unknown Table</h1>
+        <div id="tableAuthors" class="table-meta-authors">Unknown Author</div>
+        <div class="table-meta-line">
+          <span id="tableManufacturer">Unknown</span>
+          <span class="table-meta-separator"></span>
+          <span id="tableYear">Unknown</span>
+          <span class="table-meta-separator"></span>
+          <span id="tableType">Pinball</span>
+        </div>
+        <div class="table-meta-stats">
+          <div class="table-meta-stat">
+            <span class="table-meta-stat-label">My Rating</span>
+            <span id="tableRating" class="table-meta-stat-value">☆☆☆☆☆</span>
+          </div>
+          <div class="table-meta-stat">
+            <span class="table-meta-stat-label">VPinPlay Rating</span>
+            <span id="tableVPinPlayRating" class="table-meta-stat-value">☆☆☆☆☆</span>
+          </div>
+        </div>
+        <div class="table-meta-counter-strip" aria-label="Runtime and Start Count">
+          <span id="tableRuntime" class="table-meta-counter table-meta-counter-runtime">0000</span>
+          <span id="tableStartCount" class="table-meta-counter table-meta-counter-starts">0000</span>
+        </div>
+      
+        <!-- PINCABOS_POWERED_IP_HTML_V1 -->
+        <div
+          id="pincab-powered-by"
+          class="pincab-powered-by"
+          aria-label="PinCabOS cabinet network address"
+        >
+          <span class="pincab-powered-label">
+            <span class="pincab-powered-prefix">Powered By</span>
+            <span class="pincab-brand-pin">Pin</span><span class="pincab-brand-cab">Cab</span><span class="pincab-brand-os">OS</span>
+          </span>
+
+          <span class="pincab-powered-separator">
+            •
+          </span>
+
+          <span
+            id="pincabCabIp"
+            class="pincab-cab-ip"
+          >
+            IP...
+          </span>
+        </div>
+</section>
+    </div>
+  </div>
+
+  <div id="overlay-root">
+    <div id="menu-overlay-container"></div>
+  </div>
+
+  <div id="table-loading-overlay" aria-hidden="true">
+    <img src="img/loading.gif" alt="" class="table-loading-spinner">
+  </div>
+
+  <div id="remote-launch-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+    <div style="color: white; font-size: 3em; font-family: Arial, sans-serif; text-align: center;">
+      <div style="margin-bottom: 20px;">Launching...</div>
+      <div id="remote-launch-table-name" style="font-size: 1.5em; color: #4CAF50;"></div>
+    </div>
+  </div>
+</body>
+</html>

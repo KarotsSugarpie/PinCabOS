@@ -1,0 +1,13 @@
+{
+  "title": "PinCabOS Theme Options",
+  "description": "Options du thème PinCabOS.",
+  "options": [
+    {
+      "key": "startCollectionSelection",
+      "name": "Start on Collection Selection",
+      "description": "Instead of loading your set collection startup start on selectable collection.",
+      "type": "boolean",
+      "value": false
+    }
+  ]
+}

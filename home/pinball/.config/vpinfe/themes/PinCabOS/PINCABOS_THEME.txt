@@ -1,0 +1,13 @@
+PinCabOS VPinFE Theme
+
+Base:
+Trinidad
+
+Created:
+2026-08-21T07:27:36-04:00
+
+Original theme preserved:
+/home/pinball/.config/vpinfe/themes/Trinidad
+
+Custom theme:
+/home/pinball/.config/vpinfe/themes/PinCabOS
