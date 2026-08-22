@@ -14,7 +14,7 @@ from flask import request
 
 _MARKER = "data-pincabos-appearance-global-bridge"
 _VARS_PATH = "/static/pincabos-appearance-vars.css?v=appearance-global-v1"
-_BRIDGE_PATH = "/static/pincabos-appearance-dashboard-menu-v2.css?v=appearance-dashboard-menu-v2"
+_BRIDGE_PATH = "/static/pincabos-appearance-dashboard-menu-v2.css?v=fullwidth-v2"
 
 
 def install_appearance_global(app):
