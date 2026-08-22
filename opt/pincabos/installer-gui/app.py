@@ -89,6 +89,8 @@ def install():
         return jsonify({"error": "bad-confirm"}), 400
     if not re.fullmatch(r"/dev/[a-z0-9]+", a.get("disk", "")) and not DEMO:
         return jsonify({"error": "bad-disk"}), 400
+    if str(a.get("mode", "")) not in ("1", "2", "3"):
+        return jsonify({"error": "bad-mode"}), 400
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     ANSWERS.write_text("".join(
         f'PCO_ANS_{k.upper()}="{a[k]}"\n'
