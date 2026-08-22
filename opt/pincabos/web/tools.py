@@ -575,7 +575,18 @@ def tools_hub_html():
           </div>
         </a>
 
-        <a class="tool-card" href="/tools/appearance">
+
+        <!-- PINCABOS_UPDATES_V4_CARD_START -->
+        <a class="tool-card" href="/tools/updates">
+          <div class="pco-tool-art" style="display:grid;place-items:center;font-size:64px;color:#ff9b25">↻</div>
+          <div class="pco-tool-body">
+            <strong>PinCabOS Updates</strong>
+            <span class="pco-tool-description">Verifier, installer ou restaurer les mises a jour PinCabOS publiees sur GitHub Releases.</span>
+            <div class="pco-tool-footer"><span>Ouvrir Updates</span><span class="pco-tool-open">→</span></div>
+          </div>
+        </a>
+        <!-- PINCABOS_UPDATES_V4_CARD_END -->
+<a class="tool-card" href="/tools/appearance">
           <div class="pco-tool-art">
             <img src="/static/pincabos-assets/PCOSApparence.png?v=toolsart1"
                  alt="Apparence PinCabOS" loading="lazy">
@@ -590,7 +601,7 @@ def tools_hub_html():
 
 
         <!-- PINCABOS_TOOLS_NETWORK_CARD_V11 -->
-        
+
       </div>
     </section>
 
@@ -613,7 +624,7 @@ def tools_hub_html():
           <div class="pco-tool-body">
             <strong>Config INI VPinFE</strong>
             <span class="pco-tool-description">Lecture guidée de la configuration VPinFE avec préparation d’édition sécurisée.</span>
-            
+
             <div class="pco-tool-footer"><span>Ouvrir configuration</span><span class="pco-tool-open">→</span></div>
           </div>
         </a>
@@ -683,7 +694,7 @@ def tools_hub_html():
 
         <!-- PINCABOS_MEDIA_RECORDER_CARD_V1 -->
         <a class="tool-card" href="/tools/media-recorder">
-          
+
           <div class="pco-tool-art">
             <img src="/static/pincabos-assets/PCOSRecorder.png?v=pincabrecorder2"
                  alt="PinCab Recorder"
@@ -734,7 +745,7 @@ def tools_hub_html():
           <div class="pco-tool-body">
             <strong>Config INI VPinballX</strong>
             <span class="pco-tool-description">Lecture guidée de la configuration moteur VPinballX.</span>
-            
+
             <div class="pco-tool-footer"><span>Ouvrir configuration</span><span class="pco-tool-open">→</span></div>
           </div>
         </a>
@@ -1123,6 +1134,17 @@ def register_tools_routes(app, page):
     if not app.config.get("PINCABOS_IMPEXP_NATIVE_UI"):
         _tools_register_export_table_get_route(app)
         _tools_register_import_table_get_route(app)
+
+    # PINCABOS_UPDATES_V4_REGISTER_START
+    try:
+        from pincabos_updates import register as _pincabos_updates_register
+        _pincabos_updates_register(app, page)
+    except Exception as _pincabos_updates_error:
+        try:
+            app.logger.exception("PinCabOS Updates registration failed: %s", _pincabos_updates_error)
+        except Exception:
+            pass
+    # PINCABOS_UPDATES_V4_REGISTER_END
     _tools_register_appearance_routes(app)
     _tools_register_appearance_write_routes(app)
 
