@@ -177,7 +177,7 @@ BLACKLIST="modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port
 cat > "$TREE/boot/grub/grub.cfg" <<GRUBCFG
 source /boot/grub/pincabos-branding.cfg
 set default=0
-set timeout=10
+set timeout=15
 menuentry "Install PinCabOS" {
     linux /casper/vmlinuz boot=casper $COMMON pincabos.installer=gui systemd.unit=pincabos-gui-install.target $QUIET $BLACKLIST ---
     initrd /casper/initrd
