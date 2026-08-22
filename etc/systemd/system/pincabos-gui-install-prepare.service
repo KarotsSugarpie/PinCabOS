@@ -1,0 +1,10 @@
+[Unit]
+Description=PinCabOS graphical installer preparation (hold back system repairers)
+DefaultDependencies=no
+After=sysinit.target
+Before=pincabos-gui-wizard.service pincabos-gui-kiosk.service timers.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/pincabos-gui-install-prepare

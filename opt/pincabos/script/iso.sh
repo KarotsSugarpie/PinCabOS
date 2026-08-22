@@ -790,14 +790,35 @@ echo "==============================================================="
 [ -d "$TARGET" ] || { echo "ERROR: target missing: $TARGET"; exit 1; }
 findmnt "$TARGET" >/dev/null || { echo "ERROR: $TARGET not mounted"; exit 1; }
 
+# PINCABOS_LIVE_SQUASHFS_V1
+# Two payload shapes are supported:
+#   - live model : the ISO *is* the system, shipped as casper/filesystem.squashfs
+#   - classic    : a split zstd tarball next to this helper
+LIVE_SQUASHFS="$PAYLOAD_DIR/../casper/filesystem.squashfs"
+
 echo
 echo "=== 1) Verify chunks ==="
-( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256 )
+if [ -f "$LIVE_SQUASHFS" ]; then
+  echo "Live squashfs detected, checksum already verified by casper at boot."
+else
+  ( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256 )
+fi
 
 echo
 echo "=== 2) Extract rootfs ==="
-cat "$PAYLOAD_DIR"/pincabos-rootfs-cab-v8.1g.tar.zst.part-* \
-  | tar --acls --xattrs --numeric-owner -I zstd -xpf - -C "$TARGET"
+if [ -f "$LIVE_SQUASHFS" ]; then
+  # Progress bar left on purpose: the graphical installer parses it.
+  unsquashfs -f -d "$TARGET" "$LIVE_SQUASHFS"
+  # Strip what only makes sense on live media.
+  rm -f "$TARGET/etc/pincabos-live" \
+        "$TARGET/etc/netplan/01-pincabos-live-dhcp.yaml"
+  rm -f "$TARGET/etc/systemd/system/pincabos-gui-install.target" \
+        "$TARGET/etc/systemd/system/pincabos-gui-install-prepare.service" \
+        "$TARGET/usr/local/sbin/pincabos-gui-install-prepare"
+else
+  cat "$PAYLOAD_DIR"/pincabos-rootfs-cab-v8.1g.tar.zst.part-* \
+    | tar --acls --xattrs --numeric-owner -I zstd -xpf - -C "$TARGET"
+fi
 
 
 echo
