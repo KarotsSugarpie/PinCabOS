@@ -26,13 +26,56 @@ def config():
     d=load_json(CONFIG,{})
     return d.get('repository','KarotsSugarpie/PinCabOS'), d.get('channel','beta')
 
-def local_version():
+def display_version_from_tag(tag):
+    value=str(tag or '').strip()
+    low=value.lower()
+    if low.startswith('alpha2.'):
+        core=value.split('-',1)[0]
+        return 'Alpha 2.'+core.split('.',1)[1]
+    return value
+
+def local_tag():
     st=load_json(STATE,{})
-    if st.get('installed_version'): return str(st['installed_version'])
+    if st.get('installed_version'):
+        return str(st['installed_version'])
     for p in VERSION_FILES:
         d=load_json(p,{})
-        if d.get('version'): return str(d['version'])
+        if d.get('version'):
+            return str(d['version'])
     return 'unknown'
+
+def local_version():
+    st=load_json(STATE,{})
+    if st.get('display_version'):
+        return str(st['display_version'])
+    if st.get('installed_version'):
+        return display_version_from_tag(st['installed_version'])
+    for p in VERSION_FILES:
+        d=load_json(p,{})
+        if d.get('version'):
+            return str(d['version'])
+    return 'unknown'
+
+def sync_version_files(display):
+    if not display:
+        return
+    stamp=subprocess.check_output(
+        ['date','-u','+%Y-%m-%dT%H:%M:%SZ'],
+        text=True
+    ).strip()
+
+    for p in VERSION_FILES:
+        if not p.exists():
+            continue
+        d=load_json(p,{})
+        if not isinstance(d,dict):
+            continue
+        d['version']=display
+        if 'updated_at' in d:
+            d['updated_at']=stamp.replace('T',' ').replace('Z','')
+        if 'generated_at' in d:
+            d['generated_at']=stamp
+        save_json(p,d)
 
 def api_json(url):
     req=urllib.request.Request(url, headers={'User-Agent':'PinCabOS-Updates/4','Accept':'application/vnd.github+json'})
@@ -88,7 +131,13 @@ def status():
     repo, channel=config()
     print(f'Repository       : {repo}')
     print(f'Channel          : {channel}')
-    print(f'Installed version: {local_version()}')
+    display=local_version()
+    if os.geteuid()==0:
+        try:
+            sync_version_files(display)
+        except Exception:
+            pass
+    print(f'Installed version: {display}')
     st=load_json(STATE,{})
     if st.get('last_backup'): print(f'Last backup      : {st["last_backup"]}')
 
@@ -98,7 +147,9 @@ def check():
     if not m:
         print('Available version: none compatible')
         return 2
-    print(f'Available version: {m["version"]}')
+    display=m.get('display_version') or display_version_from_tag(m["version"])
+    print(f'Available version: {display}')
+    print(f'Release tag      : {m["version"]}')
     print(f'Release URL      : {m["_release"].get("html_url","")}')
     return 0
 
@@ -140,64 +191,539 @@ def validate_installed(rows):
             subprocess.run(['visudo','-cf',str(p)],check=True,stdout=subprocess.DEVNULL)
 
 def do_update():
-    require_root(); CACHE.mkdir(parents=True,exist_ok=True); BACKUPS.mkdir(parents=True,exist_ok=True)
-    m=release()
-    if not m: raise UpdateError('No compatible GitHub Release found.')
-    if local_version()==m['version']:
-        print(f'GO [OK] Already up to date: {m["version"]}'); return 0
-    assets=m['_assets']
-    names=[m.get('archive','pincabos-update.tar.zst'),m.get('files','files.list'),m.get('remove','remove.list')]
-    for n in names:
-        if n not in assets: raise UpdateError(f'Missing Release asset: {n}')
-    work=Path(tempfile.mkdtemp(prefix='pincabos-update-',dir=str(CACHE)))
-    try:
-        archive=work/names[0]; files=work/names[1]; remove=work/names[2]
-        for n,p in zip(names,[archive,files,remove]): download(assets[n]['browser_download_url'],p)
-        if sha256(archive).lower()!=str(m.get('archive_sha256','')).lower(): raise UpdateError('Archive SHA256 mismatch.')
-        rows=validate_list(files); rem=validate_list(remove) if remove.stat().st_size else []
-        actual=sorted(set(x.rstrip('/') for x in subprocess.check_output(['tar','--zstd','-tf',str(archive)],text=True).splitlines() if x and not x.endswith('/')))
-        if rows!=actual: raise UpdateError('Archive content differs from files.list.')
-        stamp=subprocess.check_output(['date','+%Y%m%d-%H%M%S'],text=True).strip()
-        bdir=BACKUPS/stamp; bdir.mkdir(parents=True)
-        existing=[]; new=[]
-        for rel in sorted(set(rows+rem)):
-            p=Path('/')/rel
-            (existing if p.exists() or p.is_symlink() else new).append(rel)
-        (bdir/'existing.list').write_text(''.join(x+'\n' for x in existing),encoding='utf-8')
-        (bdir/'new.list').write_text(''.join(x+'\n' for x in new),encoding='utf-8')
-        (bdir/'previous-version').write_text(local_version()+'\n',encoding='utf-8')
-        prev=load_json(STATE,{})
-        (bdir/'previous-state.json').write_text(json.dumps(prev,indent=2)+'\n',encoding='utf-8')
-        if existing:
-            subprocess.run(['tar','--zstd','-cpf',str(bdir/'backup.tar.zst'),'-C','/','-T',str(bdir/'existing.list')],check=True)
-        svcs=active_services()
-        for s in svcs: subprocess.run(['systemctl','stop',s],check=False)
-        try:
-            subprocess.run(['tar','--zstd','-xpf',str(archive),'-C','/'],check=True)
-            for rel in rem:
-                p=Path('/')/rel
-                if p.is_dir() and not p.is_symlink(): shutil.rmtree(p,ignore_errors=True)
-                else:
-                    try: p.unlink()
-                    except FileNotFoundError: pass
-            validate_installed(rows)
-        except Exception:
-            for rel in new:
-                p=Path('/')/rel
-                if p.is_dir() and not p.is_symlink(): shutil.rmtree(p,ignore_errors=True)
-                else:
-                    try: p.unlink()
-                    except FileNotFoundError: pass
-            if (bdir/'backup.tar.zst').exists(): subprocess.run(['tar','--zstd','-xpf',str(bdir/'backup.tar.zst'),'-C','/'],check=False)
-            restart_services(svcs)
-            raise
-        restart_services(svcs)
-        save_json(STATE,{'installed_version':m['version'],'installed_files':rows,'last_backup':str(bdir),'channel':config()[1]})
-        print(f'GO [OK] Update installed: {m["version"]}')
-        print(f'GO [OK] Backup: {bdir}')
+    require_root()
+
+    CACHE.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    BACKUPS.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    m = release()
+
+    if not m:
+        raise UpdateError(
+            'No compatible GitHub Release found.'
+        )
+
+    if local_tag() == m['version']:
+        print(
+            f'GO [OK] Already up to date: '
+            f'{m["version"]}'
+        )
         return 0
+
+    assets = m['_assets']
+
+    names = [
+        m.get(
+            'archive',
+            'pincabos-update.tar.zst'
+        ),
+        m.get(
+            'files',
+            'files.list'
+        ),
+        m.get(
+            'remove',
+            'remove.list'
+        ),
+    ]
+
+    for name in names:
+        if name not in assets:
+            raise UpdateError(
+                f'Missing Release asset: {name}'
+            )
+
+    work = Path(
+        tempfile.mkdtemp(
+            prefix='pincabos-update-',
+            dir=str(CACHE)
+        )
+    )
+
+    try:
+        archive = work / names[0]
+        files = work / names[1]
+        remove = work / names[2]
+
+        for name, target in zip(
+            names,
+            [archive, files, remove]
+        ):
+            download(
+                assets[name][
+                    'browser_download_url'
+                ],
+                target
+            )
+
+        expected_sha = str(
+            m.get(
+                'archive_sha256',
+                ''
+            )
+        ).lower()
+
+        actual_sha = sha256(
+            archive
+        ).lower()
+
+        if actual_sha != expected_sha:
+            raise UpdateError(
+                'Archive SHA256 mismatch.'
+            )
+
+        rows = validate_list(
+            files
+        )
+
+        explicit_remove = (
+            validate_list(remove)
+            if remove.stat().st_size
+            else []
+        )
+
+        previous_state = load_json(
+            STATE,
+            {}
+        )
+
+        previous_files = [
+            str(x).strip()
+            for x in previous_state.get(
+                'installed_files',
+                []
+            )
+            if str(x).strip()
+            and allowed(str(x).strip())
+        ]
+
+        stale = sorted(
+            set(previous_files)
+            - set(rows)
+        )
+
+        removals = sorted(
+            set(
+                explicit_remove
+                + stale
+            )
+        )
+
+        if stale:
+            print(
+                'INFO [--] '
+                f'{len(stale)} ancien(s) '
+                'fichier(s) gere(s) '
+                'seront retires.'
+            )
+
+        actual_archive = sorted(
+            set(
+                x.rstrip('/')
+                for x
+                in subprocess.check_output(
+                    [
+                        'tar',
+                        '--zstd',
+                        '-tf',
+                        str(archive)
+                    ],
+                    text=True
+                ).splitlines()
+                if x
+                and not x.endswith('/')
+            )
+        )
+
+        if rows != actual_archive:
+            raise UpdateError(
+                'Archive content differs '
+                'from files.list.'
+            )
+
+        stamp = subprocess.check_output(
+            [
+                'date',
+                '+%Y%m%d-%H%M%S'
+            ],
+            text=True
+        ).strip()
+
+        backup_dir = (
+            BACKUPS
+            / stamp
+        )
+
+        backup_dir.mkdir(
+            parents=True
+        )
+
+        existing = []
+        new_files = []
+        owners = {}
+
+        for rel in sorted(
+            set(
+                rows
+                + removals
+            )
+        ):
+            target = (
+                Path('/')
+                / rel
+            )
+
+            if (
+                target.exists()
+                or target.is_symlink()
+            ):
+                existing.append(
+                    rel
+                )
+
+                try:
+                    stat = (
+                        target.lstat()
+                    )
+
+                    owners[rel] = {
+                        'uid': stat.st_uid,
+                        'gid': stat.st_gid,
+                    }
+
+                except OSError:
+                    pass
+
+            else:
+                new_files.append(
+                    rel
+                )
+
+        (
+            backup_dir
+            / 'existing.list'
+        ).write_text(
+            ''.join(
+                x + '\n'
+                for x in existing
+            ),
+            encoding='utf-8'
+        )
+
+        (
+            backup_dir
+            / 'new.list'
+        ).write_text(
+            ''.join(
+                x + '\n'
+                for x in new_files
+            ),
+            encoding='utf-8'
+        )
+
+        (
+            backup_dir
+            / 'owners.json'
+        ).write_text(
+            json.dumps(
+                owners,
+                indent=2
+            ) + '\n',
+            encoding='utf-8'
+        )
+
+        (
+            backup_dir
+            / 'previous-version'
+        ).write_text(
+            local_tag()
+            + '\n',
+            encoding='utf-8'
+        )
+
+        (
+            backup_dir
+            / 'previous-state.json'
+        ).write_text(
+            json.dumps(
+                previous_state,
+                indent=2
+            ) + '\n',
+            encoding='utf-8'
+        )
+
+        if existing:
+            subprocess.run(
+                [
+                    'tar',
+                    '--zstd',
+                    '-cpf',
+                    str(
+                        backup_dir
+                        / 'backup.tar.zst'
+                    ),
+                    '-C',
+                    '/',
+                    '-T',
+                    str(
+                        backup_dir
+                        / 'existing.list'
+                    )
+                ],
+                check=True
+            )
+
+        services = active_services()
+
+        for service in services:
+            subprocess.run(
+                [
+                    'systemctl',
+                    'stop',
+                    service
+                ],
+                check=False
+            )
+
+        try:
+            subprocess.run(
+                [
+                    'tar',
+                    '--zstd',
+                    '-xpf',
+                    str(archive),
+                    '-C',
+                    '/'
+                ],
+                check=True
+            )
+
+            # Les fichiers deja existants
+            # conservent leur UID/GID.
+            for rel, meta in owners.items():
+                target = (
+                    Path('/')
+                    / rel
+                )
+
+                if not (
+                    target.exists()
+                    or target.is_symlink()
+                ):
+                    continue
+
+                try:
+                    uid = int(
+                        meta['uid']
+                    )
+
+                    gid = int(
+                        meta['gid']
+                    )
+
+                    if target.is_symlink():
+                        os.lchown(
+                            target,
+                            uid,
+                            gid
+                        )
+                    else:
+                        os.chown(
+                            target,
+                            uid,
+                            gid
+                        )
+
+                except OSError as exc:
+                    print(
+                        'WARNING [--] '
+                        'Owner restore failed '
+                        f'for {rel}: {exc}'
+                    )
+
+            # Sécurité stricte sudoers.
+            for rel in rows:
+                if not rel.startswith(
+                    'etc/sudoers.d/'
+                ):
+                    continue
+
+                target = (
+                    Path('/')
+                    / rel
+                )
+
+                if (
+                    target.exists()
+                    and not target.is_symlink()
+                ):
+                    target.chmod(
+                        0o440
+                    )
+
+            for rel in removals:
+                target = (
+                    Path('/')
+                    / rel
+                )
+
+                if (
+                    target.is_dir()
+                    and not target.is_symlink()
+                ):
+                    shutil.rmtree(
+                        target,
+                        ignore_errors=True
+                    )
+
+                else:
+                    try:
+                        target.unlink()
+                    except FileNotFoundError:
+                        pass
+
+            validate_installed(
+                rows
+            )
+
+        except Exception:
+            for rel in new_files:
+                target = (
+                    Path('/')
+                    / rel
+                )
+
+                if (
+                    target.is_dir()
+                    and not target.is_symlink()
+                ):
+                    shutil.rmtree(
+                        target,
+                        ignore_errors=True
+                    )
+
+                else:
+                    try:
+                        target.unlink()
+                    except FileNotFoundError:
+                        pass
+
+            backup_tar = (
+                backup_dir
+                / 'backup.tar.zst'
+            )
+
+            if backup_tar.exists():
+                subprocess.run(
+                    [
+                        'tar',
+                        '--zstd',
+                        '-xpf',
+                        str(backup_tar),
+                        '-C',
+                        '/'
+                    ],
+                    check=False
+                )
+
+            restart_services(
+                services
+            )
+
+            raise
+
+        restart_services(
+            services
+        )
+
+        display = (
+            m.get(
+                'display_version'
+            )
+            or display_version_from_tag(
+                m['version']
+            )
+        )
+
+        reboot_required = bool(
+            m.get(
+                'reboot_required',
+                False
+            )
+        )
+
+        save_json(
+            STATE,
+            {
+                'installed_version':
+                    m['version'],
+
+                'display_version':
+                    display,
+
+                'installed_files':
+                    rows,
+
+                'last_backup':
+                    str(backup_dir),
+
+                'channel':
+                    config()[1],
+
+                'reboot_required':
+                    reboot_required,
+            }
+        )
+
+        try:
+            sync_version_files(
+                display
+            )
+        except Exception as exc:
+            print(
+                'WARNING [--] '
+                'Version files not '
+                f'synchronized: {exc}'
+            )
+
+        print(
+            'GO [OK] Update installed: '
+            f'{display}'
+        )
+
+        print(
+            'GO [OK] Release tag: '
+            f'{m["version"]}'
+        )
+
+        print(
+            'GO [OK] Backup: '
+            f'{backup_dir}'
+        )
+
+        print(
+            'Reboot required  : '
+            + (
+                'yes'
+                if reboot_required
+                else 'no'
+            )
+        )
+
+        return 0
+
     finally:
-        shutil.rmtree(work,ignore_errors=True)
+        shutil.rmtree(
+            work,
+            ignore_errors=True
+        )
 
 def rollback_last():
     require_root(); st=load_json(STATE,{})

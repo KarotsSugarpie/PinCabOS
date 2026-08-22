@@ -243,3 +243,72 @@ html body .pincabos-nav .nav-vpinfe-vps-group::before {
   background: var(--pco-appearance-nav-panel-bg, rgba(12, 0, 22, .58)) !important;
   border-color: var(--pco-appearance-nav-panel-border, rgba(255, 122, 0, .25)) !important;
 }
+
+/* PINCABOS_FULLWIDTH_GLOBAL_V1_BEGIN */
+
+/*
+ * PinCabOS Full Width global.
+ * La largeur appartient au viewport.
+ * Les cartes/panneaux internes conservent leurs propres dimensions.
+ */
+
+html,
+body {
+  width: 100%;
+  max-width: none !important;
+}
+
+html body main,
+html body > main,
+html body > .container,
+html body > .container-fluid,
+html body > .main-content,
+html body > .page-content,
+html body > .content-wrapper,
+html body main > .container,
+html body main > .container-fluid,
+html body main > .main-content,
+html body main > .page-content,
+html body main > .content-wrapper {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+
+/* Racines PinCabOS connues */
+html body .pco-tools-page,
+html body .pco-up-wrap,
+html body .pco-st-shell,
+html body .dof-pro-shell,
+html body .vpxbc-shell,
+html body .pco-page,
+html body .pco-page-wrap,
+html body .pco-page-shell,
+html body .pco-tools-page,
+html body .pco-dashboard-page,
+html body .pco-settings-page,
+html body .pco-admin-page,
+html body .pco-network-page,
+html body .pco-storage-page,
+html body .pco-explorer-page,
+html body .pco-import-page,
+html body .pco-export-page {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+
+/*
+ * Modules futurs : seulement les wrappers DIRECTS du main.
+ * Cela evite d'elargir les cartes et dialogues internes.
+ */
+html body main > [class$="-page"],
+html body main > [class$="-shell"],
+html body main > [class$="-wrap"],
+html body main > [class$="-wrapper"] {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+
+/* PINCABOS_FULLWIDTH_GLOBAL_V1_END */
