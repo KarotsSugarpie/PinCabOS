@@ -1,0 +1,66 @@
+name: PinCabOS Release V4
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag/version
+        required: true
+        type: string
+      channel:
+        description: Update channel
+        required: true
+        default: beta
+        type: choice
+        options: [stable, beta, dev]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zstd
+        run: sudo apt-get update && sudo apt-get install -y zstd
+      - name: Validate V4 sources
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for p in [
+              Path('opt/pincabos/update/pincabos_updates.py'),
+              Path('opt/pincabos/update/build_release_v4.py'),
+          ]:
+              compile(p.read_text(encoding='utf-8'), str(p), 'exec')
+          PY
+          bash -n usr/local/sbin/getpcos
+          bash -n usr/local/bin/getpcos
+      - name: Build release assets
+        run: |
+          rm -rf dist
+          python3 opt/pincabos/update/build_release_v4.py \
+            --version '${{ inputs.version }}' \
+            --channel '${{ inputs.channel }}' \
+            --out dist
+          cd dist
+          sha256sum -c audit.sha256
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release already exists: $VERSION" >&2
+            exit 1
+          fi
+          extra=()
+          if [[ "$CHANNEL" != "stable" ]]; then extra+=(--prerelease); fi
+          gh release create "$VERSION" \
+            dist/pincabos-update.tar.zst \
+            dist/files.list \
+            dist/remove.list \
+            dist/release.json \
+            dist/audit.sha256 \
+            --target "$GITHUB_SHA" \
+            --title "PinCabOS $VERSION" \
+            --notes "PinCabOS Updates V4 clean release. Distributed from official GitHub Releases with SHA-256 validation, backup and rollback." \
+            "${extra[@]}"

@@ -1,1 +1,0 @@
-/opt/pincabos/script/build-update.sh
