@@ -310,3 +310,9 @@
 
   display: block !important;
 }
+
+/* PINCABOS_DASHBOARD_MODES_V1 — interrupteur de vue */
+.pco-lobby-mode{display:inline-flex;border:1px solid #d75f00;border-radius:8px;overflow:hidden}
+.pco-lobby-actions .pco-lobby-mode button{border:0;border-radius:0;padding:7px 12px;background:#1c0d2b}
+.pco-lobby-actions .pco-lobby-mode button+button{border-left:1px solid #d75f00}
+.pco-lobby-actions .pco-lobby-mode button.pco-good{background:#0d3729}

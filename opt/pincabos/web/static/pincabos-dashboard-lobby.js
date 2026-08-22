@@ -174,9 +174,27 @@
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && catalogModal && !catalogModal.hidden) closeCatalogHard(event);
   });
+  // PINCABOS_DASHBOARD_MODES_V1
+  // L'interrupteur de vue vit dans la meme portee que layout/savedLayout :
+  // il charge la grille de la vue choisie par la meme route que le reste.
+  const modeButtons = Array.from(document.querySelectorAll('[data-pco-mode]'));
+  const paintMode = (mode) => {
+    modeButtons.forEach(b => b.classList.toggle('pco-good', b.dataset.pcoMode === mode));
+  };
+  paintMode(cfg.mode || 'pro');
+  modeButtons.forEach(b => b.addEventListener('click', async () => {
+    const mode = b.dataset.pcoMode;
+    if (b.classList.contains('pco-good')) return;
+    if (editing && !confirm('Quitter le mode édition sans enregistrer, et changer de vue ?')) return;
+    try {
+      const result = await post('/dashboard/lobby/mode', {mode});
+      layout = deep(result.layout); savedLayout = deep(layout); editing = false; closeCatalog(); render();
+      paintMode(result.mode); notify('Vue ' + result.label + ' affichée.');
+    } catch (error) { notify(error.message); }
+  }));
   document.getElementById('pco-lobby-cancel').addEventListener('click',()=>{layout=deep(savedLayout); editing=false; closeCatalog(); render(); notify('Modifications annulées.');});
   document.getElementById('pco-lobby-save').addEventListener('click',async()=>{try{const result=await post('/dashboard/lobby/layout',{layout}); layout=deep(result.layout); savedLayout=deep(layout); editing=false; closeCatalog(); render(); notify('Dashboard enregistré.');}catch(error){notify(error.message);}});
-  document.getElementById('pco-lobby-default').addEventListener('click',async()=>{if(!confirm('Réinitialiser la disposition par défaut?'))return;try{const result=await post('/dashboard/lobby/default'); layout=deep(result.layout); savedLayout=deep(layout); render(); notify('Disposition par défaut enregistrée.');}catch(error){notify(error.message);}});
+  document.getElementById('pco-lobby-default').addEventListener('click',async()=>{if(!confirm('Remettre cette vue à sa disposition d\'origine ? L\'autre vue n\'est pas touchée.'))return;try{const result=await post('/dashboard/lobby/default'); layout=deep(result.layout); savedLayout=deep(layout); render(); notify('Disposition par défaut enregistrée.');}catch(error){notify(error.message);}});
   document.getElementById('pco-lobby-refresh').addEventListener('click',()=>{refreshStatus(true);refreshLive(true);});
   root.addEventListener('click',ev=>{const target=ev.target.closest('[data-confirm]');if(target && !confirm(target.dataset.confirm))ev.preventDefault();});
   const getPath=(data,path)=>path.split('.').reduce((v,k)=>v&&v[k],data);
