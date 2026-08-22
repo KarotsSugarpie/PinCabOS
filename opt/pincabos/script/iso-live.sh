@@ -261,7 +261,7 @@ mksquashfs "$ROOTFS" "$SQUASHFS" \
 stat -c %s "$SQUASHFS" | awk '{printf "  squashfs: %.2f GB\n", $1/1e9}'
 
 # Checksum of what actually gets deployed.
-( cd "$TREE/casper" && sha256sum filesystem.squashfs ) > "$PAYLOAD_DST/pincabos-rootfs-cab-v8.1g.parts.sha256" 2>/dev/null || true
+( cd "$TREE/casper" && sha256sum filesystem.squashfs | sed "s#filesystem.squashfs#../casper/filesystem.squashfs#" ) > "$PAYLOAD_DST/pincabos-rootfs-cab-v8.1g.parts.sha256" 2>/dev/null || true
 
 echo "=== 6) ISO ==="
 mount_pseudo

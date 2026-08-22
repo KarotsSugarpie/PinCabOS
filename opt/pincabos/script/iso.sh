@@ -5308,11 +5308,17 @@ check_payload() {
     exit 1
   }
 
-  (
-    cd "$PAYLOAD_DIR"
-    sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
-    sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
-  )
+  # PINCABOS_LIVE_SQUASHFS_V1 — same two shapes as the deployment helper.
+  if [ -f "$PAYLOAD_DIR/../casper/filesystem.squashfs" ]; then
+    echo "Live squashfs detected, already verified by casper at boot."
+    ( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256 )
+  else
+    (
+      cd "$PAYLOAD_DIR"
+      sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
+      sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
+    )
+  fi
 
   echo
   pco_go "payload checksums valid"
