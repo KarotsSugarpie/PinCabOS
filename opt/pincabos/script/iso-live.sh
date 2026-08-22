@@ -17,6 +17,9 @@
 #
 #   --rootfs   prepared PinCabOS root filesystem (default: $ROOTFS_DIR or
 #              /root/pco-master)
+#   --installer overlay holding the live installer components (engine,
+#              dispatcher, tty unit) to drop into the rootfs before it is
+#              compressed. Without them the ISO boots but cannot install.
 #   --payload  payload directory produced by iso.sh (helper script + Plymouth
 #              overlay). Optional: without it the ISO still boots and installs,
 #              it just carries no post-install helper.
@@ -26,6 +29,7 @@ set -euo pipefail
 
 ROOTFS="${ROOTFS_DIR:-/root/pco-master}"
 PAYLOAD_SRC=""
+INSTALLER_SRC=""
 OUT_ISO="/root/pincabos-live.iso"
 ZSTD_LEVEL=19
 KERNEL_VERSION=""
@@ -34,6 +38,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --rootfs)  ROOTFS="$2"; shift 2 ;;
     --payload) PAYLOAD_SRC="$2"; shift 2 ;;
+    --installer) INSTALLER_SRC="$2"; shift 2 ;;
     --out)     OUT_ISO="$2"; shift 2 ;;
     --level)   ZSTD_LEVEL="$2"; shift 2 ;;
     --kernel)  KERNEL_VERSION="$2"; shift 2 ;;
@@ -43,6 +48,31 @@ while [ $# -gt 0 ]; do
 done
 
 die() { echo "ERROR: $*" >&2; exit 1; }
+
+# mkinitramfs needs a real /proc, /sys and /dev inside the chroot; without them
+# it silently produces an initrd casper cannot boot from.
+PSEUDO_MOUNTED=0
+mount_pseudo() {
+  mountpoint -q "$ROOTFS/proc" || mount -t proc proc "$ROOTFS/proc"
+  mountpoint -q "$ROOTFS/sys"  || mount -t sysfs sys "$ROOTFS/sys"
+  if ! mountpoint -q "$ROOTFS/dev"; then
+    mount --bind /dev "$ROOTFS/dev"
+    # Keep the bind private: a shared mount would propagate the later umount
+    # back to the host and take its /dev/pts down with it.
+    mount --make-rprivate "$ROOTFS/dev" 2>/dev/null || true
+  fi
+  mountpoint -q "$ROOTFS/dev/pts" || mount --bind /dev/pts "$ROOTFS/dev/pts" 2>/dev/null || true
+  PSEUDO_MOUNTED=1
+}
+umount_pseudo() {
+  [ "$PSEUDO_MOUNTED" = 1 ] || return 0
+  umount "$ROOTFS/dev/pts" 2>/dev/null || true
+  umount "$ROOTFS/dev" 2>/dev/null || true
+  umount "$ROOTFS/sys" 2>/dev/null || true
+  umount "$ROOTFS/proc" 2>/dev/null || true
+  PSEUDO_MOUNTED=0
+}
+trap umount_pseudo EXIT
 
 [ "$(id -u)" -eq 0 ] || die "root required"
 [ -d "$ROOTFS" ] || die "rootfs not found: $ROOTFS"
@@ -54,6 +84,7 @@ PAYLOAD_DST="$TREE/pincabos-payload"
 START=$(date +%s)
 
 echo "=== 1) Live rootfs preparation ==="
+mount_pseudo
 # casper drives the live boot; it must live inside the image we are about to
 # compress, not on the build host.
 if [ ! -x "$ROOTFS/usr/share/initramfs-tools/scripts/casper" ] \
@@ -68,7 +99,7 @@ cat > "$ROOTFS/etc/casper.conf" <<'CASPER'
 export USERNAME="pinball"
 export USERFULLNAME="PinCabOS"
 export HOST="pincabos-live"
-export BUILD_SYSTEM="PinCabOS"
+export BUILD_SYSTEM="Ubuntu"
 export FLAVOUR="PinCabOS"
 CASPER
 
@@ -85,6 +116,13 @@ network:
   renderer: NetworkManager
 NETPLAN
 chmod 0600 "$ROOTFS/etc/netplan/01-pincabos-live-dhcp.yaml"
+
+# Live installer components live outside the installed system: they are dropped
+# into the rootfs here so that the squashfs carries them.
+if [ -n "$INSTALLER_SRC" ] && [ -d "$INSTALLER_SRC" ]; then
+  echo "  adding live installer components from $INSTALLER_SRC"
+  ( cd "$INSTALLER_SRC" && tar -cf - . ) | ( cd "$ROOTFS" && tar -xf - )
+fi
 
 echo "=== 2) Live initrd ==="
 if [ -z "$KERNEL_VERSION" ]; then
@@ -170,6 +208,7 @@ else
   echo "  no payload directory given: ISO will boot and install, without post-install helper"
 fi
 
+umount_pseudo
 echo "=== 5) squashfs (zstd $ZSTD_LEVEL) ==="
 # Excludes must stay RELATIVE to a single source directory: with two sources
 # mksquashfs silently ignores them (15 GB instead of 3).
@@ -225,6 +264,7 @@ stat -c %s "$SQUASHFS" | awk '{printf "  squashfs: %.2f GB\n", $1/1e9}'
 ( cd "$TREE/casper" && sha256sum filesystem.squashfs ) > "$PAYLOAD_DST/pincabos-rootfs-cab-v8.1g.parts.sha256" 2>/dev/null || true
 
 echo "=== 6) ISO ==="
+mount_pseudo
 rm -f "$ROOTFS/tmp/pincabos-live.iso"
 # NOTE: after the "--", grub-mkrescue speaks NATIVE xorriso, not mkisofs:
 # -iso-level / -V and friends are rejected there.
