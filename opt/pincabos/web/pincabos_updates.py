@@ -14,8 +14,8 @@ from flask import jsonify, request
 
 CONFIG = Path("/etc/pincabos/updates.json")
 STATE = Path("/var/lib/pincabos/updates/state.json")
-WEBSTATE = Path("/tmp/pincabos-update-web-state.json")
-LOGFILE = Path("/tmp/pincabos-update-web.log")
+WEBSTATE = Path("/run/pincabos-updates/update-web-state.json")
+LOGFILE = Path("/run/pincabos-updates/update-web.log")
 BACKUPS = Path("/opt/pincabos/backups/updates")
 VERSION_FILES = [
     Path("/opt/pincabos/config/version.json"),
@@ -98,12 +98,19 @@ def _read_log_tail(limit=200000):
 
 
 def _pid_alive(pid):
+    # PINCABOS_ROOT_PID_ALIVE_V1
     try:
         pid = int(pid)
         if pid <= 0:
             return False
         os.kill(pid, 0)
         return True
+    except PermissionError:
+        # Le WebApp tourne sous pinball alors que le runner
+        # tourne sous root. EPERM signifie que le PID existe.
+        return True
+    except (ProcessLookupError, ValueError, TypeError):
+        return False
     except Exception:
         return False
 
@@ -552,6 +559,9 @@ def _updates_body_html():
 
   let localClearMode = false;
 
+  // PINCABOS_UPDATE_RECONNECT_UX_V1
+  let expectedOfflineUntil = 0;
+
   function esc(s){
     return (s ?? "").toString();
   }
@@ -618,8 +628,15 @@ def _updates_body_html():
       const data = await res.json();
       render(data);
     }catch(err){
-      setStatus("error", "Erreur");
-      el.msg.textContent = "Impossible de lire l’état du module Updates.";
+      if(expectedOfflineUntil && Date.now() < expectedOfflineUntil){
+        setStatus("running", "Mise à jour en cours");
+        el.msg.textContent =
+          "Connexion temporairement interrompue pendant l’installation. "
+          + "PinCabOS continue la mise à jour et cette page se reconnectera automatiquement.";
+      }else{
+        setStatus("error", "Erreur");
+        el.msg.textContent = "Impossible de lire l’état du module Updates.";
+      }
     }
   }
 
@@ -637,7 +654,23 @@ def _updates_body_html():
       const data = await res.json();
       if(!res.ok || !data.ok){
         alert(data.error || "Operation refusee.");
+        return;
       }
+
+      if(action === "update" || action === "rollback"){
+        expectedOfflineUntil = Date.now() + 120000;
+
+        setStatus(
+          "running",
+          action === "update"
+            ? "Mise à jour en cours"
+            : "Rollback en cours"
+        );
+
+        el.msg.textContent =
+          "L’opération a démarré. Le WebApp peut être indisponible quelques secondes.";
+      }
+
       await refreshState();
     }catch(err){
       alert("Erreur lors du lancement de l’operation.");

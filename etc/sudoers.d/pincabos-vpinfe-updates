@@ -1,0 +1,2 @@
+Cmnd_Alias PINCABOS_VPINFE_UPDATES = /usr/local/sbin/pincabos-vpinfe-update-web-runner check, /usr/local/sbin/pincabos-vpinfe-update-web-runner update, /usr/local/sbin/pincabos-vpinfe-update-web-runner rollback
+pinball ALL=(root) NOPASSWD: PINCABOS_VPINFE_UPDATES

@@ -1,0 +1,765 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import fcntl
+import grp
+import json
+import os
+import pwd
+import shutil
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+ENGINE = Path(
+    "/opt/pincabos/tools/vpinfeupdate.py"
+)
+
+WRAPPER = Path(
+    "/opt/pincabos/tools/update-vpinfe.sh"
+)
+
+TARGET = Path(
+    "/home/pinball/vpinfe"
+)
+
+BACKUPS = Path(
+    "/opt/pincabos/backups/vpinfe-update"
+)
+
+ROLLBACK_BACKUPS = Path(
+    "/opt/pincabos/backups/vpinfe-manual-rollback"
+)
+
+RUNTIME_ENGINE = Path(
+    "/opt/pincabos/runtime/vpinfe-update"
+)
+
+RUNTIME = Path(
+    "/run/pincabos-vpinfe-updates"
+)
+
+STATE = RUNTIME / "update-web-state.json"
+LOG = RUNTIME / "update-web.log"
+
+LOCK = Path(
+    "/run/lock/pincabos-vpinfe-update-web.lock"
+)
+
+ENGINE_LOCK = Path(
+    "/run/lock/pincabos-vpinfeupdate.lock"
+)
+
+SERVICE = "pincabos-vpinfe.service"
+
+SELF = (
+    "/usr/local/sbin/"
+    "pincabos-vpinfe-update-web-runner"
+)
+
+
+def now():
+    return (
+        datetime.now(timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def pinball_ids():
+    user = pwd.getpwnam("pinball")
+    group = grp.getgrnam("pinball")
+
+    return user.pw_uid, group.gr_gid
+
+
+def prepare_runtime():
+    RUNTIME.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    os.chmod(RUNTIME, 0o775)
+
+    _, gid = pinball_ids()
+
+    try:
+        os.chown(
+            RUNTIME,
+            0,
+            gid
+        )
+    except OSError:
+        pass
+
+
+def save_state(data):
+    prepare_runtime()
+
+    tmp = STATE.with_name(
+        STATE.name
+        + ".tmp."
+        + str(os.getpid())
+    )
+
+    tmp.write_text(
+        json.dumps(
+            data,
+            indent=2,
+            ensure_ascii=False
+        ) + "\n",
+        encoding="utf-8"
+    )
+
+    os.chmod(tmp, 0o644)
+
+    _, gid = pinball_ids()
+    os.chown(tmp, 0, gid)
+
+    os.replace(tmp, STATE)
+
+
+def prepare_log():
+    prepare_runtime()
+
+    LOG.write_text(
+        "",
+        encoding="utf-8"
+    )
+
+    os.chmod(LOG, 0o644)
+
+    _, gid = pinball_ids()
+    os.chown(LOG, 0, gid)
+
+
+def line(text=""):
+    with LOG.open(
+        "a",
+        encoding="utf-8"
+    ) as fh:
+        fh.write(
+            str(text).rstrip()
+            + "\n"
+        )
+
+
+def base_state(action):
+    return {
+        "running": True,
+        "pid": os.getpid(),
+        "action": action,
+        "status": "running",
+        "message":
+            f"Opération lancée : {action}",
+        "started_at": now(),
+        "finished_at": "",
+        "last_exit_code": None,
+    }
+
+
+def engine_status():
+    try:
+        result = subprocess.run(
+            [
+                "/usr/bin/python3",
+                str(ENGINE),
+                "--status",
+            ],
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
+
+        return json.loads(
+            (result.stdout or "").strip()
+            or "{}"
+        )
+
+    except Exception:
+        return {}
+
+
+def append_summary():
+    data = engine_status()
+
+    local = (
+        data.get("local", {})
+        if isinstance(data.get("local"), dict)
+        else {}
+    )
+
+    remote = (
+        data.get("remote", {})
+        if isinstance(data.get("remote"), dict)
+        else {}
+    )
+
+    update = (
+        data.get("update", {})
+        if isinstance(data.get("update"), dict)
+        else {}
+    )
+
+    line()
+    line(
+        "Repository       : "
+        "superhac/vpinfe"
+    )
+    line(
+        "Channel          : stable"
+    )
+    line(
+        "Installed version: "
+        + str(
+            local.get("display")
+            or "non détectée"
+        )
+    )
+    line(
+        "Available version: "
+        + str(
+            remote.get("tag")
+            or "non vérifiée"
+        )
+    )
+
+    if remote.get("html_url"):
+        line(
+            "Release URL      : "
+            + str(remote["html_url"])
+        )
+
+    line()
+    line(
+        "Etat             : "
+        + str(
+            update.get("label")
+            or "-"
+        )
+    )
+
+
+def run_check():
+    result = subprocess.run(
+        [
+            "/usr/bin/python3",
+            str(ENGINE),
+            "--check",
+        ],
+        text=True,
+        capture_output=True,
+    )
+
+    raw = (
+        (result.stdout or "")
+        + "\n"
+        + (result.stderr or "")
+    ).strip()
+
+    if raw:
+        try:
+            json.loads(raw)
+        except Exception:
+            line(raw)
+
+    append_summary()
+
+    return result.returncode
+
+
+def run_update():
+    with LOG.open(
+        "a",
+        encoding="utf-8"
+    ) as output:
+
+        process = subprocess.Popen(
+            [str(WRAPPER)],
+            stdout=output,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+
+        rc = process.wait()
+
+    append_summary()
+
+    return rc
+
+
+def service_active():
+    return subprocess.run(
+        [
+            "/usr/bin/systemctl",
+            "is-active",
+            "--quiet",
+            SERVICE,
+        ],
+        check=False,
+    ).returncode == 0
+
+
+def wait_service(seconds=40):
+    deadline = (
+        time.monotonic()
+        + seconds
+    )
+
+    while time.monotonic() < deadline:
+        if service_active():
+            return True
+
+        time.sleep(1)
+
+    return False
+
+
+def validate_vpinfe(root):
+    exe = root / "vpinfe"
+    internal = root / "_internal"
+
+    if not exe.is_file():
+        raise RuntimeError(
+            "Backup invalide : binaire "
+            "vpinfe absent."
+        )
+
+    if not internal.is_dir():
+        raise RuntimeError(
+            "Backup invalide : _internal absent."
+        )
+
+    head = exe.read_bytes()[:20]
+
+    if (
+        len(head) < 20
+        or head[:4] != b"\x7fELF"
+        or head[4] != 2
+        or int.from_bytes(
+            head[18:20],
+            "little"
+        ) != 0x3E
+    ):
+        raise RuntimeError(
+            "Backup invalide : VPinFE "
+            "n'est pas un ELF Linux x86_64."
+        )
+
+
+def chown_tree(root):
+    uid, gid = pinball_ids()
+
+    for current, dirs, files in os.walk(root):
+        os.chown(
+            current,
+            uid,
+            gid
+        )
+
+        for name in dirs:
+            os.chown(
+                Path(current, name),
+                uid,
+                gid
+            )
+
+        for name in files:
+            os.chown(
+                Path(current, name),
+                uid,
+                gid
+            )
+
+    os.chmod(
+        root / "vpinfe",
+        0o755
+    )
+
+
+def latest_backup():
+    candidates = []
+
+    if BACKUPS.is_dir():
+        for item in BACKUPS.iterdir():
+            candidate = item / "vpinfe"
+
+            if (
+                item.is_dir()
+                and (candidate / "vpinfe").is_file()
+                and (candidate / "_internal").is_dir()
+            ):
+                candidates.append(candidate)
+
+    if not candidates:
+        raise RuntimeError(
+            "Aucun backup VPinFE valide."
+        )
+
+    candidates.sort(
+        key=lambda p: p.parent.name
+    )
+
+    return candidates[-1]
+
+
+def run_rollback():
+    ENGINE_LOCK.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    with ENGINE_LOCK.open("w") as engine_lock:
+        try:
+            fcntl.flock(
+                engine_lock.fileno(),
+                fcntl.LOCK_EX
+                | fcntl.LOCK_NB,
+            )
+        except BlockingIOError:
+            raise RuntimeError(
+                "Une opération VPinFE "
+                "est déjà en cours."
+            )
+
+        source = latest_backup()
+
+        stamp = datetime.now().strftime(
+            "%Y%m%d-%H%M%S"
+        )
+
+        stage = (
+            RUNTIME_ENGINE
+            / (
+                "manual-rollback-"
+                + stamp
+                + "-"
+                + str(os.getpid())
+            )
+        )
+
+        restore = stage / "vpinfe"
+
+        safety = (
+            ROLLBACK_BACKUPS
+            / stamp
+        )
+
+        safety_current = (
+            safety
+            / "vpinfe-before-rollback"
+        )
+
+        for path in (
+            RUNTIME_ENGINE,
+            ROLLBACK_BACKUPS,
+        ):
+            path.mkdir(
+                parents=True,
+                exist_ok=True
+            )
+
+        device = TARGET.parent.stat().st_dev
+
+        for path in (
+            RUNTIME_ENGINE,
+            ROLLBACK_BACKUPS,
+        ):
+            if path.stat().st_dev != device:
+                raise RuntimeError(
+                    "Rollback atomique impossible : "
+                    "filesystem différent."
+                )
+
+        line(
+            "Backup sélectionné : "
+            + str(source)
+        )
+
+        line(
+            "Copie contrôlée du backup..."
+        )
+
+        stage.mkdir(
+            parents=True,
+            exist_ok=False
+        )
+
+        shutil.copytree(
+            source,
+            restore
+        )
+
+        validate_vpinfe(restore)
+        chown_tree(restore)
+
+        was_active = service_active()
+        current_moved = False
+        restore_moved = False
+
+        safety.mkdir(
+            parents=True,
+            exist_ok=False
+        )
+
+        try:
+            if was_active:
+                line(
+                    "Arrêt contrôlé de VPinFE..."
+                )
+
+                subprocess.run(
+                    [
+                        "/usr/bin/systemctl",
+                        "stop",
+                        SERVICE,
+                    ],
+                    check=True,
+                )
+
+            if not TARGET.exists():
+                raise RuntimeError(
+                    "Installation VPinFE actuelle absente."
+                )
+
+            line(
+                "Backup sécurité version actuelle : "
+                + str(safety_current)
+            )
+
+            os.rename(
+                TARGET,
+                safety_current
+            )
+
+            current_moved = True
+
+            os.rename(
+                restore,
+                TARGET
+            )
+
+            restore_moved = True
+
+            if was_active:
+                line(
+                    "Redémarrage contrôlé de VPinFE..."
+                )
+
+                subprocess.run(
+                    [
+                        "/usr/bin/systemctl",
+                        "start",
+                        SERVICE,
+                    ],
+                    check=True,
+                )
+
+                if not wait_service():
+                    raise RuntimeError(
+                        "VPinFE ne redevient pas actif "
+                        "après rollback."
+                    )
+
+            line(
+                "SUCCÈS : rollback VPinFE terminé."
+            )
+
+            line(
+                "Version précédente restaurée depuis : "
+                + str(source)
+            )
+
+            line(
+                "Version remplacée conservée dans : "
+                + str(safety_current)
+            )
+
+            return 0
+
+        except Exception as exc:
+            line(
+                "ERREUR ROLLBACK : "
+                + str(exc)
+            )
+
+            try:
+                if (
+                    restore_moved
+                    and TARGET.exists()
+                ):
+                    failed = (
+                        safety
+                        / "vpinfe-rollback-failed"
+                    )
+
+                    os.rename(
+                        TARGET,
+                        failed
+                    )
+
+                if (
+                    current_moved
+                    and safety_current.exists()
+                    and not TARGET.exists()
+                ):
+                    os.rename(
+                        safety_current,
+                        TARGET
+                    )
+
+                if (
+                    was_active
+                    and TARGET.exists()
+                ):
+                    subprocess.run(
+                        [
+                            "/usr/bin/systemctl",
+                            "start",
+                            SERVICE,
+                        ],
+                        check=False,
+                    )
+
+                line(
+                    "GO [OK] Version d'avant rollback "
+                    "restaurée."
+                )
+
+            except Exception as restore_error:
+                line(
+                    "NOGO [!!] Restauration après "
+                    "échec rollback : "
+                    + str(restore_error)
+                )
+
+            return 1
+
+        finally:
+            shutil.rmtree(
+                stage,
+                ignore_errors=True
+            )
+
+
+def detached_start(action):
+    unit = (
+        "pincabos-vpinfe-update-web-"
+        + action
+        + "-"
+        + str(os.getpid())
+    )
+
+    result = subprocess.run(
+        [
+            "/usr/bin/systemd-run",
+            "--unit=" + unit,
+            "--collect",
+            "--no-block",
+            "--setenv=PINCABOS_VPINFE_UPDATE_CHILD=1",
+            SELF,
+            action,
+        ],
+        check=False,
+    )
+
+    return result.returncode
+
+
+def main():
+    if len(sys.argv) != 2:
+        return 2
+
+    action = (
+        sys.argv[1]
+        .strip()
+        .lower()
+    )
+
+    if action not in {
+        "check",
+        "update",
+        "rollback",
+    }:
+        return 2
+
+    if (
+        os.environ.get(
+            "PINCABOS_VPINFE_UPDATE_CHILD"
+        )
+        != "1"
+    ):
+        return detached_start(action)
+
+    LOCK.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    with LOCK.open("w") as lock_handle:
+        try:
+            fcntl.flock(
+                lock_handle.fileno(),
+                fcntl.LOCK_EX
+                | fcntl.LOCK_NB,
+            )
+        except BlockingIOError:
+            return 75
+
+        prepare_log()
+
+        state = base_state(action)
+        save_state(state)
+
+        rc = 1
+
+        try:
+            if action == "check":
+                rc = run_check()
+
+            elif action == "update":
+                rc = run_update()
+
+            elif action == "rollback":
+                rc = run_rollback()
+
+        except Exception as exc:
+            line(
+                "ERREUR : "
+                + str(exc)
+            )
+
+            rc = 1
+
+        state.update(
+            {
+                "running": False,
+                "finished_at": now(),
+                "last_exit_code": rc,
+                "status":
+                    "success"
+                    if rc == 0
+                    else "error",
+                "message":
+                    "Opération terminée."
+                    if rc == 0
+                    else (
+                        "Opération en erreur "
+                        f"(code {rc})."
+                    ),
+            }
+        )
+
+        save_state(state)
+
+        return rc
+
+
+if __name__ == "__main__":
+    raise SystemExit(
+        main()
+    )

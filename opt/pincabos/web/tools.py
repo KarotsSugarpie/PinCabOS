@@ -5687,54 +5687,11 @@ def _tools_vpinfe_update_page(status, token, report="", http_status=200):
 
 
 def _tools_register_vpinfe_update_routes(app):
-    @app.route("/tools/vpinfe/update", methods=["GET"])
-    def tools_vpinfe_update():
-        return _tools_vpinfe_update_page(
-            _tools_vpinfe_update_status(remote=True),
-            _tools_vpinfe_update_token(),
-        )
+    # PINCABOS_VPINFE_UPDATE_ASYNC_UI_V1
+    from pincabos_vpinfe_updates import register
+    return register(app, _TOOLS_PAGE_HELPER)
 
-    @app.route("/tools/vpinfe/update/run", methods=["POST"])
-    def tools_vpinfe_update_run():
-        token = request.form.get("csrf", "")
-        expected = session.get("pco_vpinfe_update_csrf", "")
-        if not isinstance(expected, str) or not hmac.compare_digest(str(token), expected):
-            return _tools_vpinfe_update_page(
-                _tools_vpinfe_update_status(remote=False),
-                _tools_vpinfe_update_token(),
-                "ERREUR : jeton de sécurité invalide. Recharge la page Update VPinFE puis recommence.",
-                403,
-            )
-        try:
-            result = subprocess.run(
-                ["/usr/bin/sudo", "-n", _VPINFE_UPDATE_WRAPPER],
-                text=True,
-                capture_output=True,
-                timeout=840,
-            )
-            report = ((result.stdout or "") + "\n" + (result.stderr or "")).strip()
-            if not report:
-                report = "Aucune sortie de l’updater."
-            return _tools_vpinfe_update_page(
-                _tools_vpinfe_update_status(remote=True),
-                _tools_vpinfe_update_token(),
-                report,
-                200 if result.returncode == 0 else 500,
-            )
-        except subprocess.TimeoutExpired:
-            return _tools_vpinfe_update_page(
-                _tools_vpinfe_update_status(remote=False),
-                _tools_vpinfe_update_token(),
-                "ERREUR : délai WebApp dépassé. Vérifie le journal et l’état VPinFE avant toute nouvelle tentative.",
-                504,
-            )
-        except Exception as exc:
-            return _tools_vpinfe_update_page(
-                _tools_vpinfe_update_status(remote=False),
-                _tools_vpinfe_update_token(),
-                f"ERREUR : impossible de lancer l’updater: {exc}",
-                500,
-            )
+
 # === PINCABOS_VPINFE_UPDATE_TOOLS_V1 END ===
 
 # PINCABOS_TOOLS_VPINFE_WIDGETS_PORT8001_V10

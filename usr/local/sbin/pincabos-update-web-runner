@@ -12,11 +12,11 @@ from pathlib import Path
 
 
 STATE = Path(
-    "/tmp/pincabos-update-web-state.json"
+    "/run/pincabos-updates/update-web-state.json"
 )
 
 LOG = Path(
-    "/tmp/pincabos-update-web.log"
+    "/run/pincabos-updates/update-web.log"
 )
 
 LOCK = Path(
@@ -158,6 +158,46 @@ def base_state(
 
 
 def main():
+    # PINCABOS_UPDATE_DETACH_V1
+    # Le premier processus vient du WebApp.
+    # Le vrai runner est relance dans son propre cgroup systemd
+    # afin de survivre a l'arret de pincabos-webapp.service.
+    if os.environ.get("PINCABOS_UPDATE_SYSTEMD_CHILD") != "1":
+        if len(sys.argv) < 2:
+            return 2
+
+        action = sys.argv[1].strip().lower()
+
+        if action not in {
+            "check",
+            "update",
+            "rollback",
+            "reboot",
+        }:
+            return 2
+
+        unit = (
+            "pincabos-update-web-"
+            + action
+            + "-"
+            + str(os.getpid())
+        )
+
+        cmd = [
+            "/usr/bin/systemd-run",
+            "--unit=" + unit,
+            "--collect",
+            "--no-block",
+            "--setenv=PINCABOS_UPDATE_SYSTEMD_CHILD=1",
+            "/usr/local/sbin/pincabos-update-web-runner",
+            *sys.argv[1:],
+        ]
+
+        return subprocess.run(
+            cmd,
+            check=False
+        ).returncode
+
     if len(sys.argv) < 2:
         return 2
 
