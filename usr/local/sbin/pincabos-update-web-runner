@@ -1,0 +1,357 @@
+#!/usr/bin/env python3
+
+import fcntl
+import json
+import os
+import pwd
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+STATE = Path(
+    "/tmp/pincabos-update-web-state.json"
+)
+
+LOG = Path(
+    "/tmp/pincabos-update-web.log"
+)
+
+LOCK = Path(
+    "/run/lock/pincabos-update-web.lock"
+)
+
+ENGINE_STATE = Path(
+    "/var/lib/pincabos/updates/state.json"
+)
+
+
+def now():
+    return (
+        datetime.now(
+            timezone.utc
+        )
+        .isoformat()
+        .replace(
+            "+00:00",
+            "Z"
+        )
+    )
+
+
+def pinball_ids():
+    try:
+        user = pwd.getpwnam(
+            "pinball"
+        )
+
+        return (
+            user.pw_uid,
+            user.pw_gid
+        )
+
+    except KeyError:
+        return (
+            -1,
+            -1
+        )
+
+
+def chown_pinball(path):
+    uid, gid = pinball_ids()
+
+    if uid < 0:
+        return
+
+    try:
+        os.chown(
+            path,
+            uid,
+            gid
+        )
+    except OSError:
+        pass
+
+
+def save_state(data):
+    tmp = Path(
+        f"{STATE}.tmp.{os.getpid()}"
+    )
+
+    tmp.write_text(
+        json.dumps(
+            data,
+            indent=2,
+            ensure_ascii=False
+        ) + "\n",
+        encoding="utf-8"
+    )
+
+    tmp.chmod(
+        0o644
+    )
+
+    chown_pinball(
+        tmp
+    )
+
+    os.replace(
+        tmp,
+        STATE
+    )
+
+    chown_pinball(
+        STATE
+    )
+
+
+def load_json(path):
+    try:
+        return json.loads(
+            path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+    except Exception:
+        return {}
+
+
+def prepare_log():
+    LOG.write_text(
+        "",
+        encoding="utf-8"
+    )
+
+    LOG.chmod(
+        0o644
+    )
+
+    chown_pinball(
+        LOG
+    )
+
+
+def base_state(
+    action,
+    reboot_after=False
+):
+    return {
+        "running": True,
+        "pid": os.getpid(),
+        "action": action,
+        "status": "running",
+        "message":
+            f"Operation lancee : {action}",
+        "started_at": now(),
+        "finished_at": "",
+        "last_exit_code": None,
+        "reboot_after":
+            bool(reboot_after),
+        "reboot_recommended":
+            False,
+        "reboot_scheduled":
+            False,
+    }
+
+
+def main():
+    if len(sys.argv) < 2:
+        return 2
+
+    action = (
+        sys.argv[1]
+        .strip()
+        .lower()
+    )
+
+    reboot_after = (
+        len(sys.argv) >= 3
+        and sys.argv[2] == "1"
+    )
+
+    if action not in {
+        "check",
+        "update",
+        "rollback",
+        "reboot",
+    }:
+        return 2
+
+    LOCK.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    lock_file = LOCK.open(
+        "w"
+    )
+
+    try:
+        fcntl.flock(
+            lock_file.fileno(),
+            fcntl.LOCK_EX
+            | fcntl.LOCK_NB
+        )
+
+    except BlockingIOError:
+        return 75
+
+    state = base_state(
+        action,
+        reboot_after
+    )
+
+    prepare_log()
+    save_state(
+        state
+    )
+
+    if action == "reboot":
+        state.update(
+            {
+                "status":
+                    "success",
+                "message":
+                    "Redemarrage planifie.",
+                "running":
+                    False,
+                "finished_at":
+                    now(),
+                "last_exit_code":
+                    0,
+                "reboot_scheduled":
+                    True,
+            }
+        )
+
+        save_state(
+            state
+        )
+
+        time.sleep(
+            3
+        )
+
+        subprocess.run(
+            [
+                "/usr/bin/systemctl",
+                "reboot"
+            ],
+            check=False
+        )
+
+        return 0
+
+    with LOG.open(
+        "w",
+        encoding="utf-8"
+    ) as output:
+        process = subprocess.Popen(
+            [
+                "/usr/local/sbin/getpcos",
+                action
+            ],
+            stdout=output,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+
+        rc = process.wait()
+
+    LOG.chmod(
+        0o644
+    )
+
+    chown_pinball(
+        LOG
+    )
+
+    engine = load_json(
+        ENGINE_STATE
+    )
+
+    reboot_required = bool(
+        engine.get(
+            "reboot_required",
+            False
+        )
+    )
+
+    state.update(
+        {
+            "running":
+                False,
+            "finished_at":
+                now(),
+            "last_exit_code":
+                rc,
+            "status":
+                (
+                    "success"
+                    if rc == 0
+                    else "error"
+                ),
+            "message":
+                (
+                    "Operation terminee."
+                    if rc == 0
+                    else
+                    f"Operation en erreur "
+                    f"(code {rc})."
+                ),
+            "reboot_recommended":
+                (
+                    reboot_required
+                    if action == "update"
+                    else False
+                ),
+        }
+    )
+
+    save_state(
+        state
+    )
+
+    if (
+        rc == 0
+        and action == "update"
+        and reboot_after
+        and reboot_required
+    ):
+        state[
+            "reboot_scheduled"
+        ] = True
+
+        state[
+            "message"
+        ] = (
+            "Mise a jour terminee. "
+            "Redemarrage requis et planifie."
+        )
+
+        save_state(
+            state
+        )
+
+        time.sleep(
+            4
+        )
+
+        subprocess.run(
+            [
+                "/usr/bin/systemctl",
+                "reboot"
+            ],
+            check=False
+        )
+
+    return rc
+
+
+if __name__ == "__main__":
+    raise SystemExit(
+        main()
+    )

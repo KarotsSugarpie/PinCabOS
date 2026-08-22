@@ -1,66 +1,303 @@
 name: PinCabOS Release V4
+
 on:
+  pull_request_target:
+    types:
+      - closed
+
   workflow_dispatch:
     inputs:
-      version:
-        description: Release tag/version
-        required: true
+      pr_number:
+        description: Numero de PR a publier
+        required: false
         type: string
+
       channel:
-        description: Update channel
+        description: Canal
         required: true
         default: beta
         type: choice
-        options: [stable, beta, dev]
+        options:
+          - stable
+          - beta
+          - dev
+
 permissions:
   contents: write
+  pull-requests: read
+
+concurrency:
+  group: pincabos-release-v4
+  cancel-in-progress: false
+
 jobs:
   release:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.merged == true
+
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install zstd
-        run: sudo apt-get update && sudo apt-get install -y zstd
-      - name: Validate V4 sources
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install tools
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          for p in [
-              Path('opt/pincabos/update/pincabos_updates.py'),
-              Path('opt/pincabos/update/build_release_v4.py'),
-          ]:
-              compile(p.read_text(encoding='utf-8'), str(p), 'exec')
-          PY
-          bash -n usr/local/sbin/getpcos
-          bash -n usr/local/bin/getpcos
-      - name: Build release assets
-        run: |
-          rm -rf dist
-          python3 opt/pincabos/update/build_release_v4.py \
-            --version '${{ inputs.version }}' \
-            --channel '${{ inputs.channel }}' \
-            --out dist
-          cd dist
-          sha256sum -c audit.sha256
-      - name: Create GitHub Release
+          sudo apt-get update
+          sudo apt-get install -y zstd
+
+      - name: Resolve merged PR
+        id: version
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
-          CHANNEL: ${{ inputs.channel }}
+          EVENT_PR: ${{ github.event.pull_request.number }}
+          INPUT_PR: ${{ inputs.pr_number }}
+          INPUT_CHANNEL: ${{ inputs.channel }}
+        shell: bash
         run: |
-          if gh release view "$VERSION" >/dev/null 2>&1; then
-            echo "Release already exists: $VERSION" >&2
+          set -Eeuo pipefail
+
+          latest="$(
+            gh pr list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state merged \
+              --limit 100 \
+              --json number,mergedAt \
+              --jq \
+              'sort_by(.mergedAt) | last | .number'
+          )"
+
+          if [[ -z "$latest" || "$latest" == "null" ]]; then
+            echo "Aucune PR mergee." >&2
             exit 1
           fi
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            pr="${INPUT_PR:-$latest}"
+            channel="${INPUT_CHANNEL:-beta}"
+          else
+            pr="$EVENT_PR"
+            channel="beta"
+          fi
+
+          if [[ "$pr" != "$latest" ]]; then
+            echo "PR #$pr n'est plus la derniere mergee."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          display="Alpha 2.${pr}"
+          date_tag="$(date -u +%Y%m%d)"
+          tag="alpha2.${pr}-${channel}.${date_tag}.1"
+
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "display=$display" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+          echo "PR      : #$pr"
+          echo "Version : $display"
+          echo "Tag     : $tag"
+
+      - name: Synchronize source version
+        if: steps.version.outputs.publish == 'true'
+        env:
+          DISPLAY_VERSION: ${{ steps.version.outputs.display }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          display = os.environ["DISPLAY_VERSION"]
+
+          stamp = datetime.now(
+              timezone.utc
+          ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+          for path in [
+              Path("opt/pincabos/config/version.json"),
+              Path("opt/pincabos/version.json"),
+          ]:
+              if not path.exists():
+                  continue
+
+              data = json.loads(
+                  path.read_text(
+                      encoding="utf-8"
+                  )
+              )
+
+              data["version"] = display
+
+              if "updated_at" in data:
+                  data["updated_at"] = (
+                      stamp
+                      .replace("T", " ")
+                      .replace("Z", "")
+                  )
+
+              if "generated_at" in data:
+                  data["generated_at"] = stamp
+
+              path.write_text(
+                  json.dumps(
+                      data,
+                      indent=2,
+                      ensure_ascii=False
+                  ) + "\n",
+                  encoding="utf-8"
+              )
+          PY
+
+          git config user.name "PinCabOS Release"
+          git config user.email "pincabos@localhost"
+
+          git add \
+            opt/pincabos/config/version.json \
+            opt/pincabos/version.json
+
+          if ! git diff --cached --quiet; then
+            git commit \
+              -m "chore(release): ${DISPLAY_VERSION} [skip ci]"
+
+            git push origin HEAD:main
+          fi
+
+      - name: Validate sources
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          for path in [
+              Path("opt/pincabos/update/pincabos_updates.py"),
+              Path("opt/pincabos/update/build_release_v4.py"),
+              Path("opt/pincabos/web/pincabos_updates.py"),
+              Path("opt/pincabos/web/tools.py"),
+              Path("usr/local/sbin/pincabos-update-web-runner"),
+          ]:
+              compile(
+                  path.read_text(
+                      encoding="utf-8"
+                  ),
+                  str(path),
+                  "exec"
+              )
+          PY
+
+          bash -n usr/local/sbin/getpcos
+          bash -n usr/local/bin/getpcos
+
+          sudo visudo \
+            -cf \
+            etc/sudoers.d/pincabos-updates-web
+
+      - name: Build full Release
+        if: steps.version.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.tag }}
+          DISPLAY_VERSION: ${{ steps.version.outputs.display }}
+          CHANNEL: ${{ steps.version.outputs.channel }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          rm -rf dist
+
+          GITHUB_SHA="$(git rev-parse HEAD)" \
+          python3 \
+            opt/pincabos/update/build_release_v4.py \
+            --version "$VERSION" \
+            --display-version "$DISPLAY_VERSION" \
+            --channel "$CHANNEL" \
+            --out dist
+
+          cd dist
+
+          sha256sum -c audit.sha256
+
+          echo
+          echo "=== RELEASE.JSON ==="
+          cat release.json
+
+          echo
+          echo "=== FILE COUNT ==="
+          wc -l files.list
+
+      - name: Publish GitHub Release
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.tag }}
+          DISPLAY_VERSION: ${{ steps.version.outputs.display }}
+          CHANNEL: ${{ steps.version.outputs.channel }}
+          PRNUM: ${{ steps.version.outputs.pr }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          title="$(
+            gh pr view \
+              "$PRNUM" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json title \
+              --jq '.title'
+          )"
+
+          notes="$(
+            printf \
+              'PinCabOS %s\n\nRelease automatique apres merge de la PR #%s.\n\n%s\n\nRelease complete des fichiers geres par Updates V4. Validation SHA-256, backup et rollback.' \
+              "$DISPLAY_VERSION" \
+              "$PRNUM" \
+              "$title"
+          )"
+
           extra=()
-          if [[ "$CHANNEL" != "stable" ]]; then extra+=(--prerelease); fi
-          gh release create "$VERSION" \
-            dist/pincabos-update.tar.zst \
-            dist/files.list \
-            dist/remove.list \
-            dist/release.json \
-            dist/audit.sha256 \
-            --target "$GITHUB_SHA" \
-            --title "PinCabOS $VERSION" \
-            --notes "PinCabOS Updates V4 clean release. Distributed from official GitHub Releases with SHA-256 validation, backup and rollback." \
-            "${extra[@]}"
+
+          if [[ "$CHANNEL" != "stable" ]]; then
+            extra+=(--prerelease)
+          fi
+
+          if gh release view \
+              "$VERSION" \
+              --repo "$GITHUB_REPOSITORY" \
+              >/dev/null 2>&1
+          then
+            gh release upload \
+              "$VERSION" \
+              dist/pincabos-update.tar.zst \
+              dist/files.list \
+              dist/remove.list \
+              dist/release.json \
+              dist/audit.sha256 \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create \
+              "$VERSION" \
+              dist/pincabos-update.tar.zst \
+              dist/files.list \
+              dist/remove.list \
+              dist/release.json \
+              dist/audit.sha256 \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$(git rev-parse HEAD)" \
+              --title "PinCabOS $DISPLAY_VERSION" \
+              --notes "$notes" \
+              "${extra[@]}"
+          fi
+
+          echo "GO [OK] Release publiee : $VERSION"

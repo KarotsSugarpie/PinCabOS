@@ -32,7 +32,8 @@ def tools_hub_html():
 <!-- PCOS_TOOLS_ART_CARDS_V1 -->
 <style>
 .pco-tools-page {
-  max-width: 1880px;
+  max-width: none;
+  width: 100%;
   margin: 0 auto;
   color: #f7f1ff;
 }
@@ -466,6 +467,34 @@ def tools_hub_html():
 
       <div class="pco-tools-card-list">
 
+        <!-- PINCABOS_UPDATES_V4_CARD_START -->
+        <a class="tool-card" href="/tools/updates">
+          <div class="pco-tool-art">
+            <img
+              src="/static/pincabos-assets/PCOSUpdatePinCabOS.png?v=updates-pro-v3"
+              alt="PinCabOS Updates"
+              loading="lazy">
+          </div>
+          <div class="pco-tool-body">
+            <strong>PinCabOS Updates</strong>
+            <span class="pco-tool-description">
+              Vérifier, installer ou restaurer les mises à jour PinCabOS
+              publiées sur GitHub Releases.
+            </span>
+            <div class="pco-tool-footer">
+              <span>Ouvrir Updates</span>
+              <span class="pco-tool-open">→</span>
+            </div>
+          </div>
+        </a>
+        <!-- PINCABOS_UPDATES_V4_CARD_END -->
+
+
+
+
+
+
+
         <a class="tool-card" href="/tools/import-table">
           <div class="pco-tool-art">
             <img src="/static/pincabos-assets/PCOSImport.png?v=toolsart1"
@@ -576,16 +605,7 @@ def tools_hub_html():
         </a>
 
 
-        <!-- PINCABOS_UPDATES_V4_CARD_START -->
-        <a class="tool-card" href="/tools/updates">
-          <div class="pco-tool-art" style="display:grid;place-items:center;font-size:64px;color:#ff9b25">↻</div>
-          <div class="pco-tool-body">
-            <strong>PinCabOS Updates</strong>
-            <span class="pco-tool-description">Verifier, installer ou restaurer les mises a jour PinCabOS publiees sur GitHub Releases.</span>
-            <div class="pco-tool-footer"><span>Ouvrir Updates</span><span class="pco-tool-open">→</span></div>
-          </div>
-        </a>
-        <!-- PINCABOS_UPDATES_V4_CARD_END -->
+
 <a class="tool-card" href="/tools/appearance">
           <div class="pco-tool-art">
             <img src="/static/pincabos-assets/PCOSApparence.png?v=toolsart1"
