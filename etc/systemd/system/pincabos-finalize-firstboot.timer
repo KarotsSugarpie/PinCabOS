@@ -1,6 +1,7 @@
 [Unit]
 Description=Run PinCabOS finalizer after first boot settles
 ConditionPathExists=!/var/lib/pincabos/doctor-firstboot.done
+ConditionPathExists=!/etc/pincabos-live
 
 [Timer]
 OnBootSec=45s
