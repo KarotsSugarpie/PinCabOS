@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280">
+<defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#823ed1"/><stop offset="1" stop-color="#ff8a16"/></linearGradient></defs>
+<rect width="640" height="280" rx="28" fill="#08040f"/>
+<circle cx="320" cy="132" r="82" fill="none" stroke="url(#g)" stroke-width="18" stroke-dasharray="380 140" transform="rotate(-35 320 132)"/>
+<path d="M286 76h68l-34-34z" fill="#ff9c2a"/>
+<path d="M320 92v82m0 0-32-32m32 32 32-32" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="320" y="248" fill="#fff" font-size="32" font-family="sans-serif" font-weight="700" text-anchor="middle">PinCabOS Updates</text>
+</svg>

@@ -1,0 +1,1 @@
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/getpcos update, /usr/local/sbin/getpcos rollback

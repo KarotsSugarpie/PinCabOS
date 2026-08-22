@@ -244,6 +244,129 @@ html body .pincabos-nav .nav-vpinfe-vps-group::before {
   border-color: var(--pco-appearance-nav-panel-border, rgba(255, 122, 0, .25)) !important;
 }
 
+/* PINCABOS_FULLWIDTH_GLOBAL_V2_BEGIN */
+
+/*
+ * Full Width PinCabOS sans débordement horizontal.
+ *
+ * IMPORTANT:
+ * - pas de width:100% forcé sur BODY
+ * - les blocs remplissent naturellement leur parent avec width:auto
+ * - max-width:100% empêche le dépassement du viewport
+ * - min-width:0 permet aux flex/grid de rétrécir correctement
+ * - aucune scrollbar horizontale au niveau de la page
+ */
+
+html {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden !important;
+  overflow-x: clip !important;
+}
+
+html body {
+  width: auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+  overflow-x: clip !important;
+}
+
+/* Conteneurs principaux */
+
+html body main,
+html body > main,
+html body > .container,
+html body > .container-fluid,
+html body > .main-content,
+html body > .page-content,
+html body > .content-wrapper,
+html body main > .container,
+html body main > .container-fluid,
+html body main > .main-content,
+html body main > .page-content,
+html body main > .content-wrapper {
+  width: auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Racines des pages PinCabOS */
+
+html body .pco-tools-page,
+html body .pco-up-wrap,
+html body .pco-st-shell,
+html body .dof-pro-shell,
+html body .vpxbc-shell,
+html body .pco-page,
+html body .pco-page-wrap,
+html body .pco-page-shell,
+html body .pco-dashboard-page,
+html body .pco-settings-page,
+html body .pco-admin-page,
+html body .pco-network-page,
+html body .pco-storage-page,
+html body .pco-explorer-page,
+html body .pco-import-page,
+html body .pco-export-page {
+  width: auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Wrappers directs des modules */
+
+html body main > [class$="-page"],
+html body main > [class$="-shell"],
+html body main > [class$="-wrap"],
+html body main > [class$="-wrapper"] {
+  width: auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/*
+ * Flex/Grid:
+ * empêcher un enfant de forcer son parent
+ * au-delà du viewport.
+ */
+
+html body main > *,
+html body .pco-tools-page > *,
+html body .pco-up-wrap > *,
+html body .pco-st-shell > *,
+html body .pco-page > *,
+html body .pco-page-wrap > *,
+html body .pco-page-shell > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Médias */
+
+html body img,
+html body video,
+html body canvas {
+  max-width: 100%;
+}
+
+/*
+ * Protection finale.
+ * Un composant mal dimensionné ne doit jamais
+ * agrandir la page entière.
+ */
+
+html body {
+  contain: paint;
+}
+
+/* PINCABOS_FULLWIDTH_GLOBAL_V2_END */
+
 /* PINCABOS_FULLWIDTH_GLOBAL_V1_BEGIN */
 
 /*

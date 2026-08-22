@@ -13,11 +13,11 @@
   --pco-appearance-muted-text: #d8b8ff;
   --pco-appearance-card-bg: rgba(29, 11, 46, 0.76);
   --pco-appearance-card-border: #ff7a00;
-  --pco-appearance-card-radius: 2px;
+  --pco-appearance-card-radius: 4px;
   --pco-appearance-card-shadow: 0 0 25px rgba(255, 122, 0, 0.25);
   --pco-appearance-button-bg: #ff7a00;
   --pco-appearance-button-text: #160020;
-  --pco-appearance-button-radius: 2px;
+  --pco-appearance-button-radius: 4px;
   --pco-appearance-secondary-bg: #5f2a91;
   --pco-appearance-secondary-text: #ffffff;
   --pco-appearance-nav-active-bg: #ff7a00;
