@@ -790,14 +790,35 @@ echo "==============================================================="
 [ -d "$TARGET" ] || { echo "ERROR: target missing: $TARGET"; exit 1; }
 findmnt "$TARGET" >/dev/null || { echo "ERROR: $TARGET not mounted"; exit 1; }
 
+# PINCABOS_LIVE_SQUASHFS_V1
+# Two payload shapes are supported:
+#   - live model : the ISO *is* the system, shipped as casper/filesystem.squashfs
+#   - classic    : a split zstd tarball next to this helper
+LIVE_SQUASHFS="$PAYLOAD_DIR/../casper/filesystem.squashfs"
+
 echo
 echo "=== 1) Verify chunks ==="
-( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256 )
+if [ -f "$LIVE_SQUASHFS" ]; then
+  echo "Live squashfs detected, checksum already verified by casper at boot."
+else
+  ( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256 )
+fi
 
 echo
 echo "=== 2) Extract rootfs ==="
-cat "$PAYLOAD_DIR"/pincabos-rootfs-cab-v8.1g.tar.zst.part-* \
-  | tar --acls --xattrs --numeric-owner -I zstd -xpf - -C "$TARGET"
+if [ -f "$LIVE_SQUASHFS" ]; then
+  # Progress bar left on purpose: the graphical installer parses it.
+  unsquashfs -f -d "$TARGET" "$LIVE_SQUASHFS"
+  # Strip what only makes sense on live media.
+  rm -f "$TARGET/etc/pincabos-live" \
+        "$TARGET/etc/netplan/01-pincabos-live-dhcp.yaml"
+  rm -f "$TARGET/etc/systemd/system/pincabos-gui-install.target" \
+        "$TARGET/etc/systemd/system/pincabos-gui-install-prepare.service" \
+        "$TARGET/usr/local/sbin/pincabos-gui-install-prepare"
+else
+  cat "$PAYLOAD_DIR"/pincabos-rootfs-cab-v8.1g.tar.zst.part-* \
+    | tar --acls --xattrs --numeric-owner -I zstd -xpf - -C "$TARGET"
+fi
 
 
 echo
@@ -4562,6 +4583,13 @@ regional_setup() {
         [recap_title]="Regional configuration"
         [recap_continue]="Continue" [recap_change]="Change"
         [mode_title]="PinCabOS install mode"
+        [mode_up]="Update an existing PinCabOS (keep tables and settings)" [mode_upb]="Reinstalls over an existing install. Tables, media and screen/audio/network settings are kept."
+        [disks_upgrade]="Available target disks — UPDATE AN EXISTING INSTALL"
+        [up_scan]="Looking for an existing PinCabOS installation"
+        [up_found]="Existing installation found, settings will be kept"
+        [up_none]="No PinCabOS installation found on this disk"
+        [up_saved]="Settings saved"
+        [up_restored]="Settings restored"
         [mode_1]="Erase a full disk and install PinCabOS" [mode_1b]="Recommended for a dedicated pincab."
         [mode_2]="Install PinCabOS into existing unallocated space" [mode_2b]="Dualboot mode. Does NOT resize existing partitions."
         [mode_3]="Rescue shell" [mode_4]="Reboot"
@@ -4593,6 +4621,13 @@ regional_setup() {
         [recap_title]="Configuration régionale"
         [recap_continue]="Continuer" [recap_change]="Modifier"
         [mode_title]="Mode d'installation PinCabOS"
+        [mode_up]="Mettre à jour un PinCabOS existant (conserver tables et réglages)" [mode_upb]="Réinstalle par-dessus une installation existante. Tables, médias et réglages écrans/audio/réseau sont conservés."
+        [disks_upgrade]="Disques cibles disponibles — MISE À JOUR"
+        [up_scan]="Recherche d'une installation PinCabOS existante"
+        [up_found]="Installation existante trouvée, les réglages seront conservés"
+        [up_none]="Aucune installation PinCabOS sur ce disque"
+        [up_saved]="Réglages sauvegardés"
+        [up_restored]="Réglages restaurés"
         [mode_1]="Effacer un disque entier et installer PinCabOS" [mode_1b]="Recommandé pour un pincab dédié."
         [mode_2]="Installer dans l'espace non alloué existant" [mode_2b]="Mode dualboot. Ne redimensionne AUCUNE partition."
         [mode_3]="Console de secours" [mode_4]="Redémarrer"
@@ -4625,6 +4660,13 @@ regional_setup() {
         [recap_continue]="Weiter" [recap_change]="Ändern"
         [mode_title]="PinCabOS-Installationsmodus"
         [mode_1]="Gesamte Festplatte löschen und PinCabOS installieren" [mode_1b]="Empfohlen für einen dedizierten Pincab."
+        [mode_up]="Vorhandenes PinCabOS aktualisieren (Tische und Einstellungen behalten)" [mode_upb]="Installiert ueber eine bestehende Installation. Tische, Medien und Bildschirm-/Audio-/Netzwerkeinstellungen bleiben erhalten."
+        [disks_upgrade]="Verfuegbare Ziellaufwerke — AKTUALISIERUNG"
+        [up_scan]="Suche nach vorhandener PinCabOS-Installation"
+        [up_found]="Vorhandene Installation gefunden, Einstellungen bleiben erhalten"
+        [up_none]="Keine PinCabOS-Installation auf diesem Laufwerk"
+        [up_saved]="Einstellungen gesichert"
+        [up_restored]="Einstellungen wiederhergestellt"
         [mode_2]="In vorhandenen unpartitionierten Bereich installieren" [mode_2b]="Dualboot-Modus. Partitionen werden NICHT verkleinert."
         [mode_3]="Rettungskonsole" [mode_4]="Neu starten"
         [disks_full]="Verfügbare Ziellaufwerke — VOLLSTÄNDIGES LÖSCHEN"
@@ -4656,6 +4698,13 @@ regional_setup() {
         [recap_continue]="Continua" [recap_change]="Modifica"
         [mode_title]="Modalità di installazione PinCabOS"
         [mode_1]="Cancella un intero disco e installa PinCabOS" [mode_1b]="Consigliato per un pincab dedicato."
+        [mode_up]="Aggiorna un PinCabOS esistente (mantieni tavoli e impostazioni)" [mode_upb]="Reinstalla sopra un'installazione esistente. Tavoli, media e impostazioni schermi/audio/rete sono mantenuti."
+        [disks_upgrade]="Dischi di destinazione — AGGIORNAMENTO"
+        [up_scan]="Ricerca di un'installazione PinCabOS esistente"
+        [up_found]="Installazione esistente trovata, le impostazioni saranno mantenute"
+        [up_none]="Nessuna installazione PinCabOS su questo disco"
+        [up_saved]="Impostazioni salvate"
+        [up_restored]="Impostazioni ripristinate"
         [mode_2]="Installa nello spazio non allocato esistente" [mode_2b]="Modalità dualboot. NON ridimensiona le partizioni."
         [mode_3]="Console di ripristino" [mode_4]="Riavvia"
         [disks_full]="Dischi di destinazione — CANCELLAZIONE TOTALE"
@@ -4687,6 +4736,13 @@ regional_setup() {
         [recap_continue]="Continuar" [recap_change]="Cambiar"
         [mode_title]="Modo de instalación PinCabOS"
         [mode_1]="Borrar un disco completo e instalar PinCabOS" [mode_1b]="Recomendado para un pincab dedicado."
+        [mode_up]="Actualizar un PinCabOS existente (conservar mesas y ajustes)" [mode_upb]="Reinstala sobre una instalacion existente. Mesas, medios y ajustes de pantallas/audio/red se conservan."
+        [disks_upgrade]="Discos de destino — ACTUALIZACION"
+        [up_scan]="Buscando una instalacion PinCabOS existente"
+        [up_found]="Instalacion existente encontrada, se conservaran los ajustes"
+        [up_none]="No hay instalacion PinCabOS en este disco"
+        [up_saved]="Ajustes guardados"
+        [up_restored]="Ajustes restaurados"
         [mode_2]="Instalar en el espacio no asignado existente" [mode_2b]="Modo dualboot. NO redimensiona particiones."
         [mode_3]="Consola de rescate" [mode_4]="Reiniciar"
         [disks_full]="Discos de destino — BORRADO TOTAL"
@@ -5252,11 +5308,17 @@ check_payload() {
     exit 1
   }
 
-  (
-    cd "$PAYLOAD_DIR"
-    sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
-    sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
-  )
+  # PINCABOS_LIVE_SQUASHFS_V1 — same two shapes as the deployment helper.
+  if [ -f "$PAYLOAD_DIR/../casper/filesystem.squashfs" ]; then
+    echo "Live squashfs detected, already verified by casper at boot."
+    ( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256 )
+  else
+    (
+      cd "$PAYLOAD_DIR"
+      sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
+      sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
+    )
+  fi
 
   echo
   pco_go "payload checksums valid"
@@ -5530,6 +5592,103 @@ full_disk_install() {
   final_boot_refresh "full"
 }
 
+# Settings kept across an update. Deliberately excludes locale, keyboard,
+# timezone and orientation: the wizard asks for those every time, restoring
+# them would silently undo the user's fresh choices.
+PCO_KEEP_PATHS=(
+  # screen roles and layout
+  "home/pinball/.config/vpinfe/vpinfe.ini"
+  # audio (volume and mute intent replayed at session start)
+  "home/pinball/.config/pincabos/audio-volume-widget.json"
+  # network: PinCabOS netplan file and NetworkManager profiles (Wi-Fi keys)
+  "etc/netplan/99-pincabos-network.yaml"
+  "etc/NetworkManager/system-connections"
+  # media and databases the user has accumulated
+  "var/lib/pincabos/media-hunter"
+  "home/pinball/.config/vpinfe/vpsdb.json"
+  "home/pinball/.config/vpinfe/roms.json"
+  "home/pinball/.config/vpinfe/collections.ini"
+  # dashboard arrangement
+  "home/pinball/.config/pincabos/dashboard-layout.json"
+  "home/pinball/.config/pincabos/dashboard-mode.json"
+  "home/pinball/.config/pincabos/dashboard-layout-simple.json"
+  "home/pinball/.config/pincabos/dashboard-layout-pro.json"
+  # cab identity
+  "etc/pincabos/system-name.conf"
+)
+
+PCO_KEEP_DIR="/run/pincabos-keep"
+
+save_user_settings() {
+  rm -rf "$PCO_KEEP_DIR"
+  mkdir -p "$PCO_KEEP_DIR"
+  local kept=0 p
+  for p in "${PCO_KEEP_PATHS[@]}"; do
+    [ -e "$TARGET/$p" ] || continue
+    mkdir -p "$PCO_KEEP_DIR/$(dirname "$p")"
+    cp -a "$TARGET/$p" "$PCO_KEEP_DIR/$p"
+    kept=$((kept + 1))
+  done
+  pco_go "$(t up_saved) ($kept)"
+}
+
+restore_user_settings() {
+  local restored=0 p
+  for p in "${PCO_KEEP_PATHS[@]}"; do
+    [ -e "$PCO_KEEP_DIR/$p" ] || continue
+    mkdir -p "$TARGET/$(dirname "$p")"
+    rm -rf "$TARGET/$p"
+    cp -a "$PCO_KEEP_DIR/$p" "$TARGET/$p"
+    restored=$((restored + 1))
+  done
+  # Owners are not carried by the archive: give the pinball files back.
+  if [ -d "$TARGET/home/pinball" ]; then
+    chroot "$TARGET" chown -R pinball:pinball /home/pinball/.config 2>/dev/null || true
+  fi
+  rm -rf "$PCO_KEEP_DIR"
+  pco_go "$(t up_restored) ($restored)"
+}
+
+upgrade_install() {
+  choose_disk "$(t disks_upgrade)"
+  part_paths_for_disk "$DISK"
+
+  echo
+  pco_step "$(t up_scan)"
+  [ -b "$ROOT_PART" ] || { pco_error "$(t up_none)"; return 1; }
+
+  unmount_disk_mounts "$DISK"
+  prepare_target_mount
+  mount "$ROOT_PART" "$TARGET" || { pco_error "$(t up_none)"; return 1; }
+
+  # An update must not be able to wipe a stranger's disk: refuse anything that
+  # is not recognisably a PinCabOS root.
+  if [ ! -d "$TARGET/opt/pincabos" ] || [ ! -d "$TARGET/home/pinball" ]; then
+    umount -R "$TARGET" 2>/dev/null || true
+    pco_error "$(t up_none)"
+    return 1
+  fi
+  pco_go "$(t up_found)"
+
+  mkdir -p "$TARGET/boot/efi"
+  if [ -b "$EFI_PART" ]; then
+    mount "$EFI_PART" "$TARGET/boot/efi" || true
+  fi
+  mountpoint -q "$TARGET/boot/efi" || {
+    umount -R "$TARGET" 2>/dev/null || true
+    pco_error "EFI partition not mounted, aborting update"
+    return 1
+  }
+
+  save_user_settings
+  # unsquashfs -f overwrites in place: system files are refreshed, everything
+  # outside the image (tables, media next to them) is left alone.
+  install_payload "upgrade"
+  restore_user_settings
+  write_fstab "$ROOT_PART" "$EFI_PART"
+  final_boot_refresh "upgrade"
+}
+
 find_efi_partition() {
   local disk="$1"
 
@@ -5696,9 +5855,12 @@ while true; do
   echo "  [2] $(t mode_2)"
   echo "      $(t mode_2b)"
   echo
-  echo "  [3] $(t mode_3)"
+  echo "  [3] $(t mode_up)"
+  echo "      $(t mode_upb)"
   echo
-  echo "  [4] $(t mode_4)"
+  echo "  [4] $(t mode_3)"
+  echo
+  echo "  [5] $(t mode_4)"
   echo
   pco_prompt "$(t choice): "
   if [ -n "${PCO_ANS_MODE:-}" ]; then MODE="$PCO_ANS_MODE"; echo "$MODE"; else read -r MODE; fi
@@ -5706,8 +5868,9 @@ while true; do
   case "$MODE" in
     1) full_disk_install; break ;;
     2) dualboot_install; break ;;
-    3) bash ;;
-    4) reboot ;;
+    3) upgrade_install && break ;;
+    4) bash ;;
+    5) reboot ;;
     *) echo "$(t invalid)" ;;
   esac
 done

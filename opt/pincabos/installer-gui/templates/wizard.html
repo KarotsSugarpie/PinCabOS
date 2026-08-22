@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PinCabOS Installer</title>
 <style>
+.danger-box.soft{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.14);color:inherit}
 :root{
   --bg:#050007; --bg2:#160020; --card:#1d0a2e; --border:#5f2a91;
   --accent:#ffb000; --accent2:#ff7a00; --text:#f5f7fa; --muted:#d8b8ff;
@@ -172,6 +173,8 @@ button{
       <b data-i18n="mode_erase"></b><div class="o-desc" data-i18n="mode_erase_d"></div></div>
     <div class="opt" data-mode="2" style="text-align:left;padding:16px">
       <b data-i18n="mode_dual"></b><div class="o-desc" data-i18n="mode_dual_d"></div></div>
+    <div class="opt" data-mode="3" style="text-align:left;padding:16px">
+      <b data-i18n="mode_up"></b><div class="o-desc" data-i18n="mode_up_d"></div></div>
   </div>
   <div class="hint" id="disk-hint" data-i18n="disk_hint"></div>
   <div class="btns"><button class="ghost" onclick="go('st-orient')" data-i18n="back"></button>
@@ -270,10 +273,15 @@ function checkDisk(){const ok=!!(S.disk&&S.mode);
 function fillSummary(){
   const rows=[[t("locale"),S.locale],[t("keyboard"),S.xkb],[t("timezone"),S.tz],
     [t("orientation"),t("o"+S.orient)+" — "+t("o"+S.orient+"d")],
-    [t("disk"),S.disk+" ("+(S.mode==1?t("mode_erase"):t("mode_dual"))+")"]];
+    [t("disk"),S.disk+" ("+(S.mode==1?t("mode_erase"):S.mode==3?t("mode_up"):t("mode_dual"))+")"]];
   document.getElementById("summary").innerHTML=rows.map(([k,v])=>
     `<div class="sumline"><span>${k}</span><b>${v}</b></div>`).join("");
-  document.getElementById("confirm-dev").textContent=S.disk}
+  document.getElementById("confirm-dev").textContent=S.disk;
+  // Une mise a jour n'efface rien : le message d'effacement serait faux.
+  const box=document.querySelector("#st-confirm .danger-box");
+  const warn=box?box.querySelector("[data-i18n=confirm_warn]"):null;
+  if(warn){warn.textContent=t(S.mode==3?"confirm_warn_up":"confirm_warn");}
+  if(box){box.classList.toggle("soft",S.mode==3);}}
 document.getElementById("confirm-input").oninput=e=>{
   document.getElementById("btn-install").disabled=
     e.target.value.trim().toUpperCase()!=="INSTALL PINCABOS"};

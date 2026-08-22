@@ -1,6 +1,7 @@
 [Unit]
 Description=PinCabOS first boot finalizer and system doctor
 ConditionPathExists=!/var/lib/pincabos/doctor-firstboot.done
+ConditionPathExists=!/etc/pincabos-live
 After=network-online.target
 Wants=network-online.target
 

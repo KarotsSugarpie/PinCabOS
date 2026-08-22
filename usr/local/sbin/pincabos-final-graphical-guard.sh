@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+
+# PINCABOS_INSTALLER_GUARD_SKIP
+# Pendant une installation, cet outil ne doit rien faire : forcer
+# graphical.target, (re)demarrer lightdm et changer de VT volerait l'ecran
+# a l'installateur. Le test porte sur la ligne de commande du noyau, pas sur
+# le marqueur live : en mode « essayer sans installer » la session
+# graphique doit demarrer normalement.
+if grep -qw 'pincabos.installer' /proc/cmdline 2>/dev/null; then
+  echo 'PinCabOS: installation in progress, graphical guard skipped.'
+  exit 0
+fi
+
 pco_go() {
   printf 'GO: %s\n' "$*"
 }

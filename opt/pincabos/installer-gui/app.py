@@ -77,6 +77,10 @@ def keyboard():
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]|\x1b[c()][0-9A-B]?")
 
+# Barre de progression d'unsquashfs : [===|   ]  1234/5678  27%
+UNSQUASHFS_RE = re.compile(r"\]\s+\d+\s*/\s*\d+\s+(\d+)%")
+DEPLOY_FROM, DEPLOY_TO = 45, 72
+
 
 @app.route("/api/install", methods=["POST"])
 def install():
@@ -85,6 +89,8 @@ def install():
         return jsonify({"error": "bad-confirm"}), 400
     if not re.fullmatch(r"/dev/[a-z0-9]+", a.get("disk", "")) and not DEMO:
         return jsonify({"error": "bad-disk"}), 400
+    if str(a.get("mode", "")) not in ("1", "2", "3"):
+        return jsonify({"error": "bad-mode"}), 400
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     ANSWERS.write_text("".join(
         f'PCO_ANS_{k.upper()}="{a[k]}"\n'
@@ -127,6 +133,7 @@ def progress():
             return
         pos = 0
         pct = 2
+        envoye = 0
         while pct < 100:
             if INSTALL_LOG.exists():
                 text = INSTALL_LOG.read_text(errors="replace")
@@ -135,6 +142,13 @@ def progress():
                     for marker, p in PHASES:
                         if marker.lower() in line.lower():
                             pct = max(pct, p)
+                    # progression fine pendant l'extraction du rootfs
+                    if DEPLOY_FROM <= pct < DEPLOY_TO:
+                        m = UNSQUASHFS_RE.search(line)
+                        if m:
+                            part = min(100, int(m.group(1)))
+                            pct = max(pct, DEPLOY_FROM
+                                      + (DEPLOY_TO - DEPLOY_FROM) * part // 100)
                     # log lisible : sans ANSI, sans lignes decoratives ni art figlet
                     clean = ANSI_RE.sub("", line).strip()
                     if not clean:
@@ -142,7 +156,12 @@ def progress():
                     readable = sum(c.isalnum() or c in " ,.:;()/'\"-_" for c in clean)
                     if readable / len(clean) < 0.6:
                         continue
+                    envoye = pct
                     yield f"data: {json.dumps({'pct': pct, 'log': clean})}\n\n"
+            # la barre avance meme si aucune ligne lisible n'est apparue
+            if pct != envoye:
+                envoye = pct
+                yield f"data: {json.dumps({'pct': pct})}\n\n"
             time.sleep(1)
         yield f"data: {json.dumps({'pct': 100, 'label': 'done'})}\n\n"
     return Response(stream(), mimetype="text/event-stream")
