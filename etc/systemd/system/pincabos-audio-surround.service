@@ -1,0 +1,18 @@
+[Unit]
+Description=PinCabOS analog multichannel output (5.1 / 7.1)
+Documentation=https://pincabos.cc/
+# La reaffectation de broche relit le codec, ce que le noyau refuse tant
+# qu un client tient la carte. On passe donc avant la session graphique,
+# seule a lancer PipeWire.
+After=sound.target
+Before=display-manager.service
+ConditionPathExists=/opt/pincabos/config/audio/surround.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-audio-surround apply-boot
+RemainAfterExit=yes
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target

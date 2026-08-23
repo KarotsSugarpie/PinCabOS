@@ -1,0 +1,6 @@
+# PinCabOS - sortie multicanal analogique pilotee depuis la page Audio / SSF.
+# Seuls les modes connus sont autorises : aucun argument libre.
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-audio-surround detect, \
+    /usr/local/sbin/pincabos-audio-surround enable 7.1, \
+    /usr/local/sbin/pincabos-audio-surround enable 5.1, \
+    /usr/local/sbin/pincabos-audio-surround enable stereo

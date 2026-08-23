@@ -7,3 +7,7 @@ unclutter -idle 1 -root &
 # Niveaux audio choisis dans le widget volume : ni ALSA ni WirePlumber ne les
 # conservent, on les rejoue une fois la session audio demarree.
 /usr/local/bin/pincabos-audio-restore --session &
+
+# Profil multicanal de la carte son : WirePlumber repart en stereo a chaque
+# session, on rejoue donc le profil choisi une fois PipeWire lance.
+/usr/local/sbin/pincabos-audio-surround apply-session &

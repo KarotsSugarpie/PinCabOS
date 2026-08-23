@@ -360,7 +360,9 @@ def refresh_frontend(imported: int) -> str:
 
     try:
         playing = subprocess.run(
-            ["/usr/bin/pgrep", "-f", "VPinballX"],
+            # Le motif vise le binaire, pas la chaine : "VPinballX" tout
+            # court se reconnait dans la ligne de commande de qui le cherche.
+            ["/usr/bin/pgrep", "-f", "/VPinballX_BGFX[^/]*/VPinballX_BGFX"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             timeout=5,
