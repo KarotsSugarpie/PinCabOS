@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 """Genere le splash de demarrage a partir de la configuration des ecrans.
 
-PINCABOS_SPLASH_FROM_SCREENS_V1
+PINCABOS_SPLASH_FROM_SCREENS_V2
 
-Le theme Plymouth ne devine plus rien : il recoit les geometries exactes
-definies dans screens.json — position, resolution parametree et rotation de
-chaque role. L'image est posee une fois par ecran, et seul le playfield suit
-l'orientation choisie a l'installation.
+Le theme Plymouth ne devine plus rien : il recoit les resolutions exactes
+definies dans screens.json et s en sert pour reconnaitre le playfield parmi
+les surfaces que Plymouth expose. L illustration est ensuite posee une fois
+par ecran, a la taille de cet ecran, et seul le playfield suit l orientation
+choisie a l installation.
 
-Sans cela, le theme appelait Window.GetWidth() sans indice : il traitait tous
-les ecrans comme une seule surface et appliquait la rotation partout, laissant
-le fronton couche sur un cabinet dont le playfield est en portrait.
+Pourquoi ne pas poser les images aux coordonnees de screens.json : au moment
+du splash, X11 n existe pas encore. Plymouth ouvre une surface par sortie DRM
+et les fait toutes partir de l origine — il n y a pas de bureau etendu. Une
+image placee a x=3840 tombe donc hors de toutes les surfaces et ne s affiche
+nulle part. C est ce qui ne laissait le visuel que sur le playfield.
 
-Le theme vit dans l'initrd : il faut donc le regenerer apres chaque
-modification, ce que fait ce script.
+Le theme vit dans l initrd : il faut le regenerer apres chaque modification,
+ce que fait ce script.
 
-  pincabos-splash-sync [--force] [--no-initrd]
+  pincabos-splash-sync [--force] [--no-initrd] [--stdout]
 """
 from __future__ import annotations
 
@@ -36,84 +39,126 @@ ROLES = ("playfield", "backglass", "fulldmd", "topper")
 GEOMETRIE = re.compile(r"^(\d+)x(\d+)\+(-?\d+)\+(-?\d+)$")
 
 
-def geometries() -> tuple[dict[str, tuple[int, int, int, int]], int]:
-    """Geometries par role et rotation du playfield, lues dans screens.json."""
+def configuration() -> tuple[dict[str, tuple[int, int]], int]:
+    """Resolutions parametrees par role, et rotation du playfield."""
     data = json.loads(SCREENS.read_text(encoding="utf-8"))
-    ecrans: dict[str, tuple[int, int, int, int]] = {}
+
+    rotation = int(str(data.get("playfield_rotation") or "0") or 0) % 360
+    if rotation not in (0, 90, 180, 270):
+        rotation = 0
+
+    ecrans: dict[str, tuple[int, int]] = {}
     for role in ROLES:
         entree = data.get(role)
         if not isinstance(entree, dict):
             continue
-        m = GEOMETRIE.match(str(entree.get("geometry") or ""))
-        if not m:
-            continue
-        largeur, hauteur, x, y = (int(v) for v in m.groups())
+
+        largeur = int(entree.get("width") or 0)
+        hauteur = int(entree.get("height") or 0)
+        if not (largeur and hauteur):
+            m = GEOMETRIE.match(str(entree.get("geometry") or ""))
+            if not m:
+                continue
+            largeur, hauteur = int(m.group(1)), int(m.group(2))
+
         if largeur > 0 and hauteur > 0:
-            ecrans[role] = (x, y, largeur, hauteur)
-    rotation = int(str(data.get("playfield_rotation") or "0") or 0) % 360
-    if rotation not in (0, 90, 180, 270):
-        rotation = 0
+            ecrans[role] = (largeur, hauteur)
+
     return ecrans, rotation
 
 
-def bloc_ecran(role: str, x: int, y: int, w: int, h: int, rot: int) -> str:
-    """Pose l'illustration sur un ecran, aux dimensions parametrees."""
-    return f"""
-# --- {role} : {w}x{h}+{x}+{y}{f', rotation {rot}' if rot else ''}
-x = {x}; y = {y}; w = {w}; h = {h}; r = {rot};
-if (r == 90 || r == 270) {{ lw = h; lh = w; }} else {{ lw = w; lh = h; }}
-scale = lw / iw;
-if (ih * scale > lh) scale = lh / ih;
-img = bg0.Scale(iw * scale, ih * scale);
-if (r != 0) img = img.Rotate(r * PI / 180);
-sprite_{role} = Sprite(img);
-sprite_{role}.SetX(x + (w - img.GetWidth()) / 2);
-sprite_{role}.SetY(y + (h - img.GetHeight()) / 2);
-sprite_{role}.SetZ(-100);
-"""
+def resolution_physique(taille: tuple[int, int], rotation: int) -> tuple[int, int]:
+    """Resolution telle que la voit Plymouth, avant toute rotation X11.
+
+    screens.json enregistre ce qu annonce xrandr : sur un playfield tourne,
+    c est deja la geometrie pivotee (2160x3840). Le framebuffer de demarrage,
+    lui, est dans le sens de la dalle (3840x2160). On remet donc les cotes
+    dans l ordre pour pouvoir reconnaitre l ecran.
+    """
+    largeur, hauteur = taille
+    if rotation in (90, 270):
+        return hauteur, largeur
+    return largeur, hauteur
 
 
-def theme(ecrans: dict[str, tuple[int, int, int, int]], rot: int) -> str:
-    resume = ", ".join(
-        f"{role} {w}x{h}+{x}+{y}" for role, (x, y, w, h) in ecrans.items()
-    )
-    parts = [f"""# PinCabOS splash — genere par pincabos-splash-sync
-# PINCABOS_SPLASH_FROM_SCREENS_V1
+def theme(ecrans: dict[str, tuple[int, int]], rot: int) -> str:
+    pf_w, pf_h = resolution_physique(ecrans["playfield"], rot)
+    resume = ", ".join(f"{role} {w}x{h}" for role, (w, h) in ecrans.items())
+
+    return f"""# PinCabOS splash — genere par pincabos-splash-sync
+# PINCABOS_SPLASH_FROM_SCREENS_V2
 #
 # Ecrans parametres : {resume}
-# Rotation du playfield : {rot}
+# Rotation du playfield : {rot} (dalle vue par Plymouth : {pf_w}x{pf_h})
 #
-# Les geometries viennent de screens.json : le theme ne detecte rien et ne
-# suppose rien. Seul le playfield est tourne ; le fronton reste droit.
+# Le playfield est reconnu a sa resolution parametree, il n est pas devine.
+# Les autres ecrans recoivent la meme illustration, a leur taille, et restent
+# droits.
 
 PI = 3.14159265358979;
+rot = {rot};
+pf_w = {pf_w};
+pf_h = {pf_h};
+
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
 
 bg0 = Image("pincabos.png");
 iw = bg0.GetWidth();
 ih = bg0.GetHeight();
-"""]
 
-    for role, (x, y, w, h) in ecrans.items():
-        parts.append(bloc_ecran(role, x, y, w, h, rot if role == "playfield" else 0))
+# --- 1) reperer le playfield parmi les surfaces ouvertes par Plymouth
+pf = -1;
+i = 0;
+while (i < 8) {{
+    if (pf < 0 && Window.GetWidth(i) == pf_w && Window.GetHeight(i) == pf_h)
+        pf = i;
+    i++;
+}}
+# Aucune correspondance (mode de demarrage different du mode parametre) :
+# on retombe sur la premiere surface, qui est celle de la sortie primaire.
+if (pf < 0) pf = 0;
 
-    px, py, pw, ph = ecrans["playfield"]
-    if rot in (90, 270):
-        lw, lh = ph, pw
-    else:
-        lw, lh = pw, ph
+# --- 2) poser l illustration sur chaque ecran, a sa propre taille
+fonds = [];
+i = 0;
+while (i < 8) {{
+    sw = Window.GetWidth(i);
+    if (sw > 0) {{
+        sh = Window.GetHeight(i);
+        ox = Window.GetX(i);
+        oy = Window.GetY(i);
 
-    parts.append(f"""
-# --- barre de progression, sur le playfield uniquement
-# Jamais de Rotate() sur la barre : Rotate recadre dans le canevas d'origine et
-# la transformerait en pastille. On la pose en coordonnees ecran.
-px = {px}; py = {py}; pw = {pw}; ph = {ph}; rot = {rot};
-lw = {lw}; lh = {lh};
-scale = lw / iw;
-if (ih * scale > lh) scale = lh / ih;
-bw = iw * scale;
-bh = ih * scale;
+        r = 0;
+        if (i == pf) r = rot;
+        if (r == 90 || r == 270) {{ lw = sh; lh = sw; }} else {{ lw = sw; lh = sh; }}
+
+        scale = lw / iw;
+        if (ih * scale > lh) scale = lh / ih;
+        img = bg0.Scale(iw * scale, ih * scale);
+        if (r != 0) img = img.Rotate(r * PI / 180);
+
+        fonds[i] = Sprite(img);
+        fonds[i].SetX(ox + (sw - img.GetWidth()) / 2);
+        fonds[i].SetY(oy + (sh - img.GetHeight()) / 2);
+        fonds[i].SetZ(-100);
+
+        if (i == pf) {{
+            pf_ox = ox; pf_oy = oy;
+            pf_sw = sw; pf_sh = sh;
+            pf_lw = lw; pf_lh = lh;
+            pf_bw = iw * scale; pf_bh = ih * scale;
+        }}
+    }}
+    i++;
+}}
+
+# --- 3) barre de progression, sur le playfield uniquement
+# Jamais de Rotate() sur la barre : Rotate recadre dans le canevas d origine
+# et la transformerait en pastille. On la pose en coordonnees ecran.
+sw = pf_sw; sh = pf_sh;
+lw = pf_lw; lh = pf_lh;
+bw = pf_bw; bh = pf_bh;
 
 bar_width = bw * 0.193;
 bar_height = 6;
@@ -127,19 +172,19 @@ box_sprite = Sprite();
 box_sprite.SetZ(10);
 if (rot == 0) {{
     box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-    box_sprite.SetX(px + bar_lx); box_sprite.SetY(py + bar_ly);
+    box_sprite.SetX(pf_ox + bar_lx); box_sprite.SetY(pf_oy + bar_ly);
 }}
 if (rot == 180) {{
     box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-    box_sprite.SetX(px + pw - bar_lx - bar_width); box_sprite.SetY(py + ph - bar_ly - bar_height);
+    box_sprite.SetX(pf_ox + sw - bar_lx - bar_width); box_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
 }}
 if (rot == 90) {{
     box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-    box_sprite.SetX(px + pw - bar_ly - bar_height); box_sprite.SetY(py + bar_lx);
+    box_sprite.SetX(pf_ox + sw - bar_ly - bar_height); box_sprite.SetY(pf_oy + bar_lx);
 }}
 if (rot == 270) {{
     box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-    box_sprite.SetX(px + bar_ly); box_sprite.SetY(py + ph - bar_lx - bar_width);
+    box_sprite.SetX(pf_ox + bar_ly); box_sprite.SetY(pf_oy + sh - bar_lx - bar_width);
 }}
 
 bar_sprite = Sprite();
@@ -160,19 +205,19 @@ fun refresh_callback() {{
     if (cw < 1) cw = 1;
     if (rot == 0) {{
         bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(px + bar_lx); bar_sprite.SetY(py + bar_ly);
+        bar_sprite.SetX(pf_ox + bar_lx); bar_sprite.SetY(pf_oy + bar_ly);
     }}
     if (rot == 180) {{
         bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(px + pw - bar_lx - cw); bar_sprite.SetY(py + ph - bar_ly - bar_height);
+        bar_sprite.SetX(pf_ox + sw - bar_lx - cw); bar_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
     }}
     if (rot == 90) {{
         bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(px + pw - bar_ly - bar_height); bar_sprite.SetY(py + bar_lx);
+        bar_sprite.SetX(pf_ox + sw - bar_ly - bar_height); bar_sprite.SetY(pf_oy + bar_lx);
     }}
     if (rot == 270) {{
         bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(px + bar_ly); bar_sprite.SetY(py + ph - bar_lx - cw);
+        bar_sprite.SetX(pf_ox + bar_ly); bar_sprite.SetY(pf_oy + sh - bar_lx - cw);
     }}
 }}
 
@@ -184,8 +229,7 @@ fun boot_progress_callback(duration, progress) {{
 
 Plymouth.SetBootProgressFunction(boot_progress_callback);
 Plymouth.SetRefreshFunction(refresh_callback);
-""")
-    return "".join(parts)
+"""
 
 
 def regenerer_initrd() -> bool:
@@ -198,28 +242,27 @@ def regenerer_initrd() -> bool:
             return True
         except (FileNotFoundError, subprocess.CalledProcessError):
             continue
-    print("  AVERTISSEMENT : initrd non regenere, le splash gardera l'ancienne mise en page")
+    print("  AVERTISSEMENT : initrd non regenere, le splash gardera l ancienne mise en page")
     return False
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--force", action="store_true",
-                        help="regenerer meme si la configuration n'a pas change")
+                        help="regenerer meme si la configuration n a pas change")
     parser.add_argument("--no-initrd", action="store_true",
-                        help="ecrire le theme sans regenerer l'initrd")
+                        help="ecrire le theme sans regenerer l initrd")
+    parser.add_argument("--stdout", action="store_true",
+                        help="afficher le theme sans rien ecrire")
     args = parser.parse_args()
 
     if not SCREENS.is_file():
         print(f"  {SCREENS} absent : theme inchange")
         return 0
-    if not THEME_DIR.is_dir():
-        print(f"  {THEME_DIR} absent : theme PinCabOS non installe")
-        return 0
 
     try:
-        ecrans, rot = geometries()
-    except (json.JSONDecodeError, OSError) as exc:
+        ecrans, rot = configuration()
+    except (json.JSONDecodeError, OSError, ValueError) as exc:
         print(f"  screens.json illisible ({exc}) : theme inchange")
         return 0
 
@@ -227,16 +270,26 @@ def main() -> int:
         print("  role playfield absent de screens.json : theme inchange")
         return 0
 
+    contenu = theme(ecrans, rot)
+
+    if args.stdout:
+        sys.stdout.write(contenu)
+        return 0
+
+    if not THEME_DIR.is_dir():
+        print(f"  {THEME_DIR} absent : theme PinCabOS non installe")
+        return 0
+
     signature = hashlib.sha256(
         json.dumps({"ecrans": ecrans, "rot": rot}, sort_keys=True).encode()
     ).hexdigest()
     if not args.force and EMPREINTE.is_file() \
             and EMPREINTE.read_text(encoding="utf-8").strip() == signature:
-        print("  configuration d'ecrans inchangee : rien a faire")
+        print("  configuration d ecrans inchangee : rien a faire")
         return 0
 
-    THEME.write_text(theme(ecrans, rot), encoding="utf-8")
-    resume = ", ".join(f"{r} {w}x{h}+{x}+{y}" for r, (x, y, w, h) in ecrans.items())
+    THEME.write_text(contenu, encoding="utf-8")
+    resume = ", ".join(f"{r} {w}x{h}" for r, (w, h) in ecrans.items())
     print(f"  theme ecrit : {resume}")
     print(f"  rotation appliquee au playfield seul : {rot}")
 

@@ -5039,15 +5039,22 @@ apply_target_orientation() {
         [ -f "$THEME.pcosorig" ] || cp "$THEME" "$THEME.pcosorig"
 
         cat > "$THEME" <<'PLYSCRIPT'
-# PinCabOS rotation-aware splash v5.2 (installer-generated)
+# PinCabOS rotation-aware splash v6 (installer-generated)
+# PINCABOS_SPLASH_INSTALLER_PER_SCREEN_V1
+#
+# Une illustration par ecran, a la taille de cet ecran, et la rotation ne
+# s'applique qu'a la sortie primaire — le playfield. Plymouth ouvre une
+# surface par sortie video et les fait toutes partir de l'origine : dessiner
+# sans indice recopiait sur le fronton un visuel calcule pour le playfield.
+#
+# Des que les ecrans sont configures, pincabos-splash-sync remplace ce theme
+# par une version qui connait la resolution de chaque role.
+#
 # La barre est posee en coordonnees ECRAN (jamais de Rotate() sur la barre :
 # Rotate recadre dans le canevas d origine et transforme la barre en pastille).
 rot = __ROT_DEG__;
 PI = 3.14159265358979;
-rad = rot * PI / 180;
-sw = Window.GetWidth();
-sh = Window.GetHeight();
-if (rot == 90 || rot == 270) { lw = sh; lh = sw; } else { lw = sw; lh = sh; }
+pf = 0;
 
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
@@ -5055,23 +5062,48 @@ Window.SetBackgroundBottomColor(0, 0, 0);
 bg0 = Image("pincabos.png");
 iw = bg0.GetWidth();
 ih = bg0.GetHeight();
-scale = lw / iw;
-if (ih * scale > lh) scale = lh / ih;
-bw = iw * scale;
-bh = ih * scale;
-bg = bg0.Scale(bw, bh);
-if (rot != 0) bg = bg.Rotate(rad);
-bgs = Sprite(bg);
-bgs.SetX((sw - bg.GetWidth()) / 2);
-bgs.SetY((sh - bg.GetHeight()) / 2);
-bgs.SetZ(-100);
+
+fonds = [];
+i = 0;
+while (i < 8) {
+    sw = Window.GetWidth(i);
+    if (sw > 0) {
+        sh = Window.GetHeight(i);
+        ox = Window.GetX(i);
+        oy = Window.GetY(i);
+
+        r = 0;
+        if (i == pf) r = rot;
+        if (r == 90 || r == 270) { lw = sh; lh = sw; } else { lw = sw; lh = sh; }
+
+        scale = lw / iw;
+        if (ih * scale > lh) scale = lh / ih;
+        img = bg0.Scale(iw * scale, ih * scale);
+        if (r != 0) img = img.Rotate(r * PI / 180);
+
+        fonds[i] = Sprite(img);
+        fonds[i].SetX(ox + (sw - img.GetWidth()) / 2);
+        fonds[i].SetY(oy + (sh - img.GetHeight()) / 2);
+        fonds[i].SetZ(-100);
+
+        if (i == pf) {
+            pf_ox = ox; pf_oy = oy;
+            pf_sw = sw; pf_sh = sh;
+            pf_lw = lw; pf_lh = lh;
+            pf_bw = iw * scale; pf_bh = ih * scale;
+        }
+    }
+    i++;
+}
+
+sw = pf_sw; sh = pf_sh;
+lw = pf_lw; lh = pf_lh;
+bw = pf_bw; bh = pf_bh;
 
 bar_width = bw * 0.193;
 bar_height = 6;
-off_lx = (lw - bw) / 2;
-off_ly = (lh - bh) / 2;
-bar_lx = off_lx + (bw - bar_width) / 2;
-bar_ly = off_ly + bh * 0.728;
+bar_lx = (lw - bw) / 2 + (bw - bar_width) / 2;
+bar_ly = (lh - bh) / 2 + bh * 0.728;
 
 box_image = Image("progress_box.png");
 bar_image = Image("progress_bar.png");
@@ -5080,19 +5112,19 @@ box_sprite = Sprite();
 box_sprite.SetZ(10);
 if (rot == 0) {
     box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-    box_sprite.SetX(bar_lx); box_sprite.SetY(bar_ly);
+    box_sprite.SetX(pf_ox + bar_lx); box_sprite.SetY(pf_oy + bar_ly);
 }
 if (rot == 180) {
     box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-    box_sprite.SetX(sw - bar_lx - bar_width); box_sprite.SetY(sh - bar_ly - bar_height);
+    box_sprite.SetX(pf_ox + sw - bar_lx - bar_width); box_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
 }
 if (rot == 90) {
     box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-    box_sprite.SetX(sw - bar_ly - bar_height); box_sprite.SetY(bar_lx);
+    box_sprite.SetX(pf_ox + sw - bar_ly - bar_height); box_sprite.SetY(pf_oy + bar_lx);
 }
 if (rot == 270) {
     box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-    box_sprite.SetX(bar_ly); box_sprite.SetY(sh - bar_lx - bar_width);
+    box_sprite.SetX(pf_ox + bar_ly); box_sprite.SetY(pf_oy + sh - bar_lx - bar_width);
 }
 
 bar_sprite = Sprite();
@@ -5113,19 +5145,19 @@ fun refresh_callback() {
     if (cw < 1) cw = 1;
     if (rot == 0) {
         bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(bar_lx); bar_sprite.SetY(bar_ly);
+        bar_sprite.SetX(pf_ox + bar_lx); bar_sprite.SetY(pf_oy + bar_ly);
     }
     if (rot == 180) {
         bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(sw - bar_lx - cw); bar_sprite.SetY(sh - bar_ly - bar_height);
+        bar_sprite.SetX(pf_ox + sw - bar_lx - cw); bar_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
     }
     if (rot == 90) {
         bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(sw - bar_ly - bar_height); bar_sprite.SetY(bar_lx);
+        bar_sprite.SetX(pf_ox + sw - bar_ly - bar_height); bar_sprite.SetY(pf_oy + bar_lx);
     }
     if (rot == 270) {
         bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(bar_ly); bar_sprite.SetY(sh - bar_lx - cw);
+        bar_sprite.SetX(pf_ox + bar_ly); bar_sprite.SetY(pf_oy + sh - bar_lx - cw);
     }
 }
 
