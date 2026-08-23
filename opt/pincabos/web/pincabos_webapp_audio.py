@@ -1272,6 +1272,26 @@ def audio_alsa_test_card():
 
     raw_html = esc(raw or "")
 
+    # PINCABOS_AUDIO_CANAUX_DEFAUT_V1
+    canaux_preferes = next(
+        (
+            int(sortie.get("channels", 2) or 2)
+            for sortie in sorties_pw
+            if "pw:" + str(sortie["name"]) == preferee
+        ),
+        2,
+    )
+    canaux_options = "".join(
+        '<option value="%d"%s>%s</option>'
+        % (nombre, " selected" if nombre == canaux_preferes else "", libelle)
+        for nombre, libelle in (
+            (2, "2 canaux stéréo"),
+            (4, "4 canaux"),
+            (6, "6 canaux / 5.1"),
+            (8, "8 canaux / 7.1"),
+        )
+    )
+
     # PINCABOS_AUDIO_PRISES_V1
     prises = audio_prises_analogiques()
     tableau_prises = audio_carte_prises_html(prises)
@@ -1309,10 +1329,7 @@ def audio_alsa_test_card():
       <td>Canaux</td>
       <td>
         <select name="channels" style="padding:7px;">
-          <option value="2">2 canaux stéréo</option>
-          <option value="4">4 canaux</option>
-          <option value="6">6 canaux / 5.1</option>
-          <option value="8">8 canaux / 7.1</option>
+          {canaux_options}
         </select>
       </td>
     </tr>
