@@ -1036,6 +1036,157 @@ def audio_jouer_position(sink, position, canaux):
             pass
 
 
+# PINCABOS_AUDIO_PRISES_V1
+# Couleurs normalisees des broches HDA, telles que le codec les declare.
+PINCABOS_COULEURS = {
+    0: ("Inconnue", "#9ca3af"),
+    1: ("Noire", "#3f3f46"),
+    2: ("Grise", "#9ca3af"),
+    3: ("Bleue", "#3b82f6"),
+    4: ("Verte", "#22c55e"),
+    5: ("Rouge", "#ef4444"),
+    6: ("Orange", "#f97316"),
+    7: ("Jaune", "#eab308"),
+    8: ("Violette", "#a855f7"),
+    9: ("Rose", "#ec4899"),
+    14: ("Blanche", "#e5e7eb"),
+    15: ("Autre", "#9ca3af"),
+}
+
+# Rang de la broche dans son groupe de sortie -> role, positions portees, et
+# nom du controle de presence expose par le pilote.
+PINCABOS_RANGS = {
+    0: ("Avant", ("front-left", "front-right"), "Line Out Front Jack"),
+    1: ("Centre et caisson", ("front-center", "lfe"), "Line Out CLFE Jack"),
+    2: ("Arrière", ("rear-left", "rear-right"), "Line Out Surround Jack"),
+    3: ("Latéral", ("side-left", "side-right"), "Line Out Side Jack"),
+}
+
+
+def audio_codec_analogique():
+    """Codec portant les sorties analogiques, et son numero de carte ALSA."""
+    import re as _re
+
+    for codec in sorted(Path("/sys/class/sound").glob("hwC*D*")):
+        broches = {}
+        for fichier in ("init_pin_configs", "user_pin_configs"):
+            try:
+                for ligne in (codec / fichier).read_text(encoding="ascii").splitlines():
+                    morceaux = ligne.split()
+                    if len(morceaux) == 2:
+                        broches[int(morceaux[0], 16)] = int(morceaux[1], 16)
+            except OSError:
+                continue
+
+        sorties = [
+            mot for mot in broches.values()
+            if ((mot >> 20) & 0xF) == 0 and ((mot >> 30) & 0x3) in (0, 3)
+        ]
+        if len(sorties) >= 2:
+            m = _re.match(r"hwC(\d+)D\d+", codec.name)
+            return broches, (int(m.group(1)) if m else 0)
+
+    return {}, -1
+
+
+def audio_presence_jacks(carte):
+    """Etat branche / vide de chaque prise, tel que le pilote le detecte."""
+    import re as _re
+
+    etats = {}
+    liste = audio_run_cmd(f"amixer -c {int(carte)} controls 2>/dev/null")
+
+    for ligne in liste.splitlines():
+        if "Jack" not in ligne:
+            continue
+        num = _re.search(r"numid=(\d+)", ligne)
+        nom = _re.search(r"name='([^']+)'", ligne)
+        if not num or not nom:
+            continue
+        valeur = audio_run_cmd(
+            f"amixer -c {int(carte)} cget numid={num.group(1)} 2>/dev/null"
+        )
+        etats[nom.group(1)] = "values=on" in valeur
+
+    return etats
+
+
+def audio_prises_analogiques():
+    """Prises de sortie de la carte : couleur, role, positions, presence."""
+    broches, carte = audio_codec_analogique()
+    if carte < 0:
+        return []
+
+    presence = audio_presence_jacks(carte)
+    prises = []
+
+    for broche, mot in sorted(broches.items()):
+        if ((mot >> 20) & 0xF) != 0 or ((mot >> 30) & 0x3) not in (0, 3):
+            continue
+
+        rang = mot & 0xF
+        if rang not in PINCABOS_RANGS:
+            continue
+
+        role, positions, controle = PINCABOS_RANGS[rang]
+        nom_couleur, code_couleur = PINCABOS_COULEURS.get(
+            (mot >> 12) & 0xF, PINCABOS_COULEURS[0]
+        )
+
+        prises.append({
+            "role": role,
+            "couleur": nom_couleur,
+            "code": code_couleur,
+            "positions": list(positions),
+            "branche": presence.get(controle),
+        })
+
+    return prises
+
+
+def audio_carte_prises_html(prises):
+    """Tableau des prises, pour la page."""
+    if not prises:
+        return ""
+
+    lignes = []
+    for prise in prises:
+        if prise["branche"] is None:
+            etat = "<span style='opacity:.6'>non détecté</span>"
+        elif prise["branche"]:
+            etat = "<strong style='color:#7ec97e'>branchée</strong>"
+        else:
+            etat = "<strong style='color:#f0a080'>vide</strong>"
+
+        pastille = (
+            f"<span style='display:inline-block;width:13px;height:13px;"
+            f"border-radius:50%;background:{prise['code']};"
+            f"border:1px solid rgba(255,255,255,.5);vertical-align:-2px;"
+            f"margin-right:7px;'></span>"
+        )
+
+        lignes.append(
+            f"<tr><td style='white-space:nowrap'>{pastille}"
+            f"{esc(prise['couleur'])}</td>"
+            f"<td>{esc(prise['role'])}</td>"
+            f"<td>{etat}</td></tr>"
+        )
+
+    return f"""
+  <details style="margin-top:10px;" open>
+    <summary>Prises de la carte son</summary>
+    <table style="width:100%;margin-top:6px;">
+      <tr style="opacity:.7;font-size:12px;">
+        <td>Prise</td><td>Porte</td><td>État</td>
+      </tr>
+      {''.join(lignes)}
+    </table>
+    <p><small>Couleur et rôle viennent de la carte mère elle-même ; l’état
+    branché / vide est détecté en direct par le pilote.</small></p>
+  </details>
+"""
+
+
 def audio_reponse_lisible(titre, lignes, ok=True):
     """Reponse affichee dans un cadre au fond sombre : couleurs explicites.
 
@@ -1088,8 +1239,18 @@ def audio_alsa_test_card():
 
     raw_html = esc(raw or "")
 
+    # PINCABOS_AUDIO_PRISES_V1
+    prises = audio_prises_analogiques()
+    tableau_prises = audio_carte_prises_html(prises)
+    prises_par_position = json.dumps({
+        position: {"couleur": p["code"], "nom": p["couleur"],
+                   "branche": p["branche"], "role": p["role"]}
+        for p in prises for position in p["positions"]
+    }, ensure_ascii=False)
+
     return f"""
 <div class="card pco-audio-compact-card" id="pincabos-alsa-test-card">
+  <script id="pco-prises" type="application/json">{prises_par_position}</script>
   <h2>Test des haut-parleurs</h2>
   <p>
     Lance un test court avec <code>speaker-test</code>. Choisis une sortie
@@ -1202,7 +1363,15 @@ def audio_alsa_test_card():
         couche.closest("form").submit();
       }}
 
+      var PRISES = {{}};
+      try {{
+        PRISES = JSON.parse(document.getElementById("pco-prises").textContent);
+      }} catch (e) {{ PRISES = {{}}; }}
+
       function enceinte(x, y, nom, canal, caisson) {{
+        var prise = PRISES[canal] || {{}};
+        var teinte = prise.couleur || "#ff8a00";
+        var vide = prise.branche === false;
         var g = document.createElementNS(SVGNS, "g");
         g.setAttribute("transform", "translate(" + (x - 17) + "," + (y - 21) + ")");
         g.style.cursor = "pointer";
@@ -1214,17 +1383,19 @@ def audio_alsa_test_card():
         corps.setAttribute("width", "34");
         corps.setAttribute("height", "42");
         corps.setAttribute("rx", "5");
-        corps.setAttribute("fill", "rgba(255,138,0,.20)");
-        corps.setAttribute("stroke", "#ff8a00");
+        corps.setAttribute("fill", vide ? "rgba(255,255,255,.04)" : "rgba(255,138,0,.20)");
+        corps.setAttribute("stroke", teinte);
         corps.setAttribute("stroke-width", "2");
+        if (vide) corps.setAttribute("stroke-dasharray", "4 3");
         g.appendChild(corps);
+        g.setAttribute("opacity", vide ? "0.5" : "1");
 
         var cone = document.createElementNS(SVGNS, "circle");
         cone.setAttribute("cx", "17");
         cone.setAttribute("cy", caisson ? "21" : "27");
         cone.setAttribute("r", caisson ? "12" : "9");
         cone.setAttribute("fill", "none");
-        cone.setAttribute("stroke", "#ff8a00");
+        cone.setAttribute("stroke", teinte);
         cone.setAttribute("stroke-width", "2");
         g.appendChild(cone);
 
@@ -1232,7 +1403,7 @@ def audio_alsa_test_card():
         centre.setAttribute("cx", "17");
         centre.setAttribute("cy", caisson ? "21" : "27");
         centre.setAttribute("r", "3");
-        centre.setAttribute("fill", "#ff8a00");
+        centre.setAttribute("fill", teinte);
         g.appendChild(centre);
 
         if (!caisson) {{
@@ -1241,17 +1412,21 @@ def audio_alsa_test_card():
           aigu.setAttribute("cy", "10");
           aigu.setAttribute("r", "4");
           aigu.setAttribute("fill", "none");
-          aigu.setAttribute("stroke", "#ff8a00");
+          aigu.setAttribute("stroke", teinte);
           aigu.setAttribute("stroke-width", "2");
           g.appendChild(aigu);
         }}
 
         var titre = document.createElementNS(SVGNS, "title");
-        titre.textContent = nom + " — cliquer pour jouer";
+        titre.textContent = nom
+          + (prise.nom ? " — prise " + prise.nom.toLowerCase() : "")
+          + (vide ? " (prise vide)" : "")
+          + " — cliquer pour jouer";
         g.appendChild(titre);
 
         function jouer() {{
           corps.setAttribute("fill", "rgba(255,138,0,.75)");
+          g.setAttribute("opacity", "1");
           if (legende) legende.textContent = "Envoi sur : " + nom;
           envoyer(canal);
         }}
@@ -1262,10 +1437,14 @@ def audio_alsa_test_card():
         }});
         g.addEventListener("mouseenter", function () {{
           corps.setAttribute("fill", "rgba(255,138,0,.45)");
-          if (legende) legende.textContent = nom;
+          if (legende) {{
+            legende.textContent = nom
+              + (prise.nom ? " — prise " + prise.nom.toLowerCase() : "")
+              + (vide ? " — cette prise est vide" : "");
+          }}
         }});
         g.addEventListener("mouseleave", function () {{
-          corps.setAttribute("fill", "rgba(255,138,0,.20)");
+          corps.setAttribute("fill", vide ? "rgba(255,255,255,.04)" : "rgba(255,138,0,.20)");
         }});
 
         return g;
@@ -1326,6 +1505,8 @@ def audio_alsa_test_card():
 
   <p><small><code>Playback open error</code> sur un accès direct signifie que
   PipeWire tient déjà la carte : passe par la sortie PipeWire correspondante.</small></p>
+
+  {tableau_prises}
 
   <details style="margin-top:8px;" open>
     <summary>Log test audio</summary>
