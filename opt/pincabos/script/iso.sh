@@ -5596,8 +5596,21 @@ full_disk_install() {
 # timezone and orientation: the wizard asks for those every time, restoring
 # them would silently undo the user's fresh choices.
 PCO_KEEP_PATHS=(
-  # screen roles and layout
+  # Display identity of THIS machine. The payload deliberately wipes it so a
+  # fresh install redetects its own screens; on an update that would throw away
+  # the user's own configuration. screens.json is the source of truth here:
+  # pincabos-display-roles.py resyncs vpinfe.ini and VPinballX.ini from it, so
+  # losing it is enough to have backglass and fulldmd swap places at next boot.
+  "opt/pincabos/config/screens"
+  "opt/pincabos/config/display-aliases.env"
+  "opt/pincabos/state/screens-apply-last-success.flag"
+  "var/lib/pincabos/hardware-autoconfig.done"
+  "etc/X11/xorg.conf"
+  "etc/X11/xorg.conf.d"
+  # screen roles and window placement, as applied to the frontends
   "home/pinball/.config/vpinfe/vpinfe.ini"
+  "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+  "home/pinball/.vpinball/VPinballX.ini"
   # audio (volume and mute intent replayed at session start)
   "home/pinball/.config/pincabos/audio-volume-widget.json"
   # network: PinCabOS netplan file and NetworkManager profiles (Wi-Fi keys)
