@@ -78,9 +78,25 @@ make_xauth() {
   chown pinball:pinball "$XAUTH"; chmod 0600 "$XAUTH"
 }
 
+# PINCABOS_LIVE_SLOT_BY_ROLE_V1
+# Sortie associee au role demande, telle que le systeme l'a resolue.
+slot_role_output() {
+  local slot="$1" aliases='/opt/pincabos/config/display-aliases.env' key
+  [ -r "$aliases" ] || return 1
+  case "$slot" in
+    0) key='PINCABOS_PLAYFIELD_OUTPUT' ;;
+    1) key='PINCABOS_BACKGLASS_OUTPUT' ;;
+    2) key='PINCABOS_FULLDMD_OUTPUT' ;;
+    *) return 1 ;;
+  esac
+  sed -n "s/^${key}='\(.*\)'$/\1/p" "$aliases" | head -n1
+}
+
 slot_output() {
   local slot="$1" line output geometry width height xpos ypos
   local records=()
+  local wanted
+  wanted="$(slot_role_output "$slot" || true)"
   while IFS= read -r line; do
     [[ "$line" =~ ^([A-Za-z0-9-]+)[[:space:]]connected ]] || continue
     output="${BASH_REMATCH[1]}"
@@ -91,7 +107,17 @@ slot_output() {
   done < <(runuser -u pinball -- env DISPLAY=:0 XAUTHORITY="$XAUTH" xrandr --query 2>/dev/null)
   [ "${#records[@]}" -ge 3 ] || return 1
   mapfile -t records < <(printf '%s\n' "${records[@]}" | sort -t'|' -n -k1,1)
-  local selected="${records[$slot]}"
+
+  # PINCABOS_LIVE_SLOT_BY_ROLE_V1 — le role d'abord, la position en secours.
+  local selected='' record
+  if [ -n "$wanted" ]; then
+    for record in "${records[@]}"; do
+      case "$record" in
+        *"|${wanted}|"*) selected="$record"; break ;;
+      esac
+    done
+  fi
+  [ -n "$selected" ] || selected="${records[$slot]}"
   IFS='|' read -r xpos output geometry <<< "$selected"
   printf '%s|%s\n' "$output" "$geometry"
 }
