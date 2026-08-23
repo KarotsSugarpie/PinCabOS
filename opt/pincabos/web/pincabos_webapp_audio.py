@@ -841,9 +841,99 @@ def pincabos_safe_audio_alsa_card():
 """
 
 
+# PINCABOS_AUDIO_TEST_PIPEWIRE_V1
+PINCABOS_SESSION_USER = "pinball"
+PINCABOS_SESSION_UID = "1000"
+
+
+def audio_session_prefix():
+    """Prefixe de commande pour parler a la session audio de la seance.
+
+    PINCABOS_AUDIO_SESSION_PREFIX_V1
+
+    La webapp tourne deja sous le compte de la session : lui faire appeler
+    runuser revient a lui demander un privilege qu'elle n'a pas, et l'appel
+    echoue sans bruit. On ne bascule d'utilisateur que depuis root, cas des
+    appels lances par un service systeme.
+    """
+    import os as _os
+
+    environnement = [
+        "/usr/bin/env",
+        f"XDG_RUNTIME_DIR=/run/user/{PINCABOS_SESSION_UID}",
+        f"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{PINCABOS_SESSION_UID}/bus",
+    ]
+
+    if _os.geteuid() == 0:
+        return ["/usr/sbin/runuser", "-u", PINCABOS_SESSION_USER, "--"] + environnement
+
+    return environnement
+
+
+def audio_pipewire_sinks():
+    """Sorties vues par PipeWire : nom interne, libelle et nombre de canaux."""
+    import subprocess as _sp
+
+    try:
+        brut = _sp.run(
+            audio_session_prefix() + ["/usr/bin/pactl", "list", "sinks"],
+            capture_output=True, text=True, timeout=8, check=False,
+        ).stdout
+    except Exception:
+        return []
+
+    sorties = []
+    courant = {}
+    for ligne in brut.splitlines():
+        depouillee = ligne.strip()
+        if depouillee.startswith("Name:"):
+            if courant.get("name"):
+                sorties.append(courant)
+            courant = {"name": depouillee.split(":", 1)[1].strip()}
+        elif depouillee.startswith("Description:") and courant:
+            courant["description"] = depouillee.split(":", 1)[1].strip()
+        elif depouillee.startswith("Sample Specification:") and courant:
+            m = re.search(r"(\d+)ch", depouillee)
+            courant["channels"] = int(m.group(1)) if m else 2
+    if courant.get("name"):
+        sorties.append(courant)
+
+    return [x for x in sorties if x.get("name")]
+
+
+def audio_reponse_lisible(titre, lignes, ok=True):
+    """Reponse affichee dans un cadre au fond sombre : couleurs explicites.
+
+    Sans cela le document herite du fond du cadre et ecrit en noir dessus.
+    """
+    couleur = "#7ec97e" if ok else "#f08080"
+    return (
+        "<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\">"
+        "<style>"
+        "html,body{background:#14001f;color:#e8e0ef;font:13px/1.5 ui-monospace,monospace;"
+        "margin:0;padding:10px}"
+        f"h1{{font-size:13px;margin:0 0 8px;color:{couleur}}}"
+        "pre{white-space:pre-wrap;word-break:break-word;margin:0}"
+        "</style></head><body>"
+        f"<h1>{esc(titre)}</h1><pre>{esc(chr(10).join(lignes))}</pre>"
+        "</body></html>"
+    ), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 def audio_alsa_test_card():
     devices, raw = audio_detect_alsa_devices()
     options = []
+
+    # PINCABOS_AUDIO_TEST_PIPEWIRE_V1
+    # PipeWire tient les cartes en permanence : ses sorties viennent en tete,
+    # ce sont les seules testables sans arreter la session audio.
+    for sortie in audio_pipewire_sinks():
+        canaux = int(sortie.get("channels", 2) or 2)
+        libelle = sortie.get("description") or sortie["name"]
+        options.append(
+            f'<option value="pw:{esc(sortie["name"])}" data-canaux="{canaux}">'
+            f'{esc(libelle)} — {canaux} canaux — PipeWire</option>'
+        )
 
     for d in devices:
         hw = str(d.get("id", "") or "")
@@ -853,7 +943,7 @@ def audio_alsa_test_card():
         desc = str(d.get("description", "") or "")
 
         plug = f"plughw:{card},{dev}" if card != "" and dev != "" else hw
-        label = f"{name} — {desc} — {plug} recommandé"
+        label = f"{name} — {desc} — {plug} — accès direct"
         options.append(f'<option value="{esc(plug)}">{esc(label)}</option>')
 
     if not options:
@@ -865,8 +955,14 @@ def audio_alsa_test_card():
 <div class="card pco-audio-compact-card" id="pincabos-alsa-test-card">
   <h2>Test audio ALSA rapide</h2>
   <p>
-    Cette carte liste les sorties ALSA et lance un test court avec <code>speaker-test</code>.
-    Utilise d’abord <code>plughw:X,Y</code>, plus compatible que <code>hw:X,Y</code>.
+    Lance un test court avec <code>speaker-test</code>. Choisis une sortie
+    <strong>PipeWire</strong> : PipeWire tient les cartes en permanence, donc un
+    accès direct <code>hw:</code> / <code>plughw:</code> répondra
+    <code>Playback open error</code> tant qu’une session audio tourne.
+  </p>
+  <p>
+    Pour vérifier un câblage SSF, prends le signal <strong>nom des canaux</strong> :
+    chaque haut-parleur annonce sa position à voix haute.
   </p>
 
   <table style="width:100%;">
@@ -889,17 +985,28 @@ def audio_alsa_test_card():
         </select>
       </td>
     </tr>
+    <tr>
+      <td>Signal</td>
+      <td>
+        <select name="signal" style="padding:7px;">
+          <option value="wav">Nom des canaux — annoncé à voix haute</option>
+          <option value="sine">Sinusoïde 440 Hz</option>
+        </select>
+      </td>
+    </tr>
   </table>
 
   <form method="post" action="/audio-ssf/test-alsa-quick" target="pco-alsa-action-frame">
     <input type="hidden" name="device" id="pco-alsa-hidden-device" value="">
     <input type="hidden" name="channels" id="pco-alsa-hidden-channels" value="2">
+    <input type="hidden" name="signal" id="pco-alsa-hidden-signal" value="wav">
     <p style="margin:6px 0 8px 0;">
       <button class="button" type="submit"
         onclick="
           const card=this.closest('.card');
           document.getElementById('pco-alsa-hidden-device').value=card.querySelector('select[name=device]').value;
           document.getElementById('pco-alsa-hidden-channels').value=card.querySelector('select[name=channels]').value;
+          document.getElementById('pco-alsa-hidden-signal').value=card.querySelector('select[name=signal]').value;
         ">
         Tester 2 secondes
       </button>
@@ -907,7 +1014,8 @@ def audio_alsa_test_card():
     </p>
   </form>
 
-  <p><small>Si <code>hw:X,Y</code> retourne <code>Bad address</code>, essaie le même périphérique en <code>plughw:X,Y</code>.</small></p>
+  <p><small><code>Playback open error</code> sur un accès direct signifie que
+  PipeWire tient déjà la carte : passe par la sortie PipeWire correspondante.</small></p>
 
   <details style="margin-top:8px;" open>
     <summary>Log test audio</summary>
@@ -1760,55 +1868,112 @@ def pincabos_audio_ssf_page_fixed():
 
 @route("/audio-ssf/test-alsa-quick", methods=["POST"])
 def audio_ssf_test_alsa_quick():
+    """PINCABOS_AUDIO_TEST_RUN_V1"""
     device = request.form.get("device", "").strip()
     channels = request.form.get("channels", "2").strip()
+    signal = request.form.get("signal", "wav").strip()
 
     if not device:
-        return "ERREUR: aucun périphérique ALSA sélectionné.", 400, {"Content-Type": "text/plain; charset=utf-8"}
-
-    if channels not in ["2", "4", "6", "8"]:
-        channels = "2"
-
-    try:
-        cmd = [
-            "/usr/bin/timeout",
-            "3",
-            "/usr/bin/speaker-test",
-            "-D",
-            device,
-            "-c",
-            channels,
-            "-t",
-            "sine",
-            "-f",
-            "440",
-            "-l",
-            "1",
-        ]
-
-        r = subprocess.run(
-            cmd,
-            text=True,
-            capture_output=True,
-            timeout=5,
+        return audio_reponse_lisible(
+            "Aucune sortie sélectionnée",
+            ["Choisis une sortie dans la liste, puis relance le test."],
+            ok=False,
         )
 
-        out = []
-        out.append("Commande: " + " ".join(cmd))
-        out.append("")
-        out.append("Code retour: " + str(r.returncode))
-        out.append("")
-        if r.stdout:
-            out.append("STDOUT:")
-            out.append(r.stdout)
-        if r.stderr:
-            out.append("STDERR:")
-            out.append(r.stderr)
+    if channels not in ("2", "4", "6", "8"):
+        channels = "2"
+    if signal not in ("wav", "sine"):
+        signal = "wav"
 
-        return "\n".join(out), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    # La sortie demandée doit figurer parmi celles que le système déclare :
+    # rien de ce qui vient du formulaire n'est transmis tel quel.
+    connues = {f"pw:{x['name']}" for x in audio_pipewire_sinks()}
+    for d in audio_detect_alsa_devices()[0]:
+        connues.add(str(d.get("id") or ""))
+        connues.add(f"plughw:{d.get('card')},{d.get('device')}")
 
-    except Exception as e:
-        return "Erreur test ALSA: " + str(e), 500, {"Content-Type": "text/plain; charset=utf-8"}
+    if device not in connues:
+        return audio_reponse_lisible(
+            "Sortie inconnue",
+            [f"{device} n'est plus déclarée par le système.",
+             "Rafraîchis la page pour recharger la liste."],
+            ok=False,
+        )
+
+    # Le signal parlé annonce chaque canal l'un après l'autre : il faut lui
+    # laisser le temps de faire le tour.
+    secondes = 4 + int(channels) * 3 if signal == "wav" else 4
+
+    test = ["/usr/bin/speaker-test", "-c", channels, "-t", signal, "-l", "1"]
+    if signal == "sine":
+        test += ["-f", "440"]
+
+    if device.startswith("pw:"):
+        # PINCABOS_AUDIO_TEST_PCM_V1
+        # Le PCM s'appelle « pipewire » — « pulse » est le plugin de
+        # PulseAudio, absent ici — et la sortie visee se choisit par
+        # PIPEWIRE_NODE.
+        cmd = (
+            audio_session_prefix()
+            + [f"PIPEWIRE_NODE={device[3:]}", "/usr/bin/timeout", str(secondes)]
+            + test + ["-D", "pipewire"]
+        )
+        route_lisible = f"PipeWire → {device[3:]}"
+    else:
+        cmd = ["/usr/bin/timeout", str(secondes)] + test + ["-D", device]
+        route_lisible = f"accès direct → {device}"
+
+    try:
+        r = subprocess.run(
+            cmd, text=True, capture_output=True, timeout=secondes + 6,
+        )
+    except Exception as exc:
+        return audio_reponse_lisible(
+            "Test impossible", [str(exc)], ok=False,
+        )
+
+    sortie = (r.stdout or "") + (r.stderr or "")
+
+    lignes = [
+        f"Sortie   : {route_lisible}",
+        f"Canaux   : {channels}",
+        f"Signal   : {'nom des canaux' if signal == 'wav' else 'sinusoïde 440 Hz'}",
+        "",
+    ]
+
+    # timeout coupe speaker-test en pleine lecture : « Interrupted system
+    # call » est la fin normale de l'essai, pas une panne.
+    ok = (
+        r.returncode in (0, 124)
+        and "open error" not in sortie.lower()
+        and "unknown pcm" not in sortie.lower()
+    )
+
+    if "unknown pcm" in sortie.lower():
+        lignes += [
+            "Le pont ALSA vers PipeWire est absent (paquet pipewire-alsa).",
+            "",
+        ]
+    elif "open error" in sortie.lower() and not device.startswith("pw:"):
+        lignes += [
+            "Le périphérique est occupé : PipeWire tient la carte en permanence.",
+            "Reprends le test sur la sortie PipeWire correspondante.",
+            "",
+        ]
+    elif "No such file" in sortie and signal == "wav":
+        lignes += [
+            "Les échantillons parlés sont absents (paquet alsa-utils).",
+            "Utilise le signal sinusoïde.",
+            "",
+        ]
+    elif ok:
+        lignes += ["Test joué. Note quels haut-parleurs ont répondu.", ""]
+
+    lignes += [sortie.strip() or "(aucune sortie)"]
+
+    return audio_reponse_lisible(
+        "Test terminé" if ok else "Test en échec", lignes, ok=ok,
+    )
 
 
 @route("/audio-ssf/system-volume/get", methods=["GET"])
