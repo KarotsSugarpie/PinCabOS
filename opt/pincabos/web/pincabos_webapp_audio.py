@@ -937,6 +937,105 @@ def audio_nom_position(code):
     return PINCABOS_POSITIONS.get(str(code or "").strip(), str(code or "?"))
 
 
+# PINCABOS_AUDIO_VOIX_V1
+PINCABOS_VOIX_RACINE = Path("/opt/pincabos/media/audio-voix")
+PINCABOS_VOIX_LANGUES = ("fr", "en", "es", "it")
+
+# Nom de chaque position chez ffmpeg. C'est la seule table de correspondance
+# du test : ni index de canal, ni ordre a deviner.
+PINCABOS_POSITION_FFMPEG = {
+    "front-left": "FL",
+    "front-right": "FR",
+    "front-center": "FC",
+    "lfe": "LFE",
+    "rear-left": "BL",
+    "rear-right": "BR",
+    "rear-center": "BC",
+    "side-left": "SL",
+    "side-right": "SR",
+    "mono": "FC",
+}
+
+PINCABOS_LAYOUT_FFMPEG = {
+    2: "stereo",
+    6: "5.1",
+    8: "7.1",
+}
+
+
+def audio_langue_voix():
+    """Langue des annonces : celle choisie a l'installation."""
+    for chemin in ("/etc/default/locale", "/etc/locale.conf"):
+        try:
+            for ligne in Path(chemin).read_text(encoding="utf-8").splitlines():
+                if ligne.startswith("LANG="):
+                    code = ligne.split("=", 1)[1].strip().strip('"').lower()[:2]
+                    if code in PINCABOS_VOIX_LANGUES:
+                        return code
+        except OSError:
+            continue
+    return "en"
+
+
+def audio_voix_fichier(position):
+    """Annonce pour cette position, dans la langue du cab sinon en anglais."""
+    for langue in (audio_langue_voix(), "en"):
+        fichier = PINCABOS_VOIX_RACINE / langue / f"{position}.opus"
+        if fichier.is_file():
+            return fichier
+    return None
+
+
+def audio_jouer_position(sink, position, canaux):
+    """Joue l'annonce sur ce seul haut-parleur.
+
+    ffmpeg place la voix dans le canal portant ce nom, puis pw-play envoie le
+    flux sur la sortie choisie. Aucun numero de canal n'intervient.
+    """
+    import tempfile
+
+    nom_ffmpeg = PINCABOS_POSITION_FFMPEG.get(position)
+    layout = PINCABOS_LAYOUT_FFMPEG.get(int(canaux))
+
+    if not nom_ffmpeg or not layout:
+        return False, f"Position {position} non placable sur {canaux} canaux."
+
+    voix = audio_voix_fichier(position)
+    if not voix:
+        return False, f"Annonce absente pour {position}."
+
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as sortie:
+        chemin = sortie.name
+
+    try:
+        rendu = subprocess.run(
+            ["/usr/bin/ffmpeg", "-v", "error", "-y", "-i", str(voix),
+             "-af", f"pan={layout}|{nom_ffmpeg}=c0",
+             "-c:a", "pcm_s16le", chemin],
+            capture_output=True, text=True, timeout=20,
+        )
+        if rendu.returncode != 0:
+            return False, (rendu.stderr or "ffmpeg a echoue").strip()
+
+        lecture = subprocess.run(
+            audio_session_prefix()
+            + ["/usr/bin/pw-play", "--target", sink, chemin],
+            capture_output=True, text=True, timeout=25,
+        )
+        if lecture.returncode != 0:
+            return False, (lecture.stderr or "pw-play a echoue").strip()
+
+        return True, f"{position} — canal {nom_ffmpeg} du flux {layout}"
+
+    except Exception as exc:
+        return False, str(exc)
+    finally:
+        try:
+            Path(chemin).unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
 def audio_reponse_lisible(titre, lignes, ok=True):
     """Reponse affichee dans un cadre au fond sombre : couleurs explicites.
 
@@ -1038,45 +1137,171 @@ def audio_alsa_test_card():
     <input type="hidden" name="device" id="pco-alsa-hidden-device" value="">
     <input type="hidden" name="channels" id="pco-alsa-hidden-channels" value="2">
     <input type="hidden" name="signal" id="pco-alsa-hidden-signal" value="wav">
-    <input type="hidden" name="channel" id="pco-alsa-hidden-channel" value="">
+    <input type="hidden" name="position" id="pco-alsa-hidden-position" value="">
 
-    <!-- PINCABOS_AUDIO_PER_SPEAKER_V1 -->
-    <div id="pco-hp-boutons" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;"></div>
+    <!-- PINCABOS_AUDIO_CAB_MAP_V1 -->
+    <div id="pco-hp-schema" style="margin:10px 0;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;">
+      <svg id="pco-hp-svg" viewBox="0 0 320 420" role="img"
+           aria-label="Schema du cabinet avec ses haut-parleurs"
+           style="width:230px;max-width:100%;height:auto;flex:0 0 auto;">
+        <!-- fronton -->
+        <rect x="62" y="8" width="196" height="122" rx="10"
+              fill="rgba(255,255,255,.04)" stroke="rgba(255,176,0,.45)" stroke-width="2"/>
+        <text x="160" y="122" text-anchor="middle" font-size="11"
+              fill="rgba(255,255,255,.38)">fronton</text>
+        <!-- corps du cabinet -->
+        <path d="M78 140 L242 140 L272 396 L48 396 Z"
+              fill="rgba(255,255,255,.04)" stroke="rgba(255,176,0,.45)" stroke-width="2"/>
+        <!-- lockbar -->
+        <rect x="46" y="386" width="228" height="14" rx="7"
+              fill="rgba(255,176,0,.18)" stroke="rgba(255,176,0,.45)" stroke-width="2"/>
+        <text x="160" y="414" text-anchor="middle" font-size="11"
+              fill="rgba(255,255,255,.38)">lockbar</text>
+        <g id="pco-hp-couche"></g>
+      </svg>
+      <div style="flex:1 1 200px;min-width:180px;">
+        <div id="pco-hp-legende" style="font-size:12px;opacity:.75;margin-bottom:6px;"></div>
+        <div id="pco-hp-restants" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+    </div>
     <script>
     (function () {{
       var carte = document.getElementById("pincabos-alsa-test-card");
       if (!carte) return;
       var choix = carte.querySelector("select[name=device]");
-      var hote = document.getElementById("pco-hp-boutons");
-      if (!choix || !hote) return;
+      var couche = document.getElementById("pco-hp-couche");
+      var restants = document.getElementById("pco-hp-restants");
+      var legende = document.getElementById("pco-hp-legende");
+      if (!choix || !couche) return;
 
-      function envoyer(canal) {{
+      var SVGNS = "http://www.w3.org/2000/svg";
+
+      // Position de chaque canal sur le cabinet. Le fronton porte les voies
+      // avant, le corps le caisson, l'arriere se place pres du fronton et les
+      // lateraux au lockbar — la disposition d'un SSF.
+      var PLACES = {{
+        "front-left":   [104, 52],
+        "front-center": [160, 52],
+        "front-right":  [216, 52],
+        "rear-left":    [102, 190],
+        "rear-center":  [160, 190],
+        "rear-right":   [218, 190],
+        "lfe":          [160, 285],
+        "side-left":    [70, 366],
+        "side-right":   [250, 366],
+        "mono":         [160, 285]
+      }};
+
+      // PINCABOS_AUDIO_VOIX_V1 — on designe la position par son nom.
+      function envoyer(code) {{
         document.getElementById("pco-alsa-hidden-device").value = choix.value;
         document.getElementById("pco-alsa-hidden-channels").value =
           choix.selectedOptions[0].dataset.canaux || "2";
         document.getElementById("pco-alsa-hidden-signal").value = "wav";
-        document.getElementById("pco-alsa-hidden-channel").value = canal;
-        hote.closest("form").submit();
+        document.getElementById("pco-alsa-hidden-position").value = code;
+        couche.closest("form").submit();
+      }}
+
+      function enceinte(x, y, nom, canal, caisson) {{
+        var g = document.createElementNS(SVGNS, "g");
+        g.setAttribute("transform", "translate(" + (x - 17) + "," + (y - 21) + ")");
+        g.style.cursor = "pointer";
+        g.setAttribute("tabindex", "0");
+        g.setAttribute("role", "button");
+        g.setAttribute("aria-label", nom);
+
+        var corps = document.createElementNS(SVGNS, "rect");
+        corps.setAttribute("width", "34");
+        corps.setAttribute("height", "42");
+        corps.setAttribute("rx", "5");
+        corps.setAttribute("fill", "rgba(255,138,0,.20)");
+        corps.setAttribute("stroke", "#ff8a00");
+        corps.setAttribute("stroke-width", "2");
+        g.appendChild(corps);
+
+        var cone = document.createElementNS(SVGNS, "circle");
+        cone.setAttribute("cx", "17");
+        cone.setAttribute("cy", caisson ? "21" : "27");
+        cone.setAttribute("r", caisson ? "12" : "9");
+        cone.setAttribute("fill", "none");
+        cone.setAttribute("stroke", "#ff8a00");
+        cone.setAttribute("stroke-width", "2");
+        g.appendChild(cone);
+
+        var centre = document.createElementNS(SVGNS, "circle");
+        centre.setAttribute("cx", "17");
+        centre.setAttribute("cy", caisson ? "21" : "27");
+        centre.setAttribute("r", "3");
+        centre.setAttribute("fill", "#ff8a00");
+        g.appendChild(centre);
+
+        if (!caisson) {{
+          var aigu = document.createElementNS(SVGNS, "circle");
+          aigu.setAttribute("cx", "17");
+          aigu.setAttribute("cy", "10");
+          aigu.setAttribute("r", "4");
+          aigu.setAttribute("fill", "none");
+          aigu.setAttribute("stroke", "#ff8a00");
+          aigu.setAttribute("stroke-width", "2");
+          g.appendChild(aigu);
+        }}
+
+        var titre = document.createElementNS(SVGNS, "title");
+        titre.textContent = nom + " — cliquer pour jouer";
+        g.appendChild(titre);
+
+        function jouer() {{
+          corps.setAttribute("fill", "rgba(255,138,0,.75)");
+          if (legende) legende.textContent = "Envoi sur : " + nom;
+          envoyer(canal);
+        }}
+
+        g.addEventListener("click", jouer);
+        g.addEventListener("keydown", function (e) {{
+          if (e.key === "Enter" || e.key === " ") {{ e.preventDefault(); jouer(); }}
+        }});
+        g.addEventListener("mouseenter", function () {{
+          corps.setAttribute("fill", "rgba(255,138,0,.45)");
+          if (legende) legende.textContent = nom;
+        }});
+        g.addEventListener("mouseleave", function () {{
+          corps.setAttribute("fill", "rgba(255,138,0,.20)");
+        }});
+
+        return g;
       }}
 
       function dessiner() {{
-        hote.innerHTML = "";
+        couche.replaceChildren();
+        restants.replaceChildren();
         var option = choix.selectedOptions[0];
+        var codes = (option && option.dataset.carte || "").split(",").filter(Boolean);
         var noms = (option && option.dataset.noms || "").split(",").filter(Boolean);
-        if (!noms.length) {{
-          hote.innerHTML =
-            "<small style='opacity:.7'>Cette sortie ne declare pas ses positions :"
-            + " utilise le bouton de test complet ci-dessous.</small>";
+
+        if (!codes.length) {{
+          legende.textContent =
+            "Cette sortie ne declare pas ses positions : utilise le bouton de test complet.";
           return;
         }}
-        noms.forEach(function (nom, i) {{
+
+        legende.textContent = "Clique un haut-parleur pour n'envoyer le son que la.";
+
+        codes.forEach(function (code, i) {{
+          var nom = noms[i] || code;
+          var place = PLACES[code.trim()];
+          if (place) {{
+            couche.appendChild(enceinte(place[0], place[1], nom, code.trim(),
+                                        code.trim() === "lfe"));
+            return;
+          }}
+          // Position inconnue du schema : bouton nomme, plutot que rien.
           var b = document.createElement("button");
           b.type = "button";
           b.className = "button secondary";
           b.style.cssText = "padding:6px 10px;font-size:12px;";
           b.textContent = nom;
-          b.addEventListener("click", function () {{ envoyer(String(i + 1)); }});
-          hote.appendChild(b);
+          b.addEventListener("click", function () {{ envoyer(code.trim()); }});
+          restants.appendChild(b);
         }});
       }}
 
@@ -1091,6 +1316,7 @@ def audio_alsa_test_card():
           document.getElementById('pco-alsa-hidden-device').value=card.querySelector('select[name=device]').value;
           document.getElementById('pco-alsa-hidden-channels').value=card.querySelector('select[name=channels]').value;
           document.getElementById('pco-alsa-hidden-signal').value=card.querySelector('select[name=signal]').value;
+          document.getElementById('pco-alsa-hidden-position').value='';
         ">
         Tester 2 secondes
       </button>
@@ -1961,11 +2187,11 @@ def pincabos_audio_ssf_page_fixed():
 
 @route("/audio-ssf/test-alsa-quick", methods=["POST"])
 def audio_ssf_test_alsa_quick():
-    """PINCABOS_AUDIO_TEST_RUN_V1"""
+    """PINCABOS_AUDIO_TEST_RUN_V1 + PINCABOS_AUDIO_VOIX_V1"""
     device = request.form.get("device", "").strip()
     channels = request.form.get("channels", "2").strip()
     signal = request.form.get("signal", "wav").strip()
-    canal = request.form.get("channel", "").strip()  # PINCABOS_AUDIO_PER_SPEAKER_V1
+    position = request.form.get("position", "").strip()
 
     if not device:
         return audio_reponse_lisible(
@@ -1981,7 +2207,8 @@ def audio_ssf_test_alsa_quick():
 
     # La sortie demandée doit figurer parmi celles que le système déclare :
     # rien de ce qui vient du formulaire n'est transmis tel quel.
-    connues = {f"pw:{x['name']}" for x in audio_pipewire_sinks()}
+    sorties = audio_pipewire_sinks()
+    connues = {f"pw:{x['name']}" for x in sorties}
     for d in audio_detect_alsa_devices()[0]:
         connues.add(str(d.get("id") or ""))
         connues.add(f"plughw:{d.get('card')},{d.get('device')}")
@@ -1994,24 +2221,47 @@ def audio_ssf_test_alsa_quick():
             ok=False,
         )
 
-    # Le signal parlé annonce chaque canal l'un après l'autre : il faut lui
-    # laisser le temps de faire le tour.
-    # PINCABOS_AUDIO_PER_SPEAKER_V1 — un seul canal, ou le tour complet.
-    if not (canal.isdigit() and 1 <= int(canal) <= int(channels)):
-        canal = ""
+    # PINCABOS_AUDIO_VOIX_V1
+    # Un haut-parleur désigné par son nom : le son est placé dans le canal
+    # qui porte ce nom, et annoncé dans la langue du cabinet.
+    if position and device.startswith("pw:"):
+        if position not in PINCABOS_POSITION_FFMPEG:
+            return audio_reponse_lisible(
+                "Position inconnue", [position], ok=False,
+            )
 
-    secondes = 5 if canal else (4 + int(channels) * 3 if signal == "wav" else 4)
+        sink = device[3:]
+        carte = next(
+            (x.get("map") or [] for x in sorties if x["name"] == sink), []
+        )
+        if position not in carte:
+            return audio_reponse_lisible(
+                "Position absente de cette sortie",
+                [f"{position} n'existe pas sur {sink}.",
+                 "Positions disponibles : " + ", ".join(carte)],
+                ok=False,
+            )
+
+        ok, detail = audio_jouer_position(sink, position, len(carte))
+        return audio_reponse_lisible(
+            "Annonce jouée" if ok else "Annonce impossible",
+            [f"Sortie   : {sink}",
+             f"Langue   : {audio_langue_voix()}",
+             "",
+             detail],
+            ok=ok,
+        )
+
+    # Tour complet : speaker-test annonce lui-même chaque canal.
+    secondes = 4 + int(channels) * 3 if signal == "wav" else 4
 
     test = ["/usr/bin/speaker-test", "-c", channels, "-t", signal, "-l", "1"]
-    if canal:
-        test += ["-s", canal]
     if signal == "sine":
         test += ["-f", "440"]
 
     if device.startswith("pw:"):
-        # PINCABOS_AUDIO_TEST_PCM_V1
         # Le PCM s'appelle « pipewire » — « pulse » est le plugin de
-        # PulseAudio, absent ici — et la sortie visee se choisit par
+        # PulseAudio, absent ici — et la sortie visée se choisit par
         # PIPEWIRE_NODE.
         cmd = (
             audio_session_prefix()
@@ -2028,16 +2278,13 @@ def audio_ssf_test_alsa_quick():
             cmd, text=True, capture_output=True, timeout=secondes + 6,
         )
     except Exception as exc:
-        return audio_reponse_lisible(
-            "Test impossible", [str(exc)], ok=False,
-        )
+        return audio_reponse_lisible("Test impossible", [str(exc)], ok=False)
 
     sortie = (r.stdout or "") + (r.stderr or "")
 
     lignes = [
         f"Sortie   : {route_lisible}",
-        f"Canaux   : {channels}"
-        + (f" — canal {canal} seul" if canal else " — tour complet"),
+        f"Canaux   : {channels} — tour complet",
         f"Signal   : {'nom des canaux' if signal == 'wav' else 'sinusoïde 440 Hz'}",
         "",
     ]
@@ -2059,12 +2306,6 @@ def audio_ssf_test_alsa_quick():
         lignes += [
             "Le périphérique est occupé : PipeWire tient la carte en permanence.",
             "Reprends le test sur la sortie PipeWire correspondante.",
-            "",
-        ]
-    elif "No such file" in sortie and signal == "wav":
-        lignes += [
-            "Les échantillons parlés sont absents (paquet alsa-utils).",
-            "Utilise le signal sinusoïde.",
             "",
         ]
     elif ok:
