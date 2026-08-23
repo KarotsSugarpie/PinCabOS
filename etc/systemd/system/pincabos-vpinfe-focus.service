@@ -1,0 +1,17 @@
+[Unit]
+Description=PinCabOS keyboard focus on the playfield window
+Documentation=https://pincabos.cc/
+After=pincabos-vpinfe.service
+BindsTo=pincabos-vpinfe.service
+
+[Service]
+Type=oneshot
+User=pinball
+Group=pinball
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pinball/.Xauthority
+ExecStart=/usr/local/libexec/pincabos/pincabos-vpinfe-focus-playfield
+TimeoutStartSec=150
+
+[Install]
+WantedBy=pincabos-vpinfe.service
