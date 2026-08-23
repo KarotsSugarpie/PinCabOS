@@ -1211,6 +1211,102 @@ def audio_sorties_classees():
     )
 
 
+# PINCABOS_AUDIO_SURROUND_UI_V1
+PINCABOS_SURROUND_OUTIL = "/usr/local/sbin/pincabos-audio-surround"
+PINCABOS_SURROUND_MODES = (
+    ("stereo", "Stéréo", 2),
+    ("5.1", "5.1", 6),
+    ("7.1", "7.1", 8),
+)
+
+
+def audio_surround_etat():
+    """Mode courant et modes atteignables par la carte analogique."""
+    etat = {"mode": "", "canaux": 0, "possibles": [], "reaffectation": False}
+
+    try:
+        etat["mode"] = str(json.loads(
+            Path("/opt/pincabos/config/audio/surround.json")
+            .read_text(encoding="utf-8")
+        ).get("mode") or "")
+    except Exception:
+        pass
+
+    rapport = audio_run_cmd(f"{PINCABOS_SURROUND_OUTIL} detect 2>&1")
+
+    for ligne in rapport.splitlines():
+        depouillee = ligne.strip()
+        if depouillee.startswith("canaux actuels"):
+            chiffres = depouillee.split(":", 1)[-1].strip()
+            etat["canaux"] = int(chiffres) if chiffres.isdigit() else 0
+        elif depouillee.startswith("profils"):
+            profils = depouillee.split(":", 1)[-1]
+            for cle, _, _ in PINCABOS_SURROUND_MODES:
+                marqueur = ("analog-stereo" if cle == "stereo"
+                            else f"analog-surround-{cle.replace('.', '')}")
+                if marqueur in profils:
+                    etat["possibles"].append(cle)
+        elif depouillee.startswith("7.1") and "possible en reaffectant" in depouillee:
+            etat["reaffectation"] = True
+            if "7.1" not in etat["possibles"]:
+                etat["possibles"].append("7.1")
+
+    return etat
+
+
+def audio_carte_surround_html():
+    """Carte de choix du mode multicanal."""
+    etat = audio_surround_etat()
+    if not etat["possibles"]:
+        return ""
+
+    boutons = []
+    for cle, libelle, canaux in PINCABOS_SURROUND_MODES:
+        if cle not in etat["possibles"]:
+            continue
+
+        courant = etat["mode"] == cle or etat["canaux"] == canaux
+        classe = "button" if not courant else "button secondary"
+        suffixe = " — actif" if courant else ""
+        prevenir = (
+            " (réaffecte la prise bleue)"
+            if cle == "7.1" and etat["reaffectation"] and etat["canaux"] < 8
+            else ""
+        )
+        boutons.append(
+            f'<button class="{classe}" type="submit" name="mode" value="{cle}"'
+            f'{" disabled" if courant else ""}>'
+            f'{esc(libelle)} — {canaux} canaux{suffixe}{prevenir}</button>'
+        )
+
+    return f"""
+<div class="card pco-audio-compact-card" id="pincabos-surround-card">
+  <h2>Sortie multicanal</h2>
+  <p>
+    Le SSF a besoin d’un périphérique de 6 ou 8 canaux. Une carte analogique
+    démarre toujours en stéréo : sans ce choix, aucune sortie multicanal
+    n’existe et le SSF ne peut pas fonctionner.
+  </p>
+  <p>
+    Mode enregistré : <code>{esc(etat['mode'] or 'aucun')}</code> —
+    la carte fournit actuellement <strong>{etat['canaux']} canaux</strong>.
+  </p>
+  <form method="post" action="/audio-ssf/surround" target="pco-surround-frame">
+    <p style="display:flex;gap:8px;flex-wrap:wrap;">{''.join(boutons)}</p>
+  </form>
+  <p><small>Le changement de mode relance brièvement la session audio.
+  Le 7.1 réaffecte l’entrée ligne arrière — la prise bleue — en sortie
+  latérale : c’est réversible, et c’est ce que fait le pilote du fabricant
+  sous Windows.</small></p>
+  <details style="margin-top:8px;" open>
+    <summary>Résultat</summary>
+    <iframe name="pco-surround-frame"
+            style="width:100%;height:120px;background:rgba(0,0,0,.45);border:1px solid rgba(255,176,0,.25);border-radius:12px;"></iframe>
+  </details>
+</div>
+"""
+
+
 def audio_reponse_lisible(titre, lignes, ok=True):
     # PINCABOS_AUDIO_REPONSES_LISIBLES_V1 — toutes les reponses affichees
     # dans un cadre passent par ici : un cadre au fond sombre ne colore pas
@@ -1312,9 +1408,12 @@ def audio_alsa_test_card():
     <code>Playback open error</code> tant qu’une session audio tourne.
   </p>
   <p>
-    Pour vérifier un câblage SSF, prends le signal <strong>nom des canaux</strong> :
-    chaque haut-parleur annonce sa position à voix haute.
+    Pour vérifier un câblage SSF, clique un haut-parleur du schéma :
+    il annonce sa position à voix haute, et lui seul reçoit le son.
   </p>
+  <p><small>Le schéma donne la disposition habituelle d’un cabinet, pour
+  situer les positions les unes par rapport aux autres. C’est le test,
+  position par position, qui dit ce qui est réellement branché où.</small></p>
 
   <table style="width:100%;">
     <tr>
@@ -1367,7 +1466,7 @@ def audio_alsa_test_card():
         <rect x="46" y="386" width="228" height="14" rx="7"
               fill="rgba(255,176,0,.18)" stroke="rgba(255,176,0,.45)" stroke-width="2"/>
         <text x="160" y="414" text-anchor="middle" font-size="11"
-              fill="rgba(255,255,255,.38)">lockbar</text>
+              fill="rgba(255,255,255,.38)">lockbar — côté joueur</text>
         <g id="pco-hp-couche"></g>
       </svg>
       <div style="flex:1 1 200px;min-width:180px;">
@@ -1387,20 +1486,21 @@ def audio_alsa_test_card():
 
       var SVGNS = "http://www.w3.org/2000/svg";
 
-      // Position de chaque canal sur le cabinet. Le fronton porte les voies
-      // avant, le corps le caisson, l'arriere se place pres du fronton et les
-      // lateraux au lockbar — la disposition d'un SSF.
+      // PINCABOS_AUDIO_CAB_MAP_V2
+      // Seules les deux voies avant sont sur le fronton. Tout le reste vit
+      // dans le corps du cabinet, sous le plateau : arriere en haut, caisson
+      // au milieu, laterales au lockbar, cote joueur.
       var PLACES = {{
         "front-left":   [104, 52],
-        "front-center": [160, 52],
         "front-right":  [216, 52],
-        "rear-left":    [102, 190],
-        "rear-center":  [160, 190],
-        "rear-right":   [218, 190],
-        "lfe":          [160, 285],
-        "side-left":    [70, 366],
-        "side-right":   [250, 366],
-        "mono":         [160, 285]
+        "front-center": [160, 182],
+        "rear-left":    [100, 214],
+        "rear-right":   [220, 214],
+        "lfe":          [160, 280],
+        "rear-center":  [160, 330],
+        "side-left":    [100, 368],
+        "side-right":   [220, 368],
+        "mono":         [160, 280]
       }};
 
       // PINCABOS_AUDIO_VOIX_V1 — on designe la position par son nom.
@@ -2393,6 +2493,8 @@ def pincabos_audio_ssf_page_fixed():
   Ils sont maintenant dans SSF Commander.
 </p>
 
+{audio_carte_surround_html()}
+
 <div class="grid pco-audio-grid-tests">
   {pincabos_safe_audio_alsa_card()}
   {audio_wav_test_card()}
@@ -2420,6 +2522,70 @@ def pincabos_audio_ssf_page_fixed():
 {audio_ini_values_card()}
 """
     return page("Audio / SSF V2", body)
+
+
+@route("/audio-ssf/surround", methods=["POST"])
+def audio_ssf_surround():
+    """PINCABOS_AUDIO_SURROUND_UI_V1"""
+    mode = request.form.get("mode", "").strip()
+
+    if mode not in {cle for cle, _, _ in PINCABOS_SURROUND_MODES}:
+        return audio_reponse_lisible("Mode inconnu", [mode], ok=False)
+
+    # La règle sudo n'autorise que ces trois modes, écrits en toutes lettres :
+    # aucun argument libre n'atteint l'outil.
+    resultat = audio_run_cmd(
+        f"/usr/bin/sudo -n {PINCABOS_SURROUND_OUTIL} enable {mode} 2>&1"
+    )
+
+    ok = "GO:" in resultat
+    suite = []
+
+    # PINCABOS_AUDIO_SURROUND_SUIVI_V1
+    # Le nom du peripherique change avec le mode. Sans report, VPX cherche une
+    # sortie disparue et retombe sur le peripherique par defaut, en stereo.
+    if ok:
+        # PINCABOS_AUDIO_SURROUND_SUIVI_V2
+        # La sortie est detruite puis recreee : on la laisse revenir avant de
+        # lire son nom, sinon on ecrit dans le vide.
+        import time as _time
+
+        libelle = ""
+        for _ in range(10):
+            sorties = audio_sorties_classees()
+            attendus = 2 if mode == "stereo" else (6 if mode == "5.1" else 8)
+            candidate = next(
+                (
+                    x for x in sorties
+                    if int(x.get("channels", 2) or 2) == attendus
+                ),
+                None,
+            )
+            if candidate:
+                libelle = candidate.get("description") or candidate["name"]
+                break
+            _time.sleep(1)
+
+        if libelle:
+            try:
+                suite = _pco_vpx_write_audio(libelle, libelle,
+                                             audio_ini_read_key(
+                                                 str(PINCABOS_VPX_AUDIO_INI),
+                                                 "Player", "Sound3D") or "0")
+                suite = [f"VPX pointe maintenant sur : {libelle}"] + list(suite)
+            except Exception as exc:
+                suite = [f"VPX non mis à jour : {exc}"]
+        else:
+            suite = ["Sortie non revenue à temps : VPX n'a pas été redirigé.",
+                     "Ouvre la page Audio et enregistre la configuration."]
+
+    return audio_reponse_lisible(
+        f"Mode {mode} appliqué" if ok else f"Mode {mode} refusé",
+        [resultat.strip() or "(aucune sortie)", ""] + suite + [
+            "",
+            "Recharge la page pour voir le nouveau schéma."],
+        ok=ok,
+    )
 
 
 @route("/audio-ssf/test-alsa-quick", methods=["POST"])

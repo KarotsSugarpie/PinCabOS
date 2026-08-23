@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -53,25 +54,36 @@ def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, check=False, **kw)
 
 
-def pactl(*args: str) -> subprocess.CompletedProcess:
-    """pactl dans la session graphique, seule a voir PipeWire."""
-    return run([
-        "/usr/sbin/runuser", "-u", SESSION_USER, "--",
+def prefixe_session() -> list[str]:
+    """Prefixe pour parler a la session audio de la seance.
+
+    PINCABOS_AUDIO_SESSION_PREFIX_V1
+
+    Appele depuis la page, ce programme tourne deja sous le compte de la
+    session : lui faire appeler runuser revient a lui demander un privilege
+    qu il n a pas, et l appel echoue sans bruit — PipeWire parait alors
+    absent. On ne bascule donc d utilisateur que depuis root, cas du service
+    de demarrage.
+    """
+    environnement = [
         "/usr/bin/env",
         f"XDG_RUNTIME_DIR=/run/user/{SESSION_UID}",
         f"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{SESSION_UID}/bus",
-        "/usr/bin/pactl", *args,
-    ])
+    ]
+
+    if os.geteuid() == 0:
+        return ["/usr/sbin/runuser", "-u", SESSION_USER, "--"] + environnement
+
+    return environnement
+
+
+def pactl(*args: str) -> subprocess.CompletedProcess:
+    """pactl dans la session graphique, seule a voir PipeWire."""
+    return run(prefixe_session() + ["/usr/bin/pactl", *args])
 
 
 def systemctl_user(*args: str) -> subprocess.CompletedProcess:
-    return run([
-        "/usr/sbin/runuser", "-u", SESSION_USER, "--",
-        "/usr/bin/env",
-        f"XDG_RUNTIME_DIR=/run/user/{SESSION_UID}",
-        f"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{SESSION_UID}/bus",
-        "/usr/bin/systemctl", "--user", *args,
-    ])
+    return run(prefixe_session() + ["/usr/bin/systemctl", "--user", *args])
 
 
 # --------------------------------------------------------------------------
