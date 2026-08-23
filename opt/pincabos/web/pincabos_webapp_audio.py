@@ -309,30 +309,34 @@ def _pco_vpx_sound3d_options(selected):
     if selected not in {"0", "1", "2", "3", "4", "5"}:
         selected = "0"
 
+    # PINCABOS_SOUND3D_LABELS_V1
+    # Intitules repris de VPinball : les modes 4 et 5 sont des modes a SIX
+    # canaux, pas du 7.1. Les annoncer en 7.1 fait passer un fonctionnement
+    # normal pour une panne.
     modes = (
         (
             "0",
-            "Cartes individuelles — 2 canaux avant",
+            "2 canaux — avant",
         ),
         (
             "1",
-            "Cartes individuelles — 2 canaux arrière",
+            "2 canaux — arrière",
         ),
         (
             "2",
-            "5.1 — arrière au lockbar",
+            "Jusqu'à 6 canaux — arrière au lockbar",
         ),
         (
             "3",
-            "5.1 — avant au lockbar",
+            "Jusqu'à 6 canaux — avant au lockbar",
         ),
         (
             "4",
-            "7.1 — VPX Side + Rear, mixage Legacy",
+            "6 canaux — latéral et arrière au lockbar, mixage historique",
         ),
         (
             "5",
-            "7.1 — VPX Side + Rear, nouveau mixage",
+            "6 canaux — latéral et arrière au lockbar, nouveau mixage",
         ),
     )
 
@@ -519,35 +523,11 @@ def audio_config_rows():
 
     legacy_rows = []
 
+    # PINCABOS_AUDIO_DEAD_ROWS_V1
+    # Les cles d'un routage audio anterieur ne sont plus affichees : rien ne
+    # les lit, et posees au milieu des vrais reglages elles se lisaient comme
+    # des reglages. « Mode nuit », elle, a de vrais consommateurs.
     for label, key in (
-        (
-            "Mode audio PinCabOS",
-            "audio_mode",
-        ),
-        (
-            "Backend",
-            "audio_backend",
-        ),
-        (
-            "Surround PinCabOS",
-            "surround_device",
-        ),
-        (
-            "Bass shaker",
-            "bass_device",
-        ),
-        (
-            "Inverser gauche / droite",
-            "invert_lr",
-        ),
-        (
-            "Inverser avant / arrière",
-            "invert_front_rear",
-        ),
-        (
-            "Bass activé",
-            "enable_bass",
-        ),
         (
             "Mode nuit",
             "night_mode",
@@ -1586,7 +1566,6 @@ def pincabos_audio_ssf_page_fixed():
     try:
         saved_rows = f"""
 <table>
-  <tr><td>Mode audio</td><td><code>{esc(cfg.get('audio_mode', ''))}</code></td></tr>
   <tr><td>Backend</td><td><code>{esc(cfg.get('audio_backend', ''))}</code></td></tr>
   <tr><td>Backbox / ROM / Musique</td><td><code>{esc(cfg.get('backbox_device', ''))}</code></td></tr>
   <tr><td>Playfield / SSF</td><td><code>{esc(cfg.get('playfield_device', ''))}</code></td></tr>
