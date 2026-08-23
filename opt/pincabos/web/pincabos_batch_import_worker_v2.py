@@ -348,6 +348,50 @@ def finish_item(
         return job
 
 
+def refresh_frontend(imported: int) -> str:
+    """Relance VPinFE pour qu'il prenne en compte les tables installees.
+
+    PINCABOS_IMPORT_REFRESH_FRONTEND_V1
+
+    Le worker tourne en root : pas de sudo, pas de regle a maintenir.
+    """
+    if imported <= 0:
+        return ""
+
+    try:
+        playing = subprocess.run(
+            ["/usr/bin/pgrep", "-f", "VPinballX"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        ).returncode == 0
+    except Exception:
+        playing = False
+
+    if playing:
+        log("Table en cours : frontend non relance.")
+        return "Une table est en cours — relance le frontend quand tu auras fini."
+
+    try:
+        result = subprocess.run(
+            ["/usr/bin/systemctl", "restart", "pincabos-vpinfe.service"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except Exception as exc:
+        log(f"Relance du frontend impossible : {exc}")
+        return f"Frontend non relance ({exc})."
+
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        log(f"Relance du frontend en echec : {detail}")
+        return f"Frontend non relance ({detail})."
+
+    log("Frontend relance : les nouvelles tables sont visibles.")
+    return "Frontend relance — les nouvelles tables sont dans le carrousel."
+
+
 def finalize_job(job_id: str, stopped: bool = False) -> None:
     with queue.state_lock(True):
         job = queue.load_job_unlocked(job_id)
@@ -382,6 +426,15 @@ def finalize_job(job_id: str, stopped: bool = False) -> None:
             job["state"] = "completed"
             label = "Terminé"
             queue.add_event(job, f"SMART BATCH TERMINÉ — {summary}.")
+
+        # PINCABOS_IMPORT_REFRESH_FRONTEND_V1
+        # La relance a lieu dans le verrou : le job est deja dans son etat
+        # final, et l'evenement doit apparaitre dans le meme journal que le
+        # resume d'import.
+        if not stopped and not job.get("stop_requested"):
+            note = refresh_frontend(ok_count)
+            if note:
+                queue.add_event(job, note)
 
         queue.refresh_progress(job, label, "")
         queue.cleanup_uploads(job)

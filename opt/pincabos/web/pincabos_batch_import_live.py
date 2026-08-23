@@ -326,6 +326,9 @@ _PAGE_UI = r'''
       xhr.open("POST", url, true);
       xhr.responseType = "json";
       xhr.withCredentials = true;
+      /* PINCABOS_UPLOAD_SPEED_V1 — memes en-tetes que la version fetch(). */
+      xhr.setRequestHeader("Accept", "application/json");
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
       xhr.upload.onprogress = event => {
         if (event.lengthComputable && onProgress) onProgress(event.loaded, event.total);
       };
@@ -492,6 +495,17 @@ _PAGE_UI = r'''
       return `${(value / (1024 ** 2)).toFixed(1)} Mo`;
     };
 
+    /* PINCABOS_UPLOAD_SPEED_V1 */
+    const humanDuree = secondes => {
+      const value = Math.max(0, Math.round(Number(secondes) || 0));
+      if (value < 60) return `${value} s`;
+      const minutes = Math.floor(value / 60);
+      if (minutes < 60) {
+        return `${minutes} min ${String(value % 60).padStart(2, "0")} s`;
+      }
+      return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} min`;
+    };
+
     async function sendOne(
       jobId,
       file,
@@ -512,17 +526,33 @@ _PAGE_UI = r'''
             + `?name=${encodeURIComponent(file.name)}`
             + `&size=${encodeURIComponent(String(file.size))}`;
 
-          await json(
-            url,
-            {
-              method: "POST",
-              headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/octet-stream"
-              },
-              body: file
-            }
-          );
+          /*
+           * PINCABOS_UPLOAD_SPEED_V1
+           * fetch() ne rend compte de rien avant la fin du transfert.
+           * XMLHttpRequest, si — c'est la seule raison de ce detour.
+           * Le debit est moyenne depuis le debut du package : plus stable
+           * qu'une mesure instantanee sur un reseau qui respire.
+           */
+          const debut = Date.now();
+          let dernierAffichage = 0;
+
+          await uploadWithProgress(url, file, (envoye, taille) => {
+            const maintenant = Date.now();
+            if (maintenant - dernierAffichage < 200 && envoye < taille) return;
+            dernierAffichage = maintenant;
+
+            const secondes = Math.max(0.3, (maintenant - debut) / 1000);
+            const debit = envoye / secondes;
+            const reste = debit > 0 ? (taille - envoye) / debit : 0;
+
+            setProgress(
+              taille ? envoye / taille : 0,
+              `Téléversement ${index}/${total} : ${file.name} — `
+              + `${humanSize(envoye)} / ${humanSize(taille)} · `
+              + `${humanSize(debit)}/s`
+              + (reste > 1 ? ` · ${humanDuree(reste)} restantes` : "")
+            );
+          });
 
           return;
 
@@ -761,6 +791,7 @@ _PAGE_UI = r'''
       );
 
       stagingCompleted = true;
+      setProgress(null); /* PINCABOS_UPLOAD_SPEED_V1 */
 
       setMessage(
         `${files.length}/${files.length} packages téléversés. `
