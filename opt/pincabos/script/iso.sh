@@ -5645,6 +5645,10 @@ PCO_KEEP_PATHS=(
   "home/pinball/.vpinball/VPinballX.ini"
   # audio (volume and mute intent replayed at session start)
   "home/pinball/.config/pincabos/audio-volume-widget.json"
+  # PINCABOS_KEEP_AUDIO_SURROUND_V1
+  # audio: multichannel mode and pin retask, replayed at boot. Without this an
+  # update drops the cabinet back to stereo and the SSF silently stops.
+  "opt/pincabos/config/audio/surround.json"
   # network: PinCabOS netplan file and NetworkManager profiles (Wi-Fi keys)
   "etc/netplan/99-pincabos-network.yaml"
   "etc/NetworkManager/system-connections"
