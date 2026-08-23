@@ -1187,7 +1187,34 @@ def audio_carte_prises_html(prises):
 """
 
 
+# PINCABOS_AUDIO_SORTIE_DEFAUT_V1
+def audio_sortie_preferee(sorties):
+    """Sortie a preselectionner : celle de VPX, sinon la plus capable."""
+    if not sorties:
+        return ""
+
+    attendue = (_pco_vpx_audio_values().get("SoundDevice") or "").strip()
+    if attendue:
+        for sortie in sorties:
+            if (sortie.get("description") or "").strip() == attendue:
+                return f"pw:{sortie['name']}"
+
+    plus_capable = max(sorties, key=lambda x: int(x.get("channels", 2) or 2))
+    return f"pw:{plus_capable['name']}"
+
+
+def audio_sorties_classees():
+    """Sorties PipeWire, la plus capable en tete."""
+    return sorted(
+        audio_pipewire_sinks(),
+        key=lambda x: (-int(x.get("channels", 2) or 2), x.get("description") or ""),
+    )
+
+
 def audio_reponse_lisible(titre, lignes, ok=True):
+    # PINCABOS_AUDIO_REPONSES_LISIBLES_V1 — toutes les reponses affichees
+    # dans un cadre passent par ici : un cadre au fond sombre ne colore pas
+    # le document qu'il accueille, et le texte brut s'y ecrit en noir.
     """Reponse affichee dans un cadre au fond sombre : couleurs explicites.
 
     Sans cela le document herite du fond du cadre et ecrit en noir dessus.
@@ -1213,12 +1240,18 @@ def audio_alsa_test_card():
     # PINCABOS_AUDIO_TEST_PIPEWIRE_V1
     # PipeWire tient les cartes en permanence : ses sorties viennent en tete,
     # ce sont les seules testables sans arreter la session audio.
-    for sortie in audio_pipewire_sinks():
+    # PINCABOS_AUDIO_SORTIE_DEFAUT_V1
+    sorties_pw = audio_sorties_classees()
+    preferee = audio_sortie_preferee(sorties_pw)
+
+    for sortie in sorties_pw:
         canaux = int(sortie.get("channels", 2) or 2)
         libelle = sortie.get("description") or sortie["name"]
         carte = ",".join(sortie.get("map") or [])
+        valeur = f'pw:{sortie["name"]}'
+        marque = " selected" if valeur == preferee else ""
         options.append(
-            f'<option value="pw:{esc(sortie["name"])}" data-canaux="{canaux}"'
+            f'<option value="{esc(valeur)}" data-canaux="{canaux}"{marque}'
             f' data-carte="{esc(carte)}" data-noms="{esc(",".join(audio_nom_position(p) for p in (sortie.get("map") or [])))}">'
             f'{esc(libelle)} — {canaux} canaux — PipeWire</option>'
         )
@@ -1569,11 +1602,17 @@ def audio_wav_test_card():
     # PINCABOS_AUDIO_WAV_PIPEWIRE_V1
     # Sorties PipeWire en tete : ce sont les seules multicanal, et les seules
     # jouables sans se heurter a une carte que PipeWire tient deja.
-    for sortie in audio_pipewire_sinks():
+    # PINCABOS_AUDIO_SORTIE_DEFAUT_V1 — meme preselection que le test.
+    sorties_pw = audio_sorties_classees()
+    preferee = audio_sortie_preferee(sorties_pw)
+
+    for sortie in sorties_pw:
         canaux = int(sortie.get("channels", 2) or 2)
         libelle = sortie.get("description") or sortie["name"]
+        valeur = f'pw:{sortie["name"]}'
+        marque = " selected" if valeur == preferee else ""
         device_options.append(
-            f'<option value="pw:{esc(sortie["name"])}">'
+            f'<option value="{esc(valeur)}"{marque}>'
             f'{esc(libelle)} — {canaux} canaux — PipeWire</option>'
         )
 
@@ -1584,7 +1623,7 @@ def audio_wav_test_card():
         name = str(d.get("name", hw) or hw)
         desc = str(d.get("description", "") or "")
         plug = f"plughw:{card},{dev}" if card != "" and dev != "" else hw
-        selected = " selected" if plug == "plughw:2,0" else ""
+        selected = ""  # PINCABOS_AUDIO_SORTIE_DEFAUT_V1 : la sortie PipeWire prime
         label = f"{name} — {desc} — {plug}"
         device_options.append(f'<option value="{esc(plug)}"{selected}>{esc(label)}</option>')
 
@@ -2502,7 +2541,9 @@ def audio_ssf_test_alsa_quick():
 @route("/audio-ssf/system-volume/get", methods=["GET"])
 def audio_ssf_system_volume_get():
     device = request.args.get("device", "").strip()
-    return audio_system_volume_get(device), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return audio_reponse_lisible(
+        "Volume système", str(audio_system_volume_get(device)).splitlines(), ok=True,
+    )
 
 
 @route("/audio-ssf/system-volume/apply", methods=["POST"])
@@ -2510,7 +2551,11 @@ def audio_ssf_system_volume_apply():
     device = request.form.get("device", "").strip()
     volume = request.form.get("volume", "70")
     balance = request.form.get("balance", "0")
-    return audio_system_volume_apply(volume, balance, device), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return audio_reponse_lisible(
+        "Volume appliqué",
+        str(audio_system_volume_apply(volume, balance, device)).splitlines(),
+        ok=True,
+    )
 
 
 @route("/audio-ssf/system-volume/meter-html", methods=["GET", "POST"])
@@ -2709,17 +2754,25 @@ def audio_ssf_test_wav():
     ).strip()
 
     if not wav_file:
-        return "ERREUR: aucun fichier WAV sélectionné.", 400, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible(
+            "Aucun fichier WAV sélectionné",
+            ["Choisis un fichier dans la liste, puis relance la lecture."],
+            ok=False,
+        )
 
     if not device:
-        return "ERREUR: aucune sortie ALSA sélectionnée.", 400, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible(
+            "Aucune sortie sélectionnée",
+            ["Choisis une sortie dans la liste, puis relance la lecture."],
+            ok=False,
+        )
 
     wav_path = Path(wav_file)
 
     try:
         resolved = wav_path.resolve()
     except Exception as e:
-        return f"ERREUR chemin WAV invalide: {e}", 400, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible("Chemin WAV invalide", [str(e)], ok=False)
 
     allowed_roots = [
         Path("/opt/pincabos/media").resolve(),
@@ -2727,13 +2780,15 @@ def audio_ssf_test_wav():
     ]
 
     if not resolved.exists() or not resolved.is_file():
-        return f"ERREUR fichier WAV absent: {resolved}", 404, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible("Fichier WAV absent", [str(resolved)], ok=False)
 
     if resolved.suffix.lower() not in [".wav", ".wave"]:
-        return f"ERREUR fichier non WAV: {resolved}", 400, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible("Ce fichier n\'est pas un WAV", [str(resolved)], ok=False)
 
     if not any(str(resolved).startswith(str(root) + "/") or resolved == root for root in allowed_roots):
-        return f"ERREUR chemin WAV non autorisé: {resolved}", 403, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible(
+            "Chemin WAV non autorisé", [str(resolved)], ok=False,
+        )
 
     # Nettoie les anciens tests et les captures VU courtes avant lecture.
     for kill_cmd in [
@@ -2785,21 +2840,24 @@ def audio_ssf_test_wav():
                 out += ["", "STDOUT:", stdout]
             if stderr:
                 out += ["", "STDERR:", stderr]
-            return "\n".join(out), 200, {"Content-Type": "text/plain; charset=utf-8"}
+            return audio_reponse_lisible(
+                "Lecture terminée" if proc.returncode == 0 else "Lecture en échec",
+                out, ok=proc.returncode == 0,
+            )
 
         except subprocess.TimeoutExpired:
-            return (
-                "Lecture WAV lancée.\n"
-                f"PID: {proc.pid}\n"
-                f"Fichier: {resolved}\n"
-                f"Sortie: {device}\n"
-                + (f"PipeWire sink: {sink}" if sink else "Mode: ALSA direct"),
-                200,
-                {"Content-Type": "text/plain; charset=utf-8"},
+            return audio_reponse_lisible(
+                "Lecture en cours",
+                [f"Fichier : {resolved}",
+                 f"Sortie  : {sink or device}",
+                 f"Routage : {'PipeWire' if sink else 'accès direct ALSA'}",
+                 "",
+                 "Utilise « Stop audio » pour interrompre."],
+                ok=True,
             )
 
     except Exception as e:
-        return f"Erreur lancement WAV: {e}", 500, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible("Lancement impossible", [str(e)], ok=False)
 
 
 @route("/audio-ssf/test-wav-stop", methods=["POST"])
@@ -2816,7 +2874,7 @@ def audio_ssf_test_wav_stop_fixed():
             out.append(" ".join(cmd) + f" => {r.returncode}")
         except Exception as e:
             out.append(" ".join(cmd) + f" => ERREUR {e}")
-    return "Stop audio demandé.\n" + "\n".join(out), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return audio_reponse_lisible("Lecture interrompue", out, ok=True)
 
 
 
