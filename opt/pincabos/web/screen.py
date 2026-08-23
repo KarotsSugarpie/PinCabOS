@@ -200,9 +200,22 @@ def write_from_form(form) -> dict:
 
 
 def role_index(screens: list[dict], output: str) -> str:
-    for idx, sc in enumerate(screens):
+    """Identifiant de l'ecran tel que le comptent les applications.
+
+    PINCABOS_APP_SCREEN_INDEX_V1
+
+    VPinFE numerote les sorties dans l'ordre ou le serveur X les declare, et
+    ne compte que celles qui affichent quelque chose. Une sortie branchee mais
+    eteinte ne doit donc pas consommer un numero, sans quoi tous les ecrans
+    suivants se decalent.
+    """
+    index = 0
+    for sc in screens:
+        if not sc.get("current"):
+            continue
         if sc.get("output") == output:
-            return str(idx)
+            return str(index)
+        index += 1
     return ""
 
 
