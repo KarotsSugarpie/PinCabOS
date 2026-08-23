@@ -18,6 +18,7 @@ memes — c'est reversible, et c'est exactement ce que fait hda-jack-retask.
 
   pincabos-audio-surround detect
   pincabos-audio-surround enable 7.1 | 5.1 | stereo
+  pincabos-audio-surround auto            (5.1 au premier demarrage, si possible)
   pincabos-audio-surround apply-boot      (reaffectation, avant la session)
   pincabos-audio-surround apply-session   (profil, une fois PipeWire lance)
 """
@@ -367,18 +368,64 @@ def cmd_apply_boot() -> int:
     return 0
 
 
-def cmd_apply_session() -> int:
-    """Rejoue le profil une fois PipeWire lance : il repart en stereo sinon."""
-    config = lire_config()
-    profil = str(config.get("profile") or "")
-    if not profil:
+def cmd_auto() -> int:
+    """Premier demarrage : adopter le 5.1 si la carte le donne sans reaffecter.
+
+    PINCABOS_AUDIO_AUTO_51_V1
+    """
+    if lire_config().get("mode"):
+        return 0  # un choix existe deja, on n y touche pas
+
+    trouve = carte_analogique()
+    if not trouve:
+        return 0
+    codec, carte = trouve
+
+    # Sans reaffectation de broche : on ne prend que ce que la carte donne
+    # deja. Six canaux suffisent au 5.1 ; le 7.1 en demanderait huit, donc une
+    # reaffectation, donc une decision qui revient a l utilisateur.
+    if canaux_max(carte) < 6:
         return 0
 
+    nom = nom_carte_pactl(carte)
+    if not nom or PROFILS["5.1"] not in profils_disponibles(nom):
+        return 0
+
+    applique = appliquer_profil(nom, PROFILS["5.1"])
+    if not applique:
+        return 0
+
+    config = lire_config()
+    config.update({
+        "mode": "5.1",
+        "card": nom,
+        "profile": applique,
+        "codec": codec.name,
+        "pin_retask": {},
+        "source": "automatique",
+    })
+    ecrire_config(config)
+
+    print(f"GO: 5.1 adopte automatiquement ({applique})")
+    return 0
+
+
+def cmd_apply_session() -> int:
+    """Rejoue le profil une fois PipeWire lance : il repart en stereo sinon."""
     for _ in range(20):
         if run(["/usr/bin/pgrep", "-u", SESSION_USER, "-x", "wireplumber"]).returncode == 0:
             break
         time.sleep(1)
     time.sleep(3)
+
+    # PINCABOS_AUDIO_AUTO_51_V1 — un cabinet neuf n a pas encore de choix.
+    if not lire_config().get("mode"):
+        cmd_auto()
+
+    config = lire_config()
+    profil = str(config.get("profile") or "")
+    if not profil:
+        return 0
 
     nom = str(config.get("card") or "")
     if not nom:
@@ -400,6 +447,7 @@ def main() -> int:
     p.add_argument("--no-session-restart", action="store_true",
                    help="ne pas arreter PipeWire (appel depuis le demarrage)")
     sous.add_parser("apply-boot")
+    sous.add_parser("auto")
     sous.add_parser("apply-session")
     args = parser.parse_args()
 
@@ -409,6 +457,8 @@ def main() -> int:
         return cmd_enable(args.mode, session=not args.no_session_restart)
     if args.commande == "apply-boot":
         return cmd_apply_boot()
+    if args.commande == "auto":
+        return cmd_auto()
     if args.commande == "apply-session":
         return cmd_apply_session()
 
