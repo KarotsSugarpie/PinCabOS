@@ -168,6 +168,16 @@ def audio_device_options(selected):
     devices, _raw = audio_detect_alsa_devices()
     rows = ['<option value="">Non configuré</option>']
 
+    # PINCABOS_AUDIO_WAV_PIPEWIRE_V1
+    # Les sorties PipeWire d'abord : ce sont les seules qui portent le
+    # multicanal, et les seules jouables sans se heurter a la carte occupee.
+    for sortie in audio_pipewire_sinks():
+        valeur = f'pw:{sortie["name"]}'
+        canaux = int(sortie.get("channels", 2) or 2)
+        libelle = f'{sortie.get("description") or sortie["name"]} — {canaux} canaux — PipeWire'
+        sel = "selected" if selected == valeur else ""
+        rows.append(f'<option value="{esc(valeur)}" {sel}>{esc(libelle)}</option>')
+
     for dev in devices:
         dev_id = dev["id"]
         label = f'{dev["name"]} — {dev_id}'
@@ -835,8 +845,8 @@ def pincabos_safe_audio_alsa_card():
     except Exception as e:
         return f"""
 <div class="card pco-audio-compact-card">
-  <h2>Test audio ALSA rapide</h2>
-  <p class="warn">Carte ALSA indisponible: {esc(str(e))}</p>
+  <h2>Test des haut-parleurs</h2>
+  <p class="warn">Sorties audio indisponibles : {esc(str(e))}</p>
 </div>
 """
 
@@ -953,7 +963,7 @@ def audio_alsa_test_card():
 
     return f"""
 <div class="card pco-audio-compact-card" id="pincabos-alsa-test-card">
-  <h2>Test audio ALSA rapide</h2>
+  <h2>Test des haut-parleurs</h2>
   <p>
     Lance un test court avec <code>speaker-test</code>. Choisis une sortie
     <strong>PipeWire</strong> : PipeWire tient les cartes en permanence, donc un
@@ -1075,6 +1085,17 @@ def audio_wav_test_card():
     devices, _raw = audio_detect_alsa_devices()
     device_options = []
 
+    # PINCABOS_AUDIO_WAV_PIPEWIRE_V1
+    # Sorties PipeWire en tete : ce sont les seules multicanal, et les seules
+    # jouables sans se heurter a une carte que PipeWire tient deja.
+    for sortie in audio_pipewire_sinks():
+        canaux = int(sortie.get("channels", 2) or 2)
+        libelle = sortie.get("description") or sortie["name"]
+        device_options.append(
+            f'<option value="pw:{esc(sortie["name"])}">'
+            f'{esc(libelle)} — {canaux} canaux — PipeWire</option>'
+        )
+
     for d in devices:
         hw = str(d.get("id", "") or "")
         card = str(d.get("card", "") or "")
@@ -1087,7 +1108,7 @@ def audio_wav_test_card():
         device_options.append(f'<option value="{esc(plug)}"{selected}>{esc(label)}</option>')
 
     if not device_options:
-        device_options.append('<option value="">Aucune sortie ALSA détectée</option>')
+        device_options.append('<option value="">Aucune sortie audio détectée</option>')
 
     return f"""
 <div class="card pco-audio-compact-card" id="pincabos-wav-test-card">
@@ -1319,11 +1340,9 @@ def audio_pactl_find_sink_for_alsa_card(card):
     if str(card).strip() == "":
         return ""
 
-    cmd = [
-        "runuser", "-u", "pinball", "--",
-        "bash", "-lc",
-        "export XDG_RUNTIME_DIR=/run/user/1000; pactl list sinks 2>/dev/null"
-    ]
+    # PINCABOS_AUDIO_WAV_PIPEWIRE_V1 — prefixe commun : runuser seulement
+    # depuis root, sans quoi l'appel echoue et la sortie parait introuvable.
+    cmd = audio_session_prefix() + ["/usr/bin/pactl", "list", "sinks"]
 
     rc, out, err = audio_system_run(cmd, timeout=6)
     if rc != 0 or not out.strip():
@@ -2224,16 +2243,20 @@ def audio_ssf_test_wav():
         except Exception:
             pass
 
-    card, dev = audio_parse_alsa_hw(device)
-    sink = audio_pactl_find_sink_for_alsa_card(card) if card != "" else ""
+    # PINCABOS_AUDIO_WAV_PIPEWIRE_V1
+    # Une sortie PipeWire choisie explicitement est utilisee telle quelle ;
+    # sinon on cherche celle qui correspond a la carte ALSA demandee. L'acces
+    # direct ne reste qu'en dernier recours : PipeWire tient les cartes en
+    # permanence, il repondra « Device or resource busy ».
+    if device.startswith("pw:"):
+        sink = device[3:]
+    else:
+        card, dev = audio_parse_alsa_hw(device)
+        sink = audio_pactl_find_sink_for_alsa_card(card) if card != "" else ""
 
-    # Si PipeWire connaît cette carte, on utilise pw-play.
-    # Ça évite le conflit "Device or resource busy" avec ALSA direct.
     if sink:
-        cmd = [
-            "runuser", "-u", "pinball", "--",
-            "bash", "-lc",
-            f"export XDG_RUNTIME_DIR=/run/user/1000; pw-play --target {sink} {shlex.quote(str(resolved))}"
+        cmd = audio_session_prefix() + [
+            "/usr/bin/pw-play", "--target", sink, str(resolved),
         ]
         printable = f"pw-play --target {sink} {resolved}"
     else:
