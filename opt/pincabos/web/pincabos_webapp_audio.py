@@ -1214,15 +1214,15 @@ def audio_carte_retenue():
     if not nom:
         return None
 
-    for sortie in audio_pipewire_sinks():
-        if nom.endswith(sortie.get("nom_carte", "")) and sortie.get("carte") is not None:
-            return sortie["carte"]
-
-    # Le nom PipeWire d'une carte et celui d'un sink partagent leur suffixe
-    # materiel : alsa_card.pci-0000_00_1f.3 / alsa_output.pci-0000_00_1f.3...
+    # Le nom PipeWire d'une carte et celui de ses sorties partagent leur
+    # suffixe materiel : alsa_card.pci-0000_00_1f.3 donne
+    # alsa_output.pci-0000_00_1f.3.analog-surround-71.
     suffixe = nom.split(".", 1)[-1]
+    if not suffixe:
+        return None
+
     for sortie in audio_pipewire_sinks():
-        if suffixe and suffixe in sortie.get("name", ""):
+        if suffixe in sortie.get("name", ""):
             return sortie.get("carte")
 
     return None
