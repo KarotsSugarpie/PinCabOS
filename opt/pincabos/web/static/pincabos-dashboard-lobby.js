@@ -228,291 +228,396 @@
   render();
 })();
 
-/* BEGIN PINCABOS_DASHBOARD_LIVE_FULLSCREEN_V1 */
+/* BEGIN PINCABOS_DASHBOARD_LIVE_FULLSCREEN_V3 */
 (() => {
   "use strict";
 
-  if (window.__pincabosDashboardLiveFullscreenV1) return;
-  window.__pincabosDashboardLiveFullscreenV1 = true;
+  if (window.__pincabosDashboardLiveFullscreenV3) return;
+  window.__pincabosDashboardLiveFullscreenV3 = true;
 
-  let activeImage = null;
   let modal = null;
-  let modalImage = null;
+  let image = null;
+  let activeSlot = null;
+  let timer = null;
+  let loading = false;
 
-  const isVisible = (el) => {
-    if (!el) return false;
-    const style = getComputedStyle(el);
-    const rect = el.getBoundingClientRect();
+  const slotOf = (source) => {
+    const raw =
+      source?.dataset?.pcoLiveSlot ??
+      source?.dataset?.pcoLiveJpegSlot;
+
+    const slot = Number(raw);
+
     return (
-      style.display !== "none" &&
-      style.visibility !== "hidden" &&
-      rect.width > 0 &&
-      rect.height > 0
-    );
+      Number.isInteger(slot) &&
+      slot >= 0 &&
+      slot <= 2
+    ) ? slot : null;
   };
 
-  const textOf = (el) => (el?.textContent || "").replace(/\s+/g, " ").trim();
+  const urlFor = (slot) =>
+    `/dashboard/lobby/live/${slot}?t=${Date.now()}`;
 
-  const liveBlocks = () =>
-    [...document.querySelectorAll("[data-pco-live-jpeg]")].filter(isVisible);
-
-  const imageFor = (block) =>
-    block.querySelector("img[data-pco-live-jpeg-slot]") ||
-    block.querySelector("img");
-
-  const titleFor = (block, image) => {
-    const fromAlt = (image?.alt || "").trim();
-    if (fromAlt) return fromAlt;
-
-    const text = textOf(block.parentElement);
-    const match = text.match(/(Playfield|Backglass|FullDMD)[^·\n]*/i);
-    return match ? match[0].trim() : "Live display";
-  };
-
-  const cardFor = (block, image, title) => {
-    const imageRect = image.getBoundingClientRect();
-    const titleKey = title.toLowerCase();
-
-    let parent = block.parentElement;
-    let best = block.parentElement || block;
-    let bestScore = -999;
-
-    for (let level = 0; parent && parent !== document.body && level < 8; level += 1) {
-      const rect = parent.getBoundingClientRect();
-      const text = textOf(parent).toLowerCase();
-
-      if (
-        rect.width >= Math.max(220, imageRect.width) &&
-        rect.width < window.innerWidth * 0.62 &&
-        rect.height >= imageRect.height &&
-        rect.top <= imageRect.top - 4
-      ) {
-        let score = 0;
-
-        if (text.includes(titleKey.toLowerCase())) score += 8;
-        if (rect.width <= imageRect.width + 150) score += 4;
-        if (rect.height <= imageRect.height + 170) score += 4;
-        if (level <= 3) score += 3;
-
-        if (score > bestScore) {
-          best = parent;
-          bestScore = score;
-        }
-      }
-
-      parent = parent.parentElement;
+  const stopTimer = () => {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
     }
 
-    return best || block;
+    loading = false;
+  };
+
+  const refresh = () => {
+    if (
+      activeSlot === null ||
+      !image ||
+      loading
+    ) {
+      return;
+    }
+
+    loading = true;
+
+    image.onload = () => {
+      loading = false;
+    };
+
+    image.onerror = () => {
+      loading = false;
+    };
+
+    image.src = urlFor(activeSlot);
   };
 
   const ensureModal = () => {
     if (modal) return;
 
     modal = document.createElement("div");
-    modal.id = "pincabos-live-fullscreen-popup";
-    modal.setAttribute("aria-hidden", "true");
+
+    modal.id =
+      "pincabos-live-fullscreen-popup-v3";
+
+    modal.setAttribute(
+      "aria-hidden",
+      "true"
+    );
 
     modal.innerHTML = `
-      <button type="button"
-              class="pincabos-live-fullscreen-close"
-              aria-label="Fermer"
-              title="Fermer">×</button>
-      <img class="pincabos-live-fullscreen-image" alt="">
+      <img
+        class="pincabos-live-fullscreen-image-v3"
+        alt="Capture écran PinCabOS">
+
+      <button
+        type="button"
+        class="pincabos-live-fullscreen-close-v3"
+        aria-label="Fermer"
+        title="Fermer">×</button>
     `;
 
     document.body.appendChild(modal);
 
-    modalImage = modal.querySelector(".pincabos-live-fullscreen-image");
+    image = modal.querySelector(
+      ".pincabos-live-fullscreen-image-v3"
+    );
 
-    modal.querySelector(".pincabos-live-fullscreen-close")
-      .addEventListener("click", closeFullscreen);
+    modal
+      .querySelector(
+        ".pincabos-live-fullscreen-close-v3"
+      )
+      .addEventListener(
+        "click",
+        closeFullscreen
+      );
 
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) closeFullscreen();
-    });
+    modal.addEventListener(
+      "click",
+      (event) => {
+        if (event.target === modal) {
+          closeFullscreen();
+        }
+      }
+    );
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeFullscreen();
-    });
+    document.addEventListener(
+      "keydown",
+      (event) => {
+        if (
+          event.key === "Escape" &&
+          modal.getAttribute("aria-hidden") === "false"
+        ) {
+          closeFullscreen();
+        }
+      }
+    );
   };
 
-  const syncFullscreenImage = () => {
-    if (!modal || modal.getAttribute("aria-hidden") !== "false" || !activeImage) return;
-    if (!activeImage.isConnected) {
-      closeFullscreen();
+  const openFullscreen = (slot) => {
+    if (
+      !Number.isInteger(slot) ||
+      slot < 0 ||
+      slot > 2
+    ) {
       return;
     }
 
-    const source = activeImage.currentSrc || activeImage.src;
-    if (source && modalImage.src !== source) {
-      modalImage.src = source;
-    }
-  };
-
-  const openFullscreen = (image) => {
-    if (!image) return;
-
     ensureModal();
-    activeImage = image;
 
-    modalImage.src = image.currentSrc || image.src || "";
-    modal.setAttribute("aria-hidden", "false");
-    document.body.classList.add("pincabos-live-fullscreen-open");
+    stopTimer();
+
+    activeSlot = slot;
+
+    modal.setAttribute(
+      "aria-hidden",
+      "false"
+    );
+
+    document.body.classList.add(
+      "pincabos-live-fullscreen-open-v3"
+    );
+
+    /*
+     * Vrai plein écran navigateur.
+     * Cette demande reste directement dans le geste utilisateur.
+     */
+    if (
+      document.fullscreenEnabled &&
+      !document.fullscreenElement &&
+      modal.requestFullscreen
+    ) {
+      modal.requestFullscreen().catch(() => {});
+    }
+
+    refresh();
+
+    /*
+     * Le worker source tourne déjà à 5 FPS.
+     * Une requête toutes les 200 ms suffit.
+     */
+    timer = setInterval(
+      refresh,
+      200
+    );
   };
 
   function closeFullscreen() {
-    if (!modal) return;
+    stopTimer();
 
-    activeImage = null;
-    modalImage.removeAttribute("src");
-    modal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("pincabos-live-fullscreen-open");
+    activeSlot = null;
+
+    if (image) {
+      image.onload = null;
+      image.onerror = null;
+      image.removeAttribute("src");
+    }
+
+    if (modal) {
+      modal.setAttribute(
+        "aria-hidden",
+        "true"
+      );
+    }
+
+    document.body.classList.remove(
+      "pincabos-live-fullscreen-open-v3"
+    );
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
   }
 
-  const decorateLiveWidgets = () => {
-    liveBlocks().forEach((block) => {
-      const image = imageFor(block);
-      if (!image) return;
+  const decorate = () => {
+    const sources = [
+      ...document.querySelectorAll(
+        "img[data-pco-live-slot],img[data-pco-live-jpeg-slot]"
+      )
+    ];
 
-      const title = titleFor(block, image);
-      const card = cardFor(block, image, title);
+    sources.forEach((source) => {
+      const slot = slotOf(source);
 
-      if (!card || card.dataset.pincabosLiveFullscreenReady === "1") return;
+      if (slot === null) return;
 
-      card.dataset.pincabosLiveFullscreenReady = "1";
-      card.classList.add("pincabos-live-fullscreen-card");
-
-      if (getComputedStyle(card).position === "static") {
-        card.style.position = "relative";
+      if (
+        source.dataset.pcoFullscreenV3 === "1"
+      ) {
+        return;
       }
 
-      const button = document.createElement("button");
+      /*
+       * Le bouton est attaché directement au conteneur
+       * de SON image, pas à une carte parente commune.
+       */
+      const host =
+        source.parentElement;
+
+      if (!host) return;
+
+      source.dataset.pcoFullscreenV3 = "1";
+
+      if (
+        getComputedStyle(host).position === "static"
+      ) {
+        host.style.position = "relative";
+      }
+
+      const button =
+        document.createElement("button");
+
       button.type = "button";
-      button.className = "pincabos-live-fullscreen-open";
-      button.setAttribute("aria-label", `Afficher ${title} plein écran`);
-      button.setAttribute("title", "Plein écran");
+
+      button.className =
+        "pincabos-live-fullscreen-open-v3";
+
       button.textContent = "⛶";
 
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openFullscreen(image);
-      });
+      button.title =
+        `Agrandir écran ${slot}`;
 
-      card.appendChild(button);
+      button.addEventListener(
+        "click",
+        (event) => {
+          event.preventDefault();
+          event.stopPropagation();
 
-      image.addEventListener("load", syncFullscreenImage);
+          /*
+           * IMPORTANT :
+           * ce bouton conserve SON slot.
+           */
+          openFullscreen(slot);
+        }
+      );
+
+      host.appendChild(button);
     });
   };
 
-  const style = document.createElement("style");
-  style.id = "pincabos-live-fullscreen-style";
+  const style =
+    document.createElement("style");
+
+  style.id =
+    "pincabos-live-fullscreen-style-v3";
+
   style.textContent = `
-    .pincabos-live-fullscreen-card {
-      position: relative !important;
+    .pincabos-live-fullscreen-open-v3 {
+      position:absolute !important;
+      top:10px !important;
+      right:10px !important;
+      z-index:50 !important;
+
+      width:36px !important;
+      height:36px !important;
+      min-width:36px !important;
+      min-height:36px !important;
+
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+
+      padding:0 !important;
+
+      border:
+        1px solid rgba(0,224,255,.7) !important;
+
+      border-radius:8px !important;
+
+      background:
+        rgba(0,20,32,.90) !important;
+
+      color:#00e5ff !important;
+
+      font-size:21px !important;
+      font-weight:900 !important;
+      line-height:1 !important;
+
+      cursor:pointer !important;
     }
 
-    .pincabos-live-fullscreen-open {
-      position: absolute !important;
-      top: 13px !important;
-      right: 14px !important;
-      z-index: 30 !important;
-      width: 36px !important;
-      height: 36px !important;
-      min-width: 36px !important;
-      min-height: 36px !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      border: 1px solid rgba(0, 224, 255, .65) !important;
-      border-radius: 9px !important;
-      background: rgba(0, 20, 32, .92) !important;
-      color: #00e5ff !important;
-      cursor: pointer !important;
-      font-size: 1.35rem !important;
-      font-weight: 900 !important;
-      line-height: 1 !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, .34) !important;
+    #pincabos-live-fullscreen-popup-v3 {
+      position:fixed;
+      inset:0;
+
+      z-index:2147483647;
+
+      display:none;
+
+      align-items:center;
+      justify-content:center;
+
+      background:#000;
     }
 
-    .pincabos-live-fullscreen-open:hover {
-      background: #00cfe8 !important;
-      color: #00131a !important;
+    #pincabos-live-fullscreen-popup-v3[
+      aria-hidden="false"
+    ] {
+      display:flex;
     }
 
-    #pincabos-live-fullscreen-popup {
-      position: fixed;
-      inset: 0;
-      z-index: 2147483647;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: #000;
+    #pincabos-live-fullscreen-popup-v3
+    .pincabos-live-fullscreen-image-v3 {
+      display:block;
+
+      width:100vw;
+      height:100vh;
+
+      max-width:100vw;
+      max-height:100vh;
+
+      object-fit:contain;
+
+      background:#000;
     }
 
-    #pincabos-live-fullscreen-popup[aria-hidden="false"] {
-      display: flex;
+    #pincabos-live-fullscreen-popup-v3
+    .pincabos-live-fullscreen-close-v3 {
+      position:fixed;
+
+      top:16px;
+      right:18px;
+
+      z-index:5;
+
+      width:46px;
+      height:46px;
+
+      border:
+        1px solid rgba(255,255,255,.65);
+
+      border-radius:10px;
+
+      background:
+        rgba(0,0,0,.68);
+
+      color:#fff;
+
+      font-size:30px;
+      font-weight:700;
+      line-height:1;
+
+      cursor:pointer;
     }
 
-    #pincabos-live-fullscreen-popup .pincabos-live-fullscreen-image {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-      max-width: 100vw;
-      max-height: 100vh;
-      object-fit: contain;
-      background: #000;
-    }
-
-    #pincabos-live-fullscreen-popup .pincabos-live-fullscreen-close {
-      position: fixed;
-      top: 18px;
-      right: 20px;
-      z-index: 2;
-      width: 48px;
-      height: 48px;
-      border: 1px solid rgba(255, 255, 255, .58);
-      border-radius: 12px;
-      background: rgba(0, 0, 0, .64);
-      color: #fff;
-      cursor: pointer;
-      font-size: 2.2rem;
-      font-weight: 700;
-      line-height: 1;
-    }
-
-    #pincabos-live-fullscreen-popup .pincabos-live-fullscreen-close:hover {
-      background: rgba(210, 35, 55, .95);
-      border-color: rgba(255, 255, 255, .95);
-    }
-
-    body.pincabos-live-fullscreen-open {
-      overflow: hidden !important;
+    body.pincabos-live-fullscreen-open-v3 {
+      overflow:hidden !important;
     }
   `;
 
-  if (!document.getElementById(style.id)) {
-    document.head.appendChild(style);
-  }
+  document.head.appendChild(style);
 
-  decorateLiveWidgets();
+  decorate();
 
-  const observer = new MutationObserver(() => {
-    decorateLiveWidgets();
-    syncFullscreenImage();
-  });
+  const observer =
+    new MutationObserver(decorate);
 
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["src", "class", "style"]
-  });
-
-  setInterval(syncFullscreenImage, 180);
+  observer.observe(
+    document.documentElement,
+    {
+      childList:true,
+      subtree:true
+    }
+  );
 })();
-/* END PINCABOS_DASHBOARD_LIVE_FULLSCREEN_V1 */
+/* END PINCABOS_DASHBOARD_LIVE_FULLSCREEN_V3 */
 
 /* BEGIN PINCABOS_DASHBOARD_SERVICES_UNIFORM_V1 */
 (() => {
