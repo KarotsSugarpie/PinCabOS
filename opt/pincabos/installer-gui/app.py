@@ -94,7 +94,8 @@ def keyboard():
 ANSWER_RULES = {
     "lang": re.compile(r"^[a-z]{2,3}$"),
     "locale": re.compile(r"^[A-Za-z][A-Za-z0-9._@-]{1,31}$"),
-    "xkb": re.compile(r"^[a-z]{2,3}$"),
+    # PINCABOS_ANSWERS_QUOTING_V2 — base.lst contient latam, brai, custom.
+    "xkb": re.compile(r"^[a-z]{2,8}$"),
     "xkb_variant": re.compile(r"^[a-z0-9_-]{0,31}$"),
     "tz": re.compile(r"^[A-Za-z][A-Za-z0-9_+-]{0,31}(/[A-Za-z0-9_+-]{1,31}){0,2}$"),
     "orient": re.compile(r"^[1-4]$"),

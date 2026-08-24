@@ -95,7 +95,34 @@ def main() -> int:
             ("valeurs legitimes", correct),
         ]
 
+        # PINCABOS_ANSWERS_QUOTING_V2
+        # Le second bord : des valeurs exotiques mais reelles doivent passer.
+        # Un moule trop etroit ne protege de rien, il refuse l'utilisateur.
+        LEGITIMES = [
+            ("clavier latino-americain", {**correct, "xkb": "latam"}),
+            ("clavier braille", {**correct, "xkb": "brai"}),
+            ("fuseau a trois segments",
+             {**correct, "tz": "America/Argentina/Buenos_Aires"}),
+            ("fuseau avec decalage", {**correct, "tz": "Etc/GMT+1"}),
+            ("locale minimale", {**correct, "locale": "C.UTF-8"}),
+            ("variante de disposition",
+             {**correct, "xkb_variant": "nodeadkeys"}),
+            ("orientation 180", {**correct, "orient": "4"}),
+            ("mode mise a jour", {**correct, "mode": "3"}),
+        ]
+
         echecs = 0
+        for nom, reponse in LEGITIMES:
+            contenu, verdict = install(rules, reponse)
+            if contenu is None:
+                echecs += 1
+                print("  " + nom.ljust(28) + " -> REFUSE A TORT — ECHEC")
+            elif execute_quelque_chose(contenu, dossier):
+                echecs += 1
+                print("  " + nom.ljust(28) + " -> ACCEPTE ET EXECUTE — ECHEC")
+            else:
+                print("  " + nom.ljust(28) + " -> accepte, inerte")
+
         for nom, reponse in essais:
             contenu, verdict = install(rules, reponse)
             if contenu is None:
