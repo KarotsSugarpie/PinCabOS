@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+PROFILE="/tmp/pincabos_chat_backglass"
+MARKER="/run/pincabos-chat-backglass.active"
+SCREENS="/opt/pincabos/config/screens/screens.json"
+LOG="/opt/pincabos/logs/pincabos-chat-backglass.log"
+URL="http://127.0.0.1/pincabos-link/chat-backglass"
+
+die() {
+    echo "ERROR"
+    exit 1
+}
+
+status() {
+    if pgrep -f -- "--user-data-dir=${PROFILE}" >/dev/null 2>&1; then
+        echo "OPEN"
+    else
+        echo "CLOSED"
+    fi
+}
+
+geometry() {
+    python3 - "$SCREENS" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+
+try:
+    data = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    raise SystemExit(1)
+
+screen = data.get("backglass")
+
+if not isinstance(screen, dict):
+    raise SystemExit(1)
+
+values = []
+
+for key in ("x", "y", "width", "height"):
+    try:
+        value = int(screen[key])
+    except Exception:
+        raise SystemExit(1)
+
+    values.append(value)
+
+x, y, width, height = values
+
+if width < 320 or height < 240:
+    raise SystemExit(1)
+
+print(x, y, width, height)
+PY
+}
+
+close_chat() {
+    pkill -TERM -f -- "--user-data-dir=${PROFILE}" 2>/dev/null || true
+
+    for attempt in {1..20}; do
+        if ! pgrep -f -- "--user-data-dir=${PROFILE}" >/dev/null 2>&1; then
+            break
+        fi
+        sleep 0.15
+    done
+
+    pkill -KILL -f -- "--user-data-dir=${PROFILE}" 2>/dev/null || true
+
+    rm -f "$MARKER"
+    rm -rf "$PROFILE"
+
+    echo "CLOSED"
+}
+
+open_chat() {
+    if pgrep -f -- "--user-data-dir=${PROFILE}" >/dev/null 2>&1; then
+        touch "$MARKER"
+        chmod 0644 "$MARKER" || true
+        echo "OPEN"
+        return 0
+    fi
+
+    read -r SCREEN_X SCREEN_Y SCREEN_W SCREEN_H < <(geometry) || die
+
+    CHROME_BIN="$(
+        command -v google-chrome \
+        || command -v google-chrome-stable \
+        || command -v chromium-browser \
+        || command -v chromium \
+        || true
+    )"
+
+    [[ -n "$CHROME_BIN" ]] || die
+
+    install -d -o pinball -g pinball -m 0700 "$PROFILE"
+    install -d -o pinball -g pinball -m 0755 "$(dirname "$LOG")"
+
+    touch "$MARKER"
+    chmod 0644 "$MARKER"
+
+    sudo -u pinball env \
+        DISPLAY=:0 \
+        XAUTHORITY=/home/pinball/.Xauthority \
+        HOME=/home/pinball \
+        XDG_RUNTIME_DIR=/run/user/1000 \
+        nohup "$CHROME_BIN" \
+        --app="$URL" \
+        --window-name=pincabos-chat-backglass \
+        --window-position="$SCREEN_X,$SCREEN_Y" \
+        --window-size="$SCREEN_W,$SCREEN_H" \
+        --user-data-dir="$PROFILE" \
+        --no-first-run \
+        --noerrdialogs \
+        --disable-infobars \
+        --disable-session-crashed-bubble \
+        --disable-restore-session-state \
+        --disable-background-networking \
+        --disable-component-update \
+        --disable-default-apps \
+        --disable-background-timer-throttling \
+        --disable-backgrounding-occluded-windows \
+        --disable-renderer-backgrounding \
+        --disable-features=CalculateNativeWindowOcclusion,PreloadMediaEngagementData,MediaEngagementBypassAutoplayPolicies \
+        --disable-hang-monitor \
+        --disable-ipc-flooding-protection \
+        --disable-gpu-process-crash-limit \
+        --ignore-gpu-blocklist \
+        --no-sandbox \
+        --disable-gpu-sandbox \
+        --test-type \
+        --log-level=3 \
+        >>"$LOG" 2>&1 &
+
+    for attempt in {1..40}; do
+        if pgrep -f -- "--user-data-dir=${PROFILE}" >/dev/null 2>&1; then
+            echo "OPEN"
+            return 0
+        fi
+        sleep 0.25
+    done
+
+    rm -f "$MARKER"
+    die
+}
+
+[[ "$(id -u)" -eq 0 ]] || die
+
+case "${1:-}" in
+    open)
+        [[ "$#" -eq 1 ]] || die
+        open_chat
+        ;;
+    close)
+        [[ "$#" -eq 1 ]] || die
+        close_chat
+        ;;
+    status)
+        [[ "$#" -eq 1 ]] || die
+        status
+        ;;
+    geometry)
+        [[ "$#" -eq 1 ]] || die
+        geometry
+        ;;
+    *)
+        die
+        ;;
+esac

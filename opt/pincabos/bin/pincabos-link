@@ -1,0 +1,916 @@
+#!/usr/bin/env python3
+
+import argparse
+import getpass
+import json
+import os
+import re
+import shutil
+import ssl
+import subprocess
+import sys
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+
+API = "https://pincabos.cc"
+PAIR = API + "/api/device/pair"
+CHARACTERISTICS = API + "/api/device/characteristics"
+
+STATE_DIR = Path("/var/lib/pincabos-link")
+STATE = STATE_DIR / "device.json"
+
+PAIR_PATTERN = re.compile(
+    r"^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{12}$"
+)
+
+SERVICES = (
+    "pincabos-webapp.service",
+    "pincabos-vpinfe.service",
+    "pincabos-place-backbox.service",
+    "pincabos-scoreview-router.service",
+    "pincabos-batch-import-worker.service",
+    "pincabos-media-recorder-worker.service",
+    "pincabos-dashboard-live.service",
+)
+
+
+def die(message, code=1):
+    print(
+        "NOGO [!!] " + message,
+        file=sys.stderr
+    )
+    raise SystemExit(code)
+
+
+def root():
+    if os.geteuid() != 0:
+        die("Lance cette commande avec sudo.")
+
+
+def command(arguments, timeout=10):
+    try:
+        result = subprocess.run(
+            arguments,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=timeout,
+            check=False,
+        )
+
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+
+    return ""
+
+
+def read_json(path):
+    try:
+        return json.loads(
+            Path(path).read_text(encoding="utf-8")
+        )
+    except Exception:
+        return None
+
+
+def load_state(require_token=True):
+    if not STATE.exists():
+        die("Etat de liaison absent.")
+
+    try:
+        data = json.loads(
+            STATE.read_text(encoding="utf-8")
+        )
+    except Exception as exc:
+        die(
+            "Etat local illisible : " +
+            str(exc)
+        )
+
+    if not isinstance(data, dict):
+        die("Etat local invalide.")
+
+    if (
+        require_token
+        and not isinstance(
+            data.get("device_token"),
+            str
+        )
+    ):
+        die("Jeton local absent.")
+
+    return data
+
+
+def ensure_storage():
+    STATE_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+        mode=0o700,
+    )
+
+    os.chown(STATE_DIR, 0, 0)
+    os.chmod(STATE_DIR, 0o700)
+
+    descriptor, name = tempfile.mkstemp(
+        prefix=".write-test.",
+        dir=STATE_DIR,
+    )
+
+    try:
+        with os.fdopen(
+            descriptor,
+            "wb"
+        ) as handle:
+            handle.write(b"test\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        os.unlink(name)
+    except Exception:
+        try:
+            os.unlink(name)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def store(payload):
+    descriptor, name = tempfile.mkstemp(
+        prefix=".device.",
+        dir=STATE_DIR,
+    )
+
+    try:
+        with os.fdopen(
+            descriptor,
+            "w",
+            encoding="utf-8",
+        ) as handle:
+            json.dump(
+                payload,
+                handle,
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        os.chown(name, 0, 0)
+        os.chmod(name, 0o600)
+        os.replace(name, STATE)
+    except Exception:
+        try:
+            os.unlink(name)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def error_text(error):
+    try:
+        payload = json.loads(
+            error.read(4096).decode("utf-8")
+        )
+
+        return str(
+            payload.get("error")
+            or f"Erreur HTTP {error.code}."
+        )
+    except Exception:
+        return f"Erreur HTTP {error.code}."
+
+
+def status():
+    root()
+
+    if not STATE.exists():
+        print("Statut  : non lie")
+        print("Serveur : " + API)
+        return
+
+    data = load_state(require_token=False)
+    cabinet = data.get("cabinet", {})
+    owner = data.get("owner", {})
+
+    print(
+        "Statut        : " +
+        (
+            "lie"
+            if data.get("device_token")
+            else "incomplet"
+        )
+    )
+    print(
+        "Cabinet       : " +
+        str(cabinet.get("cabinet_name", "?"))
+    )
+    print(
+        "UUID          : " +
+        str(cabinet.get("cabinet_uuid", "?"))
+    )
+    print(
+        "Proprietaire  : " +
+        str(owner.get("username", "?"))
+    )
+    print(
+        "Lie le        : " +
+        str(data.get("paired_at", "?"))
+    )
+    print(
+        "Jeton local   : " +
+        (
+            "present et masque"
+            if data.get("device_token")
+            else "absent"
+        )
+    )
+
+
+def doctor():
+    request = Request(
+        API + "/",
+        headers={
+            "User-Agent": "PinCabOS-Link/2"
+        },
+    )
+
+    try:
+        with urlopen(
+            request,
+            timeout=20,
+            context=ssl.create_default_context(),
+        ) as response:
+            code = response.status
+    except Exception as exc:
+        die(
+            "Connexion TLS impossible : " +
+            str(exc)
+        )
+
+    print(f"HTTPS {API} : HTTP {code}")
+
+    if code != 200:
+        die(
+            "Le site public ne retourne pas HTTP 200."
+        )
+
+    probe_body = json.dumps({}).encode("utf-8")
+
+    probe = Request(
+        CHARACTERISTICS,
+        data=probe_body,
+        method="POST",
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "PinCabOS-Link/2",
+        },
+    )
+
+    try:
+        urlopen(
+            probe,
+            timeout=20,
+            context=ssl.create_default_context(),
+        )
+        die(
+            "La route anonyme ne devrait pas être autorisée."
+        )
+    except HTTPError as exc:
+        if exc.code != 401:
+            die(
+                "Route de caractéristiques : HTTP " +
+                str(exc.code)
+            )
+    except (
+        URLError,
+        TimeoutError,
+        ssl.SSLError
+    ) as exc:
+        die(
+            "Connexion TLS impossible : " +
+            str(exc)
+        )
+
+    print(
+        "Route caractéristiques : HTTP 401 anonyme"
+    )
+    print(
+        "GO [OK] TLS, certificat et API valides."
+    )
+
+
+def pair():
+    root()
+
+    if STATE.exists():
+        die(
+            "Etat de liaison deja present; "
+            "aucun jeton remplace."
+        )
+
+    try:
+        ensure_storage()
+    except Exception as exc:
+        die(
+            "Stockage securise indisponible : " +
+            str(exc)
+        )
+
+    entered = getpass.getpass(
+        "Cle temporaire de liaison : "
+    )
+
+    code = "".join(
+        character
+        for character in entered.upper()
+        if character not in " -\t\r\n"
+    )
+
+    if not PAIR_PATTERN.fullmatch(code):
+        die("Format de cle invalide.")
+
+    body = json.dumps({
+        "pairing_code": code
+    }).encode("utf-8")
+
+    request = Request(
+        PAIR,
+        data=body,
+        method="POST",
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "PinCabOS-Link/2",
+        },
+    )
+
+    try:
+        with urlopen(
+            request,
+            timeout=30,
+            context=ssl.create_default_context(),
+        ) as response:
+            result = json.loads(
+                response.read(65536).decode("utf-8")
+            )
+            http = response.status
+    except HTTPError as exc:
+        die(error_text(exc))
+    except (
+        URLError,
+        TimeoutError,
+        ssl.SSLError
+    ) as exc:
+        die(
+            "Connexion TLS impossible : " +
+            str(exc)
+        )
+
+    token = result.get("device_token")
+    cabinet = result.get("cabinet")
+    owner = result.get("owner")
+
+    valid = (
+        http == 201
+        and result.get("ok") is True
+        and isinstance(token, str)
+        and len(token) >= 32
+        and result.get("token_type")
+            == "PinCabOS-Device"
+        and isinstance(cabinet, dict)
+        and cabinet.get("cabinet_uuid")
+        and cabinet.get("cabinet_name")
+        and isinstance(owner, dict)
+        and owner.get("username")
+    )
+
+    if not valid:
+        die(
+            "Reponse serveur incomplete; "
+            "aucun etat local enregistre."
+        )
+
+    data = {
+        "format_version": 1,
+        "api_base": API,
+        "token_type": "PinCabOS-Device",
+        "device_token": token,
+        "cabinet": {
+            "cabinet_uuid": str(
+                cabinet["cabinet_uuid"]
+            ),
+            "cabinet_name": str(
+                cabinet["cabinet_name"]
+            ),
+        },
+        "owner": {
+            "username": str(
+                owner["username"]
+            ),
+            "display_name": str(
+                owner.get("display_name")
+                or owner["username"]
+            ),
+        },
+        "paired_at": (
+            datetime.now(timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z")
+        ),
+    }
+
+    try:
+        store(data)
+    except Exception as exc:
+        die(
+            "Serveur lie, mais sauvegarde locale "
+            "impossible : " + str(exc),
+            2,
+        )
+
+    print("GO [OK] Cabinet lie a PinCabOS.cc.")
+    print(
+        "Cabinet      : " +
+        data["cabinet"]["cabinet_name"]
+    )
+    print(
+        "UUID         : " +
+        data["cabinet"]["cabinet_uuid"]
+    )
+    print(
+        "Proprietaire : " +
+        data["owner"]["username"]
+    )
+    print(
+        "Jeton        : enregistre root:root 0600 "
+        "et non affiche"
+    )
+
+
+def collect_version():
+    data = read_json(
+        "/opt/pincabos/config/version.json"
+    )
+
+    if not isinstance(data, dict):
+        die("version.json absent ou invalide.")
+
+    def optional(key):
+        value = data.get(key)
+        return (
+            str(value).strip()
+            if value not in (None, "")
+            else None
+        )
+
+    version = optional("version")
+
+    if not version:
+        die("Version PinCabOS absente.")
+
+    return {
+        "version": version,
+        "channel": optional("channel"),
+        "build": optional("build"),
+        "codename": optional("codename"),
+    }
+
+
+def collect_cpu():
+    try:
+        lines = Path("/proc/cpuinfo").read_text(
+            encoding="utf-8",
+            errors="replace",
+        ).splitlines()
+    except Exception:
+        die("Lecture CPU impossible.")
+
+    for line in lines:
+        if line.startswith(
+            ("model name", "Hardware")
+        ):
+            return line.split(":", 1)[1].strip()
+
+    die("Modèle CPU introuvable.")
+
+
+def collect_gpus():
+    output = command([
+        "nvidia-smi",
+        "--query-gpu=name,driver_version",
+        "--format=csv,noheader",
+    ])
+
+    gpus = []
+
+    if output:
+        for line in output.splitlines():
+            parts = [
+                part.strip()
+                for part in line.split(",", 1)
+            ]
+
+            gpus.append({
+                "model": parts[0],
+                "driver": (
+                    parts[1]
+                    if len(parts) > 1
+                    else None
+                ),
+            })
+
+    if not gpus:
+        output = command(["lspci"])
+
+        for line in output.splitlines():
+            if re.search(
+                r"\b(VGA compatible|3D|Display) "
+                r"controller\b",
+                line,
+                re.I,
+            ):
+                gpus.append({
+                    "model": re.sub(
+                        r"^\S+\s+",
+                        "",
+                        line,
+                    ),
+                    "driver": None,
+                })
+
+    if not gpus:
+        die("GPU non détecté.")
+
+    return gpus[:8]
+
+
+def collect_memory():
+    try:
+        lines = Path("/proc/meminfo").read_text(
+            encoding="utf-8",
+            errors="replace",
+        ).splitlines()
+    except Exception:
+        die("Lecture mémoire impossible.")
+
+    for line in lines:
+        if line.startswith("MemTotal:"):
+            return int(line.split()[1]) * 1024
+
+    die("Mémoire totale introuvable.")
+
+
+def collect_screens():
+    data = read_json(
+        "/opt/pincabos/config/screens/screens.json"
+    )
+
+    if data is None:
+        die("Configuration des écrans absente.")
+
+    found = {}
+    roles = {
+        "playfield",
+        "backglass",
+        "fulldmd",
+    }
+
+    def walk(value, inherited_role=None):
+        if isinstance(value, dict):
+            raw_role = value.get("role")
+            role = inherited_role
+
+            if isinstance(raw_role, str):
+                normalized = (
+                    raw_role
+                    .casefold()
+                    .replace("-", "")
+                    .replace("_", "")
+                )
+
+                if normalized == "fulldmd":
+                    role = "fulldmd"
+                elif normalized in roles:
+                    role = normalized
+
+            width = value.get("width")
+            height = value.get("height")
+
+            if (
+                role in roles
+                and isinstance(width, int)
+                and not isinstance(width, bool)
+                and isinstance(height, int)
+                and not isinstance(height, bool)
+                and role not in found
+            ):
+                found[role] = {
+                    "role": role,
+                    "width": width,
+                    "height": height,
+                }
+
+            for key, child in value.items():
+                normalized_key = (
+                    str(key)
+                    .casefold()
+                    .replace("-", "")
+                    .replace("_", "")
+                )
+
+                child_role = role
+
+                if normalized_key == "fulldmd":
+                    child_role = "fulldmd"
+                elif normalized_key in roles:
+                    child_role = normalized_key
+
+                walk(child, child_role)
+
+        elif isinstance(value, list):
+            for child in value:
+                walk(child, inherited_role)
+
+    walk(data)
+
+    missing = roles - set(found)
+
+    if missing:
+        die(
+            "Écrans incomplets : " +
+            ", ".join(sorted(missing))
+        )
+
+    return [
+        found["playfield"],
+        found["backglass"],
+        found["fulldmd"],
+    ]
+
+
+def collect_services():
+    result = {}
+
+    for service in SERVICES:
+        output = command([
+            "systemctl",
+            "show",
+            service,
+            "--property=LoadState,ActiveState",
+        ])
+
+        values = {}
+
+        for line in output.splitlines():
+            if "=" in line:
+                key, value = line.split("=", 1)
+                values[key] = value
+
+        if values.get("LoadState") == "not-found":
+            state = "not-found"
+        else:
+            state = values.get(
+                "ActiveState",
+                "unknown",
+            )
+
+        if state not in {
+            "active",
+            "inactive",
+            "failed",
+            "activating",
+            "deactivating",
+            "unknown",
+            "not-found",
+        }:
+            state = "unknown"
+
+        result[service] = state
+
+    return result
+
+
+def collect_software_versions():
+    vpx_version = None
+    vpinfe_version = None
+
+    vpx_roots = Path(
+        "/home/pinball/.local/share/VPinballX"
+    )
+
+    if vpx_roots.is_dir():
+        candidates = sorted(
+            (
+                path.name
+                for path in vpx_roots.iterdir()
+                if path.is_dir()
+                and re.fullmatch(
+                    r"\d+(?:\.\d+){1,3}",
+                    path.name,
+                )
+            ),
+            reverse=True,
+        )
+
+        if candidates:
+            vpx_version = candidates[0]
+
+    for candidate in (
+        Path("/home/pinball/vpinfe/VERSION"),
+        Path("/home/pinball/vpinfe/version.txt"),
+    ):
+        if candidate.is_file():
+            value = candidate.read_text(
+                encoding="utf-8",
+                errors="replace",
+            ).strip()
+
+            if value:
+                vpinfe_version = value[:64]
+                break
+
+    return {
+        "vpx_version": vpx_version,
+        "vpinfe_version": vpinfe_version,
+    }
+
+
+def collect_payload():
+    storage = shutil.disk_usage("/")
+
+    return {
+        "schema_version": 1,
+        "pincabos": collect_version(),
+        "hardware": {
+            "cpu_model": collect_cpu(),
+            "gpus": collect_gpus(),
+            "memory_total_bytes": collect_memory(),
+            "storage_total_bytes": storage.total,
+            "storage_available_bytes": storage.free,
+        },
+        "screens": collect_screens(),
+        "software": collect_software_versions(),
+        "services": collect_services(),
+    }
+
+
+def preview():
+    root()
+    load_state(require_token=True)
+
+    payload = collect_payload()
+
+    print("===================================================")
+    print(" PREVIEW LOCAL - AUCUNE TRANSMISSION")
+    print(" JETON NON AFFICHE")
+    print("===================================================")
+
+    print(json.dumps(
+        payload,
+        indent=2,
+        ensure_ascii=False,
+        sort_keys=True,
+    ))
+
+    print()
+    print("GO [OK] Payload local conforme.")
+    print("Aucune IP, MAC ou donnée série collectée.")
+
+
+def report():
+    root()
+
+    state = load_state(require_token=True)
+    payload = collect_payload()
+
+    body = json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+
+    if len(body) > 32768:
+        die("Payload supérieur à 32768 octets.")
+
+    token_type = str(
+        state.get("token_type")
+        or "PinCabOS-Device"
+    )
+
+    token = str(state["device_token"])
+
+    request = Request(
+        CHARACTERISTICS,
+        data=body,
+        method="POST",
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization":
+                token_type + " " + token,
+            "User-Agent": "PinCabOS-Link/2",
+        },
+    )
+
+    try:
+        with urlopen(
+            request,
+            timeout=30,
+            context=ssl.create_default_context(),
+        ) as response:
+            result = json.loads(
+                response.read(65536).decode("utf-8")
+            )
+            http = response.status
+    except HTTPError as exc:
+        die(error_text(exc))
+    except (
+        URLError,
+        TimeoutError,
+        ssl.SSLError
+    ) as exc:
+        die(
+            "Connexion TLS impossible : " +
+            str(exc)
+        )
+
+    local_uuid = str(
+        state.get("cabinet", {}).get(
+            "cabinet_uuid",
+            "",
+        )
+    )
+
+    valid = (
+        http == 200
+        and result.get("ok") is True
+        and result.get("cabinet_uuid")
+            == local_uuid
+        and result.get("visibility")
+            in {"private", "friends", "public"}
+    )
+
+    if not valid:
+        die("Réponse serveur invalide.")
+
+    print("GO [OK] Caractéristiques transmises.")
+    print(
+        "Cabinet    : " +
+        str(
+            state.get("cabinet", {}).get(
+                "cabinet_name",
+                "?",
+            )
+        )
+    )
+    print(
+        "UUID       : " +
+        local_uuid
+    )
+    print(
+        "Reçu le    : " +
+        str(result.get("received_at"))
+    )
+    print(
+        "Visibilité : " +
+        str(result.get("visibility"))
+    )
+    print("Jeton      : utilisé mais jamais affiché")
+
+
+parser = argparse.ArgumentParser(
+    prog="pincabos-link"
+)
+
+parser.add_argument(
+    "command",
+    choices=(
+        "status",
+        "doctor",
+        "pair",
+        "preview",
+        "report",
+    ),
+)
+
+selected = parser.parse_args().command
+
+{
+    "status": status,
+    "doctor": doctor,
+    "pair": pair,
+    "preview": preview,
+    "report": report,
+}[selected]()

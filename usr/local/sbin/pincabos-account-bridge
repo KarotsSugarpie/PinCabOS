@@ -1,0 +1,311 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import base64
+import json
+import ssl
+import stat
+import sys
+from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+STATE_DIR = Path("/var/lib/pincabos-link")
+STATE_FILE = STATE_DIR / "device.json"
+EXPECTED_API = "https://pincabos.cc"
+EXPECTED_TOKEN_TYPE = "PinCabOS-Device"
+MAX_JSON = 1024 * 1024
+MAX_AVATAR = 4 * 1024 * 1024
+
+
+def emit(payload: dict, code: int = 0) -> None:
+    print(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    raise SystemExit(code)
+
+
+def load_state() -> dict:
+    try:
+        directory_stat = STATE_DIR.stat()
+        file_stat = STATE_FILE.stat()
+    except FileNotFoundError:
+        emit({"ok": False, "error": "device_not_linked"}, 2)
+
+    if not stat.S_ISDIR(directory_stat.st_mode):
+        emit({"ok": False, "error": "state_invalid"}, 2)
+    if directory_stat.st_uid != 0 or directory_stat.st_gid != 0:
+        emit({"ok": False, "error": "state_permissions"}, 2)
+    if stat.S_IMODE(directory_stat.st_mode) != 0o700:
+        emit({"ok": False, "error": "state_permissions"}, 2)
+
+    if not stat.S_ISREG(file_stat.st_mode):
+        emit({"ok": False, "error": "state_invalid"}, 2)
+    if file_stat.st_uid != 0 or file_stat.st_gid != 0:
+        emit({"ok": False, "error": "state_permissions"}, 2)
+    if stat.S_IMODE(file_stat.st_mode) != 0o600:
+        emit({"ok": False, "error": "state_permissions"}, 2)
+
+    try:
+        data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        emit({"ok": False, "error": "state_invalid"}, 2)
+
+    if not isinstance(data, dict):
+        emit({"ok": False, "error": "state_invalid"}, 2)
+
+    if str(data.get("api_base") or "").rstrip("/") != EXPECTED_API:
+        emit({"ok": False, "error": "api_base_invalid"}, 2)
+
+    if str(data.get("token_type") or "") != EXPECTED_TOKEN_TYPE:
+        emit({"ok": False, "error": "token_type_invalid"}, 2)
+
+    token = str(data.get("device_token") or "")
+    if len(token) < 32 or len(token) > 256:
+        emit({"ok": False, "error": "device_token_invalid"}, 2)
+
+    return data
+
+
+def request_raw(
+    method: str,
+    path: str,
+    *,
+    payload: dict | None = None,
+    max_bytes: int = MAX_JSON,
+):
+    state = load_state()
+    token = str(state["device_token"])
+    url = EXPECTED_API + path
+
+    body = None
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"{EXPECTED_TOKEN_TYPE} {token}",
+        "User-Agent": "PinCabOS-Account-Bridge/1",
+    }
+
+    if payload is not None:
+        body = json.dumps(
+            payload,
+            ensure_ascii=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+
+    request = Request(
+        url,
+        data=body,
+        method=method,
+        headers=headers,
+    )
+
+    context = ssl.create_default_context()
+
+    try:
+        with urlopen(request, timeout=20, context=context) as response:
+            data = response.read(max_bytes + 1)
+            if len(data) > max_bytes:
+                emit({"ok": False, "error": "response_too_large"}, 3)
+            return int(response.status), response.headers, data
+    except HTTPError as exc:
+        data = exc.read(max_bytes + 1)
+        if len(data) > max_bytes:
+            data = b""
+        return int(exc.code), exc.headers, data
+    except (URLError, TimeoutError, OSError):
+        emit({"ok": False, "error": "network_unavailable"}, 3)
+
+
+def request_json(method: str, path: str, payload: dict | None = None) -> None:
+    status, headers, raw = request_raw(
+        method,
+        path,
+        payload=payload,
+        max_bytes=MAX_JSON,
+    )
+
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except Exception:
+        emit(
+            {
+                "ok": False,
+                "error": "remote_response_invalid",
+                "_http_status": status,
+            },
+            3,
+        )
+
+    if not isinstance(data, dict):
+        emit(
+            {
+                "ok": False,
+                "error": "remote_response_invalid",
+                "_http_status": status,
+            },
+            3,
+        )
+
+    data["_http_status"] = status
+    emit(data, 0)
+
+
+def command_context() -> None:
+    request_json("GET", "/api/device/account-mirror/context")
+
+
+def command_presence() -> None:
+    request_json(
+        "POST",
+        "/api/device/account-mirror/presence",
+        {},
+    )
+
+
+def command_chat_get(friend_id: str, after_id: str) -> None:
+    try:
+        friend = int(friend_id)
+        after = max(0, int(after_id))
+    except ValueError:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+
+    if friend <= 0:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+
+    request_json(
+        "GET",
+        f"/api/device/account-mirror/chat/{friend}?after_id={after}",
+    )
+
+
+def command_chat_post(friend_id: str) -> None:
+    try:
+        friend = int(friend_id)
+    except ValueError:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+
+    if friend <= 0:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+
+    message = sys.stdin.read(8193)
+
+    if len(message) > 8192:
+        emit({"ok": False, "error": "message_too_large"}, 2)
+
+    message = message.strip()
+
+    if not message or len(message) > 2000:
+        emit({"ok": False, "error": "invalid_message"}, 2)
+
+    request_json(
+        "POST",
+        f"/api/device/account-mirror/chat/{friend}",
+        {"message": message},
+    )
+
+
+def command_backglass_get() -> None:
+    request_json(
+        "GET",
+        "/api/device/account-mirror/backglass",
+    )
+
+
+def command_backglass_set(value: str) -> None:
+    normalized = str(value).strip().lower()
+
+    if normalized in {"1", "true", "on"}:
+        enabled = True
+    elif normalized in {"0", "false", "off"}:
+        enabled = False
+    else:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+
+    request_json(
+        "POST",
+        "/api/device/account-mirror/backglass",
+        {"enabled": enabled},
+    )
+
+
+def command_avatar(user_id: str) -> None:
+    try:
+        target = int(user_id)
+    except ValueError:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+
+    if target <= 0:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+
+    status, headers, raw = request_raw(
+        "GET",
+        f"/api/device/account-mirror/users/{target}/avatar",
+        max_bytes=MAX_AVATAR,
+    )
+
+    content_type = str(headers.get("Content-Type") or "")
+
+    if status != 200:
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except Exception:
+            data = {"ok": False, "error": "avatar_unavailable"}
+
+        if not isinstance(data, dict):
+            data = {"ok": False, "error": "avatar_unavailable"}
+
+        data["_http_status"] = status
+        emit(data, 0)
+
+    if content_type not in {
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+    }:
+        emit(
+            {
+                "ok": False,
+                "error": "avatar_type_invalid",
+                "_http_status": 502,
+            },
+            3,
+        )
+
+    emit(
+        {
+            "ok": True,
+            "mime": content_type,
+            "data_base64": base64.b64encode(raw).decode("ascii"),
+            "_http_status": 200,
+        },
+        0,
+    )
+
+
+def main() -> None:
+    args = sys.argv[1:]
+
+    if not args:
+        emit({"ok": False, "error": "command_required"}, 2)
+
+    command = args[0]
+
+    if command == "context" and len(args) == 1:
+        command_context()
+    elif command == "presence" and len(args) == 1:
+        command_presence()
+    elif command == "chat-get" and len(args) == 3:
+        command_chat_get(args[1], args[2])
+    elif command == "chat-post" and len(args) == 2:
+        command_chat_post(args[1])
+    elif command == "backglass-get" and len(args) == 1:
+        command_backglass_get()
+    elif command == "backglass-set" and len(args) == 2:
+        command_backglass_set(args[1])
+    elif command == "avatar" and len(args) == 2:
+        command_avatar(args[1])
+    else:
+        emit({"ok": False, "error": "invalid_command"}, 2)
+
+
+if __name__ == "__main__":
+    main()

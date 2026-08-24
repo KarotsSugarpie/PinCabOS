@@ -1,0 +1,14 @@
+[Unit]
+Description=PinCabOS Chat BackGlass Agent
+After=network-online.target graphical.target pincabos-webapp.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/pincabos-chat-backglass-agent
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

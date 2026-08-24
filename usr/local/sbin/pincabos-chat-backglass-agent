@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import subprocess
+import time
+
+BRIDGE = "/usr/local/sbin/pincabos-account-bridge"
+DISPLAY = "/usr/local/sbin/pincabos-chat-backglass"
+INTERVAL = 5
+
+
+def call_json(*args):
+    try:
+        result = subprocess.run(
+            [BRIDGE, *args],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=25,
+        )
+    except Exception:
+        return None
+
+    try:
+        data = json.loads(result.stdout or "{}")
+    except Exception:
+        return None
+
+    return data if isinstance(data, dict) else None
+
+
+def display_status():
+    try:
+        result = subprocess.run(
+            [DISPLAY, "status"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=5,
+        )
+    except Exception:
+        return "UNKNOWN"
+
+    return (result.stdout or "").strip()
+
+
+def display_action(action):
+    try:
+        subprocess.run(
+            [DISPLAY, action],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=25,
+        )
+    except Exception:
+        pass
+
+
+def loop():
+    last_desired = None
+
+    while True:
+        data = call_json("backglass-get")
+
+        if data and data.get("ok") is True:
+            desired = bool(data.get("enabled"))
+            current = display_status()
+
+            if desired and current != "OPEN":
+                display_action("open")
+            elif not desired and current == "OPEN":
+                display_action("close")
+
+            if desired != last_desired:
+                print(
+                    "PinCabOS chat BackGlass desired="
+                    + ("on" if desired else "off"),
+                    flush=True,
+                )
+                last_desired = desired
+
+        time.sleep(INTERVAL)
+
+
+if __name__ == "__main__":
+    loop()

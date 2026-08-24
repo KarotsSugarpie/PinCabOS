@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+import json
+import os
+import ssl
+import stat
+import sys
+from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+
+STATE_DIR = Path("/var/lib/pincabos-link")
+STATE_FILE = STATE_DIR / "device.json"
+
+EXPECTED_API = "https://pincabos.cc"
+EXPECTED_TOKEN_TYPE = "PinCabOS-Device"
+HEARTBEAT_PATH = "/api/device/heartbeat"
+MAX_RESPONSE_BYTES = 65536
+
+
+def die(message, code=1):
+    print(
+        "NOGO [ERREUR] " + str(message),
+        file=sys.stderr,
+    )
+    raise SystemExit(code)
+
+
+def validate_permissions():
+    directory_stat = STATE_DIR.stat()
+    file_stat = STATE_FILE.stat()
+
+    if not stat.S_ISDIR(directory_stat.st_mode):
+        die("Répertoire d'état invalide.")
+
+    if directory_stat.st_uid != 0 or directory_stat.st_gid != 0:
+        die("Répertoire d'état non root:root.")
+
+    if stat.S_IMODE(directory_stat.st_mode) != 0o700:
+        die("Permissions du répertoire d'état invalides.")
+
+    if not stat.S_ISREG(file_stat.st_mode):
+        die("Fichier d'état invalide.")
+
+    if file_stat.st_uid != 0 or file_stat.st_gid != 0:
+        die("Fichier d'état non root:root.")
+
+    if stat.S_IMODE(file_stat.st_mode) != 0o600:
+        die("Permissions du fichier d'état invalides.")
+
+
+def load_state():
+    if os.geteuid() != 0:
+        die("Cette commande doit être exécutée par root.")
+
+    if not STATE_DIR.exists() or not STATE_FILE.exists():
+        die("Cabinet non lié à PinCabOS.cc.")
+
+    validate_permissions()
+
+    try:
+        data = json.loads(
+            STATE_FILE.read_text(encoding="utf-8")
+        )
+    except Exception as exc:
+        die("État local illisible : " + str(exc))
+
+    if not isinstance(data, dict):
+        die("Format d'état local invalide.")
+
+    api_base = data.get("api_base")
+    token_type = data.get("token_type")
+    token = data.get("device_token")
+    cabinet = data.get("cabinet")
+
+    if api_base != EXPECTED_API:
+        die("Serveur API local inattendu.")
+
+    if token_type != EXPECTED_TOKEN_TYPE:
+        die("Type de jeton local inattendu.")
+
+    if not isinstance(token, str) or not 32 <= len(token) <= 256:
+        die("Jeton local absent ou invalide.")
+
+    if not isinstance(cabinet, dict):
+        die("Identité locale du cabinet absente.")
+
+    uuid = cabinet.get("cabinet_uuid")
+
+    if not isinstance(uuid, str) or not uuid:
+        die("UUID local du cabinet absent.")
+
+    return {
+        "api_base": api_base,
+        "token_type": token_type,
+        "token": token,
+        "uuid": uuid,
+    }
+
+
+def safe_http_error(error):
+    name = "erreur_non_detaillee"
+
+    try:
+        body = error.read(4096)
+        payload = json.loads(body.decode("utf-8"))
+
+        if isinstance(payload, dict):
+            candidate = payload.get("error")
+
+            if isinstance(candidate, str) and candidate:
+                name = candidate[:120]
+    except Exception:
+        pass
+
+    return f"HTTP {error.code} ({name})"
+
+
+def heartbeat():
+    state = load_state()
+
+    body = json.dumps(
+        {"schema_version": 1},
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+    request = Request(
+        state["api_base"] + HEARTBEAT_PATH,
+        data=body,
+        method="POST",
+        headers={
+            "Accept": "application/json",
+            "Authorization":
+                state["token_type"] + " " + state["token"],
+            "Content-Type": "application/json",
+            "User-Agent": "PinCabOS-Link-Heartbeat/1",
+        },
+    )
+
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+
+    try:
+        with urlopen(
+            request,
+            timeout=20,
+            context=context,
+        ) as response:
+            http = response.status
+            content_type = str(
+                response.headers.get_content_type()
+            )
+            raw = response.read(MAX_RESPONSE_BYTES + 1)
+    except HTTPError as exc:
+        die("Heartbeat refusé : " + safe_http_error(exc))
+    except (
+        URLError,
+        TimeoutError,
+        ssl.SSLError,
+        OSError,
+    ) as exc:
+        die("Connexion TLS impossible : " + str(exc))
+
+    if http != 200:
+        die(f"Réponse heartbeat inattendue : HTTP {http}.")
+
+    if content_type != "application/json":
+        die("Réponse heartbeat non JSON.")
+
+    if len(raw) > MAX_RESPONSE_BYTES:
+        die("Réponse heartbeat trop volumineuse.")
+
+    try:
+        result = json.loads(raw.decode("utf-8"))
+    except Exception:
+        die("Réponse heartbeat JSON invalide.")
+
+    valid = (
+        isinstance(result, dict)
+        and result.get("ok") is True
+        and result.get("online") is True
+        and result.get("uuid") == state["uuid"]
+        and result.get("heartbeat_interval_seconds") == 60
+        and result.get("offline_after_seconds") == 180
+        and isinstance(result.get("received_at"), str)
+    )
+
+    if not valid:
+        die("Réponse heartbeat incomplète ou incohérente.")
+
+    print("GO [OK] Heartbeat transmis.")
+    print("Cabinet    : " + str(result.get("cabinet")))
+    print("UUID       : " + str(result.get("uuid")))
+    print("Reçu le    : " + str(result.get("received_at")))
+    print("Intervalle : 60 secondes")
+    print("Hors ligne : après 180 secondes")
+    print("Jeton      : utilisé mais jamais affiché")
+
+
+if __name__ == "__main__":
+    heartbeat()

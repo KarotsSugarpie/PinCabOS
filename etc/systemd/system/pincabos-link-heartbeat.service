@@ -1,0 +1,35 @@
+[Unit]
+Description=PinCabOS secure online presence heartbeat
+Documentation=https://pincabos.cc
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/var/lib/pincabos-link/device.json
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/opt/pincabos/bin/pincabos-link-heartbeat
+TimeoutStartSec=30
+UMask=0077
+
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+ReadOnlyPaths=/var/lib/pincabos-link/device.json
+
+StandardOutput=journal
+StandardError=journal

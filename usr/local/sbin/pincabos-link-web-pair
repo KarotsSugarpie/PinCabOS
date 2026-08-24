@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+CLIENT="/opt/pincabos/bin/pincabos-link"
+STATE_DIR="/var/lib/pincabos-link"
+STATE="$STATE_DIR/device.json"
+
+[[ "$(id -u)" -eq 0 ]] || {
+    echo "PAIR_FAILED"
+    exit 70
+}
+
+[[ "$#" -eq 1 ]] || {
+    echo "PAIR_INVALID"
+    exit 64
+}
+
+CODE="${1^^}"
+CODE="${CODE//-/}"
+CODE="${CODE// /}"
+
+[[ "$CODE" =~ ^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{12}$ ]] || {
+    echo "PAIR_INVALID"
+    exit 64
+}
+
+[[ -x "$CLIENT" ]] || {
+    echo "PAIR_FAILED"
+    exit 69
+}
+
+OWNER_MODE="$(stat -c '%U:%G:%a' "$CLIENT" 2>/dev/null || true)"
+[[ "$OWNER_MODE" == "root:root:755" ]] || {
+    echo "PAIR_FAILED"
+    exit 69
+}
+
+install -d -o root -g root -m 0700 "$STATE_DIR"
+
+OLD=""
+TMP="$(mktemp /run/pincabos-web-pair.XXXXXX)"
+chmod 0600 "$TMP"
+
+cleanup() {
+    rm -f "$TMP"
+    if [[ -n "$OLD" && -f "$OLD" ]]; then
+        rm -f "$STATE"
+        mv -f "$OLD" "$STATE"
+        chmod 0600 "$STATE"
+        chown root:root "$STATE"
+    fi
+}
+
+trap cleanup EXIT
+
+if [[ -f "$STATE" ]]; then
+    OLD="$STATE_DIR/.device.json.webpair.$$"
+    mv "$STATE" "$OLD"
+    chmod 0600 "$OLD"
+    chown root:root "$OLD"
+fi
+
+set +e
+printf '%s\n' "$CODE" | "$CLIENT" pair >"$TMP" 2>&1
+RC=$?
+set -e
+
+if [[ "$RC" -eq 0 && -f "$STATE" ]]; then
+    chown root:root "$STATE"
+    chmod 0600 "$STATE"
+
+    if [[ -n "$OLD" && -f "$OLD" ]]; then
+        rm -f "$OLD"
+        OLD=""
+    fi
+
+    echo "PAIR_OK"
+    exit 0
+fi
+
+rm -f "$STATE"
+
+if grep -qiE \
+    'expired|expire|invalid|invalide|deja utilise|already used|HTTP 400|HTTP 404|HTTP 409' \
+    "$TMP"; then
+    echo "PAIR_REJECTED"
+elif grep -qiE \
+    'url|network|reseau|TLS|certificate|certificat|timeout|timed out|connexion|connection' \
+    "$TMP"; then
+    echo "PAIR_NETWORK"
+else
+    echo "PAIR_FAILED"
+fi
+
+exit 1

@@ -1,0 +1,12 @@
+[Unit]
+Description=PinCabOS secure online presence every 60 seconds
+
+[Timer]
+OnActiveSec=60s
+OnUnitInactiveSec=60s
+AccuracySec=1s
+RandomizedDelaySec=5s
+Unit=pincabos-link-heartbeat.service
+
+[Install]
+WantedBy=timers.target

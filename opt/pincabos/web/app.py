@@ -1280,6 +1280,7 @@ pre,
 <a href="/tools" class="{ 'active' if title == 'Outils' else 'secondary' }"><span class="menu-ico">🧰</span> Outils PinCabOS</a>
 
 
+    <a href="/pincabos-link" class="{ 'active' if title == 'PinCabOS Link' else 'secondary' }"><span class="menu-ico">&#128279;</span> PinCabOS Link</a>
     <a href="/about" class="{ 'active' if title == 'À propos' else 'secondary' }"><span class="menu-ico">ℹ️</span> À propos</a>
     <span class="pco-menu-tools">
       <button type="button" id="pco-menu-pin-btn" class="pco-menu-tool-btn pco-menu-pin-btn" title="Épingler le menu" aria-label="Épingler le menu" onclick="return window.pcoMenuTogglePin(event);">📌</button>
@@ -16892,6 +16893,12 @@ except Exception as _pco_explorer_table_test_error:
     )
 
 # PINCABOS_MAIN_ENTRYPOINT_LAST_V1
+
+# PINCABOS_LINK_UI_V1_START
+from pincaboslink import register_pincaboslink
+register_pincaboslink(app, page)
+# PINCABOS_LINK_UI_V1_END
+
 if __name__ == "__main__":
     app.run(
         host=os.environ.get("PINCABOS_WEB_HOST", os.environ.get("PCO_WEB_HOST", "127.0.0.1")),
