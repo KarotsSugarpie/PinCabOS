@@ -35,11 +35,13 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[1] / "media/audio-voix"
 
+# PINCABOS_AUDIO_VOIX_DE_V1 — les cinq langues de l'installeur, pas quatre.
 VOIX = {
     "fr": "fr-FR",
     "en": "en-GB",
     "es": "es-ES",
     "it": "it-IT",
+    "de": "de-DE",
 }
 
 # Niveau moyen vise, et plafond de crete. Le niveau moyen fait la sensation de
@@ -62,41 +64,51 @@ TEXTES = {
     "front-left": {
         "fr": "Avant gauche", "en": "Front left",
         "es": "Frontal izquierdo", "it": "Anteriore sinistro",
+        "de": "Vorne links",
     },
     "front-right": {
         "fr": "Avant droit", "en": "Front right",
         "es": "Frontal derecho", "it": "Anteriore destro",
+        "de": "Vorne rechts",
     },
     "front-center": {
         "fr": "Centre", "en": "Center",
         "es": "Central", "it": "Centrale",
+        "de": "Mitte",
     },
     "lfe": {
         "fr": "Caisson de basses", "en": "Subwoofer",
         "es": "Subgrave", "it": "Subwoofer",
+        "de": "Subwoofer",
     },
     "rear-left": {
         "fr": "Arrière gauche", "en": "Rear left",
         "es": "Trasero izquierdo", "it": "Posteriore sinistro",
+        "de": "Hinten links",
     },
     "rear-right": {
         "fr": "Arrière droit", "en": "Rear right",
         "es": "Trasero derecho", "it": "Posteriore destro",
+        "de": "Hinten rechts",
     },
     "rear-center": {
         "fr": "Arrière centre", "en": "Rear center",
         "es": "Trasero central", "it": "Posteriore centrale",
+        "de": "Hinten Mitte",
     },
     "side-left": {
         "fr": "Latéral gauche", "en": "Side left",
         "es": "Lateral izquierdo", "it": "Laterale sinistro",
+        "de": "Seite links",
     },
     "side-right": {
         "fr": "Latéral droit", "en": "Side right",
         "es": "Lateral derecho", "it": "Laterale destro",
+        "de": "Seite rechts",
     },
     "mono": {
         "fr": "Mono", "en": "Mono", "es": "Mono", "it": "Mono",
+        "de": "Mono",
     },
 }
 

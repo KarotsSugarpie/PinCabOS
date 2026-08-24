@@ -939,7 +939,7 @@ def audio_nom_position(code):
 
 # PINCABOS_AUDIO_VOIX_V1
 PINCABOS_VOIX_RACINE = Path("/opt/pincabos/media/audio-voix")
-PINCABOS_VOIX_LANGUES = ("fr", "en", "es", "it")
+PINCABOS_VOIX_LANGUES = ("fr", "en", "es", "it", "de")
 
 # Nom de chaque position chez ffmpeg. C'est la seule table de correspondance
 # du test : ni index de canal, ni ordre a deviner.
@@ -957,7 +957,12 @@ PINCABOS_POSITION_FFMPEG = {
 }
 
 PINCABOS_LAYOUT_FFMPEG = {
+    # PINCABOS_AUDIO_QUAD_V1 — le selecteur propose « 4 canaux » : sans la
+    # disposition correspondante, cliquer un haut-parleur repondait « position
+    # non placable ». Le quadriphonique ne porte que les quatre coins, ni
+    # centre ni caisson, ce que la table exprime d'elle-meme.
     2: "stereo",
+    4: "quad",
     6: "5.1",
     8: "7.1",
 }

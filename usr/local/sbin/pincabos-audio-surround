@@ -188,7 +188,12 @@ def carte_analogique() -> tuple[Path, int] | None:
 
 def reaffecter(codec: Path, broche: int, valeur: int, arreter_session: bool) -> str:
     """Ecrit la nouvelle configuration de broche et relance le codec."""
-    (codec / "user_pin_configs").write_text(f"0x{broche:02x} 0x{valeur:08x}\n")
+    return reaffecter_brut(codec, f"0x{broche:02x} 0x{valeur:08x}\n", arreter_session)
+
+
+def reaffecter_brut(codec: Path, contenu: str, arreter_session: bool) -> str:
+    """Pose une configuration de broches et fait relire le codec."""
+    (codec / "user_pin_configs").write_text(contenu)
 
     unites = ("wireplumber.service", "pipewire-pulse.service",
               "pipewire-pulse.socket", "pipewire.service", "pipewire.socket")
@@ -215,17 +220,79 @@ def reaffecter(codec: Path, broche: int, valeur: int, arreter_session: bool) -> 
     return ""
 
 
-def nom_carte_pactl(carte: int) -> str:
-    """Nom PipeWire de la carte analogique : celle qui porte des profils surround."""
+def cartes_pactl() -> list[dict]:
+    """Cartes PipeWire, avec leur numero ALSA et leurs profils.
+
+    PINCABOS_AUDIO_CARD_MATCH_V1
+    """
     detail = pactl("list", "cards").stdout
-    nom = ""
+    cartes: list[dict] = []
+    courante: dict = {}
+
     for ligne in detail.splitlines():
-        m = re.match(r"^\s*Name:\s*(alsa_card\.\S+)", ligne)
-        if m:
-            nom = m.group(1)
+        nom = re.match(r"^\s*Name:\s*(alsa_card\.\S+)", ligne)
+        if nom:
+            if courante:
+                cartes.append(courante)
+            courante = {"nom": nom.group(1), "alsa": -1, "surround": False}
             continue
-        if nom and "analog-surround" in ligne:
-            return nom
+        if not courante:
+            continue
+        # PipeWire declare de quelle carte ALSA vient chaque carte.
+        numero = re.match(r"^\s*alsa\.card\s*=\s*\"?(\d+)\"?", ligne)
+        if numero:
+            courante["alsa"] = int(numero.group(1))
+        if "analog-surround" in ligne:
+            courante["surround"] = True
+
+    if courante:
+        cartes.append(courante)
+
+    return cartes
+
+
+def restaurer_broches(codec: Path, arreter_session: bool) -> str:
+    """Rend les broches reaffectees a leur configuration d'origine.
+
+    PINCABOS_AUDIO_PIN_RESTORE_V1
+    """
+    actuels = broches(codec, "user_pin_configs")
+    if not actuels:
+        return ""
+
+    origine = broches(codec, "init_pin_configs")
+    lignes = [
+        f"0x{b:02x} 0x{origine[b]:08x}"
+        for b in actuels
+        if b in origine
+    ]
+    if not lignes:
+        return ""
+
+    return reaffecter_brut(codec, "\n".join(lignes) + "\n", arreter_session)
+
+
+def nom_carte_pactl(carte: int) -> str:
+    """Nom PipeWire de la carte ALSA demandee.
+
+    PINCABOS_AUDIO_CARD_MATCH_V1
+
+    Le numero de carte n'est pas decoratif : sur un cabinet a deux cartes
+    analogiques, prendre la premiere venue revient a configurer celle qui ne
+    porte pas les exciters.
+    """
+    cartes = cartes_pactl()
+
+    for item in cartes:
+        if item["alsa"] == carte:
+            return item["nom"]
+
+    # Repli : PipeWire n'a pas declare le numero ALSA. On n'accepte alors le
+    # rapprochement que s'il n'y a aucune ambiguite.
+    candidates = [item for item in cartes if item["surround"]]
+    if len(candidates) == 1:
+        return candidates[0]["nom"]
+
     return ""
 
 
@@ -339,6 +406,13 @@ def cmd_enable(mode: str, session: bool) -> int:
         config["pin_retask"] = {f"0x{b:02x}": f"0x{v:08x}" for b, v in actuels.items()} \
             or ({f"0x{candidat[0]:02x}": f"0x{candidat[1]:08x}"} if candidat else {})
     else:
+        # PINCABOS_AUDIO_PIN_RESTORE_V1 — effacer la trace ne suffit pas :
+        # sans cela la prise reste une sortie jusqu'au redemarrage.
+        erreur = restaurer_broches(codec, arreter_session=session)
+        if erreur:
+            journal.append(f"prise non rendue ({erreur})")
+        elif config.get("pin_retask"):
+            journal.append("prise rendue a son role d'origine")
         config["pin_retask"] = {}
     ecrire_config(config)
 
