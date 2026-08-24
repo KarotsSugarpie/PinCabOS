@@ -5649,6 +5649,14 @@ PCO_KEEP_PATHS=(
   # audio: multichannel mode and pin retask, replayed at boot. Without this an
   # update drops the cabinet back to stereo and the SSF silently stops.
   "opt/pincabos/config/audio/surround.json"
+  # PINCABOS_KEEP_AUDIO_LEGACY_V1
+  # Le payload efface ces quatre-la pour qu'une installation NEUVE n'herite
+  # pas de l'audio de la machine de construction. En mise a jour ce sont les
+  # reglages de l'utilisateur : routage SSF, peripheriques, effets Commander.
+  "opt/pincabos/config/audio-router.json"
+  "opt/pincabos/config/audio.json"
+  "opt/pincabos/config/audio-ssf.json"
+  "opt/pincabos/config/ssf-commander.json"
   # PINCABOS_KEEP_INVENTORY_V1
   # What the MACHINE learned and no image can hand back. This list comes from
   # an inventory of what the system stores, not from what we remembered.

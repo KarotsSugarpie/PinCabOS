@@ -36,6 +36,9 @@ DOIT_PASSER = [
     "etc/sudoers.d/pincabos-audio-surround",
     "home/pinball/.config/openbox/autostart",
     "home/pinball/.config/vpinfe/themes/PinCabOS/theme.js",
+    # Surcharge d'une unite PinCabOS : le drop-in ne porte pas notre nom,
+    # mais le repertoire qui l'accueille, si.
+    "etc/systemd/system/pincabos-vpinfe.service.d/50-dof.conf",
 ]
 
 DOIT_BLOQUER = [
@@ -43,9 +46,15 @@ DOIT_BLOQUER = [
     "home/pinball/Tables/ma-table.vpx",
     "home/pinball/.config/vpinfe/vpinfe.ini",
     "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
-    # Unites qui ne sont pas a PinCabOS.
+    # Unites qui ne sont pas a PinCabOS. Notre nom dans le nom du FICHIER
+    # ne suffit pas : ce qui compte est l'unite reellement surchargee.
     "etc/systemd/system/getty@tty1.service.d/override.conf",
     "etc/systemd/system/multi-user.target.wants/ssh.service",
+    "etc/systemd/system/ssh.service.d/pincabos-backdoor.conf",
+    "etc/systemd/system/getty@tty1.service.d/pincabos-tty.conf",
+    "etc/systemd/system/a/b/pincabos-profond.conf",
+    # Un theme qui n'est pas le notre reste la propriete du joueur.
+    "home/pinball/.config/vpinfe/themes/Revolution/theme.js",
     # Systeme.
     "etc/passwd",
     "etc/shadow",

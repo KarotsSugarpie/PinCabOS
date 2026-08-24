@@ -113,12 +113,22 @@ def allowed(rel):
     # Sous systemd, la regle porte sur le NOM du fichier et non sur le chemin :
     # sans cela « multi-user.target.wants/pincabos-x.service » tombe dehors et
     # l'unite arrive sans son activation.
-    # Le nom du fichier, ou celui d'un repertoire de surcharge : un drop-in
-    # s'appelle « 10-x.conf » mais vit dans « pincabos-y.service.d ».
-    if rel.startswith('etc/systemd/system/') and any(
-            part.startswith('pincabos-') for part in Path(rel).parts[3:]):
-        return True
-    if rel.startswith('home/pinball/.config/vpinfe/themes/'): return True
+    # PINCABOS_UPDATE_SCOPE_V3
+    # Trois formes legitimes, et rien d'autre : l'unite, sa propre surcharge,
+    # son lien d'activation. Un « pincabos-*.conf » depose dans le repertoire
+    # de surcharge d'un service tiers n'en fait pas partie.
+    if rel.startswith('etc/systemd/system/'):
+        reste = rel[len('etc/systemd/system/'):].split('/')
+        if len(reste) == 1:
+            return reste[0].startswith('pincabos-')
+        if len(reste) == 2:
+            conteneur, fichier = reste
+            if conteneur.endswith('.d'):
+                return conteneur.startswith('pincabos-')
+            if conteneur.endswith(('.wants', '.requires')):
+                return fichier.startswith('pincabos-')
+        return False
+    if rel.startswith('home/pinball/.config/vpinfe/themes/PinCabOS/'): return True
     if not rel.startswith(prefixes): return False
     forbidden=('opt/pincabos/web/.venv/','opt/pincabos/web/backups/','opt/pincabos/build/','opt/pincabos/backups/','opt/pincabos/logs/')
     return not rel.startswith(forbidden) and '__pycache__' not in Path(rel).parts and not rel.endswith(('.pyc','.pyo'))

@@ -41,13 +41,20 @@ def index():
                            defaults=json.dumps(REGIONAL_DEFAULTS), demo=DEMO)
 
 
-@app.route("/api/disks")
-def disks():
+def disques_reels():
+    """Disques que cette machine porte reellement.
+
+    PINCABOS_WIZARD_LOCAL_ONLY_V1
+
+    Sert a la fois a remplir la liste et a valider le choix : une expression
+    reguliere accepte /dev/nvme0n1 sur une machine qui n'en a pas, une
+    enumeration decrit la machine devant soi.
+    """
     if DEMO:
-        return jsonify([
+        return [
             {"dev": "/dev/nvme0n1", "size": "931,5G", "model": "Samsung 980 PRO 1TB"},
             {"dev": "/dev/sda", "size": "223,6G", "model": "Crucial BX500 240GB"},
-        ])
+        ]
     out = subprocess.run(
         ["lsblk", "-J", "-d", "-o", "NAME,SIZE,TYPE,MODEL"],
         capture_output=True, text=True, timeout=10).stdout
@@ -56,7 +63,12 @@ def disks():
         if d.get("type") == "disk" and not d["name"].startswith(("loop", "sr", "zram")):
             found.append({"dev": "/dev/" + d["name"], "size": d.get("size", "?"),
                           "model": (d.get("model") or "").strip() or "Disque"})
-    return jsonify(found)
+    return found
+
+
+@app.route("/api/disks")
+def disks():
+    return jsonify(disques_reels())
 
 
 @app.route("/api/keyboard", methods=["POST"])
@@ -103,7 +115,10 @@ def install():
     a = request.get_json(force=True)
     if a.get("confirm", "").strip().upper() != "INSTALL PINCABOS":
         return jsonify({"error": "bad-confirm"}), 400
-    if not re.fullmatch(r"/dev/[a-z0-9]+", a.get("disk", "")) and not DEMO:
+    # PINCABOS_WIZARD_LOCAL_ONLY_V1
+    # Le disque demande doit figurer parmi ceux que la machine porte : la
+    # forme seule ne dit pas si le disque existe.
+    if a.get("disk", "") not in {d["dev"] for d in disques_reels()}:
         return jsonify({"error": "bad-disk"}), 400
 
     # PINCABOS_ANSWERS_QUOTING_V1
@@ -200,10 +215,21 @@ def progress():
 
 @app.route("/api/reboot", methods=["POST"])
 def reboot():
+    # PINCABOS_WIZARD_LOCAL_ONLY_V1
+    # Un point d'entree qui redemarre la machine ne peut pas etre plus ouvert
+    # que celui qui l'installe.
+    a = request.get_json(force=True, silent=True) or {}
+    if a.get("confirm", "").strip().upper() != "INSTALL PINCABOS":
+        return jsonify({"error": "bad-confirm"}), 400
     if not DEMO:
         subprocess.Popen(["systemctl", "reboot"])
     return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8046, threaded=True)
+    # PINCABOS_WIZARD_LOCAL_ONLY_V1
+    # Le kiosk qui affiche l'assistant tourne sur cette machine et interroge
+    # 127.0.0.1. Ecouter partout exposait l'installation au reseau entier.
+    # Une installation pilotee a distance reste possible, mais elle se demande.
+    app.run(host=os.environ.get("PCO_WIZARD_BIND", "127.0.0.1"),
+            port=8046, threaded=True)

@@ -38,7 +38,7 @@ ATTENDU_ABSENT = {
     "dev-login.txt",              # outillage de developpement
     "screens",                    # deja couvert par une entree dediee
     "display-aliases.env",        # idem
-    "audio",                      # couvert par audio/surround.json
+    "audio/audio-baseline.txt",   # releve de la machine de construction
 }
 
 
@@ -63,19 +63,29 @@ def main() -> int:
         print("  " + str(config) + " absent : rien a verifier")
         return 0
 
-    oublis = []
-    for entree in sorted(config.iterdir()):
-        nom = entree.name
-        if nom.endswith(".manifest") or nom.startswith("apt-"):
-            continue
-        if nom in ATTENDU_ABSENT:
-            continue
+    # PINCABOS_KEEP_INVENTORY_V2
+    # On descend dans les sous-repertoires : s'arreter au premier niveau
+    # revient a fermer les yeux sur tout ce qu'un repertoire contient.
+    def candidats(base):
+        for entree in sorted(base.iterdir()):
+            nom = entree.relative_to(config).as_posix()
+            if nom.endswith(".manifest") or nom.split("/")[-1].startswith("apt-"):
+                continue
+            if nom in ATTENDU_ABSENT:
+                continue
 
-        rel = "opt/pincabos/config/" + nom
-        couvert = any(rel == g or g.startswith(rel + "/") or rel.startswith(g + "/")
-                      for g in gardes)
-        if not couvert:
-            oublis.append(rel)
+            rel = "opt/pincabos/config/" + nom
+            couvert = any(rel == g or rel.startswith(g + "/") for g in gardes)
+            if couvert:
+                continue
+            # Un repertoire dont seule une partie est gardee doit etre ouvert :
+            # sinon la partie non gardee reste invisible.
+            if entree.is_dir() and any(g.startswith(rel + "/") for g in gardes):
+                yield from candidats(entree)
+                continue
+            yield rel
+
+    oublis = list(candidats(config))
 
     if oublis:
         print("  Une mise a jour effacerait ces reglages, et ils ne sont pas")
