@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# PINCABOS_VPINFE_FOCUS_PLAYFIELD_V1
+#
+# Donne le clavier a la fenetre du playfield des que VPinFE a fini de poser
+# ses fenetres.
+#
+# VPinFE ouvre trois fenetres — playfield, fronton, DMD. C est la derniere
+# ouverte qui recoit le focus, et ce n est pas toujours celle du playfield :
+# au demarrage, les fleches ne faisaient donc rien tant qu on n avait pas
+# fait deux Alt+Tab pour retomber sur la bonne.
+#
+# On attend que la fenetre du playfield existe, on laisse les autres finir
+# de s ouvrir, puis on lui donne le focus.
+set -u
+
+export DISPLAY="${DISPLAY:-:0}"
+export XAUTHORITY="${XAUTHORITY:-/home/pinball/.Xauthority}"
+
+TITRE="VPinFE Table"
+fenetre=""
+
+for _ in $(seq 1 90); do
+  fenetre="$(wmctrl -l 2>/dev/null | awk -v t="$TITRE" "index(\$0, t) { print \$1; exit }")"
+  [ -n "$fenetre" ] && break
+  sleep 1
+done
+
+if [ -z "$fenetre" ]; then
+  echo "pincabos-vpinfe-focus: fenetre du playfield jamais apparue" >&2
+  exit 0
+fi
+
+# Les fenetres secondaires s ouvrent juste apres : leur laisser le temps,
+# sinon l une d elles reprend le focus aussitot apres nous.
+sleep 3
+
+wmctrl -i -a "$fenetre" 2>/dev/null || true
+xdotool windowactivate --sync "$fenetre" 2>/dev/null || true
+xdotool windowfocus "$fenetre" 2>/dev/null || true
+
+actuelle="$(xdotool getactivewindow getwindowname 2>/dev/null || true)"
+echo "pincabos-vpinfe-focus: clavier sur « ${actuelle:-inconnue} »"

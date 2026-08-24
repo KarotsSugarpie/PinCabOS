@@ -1,0 +1,569 @@
+#!/usr/bin/env python3
+"""Sortie multicanal analogique : 5.1 / 7.1 sur les codecs Realtek.
+
+PINCABOS_AUDIO_SURROUND_V1
+
+Le SSF a besoin d'un peripherique de 6 ou 8 canaux. Or PipeWire demarre
+toujours une carte analogique en STEREO : sur un cab sortant d'installation,
+aucun peripherique multicanal n'existe, donc la page Audio n'a rien a proposer
+et le SSF ne peut pas fonctionner. Premiere moitie du probleme, reglee par le
+profil de carte.
+
+Seconde moitie, propre au 7.1 : la facade arriere d'une carte mere n'a que
+trois prises de sortie (verte, noire, orange) = 5.1. La paire laterale passe
+par la prise bleue, que le pilote Windows du fabricant reaffecte tout seul
+quand on choisit 7.1. Linux ne le fait pas : le codec annonce donc 6 canaux
+maximum, et aucun profil 7.1 n'apparait. On reaffecte donc la broche nous-
+memes — c'est reversible, et c'est exactement ce que fait hda-jack-retask.
+
+  pincabos-audio-surround detect
+  pincabos-audio-surround enable 7.1 | 5.1 | stereo
+  pincabos-audio-surround auto            (5.1 au premier demarrage, si possible)
+  pincabos-audio-surround apply-boot      (reaffectation, avant la session)
+  pincabos-audio-surround apply-session   (profil, une fois PipeWire lance)
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+CONFIG = Path("/opt/pincabos/config/audio/surround.json")
+SESSION_USER = "pinball"
+SESSION_UID = 1000
+
+PROFILS = {
+    "7.1": "output:analog-surround-71",
+    "5.1": "output:analog-surround-51",
+    "stereo": "output:analog-stereo",
+}
+
+# Position des champs dans le mot de configuration d'une broche HDA.
+DEVICE_LINE_OUT = 0x0
+DEVICE_LINE_IN = 0x8
+# Connectivite d'une broche : 0 = prise physique, 1 = aucune, 2 = interne,
+# 3 = les deux. Une prise du panneau arriere vaut donc 0, pas 1.
+PRISE = (0x0, 0x3)
+
+
+def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, capture_output=True, text=True, check=False, **kw)
+
+
+def prefixe_session() -> list[str]:
+    """Prefixe pour parler a la session audio de la seance.
+
+    PINCABOS_AUDIO_SESSION_PREFIX_V1
+
+    Appele depuis la page, ce programme tourne deja sous le compte de la
+    session : lui faire appeler runuser revient a lui demander un privilege
+    qu il n a pas, et l appel echoue sans bruit — PipeWire parait alors
+    absent. On ne bascule donc d utilisateur que depuis root, cas du service
+    de demarrage.
+    """
+    environnement = [
+        "/usr/bin/env",
+        f"XDG_RUNTIME_DIR=/run/user/{SESSION_UID}",
+        f"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{SESSION_UID}/bus",
+    ]
+
+    if os.geteuid() == 0:
+        return ["/usr/sbin/runuser", "-u", SESSION_USER, "--"] + environnement
+
+    return environnement
+
+
+def pactl(*args: str) -> subprocess.CompletedProcess:
+    """pactl dans la session graphique, seule a voir PipeWire."""
+    return run(prefixe_session() + ["/usr/bin/pactl", *args])
+
+
+def systemctl_user(*args: str) -> subprocess.CompletedProcess:
+    return run(prefixe_session() + ["/usr/bin/systemctl", "--user", *args])
+
+
+# --------------------------------------------------------------------------
+# Broches du codec
+
+
+def decode(mot: int) -> dict:
+    return {
+        "connectivite": (mot >> 30) & 0x3,
+        "emplacement": (mot >> 24) & 0x3F,
+        "peripherique": (mot >> 20) & 0xF,
+        "association": (mot >> 4) & 0xF,
+        "sequence": mot & 0xF,
+    }
+
+
+def codecs() -> list[Path]:
+    return sorted(Path("/sys/class/sound").glob("hwC*D*"))
+
+
+def broches(codec: Path, fichier: str = "init_pin_configs") -> dict[int, int]:
+    chemin = codec / fichier
+    resultat: dict[int, int] = {}
+    try:
+        for ligne in chemin.read_text(encoding="ascii").splitlines():
+            morceaux = ligne.split()
+            if len(morceaux) == 2:
+                resultat[int(morceaux[0], 16)] = int(morceaux[1], 16)
+    except OSError:
+        pass
+    return resultat
+
+
+def numero_carte(codec: Path) -> int:
+    m = re.match(r"hwC(\d+)D\d+", codec.name)
+    return int(m.group(1)) if m else -1
+
+
+def canaux_max(carte: int) -> int:
+    """Nombre de canaux que le peripherique analogique accepte reellement."""
+    p = run(["/usr/bin/aplay", "-D", f"hw:{carte},0",
+             "--dump-hw-params", "/dev/zero"], timeout=10)
+    m = re.search(r"^CHANNELS:.*?(\d+)\s*\]", p.stdout + p.stderr, re.M)
+    if m:
+        return int(m.group(1))
+    m = re.search(r"^CHANNELS:\s*(\d+)\s*$", p.stdout + p.stderr, re.M)
+    return int(m.group(1)) if m else 0
+
+
+def candidat_lateral(pins: dict[int, int]) -> tuple[int, int] | None:
+    """Broche a reaffecter en sortie laterale, et sa nouvelle valeur.
+
+    On cherche l'entree ligne de la facade arriere — la prise bleue — et on
+    lui donne le role de sortie, dans la meme association que les sorties
+    existantes, en sequence 3 (apres avant / centre-caisson / arriere).
+    """
+    sorties = [
+        (broche, decode(mot)) for broche, mot in pins.items()
+        if decode(mot)["peripherique"] == DEVICE_LINE_OUT
+        and decode(mot)["connectivite"] in PRISE
+    ]
+    if not sorties:
+        return None
+
+    association = min(d["association"] for _, d in sorties)
+    if any(d["sequence"] == 3 and d["association"] == association
+           for _, d in sorties):
+        return None  # la paire laterale existe deja
+
+    for broche, mot in sorted(pins.items()):
+        d = decode(mot)
+        if d["peripherique"] != DEVICE_LINE_IN or d["connectivite"] not in PRISE:
+            continue
+        nouveau = mot
+        nouveau &= ~(0xF << 20)                    # peripherique -> sortie ligne
+        nouveau = (nouveau & ~0xFF) | (association << 4) | 0x3
+        return broche, nouveau
+
+    return None
+
+
+def carte_analogique() -> tuple[Path, int] | None:
+    """Codec porteur des sorties analogiques de la carte mere."""
+    for codec in codecs():
+        pins = broches(codec)
+        if not pins:
+            continue
+        sorties = [
+            mot for mot in pins.values()
+            if decode(mot)["peripherique"] == DEVICE_LINE_OUT
+            and decode(mot)["connectivite"] in PRISE
+        ]
+        if len(sorties) >= 2:
+            return codec, numero_carte(codec)
+    return None
+
+
+# --------------------------------------------------------------------------
+# Reaffectation
+
+
+def reaffecter(codec: Path, broche: int, valeur: int, arreter_session: bool) -> str:
+    """Ecrit la nouvelle configuration de broche et relance le codec."""
+    return reaffecter_brut(codec, f"0x{broche:02x} 0x{valeur:08x}\n", arreter_session)
+
+
+def reaffecter_brut(codec: Path, contenu: str, arreter_session: bool) -> str:
+    """Pose une configuration de broches et fait relire le codec."""
+    (codec / "user_pin_configs").write_text(contenu)
+
+    unites = ("wireplumber.service", "pipewire-pulse.service",
+              "pipewire-pulse.socket", "pipewire.service", "pipewire.socket")
+
+    if arreter_session:
+        systemctl_user("stop", *unites)
+        time.sleep(2)
+
+    try:
+        (codec / "reconfig").write_text("1\n")
+    except OSError as exc:
+        if arreter_session:
+            systemctl_user("start", "pipewire.socket", "pipewire-pulse.socket",
+                           "wireplumber.service")
+        return f"NOGO: relecture du codec refusee ({exc})"
+
+    time.sleep(2)
+
+    if arreter_session:
+        systemctl_user("start", "pipewire.socket", "pipewire-pulse.socket",
+                       "wireplumber.service")
+        time.sleep(3)
+
+    return ""
+
+
+def cartes_pactl() -> list[dict]:
+    """Cartes PipeWire, avec leur numero ALSA et leurs profils.
+
+    PINCABOS_AUDIO_CARD_MATCH_V1
+    """
+    detail = pactl("list", "cards").stdout
+    cartes: list[dict] = []
+    courante: dict = {}
+
+    for ligne in detail.splitlines():
+        nom = re.match(r"^\s*Name:\s*(alsa_card\.\S+)", ligne)
+        if nom:
+            if courante:
+                cartes.append(courante)
+            courante = {"nom": nom.group(1), "alsa": -1,
+                        "surround": False, "profils": set()}
+            continue
+        if not courante:
+            continue
+        # PipeWire declare de quelle carte ALSA vient chaque carte.
+        numero = re.match(r"^\s*alsa\.card\s*=\s*\"?(\d+)\"?", ligne)
+        if numero:
+            courante["alsa"] = int(numero.group(1))
+        # PINCABOS_AUDIO_CARD_MATCH_V3 — les profils appartiennent a CETTE
+        # carte : les relever globalement ferait annoncer les capacites d'une
+        # autre.
+        courante["profils"].update(
+            re.findall(r"(output:analog-surround-\d+|output:analog-stereo)(?=[:+])",
+                       ligne)
+        )
+        if "analog-surround" in ligne:
+            courante["surround"] = True
+
+    if courante:
+        cartes.append(courante)
+
+    return cartes
+
+
+def restaurer_broches(codec: Path, arreter_session: bool) -> str:
+    """Rend les broches reaffectees a leur configuration d'origine.
+
+    PINCABOS_AUDIO_PIN_RESTORE_V1
+    """
+    actuels = broches(codec, "user_pin_configs")
+    if not actuels:
+        return ""
+
+    origine = broches(codec, "init_pin_configs")
+    lignes = [
+        f"0x{b:02x} 0x{origine[b]:08x}"
+        for b in actuels
+        if b in origine
+    ]
+    if not lignes:
+        return ""
+
+    return reaffecter_brut(codec, "\n".join(lignes) + "\n", arreter_session)
+
+
+def nom_carte_pactl(carte: int) -> str:
+    """Nom PipeWire de la carte ALSA demandee.
+
+    PINCABOS_AUDIO_CARD_MATCH_V1
+
+    Le numero de carte n'est pas decoratif : sur un cabinet a deux cartes
+    analogiques, prendre la premiere venue revient a configurer celle qui ne
+    porte pas les exciters.
+    """
+    cartes = cartes_pactl()
+
+    for item in cartes:
+        if item["alsa"] == carte:
+            return item["nom"]
+
+    # Repli : PipeWire n'a pas declare le numero ALSA. On n'accepte alors le
+    # rapprochement que s'il n'y a aucune ambiguite.
+    candidates = [item for item in cartes if item["surround"]]
+    if len(candidates) == 1:
+        return candidates[0]["nom"]
+
+    return ""
+
+
+def profils_disponibles(nom: str) -> list[str]:
+    """Profils de CETTE carte.
+
+    PINCABOS_AUDIO_CARD_MATCH_V3
+
+    Les chercher dans la sortie entiere revenait a preter a une carte les
+    capacites de sa voisine, et a proposer un mode la ou il ne s'applique pas.
+    """
+    for carte in cartes_pactl():
+        if carte["nom"] == nom:
+            return sorted(carte["profils"])
+    return []
+
+
+def appliquer_profil(nom: str, profil: str) -> str:
+    duplex = f"{profil}+input:analog-stereo"
+    for tentative in (duplex, profil):
+        if pactl("set-card-profile", nom, tentative).returncode == 0:
+            return tentative
+    return ""
+
+
+# --------------------------------------------------------------------------
+# Etat persistant
+
+
+def lire_config() -> dict:
+    try:
+        return json.loads(CONFIG.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def ecrire_config(data: dict) -> None:
+    CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+                      encoding="utf-8")
+    CONFIG.chmod(0o644)
+
+
+# --------------------------------------------------------------------------
+# Commandes
+
+
+def cmd_detect() -> int:
+    trouve = carte_analogique()
+    if not trouve:
+        print("aucune carte analogique detectee")
+        return 1
+    codec, carte = trouve
+    pins = broches(codec)
+    actuel = canaux_max(carte)
+    candidat = candidat_lateral(pins)
+    nom = nom_carte_pactl(carte)
+
+    print(f"codec            : {codec.name} (carte ALSA {carte})")
+    print(f"carte PipeWire   : {nom or 'non vue'}")
+    print(f"canaux actuels   : {actuel}")
+    print(f"profils          : {', '.join(profils_disponibles(nom)) or 'aucun'}")
+    if actuel >= 8:
+        print("7.1              : disponible")
+    elif candidat:
+        broche, valeur = candidat
+        print(f"7.1              : possible en reaffectant la broche "
+              f"0x{broche:02x} (prise bleue) -> 0x{valeur:08x}")
+    else:
+        print("7.1              : impossible sur ce codec")
+    return 0
+
+
+def cmd_enable(mode: str, session: bool) -> int:
+    if mode not in PROFILS:
+        print(f"mode inconnu : {mode}")
+        return 2
+
+    trouve = carte_analogique()
+    if not trouve:
+        print("aucune carte analogique detectee")
+        return 1
+    codec, carte = trouve
+
+    journal = []
+
+    if mode == "7.1" and canaux_max(carte) < 8:
+        candidat = candidat_lateral(broches(codec))
+        if not candidat:
+            print("NOGO: ce codec n'expose pas de prise reaffectable en laterale")
+            return 1
+        broche, valeur = candidat
+        erreur = reaffecter(codec, broche, valeur, arreter_session=session)
+        if erreur:
+            print(erreur)
+            return 1
+        journal.append(f"broche 0x{broche:02x} reaffectee en sortie laterale")
+
+    # PINCABOS_AUDIO_PIN_ORDER_V1
+    # Rendre la broche arrete et relance PipeWire : le faire APRES avoir pose
+    # le profil laissait WirePlumber reprendre la main en stereo. Le dernier
+    # geste doit etre celui qu'on veut voir survivre.
+    rendue = False
+    if mode != "7.1":
+        erreur = restaurer_broches(codec, arreter_session=session)
+        if erreur:
+            journal.append(f"prise non rendue ({erreur})")
+        elif lire_config().get("pin_retask"):
+            journal.append("prise rendue a son role d'origine")
+            rendue = True
+
+    nom = nom_carte_pactl(carte)
+    if not nom:
+        print("NOGO: carte non visible depuis la session PipeWire")
+        return 1
+
+    applique = appliquer_profil(nom, PROFILS[mode])
+    if not applique:
+        print(f"NOGO: profil {PROFILS[mode]} refuse par la carte")
+        return 1
+    journal.append(f"profil {applique}")
+
+    config = lire_config()
+    config.update({
+        "mode": mode,
+        "card": nom,
+        "profile": applique,
+        "codec": codec.name,
+    })
+    if mode == "7.1":
+        candidat = candidat_lateral(broches(codec, "init_pin_configs"))
+        actuels = broches(codec, "user_pin_configs")
+        config["pin_retask"] = {f"0x{b:02x}": f"0x{v:08x}" for b, v in actuels.items()} \
+            or ({f"0x{candidat[0]:02x}": f"0x{candidat[1]:08x}"} if candidat else {})
+    else:
+        # PINCABOS_AUDIO_PIN_ORDER_V1 — la broche a deja ete rendue plus haut,
+        # avant que le profil ne soit pose.
+        config["pin_retask"] = {}
+    ecrire_config(config)
+
+    print("GO: " + " ; ".join(journal))
+    return 0
+
+
+def cmd_apply_boot() -> int:
+    """Rejoue la reaffectation avant que la session audio ne demarre."""
+    config = lire_config()
+    retask = config.get("pin_retask") or {}
+    if not retask:
+        return 0
+    trouve = carte_analogique()
+    if not trouve:
+        return 0
+    codec, carte = trouve
+    if canaux_max(carte) >= 8:
+        return 0
+    for broche, valeur in retask.items():
+        erreur = reaffecter(codec, int(broche, 16), int(valeur, 16),
+                            arreter_session=False)
+        if erreur:
+            print(erreur)
+            return 1
+    print(f"GO: reaffectation rejouee ({', '.join(retask)})")
+    return 0
+
+
+def cmd_auto() -> int:
+    """Premier demarrage : adopter le 5.1 si la carte le donne sans reaffecter.
+
+    PINCABOS_AUDIO_AUTO_51_V1
+    """
+    if lire_config().get("mode"):
+        return 0  # un choix existe deja, on n y touche pas
+
+    trouve = carte_analogique()
+    if not trouve:
+        return 0
+    codec, carte = trouve
+
+    # Sans reaffectation de broche : on ne prend que ce que la carte donne
+    # deja. Six canaux suffisent au 5.1 ; le 7.1 en demanderait huit, donc une
+    # reaffectation, donc une decision qui revient a l utilisateur.
+    if canaux_max(carte) < 6:
+        return 0
+
+    nom = nom_carte_pactl(carte)
+    if not nom or PROFILS["5.1"] not in profils_disponibles(nom):
+        return 0
+
+    applique = appliquer_profil(nom, PROFILS["5.1"])
+    if not applique:
+        return 0
+
+    config = lire_config()
+    config.update({
+        "mode": "5.1",
+        "card": nom,
+        "profile": applique,
+        "codec": codec.name,
+        "pin_retask": {},
+        "source": "automatique",
+    })
+    ecrire_config(config)
+
+    print(f"GO: 5.1 adopte automatiquement ({applique})")
+    return 0
+
+
+def cmd_apply_session() -> int:
+    """Rejoue le profil une fois PipeWire lance : il repart en stereo sinon."""
+    for _ in range(20):
+        if run(["/usr/bin/pgrep", "-u", SESSION_USER, "-x", "wireplumber"]).returncode == 0:
+            break
+        time.sleep(1)
+    time.sleep(3)
+
+    # PINCABOS_AUDIO_AUTO_51_V1 — un cabinet neuf n a pas encore de choix.
+    if not lire_config().get("mode"):
+        cmd_auto()
+
+    config = lire_config()
+    profil = str(config.get("profile") or "")
+    if not profil:
+        return 0
+
+    nom = str(config.get("card") or "")
+    if not nom:
+        return 0
+    resultat = pactl("set-card-profile", nom, profil)
+    if resultat.returncode != 0:
+        print(f"profil {profil} non rejoue : {resultat.stderr.strip()}")
+        return 1
+    print(f"GO: profil {profil} rejoue")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    sous = parser.add_subparsers(dest="commande")
+    sous.add_parser("detect")
+    p = sous.add_parser("enable")
+    p.add_argument("mode", choices=sorted(PROFILS))
+    p.add_argument("--no-session-restart", action="store_true",
+                   help="ne pas arreter PipeWire (appel depuis le demarrage)")
+    sous.add_parser("apply-boot")
+    sous.add_parser("auto")
+    sous.add_parser("apply-session")
+    args = parser.parse_args()
+
+    if args.commande == "detect":
+        return cmd_detect()
+    if args.commande == "enable":
+        return cmd_enable(args.mode, session=not args.no_session_restart)
+    if args.commande == "apply-boot":
+        return cmd_apply_boot()
+    if args.commande == "auto":
+        return cmd_auto()
+    if args.commande == "apply-session":
+        return cmd_apply_session()
+
+    parser.print_help()
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

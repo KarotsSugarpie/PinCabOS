@@ -168,6 +168,16 @@ def audio_device_options(selected):
     devices, _raw = audio_detect_alsa_devices()
     rows = ['<option value="">Non configuré</option>']
 
+    # PINCABOS_AUDIO_WAV_PIPEWIRE_V1
+    # Les sorties PipeWire d'abord : ce sont les seules qui portent le
+    # multicanal, et les seules jouables sans se heurter a la carte occupee.
+    for sortie in audio_pipewire_sinks():
+        valeur = f'pw:{sortie["name"]}'
+        canaux = int(sortie.get("channels", 2) or 2)
+        libelle = f'{sortie.get("description") or sortie["name"]} — {canaux} canaux — PipeWire'
+        sel = "selected" if selected == valeur else ""
+        rows.append(f'<option value="{esc(valeur)}" {sel}>{esc(libelle)}</option>')
+
     for dev in devices:
         dev_id = dev["id"]
         label = f'{dev["name"]} — {dev_id}'
@@ -309,30 +319,34 @@ def _pco_vpx_sound3d_options(selected):
     if selected not in {"0", "1", "2", "3", "4", "5"}:
         selected = "0"
 
+    # PINCABOS_SOUND3D_LABELS_V1
+    # Intitules repris de VPinball : les modes 4 et 5 sont des modes a SIX
+    # canaux, pas du 7.1. Les annoncer en 7.1 fait passer un fonctionnement
+    # normal pour une panne.
     modes = (
         (
             "0",
-            "Cartes individuelles — 2 canaux avant",
+            "2 canaux — avant",
         ),
         (
             "1",
-            "Cartes individuelles — 2 canaux arrière",
+            "2 canaux — arrière",
         ),
         (
             "2",
-            "5.1 — arrière au lockbar",
+            "Jusqu'à 6 canaux — arrière au lockbar",
         ),
         (
             "3",
-            "5.1 — avant au lockbar",
+            "Jusqu'à 6 canaux — avant au lockbar",
         ),
         (
             "4",
-            "7.1 — VPX Side + Rear, mixage Legacy",
+            "6 canaux — latéral et arrière au lockbar, mixage historique",
         ),
         (
             "5",
-            "7.1 — VPX Side + Rear, nouveau mixage",
+            "6 canaux — latéral et arrière au lockbar, nouveau mixage",
         ),
     )
 
@@ -519,35 +533,11 @@ def audio_config_rows():
 
     legacy_rows = []
 
+    # PINCABOS_AUDIO_DEAD_ROWS_V1
+    # Les cles d'un routage audio anterieur ne sont plus affichees : rien ne
+    # les lit, et posees au milieu des vrais reglages elles se lisaient comme
+    # des reglages. « Mode nuit », elle, a de vrais consommateurs.
     for label, key in (
-        (
-            "Mode audio PinCabOS",
-            "audio_mode",
-        ),
-        (
-            "Backend",
-            "audio_backend",
-        ),
-        (
-            "Surround PinCabOS",
-            "surround_device",
-        ),
-        (
-            "Bass shaker",
-            "bass_device",
-        ),
-        (
-            "Inverser gauche / droite",
-            "invert_lr",
-        ),
-        (
-            "Inverser avant / arrière",
-            "invert_front_rear",
-        ),
-        (
-            "Bass activé",
-            "enable_bass",
-        ),
         (
             "Mode nuit",
             "night_mode",
@@ -855,15 +845,562 @@ def pincabos_safe_audio_alsa_card():
     except Exception as e:
         return f"""
 <div class="card pco-audio-compact-card">
-  <h2>Test audio ALSA rapide</h2>
-  <p class="warn">Carte ALSA indisponible: {esc(str(e))}</p>
+  <h2>Test des haut-parleurs</h2>
+  <p class="warn">Sorties audio indisponibles : {esc(str(e))}</p>
 </div>
 """
+
+
+# PINCABOS_AUDIO_TEST_PIPEWIRE_V1
+PINCABOS_SESSION_USER = "pinball"
+PINCABOS_SESSION_UID = "1000"
+
+
+def audio_session_prefix():
+    """Prefixe de commande pour parler a la session audio de la seance.
+
+    PINCABOS_AUDIO_SESSION_PREFIX_V1
+
+    La webapp tourne deja sous le compte de la session : lui faire appeler
+    runuser revient a lui demander un privilege qu'elle n'a pas, et l'appel
+    echoue sans bruit. On ne bascule d'utilisateur que depuis root, cas des
+    appels lances par un service systeme.
+    """
+    import os as _os
+
+    environnement = [
+        "/usr/bin/env",
+        f"XDG_RUNTIME_DIR=/run/user/{PINCABOS_SESSION_UID}",
+        f"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{PINCABOS_SESSION_UID}/bus",
+    ]
+
+    if _os.geteuid() == 0:
+        return ["/usr/sbin/runuser", "-u", PINCABOS_SESSION_USER, "--"] + environnement
+
+    return environnement
+
+
+def audio_pipewire_sinks():
+    """Sorties vues par PipeWire : nom interne, libelle et nombre de canaux."""
+    import subprocess as _sp
+
+    try:
+        brut = _sp.run(
+            audio_session_prefix() + ["/usr/bin/pactl", "list", "sinks"],
+            capture_output=True, text=True, timeout=8, check=False,
+        ).stdout
+    except Exception:
+        return []
+
+    sorties = []
+    courant = {}
+    for ligne in brut.splitlines():
+        depouillee = ligne.strip()
+        if depouillee.startswith("Name:"):
+            if courant.get("name"):
+                sorties.append(courant)
+            courant = {"name": depouillee.split(":", 1)[1].strip()}
+        elif depouillee.startswith("Description:") and courant:
+            courant["description"] = depouillee.split(":", 1)[1].strip()
+        elif depouillee.startswith("Sample Specification:") and courant:
+            m = re.search(r"(\d+)ch", depouillee)
+            courant["channels"] = int(m.group(1)) if m else 2
+        elif depouillee.startswith("alsa.card ") and courant:
+            # PINCABOS_AUDIO_CARD_MATCH_V2 — de quelle carte ALSA vient ce sink.
+            m = re.search(r"(\d+)", depouillee)
+            if m:
+                courant["carte"] = int(m.group(1))
+        elif depouillee.startswith("Channel Map:") and courant:
+            # PINCABOS_AUDIO_PER_SPEAKER_V1 — l'ordre des canaux d'un 7.1
+            # n'est pas universel : on prend celui que la sortie declare.
+            courant["map"] = [
+                p.strip() for p in depouillee.split(":", 1)[1].split(",") if p.strip()
+            ]
+    if courant.get("name"):
+        sorties.append(courant)
+
+    return [x for x in sorties if x.get("name")]
+
+
+
+# PINCABOS_AUDIO_PER_SPEAKER_V1
+PINCABOS_POSITIONS = {
+    "front-left": "Avant gauche",
+    "front-right": "Avant droit",
+    "front-center": "Centre",
+    "lfe": "Caisson (LFE)",
+    "rear-left": "Arrière gauche",
+    "rear-right": "Arrière droit",
+    "side-left": "Latéral gauche",
+    "side-right": "Latéral droit",
+    "rear-center": "Arrière centre",
+    "mono": "Mono",
+}
+
+
+def audio_nom_position(code):
+    return PINCABOS_POSITIONS.get(str(code or "").strip(), str(code or "?"))
+
+
+# PINCABOS_AUDIO_VOIX_V1
+PINCABOS_VOIX_RACINE = Path("/opt/pincabos/media/audio-voix")
+PINCABOS_VOIX_LANGUES = ("fr", "en", "es", "it", "de")
+
+# Nom de chaque position chez ffmpeg. C'est la seule table de correspondance
+# du test : ni index de canal, ni ordre a deviner.
+PINCABOS_POSITION_FFMPEG = {
+    "front-left": "FL",
+    "front-right": "FR",
+    "front-center": "FC",
+    "lfe": "LFE",
+    "rear-left": "BL",
+    "rear-right": "BR",
+    "rear-center": "BC",
+    "side-left": "SL",
+    "side-right": "SR",
+    "mono": "FC",
+}
+
+PINCABOS_LAYOUT_FFMPEG = {
+    # PINCABOS_AUDIO_QUAD_V1 — le selecteur propose « 4 canaux » : sans la
+    # disposition correspondante, cliquer un haut-parleur repondait « position
+    # non placable ». Le quadriphonique ne porte que les quatre coins, ni
+    # centre ni caisson, ce que la table exprime d'elle-meme.
+    2: "stereo",
+    4: "quad",
+    6: "5.1",
+    8: "7.1",
+}
+
+
+def audio_langue_voix():
+    """Langue des annonces : celle choisie a l'installation."""
+    for chemin in ("/etc/default/locale", "/etc/locale.conf"):
+        try:
+            for ligne in Path(chemin).read_text(encoding="utf-8").splitlines():
+                if ligne.startswith("LANG="):
+                    code = ligne.split("=", 1)[1].strip().strip('"').lower()[:2]
+                    if code in PINCABOS_VOIX_LANGUES:
+                        return code
+        except OSError:
+            continue
+    return "en"
+
+
+def audio_voix_fichier(position):
+    """Annonce pour cette position, dans la langue du cab sinon en anglais."""
+    for langue in (audio_langue_voix(), "en"):
+        fichier = PINCABOS_VOIX_RACINE / langue / f"{position}.opus"
+        if fichier.is_file():
+            return fichier
+    return None
+
+
+def audio_jouer_position(sink, position, canaux):
+    """Joue l'annonce sur ce seul haut-parleur.
+
+    ffmpeg place la voix dans le canal portant ce nom, puis pw-play envoie le
+    flux sur la sortie choisie. Aucun numero de canal n'intervient.
+    """
+    import tempfile
+
+    nom_ffmpeg = PINCABOS_POSITION_FFMPEG.get(position)
+    layout = PINCABOS_LAYOUT_FFMPEG.get(int(canaux))
+
+    if not nom_ffmpeg or not layout:
+        return False, f"Position {position} non placable sur {canaux} canaux."
+
+    voix = audio_voix_fichier(position)
+    if not voix:
+        return False, f"Annonce absente pour {position}."
+
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as sortie:
+        chemin = sortie.name
+
+    try:
+        rendu = subprocess.run(
+            ["/usr/bin/ffmpeg", "-v", "error", "-y", "-i", str(voix),
+             "-af", f"pan={layout}|{nom_ffmpeg}=c0",
+             "-c:a", "pcm_s16le", chemin],
+            capture_output=True, text=True, timeout=20,
+        )
+        if rendu.returncode != 0:
+            return False, (rendu.stderr or "ffmpeg a echoue").strip()
+
+        lecture = subprocess.run(
+            audio_session_prefix()
+            + ["/usr/bin/pw-play", "--target", sink, chemin],
+            capture_output=True, text=True, timeout=25,
+        )
+        if lecture.returncode != 0:
+            return False, (lecture.stderr or "pw-play a echoue").strip()
+
+        return True, f"{position} — canal {nom_ffmpeg} du flux {layout}"
+
+    except Exception as exc:
+        return False, str(exc)
+    finally:
+        try:
+            Path(chemin).unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
+# PINCABOS_AUDIO_PRISES_V1
+# Couleurs normalisees des broches HDA, telles que le codec les declare.
+PINCABOS_COULEURS = {
+    0: ("Inconnue", "#9ca3af"),
+    1: ("Noire", "#3f3f46"),
+    2: ("Grise", "#9ca3af"),
+    3: ("Bleue", "#3b82f6"),
+    4: ("Verte", "#22c55e"),
+    5: ("Rouge", "#ef4444"),
+    6: ("Orange", "#f97316"),
+    7: ("Jaune", "#eab308"),
+    8: ("Violette", "#a855f7"),
+    9: ("Rose", "#ec4899"),
+    14: ("Blanche", "#e5e7eb"),
+    15: ("Autre", "#9ca3af"),
+}
+
+# Rang de la broche dans son groupe de sortie -> role, positions portees, et
+# nom du controle de presence expose par le pilote.
+PINCABOS_RANGS = {
+    0: ("Avant", ("front-left", "front-right"), "Line Out Front Jack"),
+    1: ("Centre et caisson", ("front-center", "lfe"), "Line Out CLFE Jack"),
+    2: ("Arrière", ("rear-left", "rear-right"), "Line Out Surround Jack"),
+    3: ("Latéral", ("side-left", "side-right"), "Line Out Side Jack"),
+}
+
+
+def audio_codec_analogique():
+    """Codec portant les sorties analogiques, et son numero de carte ALSA."""
+    import re as _re
+
+    for codec in sorted(Path("/sys/class/sound").glob("hwC*D*")):
+        broches = {}
+        for fichier in ("init_pin_configs", "user_pin_configs"):
+            try:
+                for ligne in (codec / fichier).read_text(encoding="ascii").splitlines():
+                    morceaux = ligne.split()
+                    if len(morceaux) == 2:
+                        broches[int(morceaux[0], 16)] = int(morceaux[1], 16)
+            except OSError:
+                continue
+
+        sorties = [
+            mot for mot in broches.values()
+            if ((mot >> 20) & 0xF) == 0 and ((mot >> 30) & 0x3) in (0, 3)
+        ]
+        if len(sorties) >= 2:
+            m = _re.match(r"hwC(\d+)D\d+", codec.name)
+            return broches, (int(m.group(1)) if m else 0)
+
+    return {}, -1
+
+
+def audio_presence_jacks(carte):
+    """Etat branche / vide de chaque prise, tel que le pilote le detecte."""
+    import re as _re
+
+    etats = {}
+    liste = audio_run_cmd(f"amixer -c {int(carte)} controls 2>/dev/null")
+
+    for ligne in liste.splitlines():
+        if "Jack" not in ligne:
+            continue
+        num = _re.search(r"numid=(\d+)", ligne)
+        nom = _re.search(r"name='([^']+)'", ligne)
+        if not num or not nom:
+            continue
+        valeur = audio_run_cmd(
+            f"amixer -c {int(carte)} cget numid={num.group(1)} 2>/dev/null"
+        )
+        etats[nom.group(1)] = "values=on" in valeur
+
+    return etats
+
+
+def audio_prises_analogiques():
+    """Prises de sortie de la carte : couleur, role, positions, presence."""
+    broches, carte = audio_codec_analogique()
+    if carte < 0:
+        return []
+
+    presence = audio_presence_jacks(carte)
+    prises = []
+
+    for broche, mot in sorted(broches.items()):
+        if ((mot >> 20) & 0xF) != 0 or ((mot >> 30) & 0x3) not in (0, 3):
+            continue
+
+        rang = mot & 0xF
+        if rang not in PINCABOS_RANGS:
+            continue
+
+        role, positions, controle = PINCABOS_RANGS[rang]
+        nom_couleur, code_couleur = PINCABOS_COULEURS.get(
+            (mot >> 12) & 0xF, PINCABOS_COULEURS[0]
+        )
+
+        prises.append({
+            "role": role,
+            "couleur": nom_couleur,
+            "code": code_couleur,
+            "positions": list(positions),
+            "branche": presence.get(controle),
+        })
+
+    return prises
+
+
+def audio_carte_prises_html(prises):
+    """Tableau des prises, pour la page."""
+    if not prises:
+        return ""
+
+    lignes = []
+    for prise in prises:
+        if prise["branche"] is None:
+            etat = "<span style='opacity:.6'>non détecté</span>"
+        elif prise["branche"]:
+            etat = "<strong style='color:#7ec97e'>branchée</strong>"
+        else:
+            etat = "<strong style='color:#f0a080'>vide</strong>"
+
+        pastille = (
+            f"<span style='display:inline-block;width:13px;height:13px;"
+            f"border-radius:50%;background:{prise['code']};"
+            f"border:1px solid rgba(255,255,255,.5);vertical-align:-2px;"
+            f"margin-right:7px;'></span>"
+        )
+
+        lignes.append(
+            f"<tr><td style='white-space:nowrap'>{pastille}"
+            f"{esc(prise['couleur'])}</td>"
+            f"<td>{esc(prise['role'])}</td>"
+            f"<td>{etat}</td></tr>"
+        )
+
+    return f"""
+  <details style="margin-top:10px;" open>
+    <summary>Prises de la carte son</summary>
+    <table style="width:100%;margin-top:6px;">
+      <tr style="opacity:.7;font-size:12px;">
+        <td>Prise</td><td>Porte</td><td>État</td>
+      </tr>
+      {''.join(lignes)}
+    </table>
+    <p><small>Couleur et rôle viennent de la carte mère elle-même ; l’état
+    branché / vide est détecté en direct par le pilote.</small></p>
+  </details>
+"""
+
+
+# PINCABOS_AUDIO_SORTIE_DEFAUT_V1
+def audio_carte_retenue():
+    """Numero ALSA de la carte que le cabinet utilise pour son multicanal.
+
+    PINCABOS_AUDIO_CARD_MATCH_V2
+    """
+    try:
+        nom = str(json.loads(
+            Path("/opt/pincabos/config/audio/surround.json")
+            .read_text(encoding="utf-8")
+        ).get("card") or "")
+    except Exception:
+        return None
+
+    if not nom:
+        return None
+
+    # Le nom PipeWire d'une carte et celui de ses sorties partagent leur
+    # suffixe materiel : alsa_card.pci-0000_00_1f.3 donne
+    # alsa_output.pci-0000_00_1f.3.analog-surround-71.
+    suffixe = nom.split(".", 1)[-1]
+    if not suffixe:
+        return None
+
+    for sortie in audio_pipewire_sinks():
+        if suffixe in sortie.get("name", ""):
+            return sortie.get("carte")
+
+    return None
+
+
+def audio_sortie_preferee(sorties):
+    """Sortie a preselectionner : celle de VPX, sinon la plus capable."""
+    if not sorties:
+        return ""
+
+    attendue = (_pco_vpx_audio_values().get("SoundDevice") or "").strip()
+    if attendue:
+        for sortie in sorties:
+            if (sortie.get("description") or "").strip() == attendue:
+                return f"pw:{sortie['name']}"
+
+    # PINCABOS_AUDIO_CARD_MATCH_V2
+    # A defaut du nom exact, on reste sur la carte que le cabinet a choisie
+    # pour son multicanal : la plus capable des autres cartes ne le sert pas.
+    retenues = sorties
+    carte = audio_carte_retenue()
+    if carte is not None:
+        memes = [x for x in sorties if x.get("carte") == carte]
+        if memes:
+            retenues = memes
+
+    plus_capable = max(retenues, key=lambda x: int(x.get("channels", 2) or 2))
+    return f"pw:{plus_capable['name']}"
+
+
+def audio_sorties_classees():
+    """Sorties PipeWire, la plus capable en tete."""
+    return sorted(
+        audio_pipewire_sinks(),
+        key=lambda x: (-int(x.get("channels", 2) or 2), x.get("description") or ""),
+    )
+
+
+# PINCABOS_AUDIO_SURROUND_UI_V1
+PINCABOS_SURROUND_OUTIL = "/usr/local/sbin/pincabos-audio-surround"
+PINCABOS_SURROUND_MODES = (
+    ("stereo", "Stéréo", 2),
+    ("5.1", "5.1", 6),
+    ("7.1", "7.1", 8),
+)
+
+
+def audio_surround_etat():
+    """Mode courant et modes atteignables par la carte analogique."""
+    etat = {"mode": "", "canaux": 0, "possibles": [], "reaffectation": False}
+
+    try:
+        etat["mode"] = str(json.loads(
+            Path("/opt/pincabos/config/audio/surround.json")
+            .read_text(encoding="utf-8")
+        ).get("mode") or "")
+    except Exception:
+        pass
+
+    rapport = audio_run_cmd(f"{PINCABOS_SURROUND_OUTIL} detect 2>&1")
+
+    for ligne in rapport.splitlines():
+        depouillee = ligne.strip()
+        if depouillee.startswith("canaux actuels"):
+            chiffres = depouillee.split(":", 1)[-1].strip()
+            etat["canaux"] = int(chiffres) if chiffres.isdigit() else 0
+        elif depouillee.startswith("profils"):
+            profils = depouillee.split(":", 1)[-1]
+            for cle, _, _ in PINCABOS_SURROUND_MODES:
+                marqueur = ("analog-stereo" if cle == "stereo"
+                            else f"analog-surround-{cle.replace('.', '')}")
+                if marqueur in profils:
+                    etat["possibles"].append(cle)
+        elif depouillee.startswith("7.1") and "possible en reaffectant" in depouillee:
+            etat["reaffectation"] = True
+            if "7.1" not in etat["possibles"]:
+                etat["possibles"].append("7.1")
+
+    return etat
+
+
+def audio_carte_surround_html():
+    """Carte de choix du mode multicanal."""
+    etat = audio_surround_etat()
+    if not etat["possibles"]:
+        return ""
+
+    boutons = []
+    for cle, libelle, canaux in PINCABOS_SURROUND_MODES:
+        if cle not in etat["possibles"]:
+            continue
+
+        courant = etat["mode"] == cle or etat["canaux"] == canaux
+        classe = "button" if not courant else "button secondary"
+        suffixe = " — actif" if courant else ""
+        prevenir = (
+            " (réaffecte la prise bleue)"
+            if cle == "7.1" and etat["reaffectation"] and etat["canaux"] < 8
+            else ""
+        )
+        boutons.append(
+            f'<button class="{classe}" type="submit" name="mode" value="{cle}"'
+            f'{" disabled" if courant else ""}>'
+            f'{esc(libelle)} — {canaux} canaux{suffixe}{prevenir}</button>'
+        )
+
+    return f"""
+<div class="card pco-audio-compact-card" id="pincabos-surround-card">
+  <h2>Sortie multicanal</h2>
+  <p>
+    Le SSF a besoin d’un périphérique de 6 ou 8 canaux. Une carte analogique
+    démarre toujours en stéréo : sans ce choix, aucune sortie multicanal
+    n’existe et le SSF ne peut pas fonctionner.
+  </p>
+  <p>
+    Mode enregistré : <code>{esc(etat['mode'] or 'aucun')}</code> —
+    la carte fournit actuellement <strong>{etat['canaux']} canaux</strong>.
+  </p>
+  <form method="post" action="/audio-ssf/surround" target="pco-surround-frame">
+    <p style="display:flex;gap:8px;flex-wrap:wrap;">{''.join(boutons)}</p>
+  </form>
+  <p><small>Le changement de mode relance brièvement la session audio.
+  Le 7.1 réaffecte l’entrée ligne arrière — la prise bleue — en sortie
+  latérale : c’est réversible, et c’est ce que fait le pilote du fabricant
+  sous Windows.</small></p>
+  <details style="margin-top:8px;" open>
+    <summary>Résultat</summary>
+    <iframe name="pco-surround-frame"
+            style="width:100%;height:120px;background:rgba(0,0,0,.45);border:1px solid rgba(255,176,0,.25);border-radius:12px;"></iframe>
+  </details>
+</div>
+"""
+
+
+def audio_reponse_lisible(titre, lignes, ok=True):
+    # PINCABOS_AUDIO_REPONSES_LISIBLES_V1 — toutes les reponses affichees
+    # dans un cadre passent par ici : un cadre au fond sombre ne colore pas
+    # le document qu'il accueille, et le texte brut s'y ecrit en noir.
+    """Reponse affichee dans un cadre au fond sombre : couleurs explicites.
+
+    Sans cela le document herite du fond du cadre et ecrit en noir dessus.
+    """
+    couleur = "#7ec97e" if ok else "#f08080"
+    return (
+        "<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\">"
+        "<style>"
+        "html,body{background:#14001f;color:#e8e0ef;font:13px/1.5 ui-monospace,monospace;"
+        "margin:0;padding:10px}"
+        f"h1{{font-size:13px;margin:0 0 8px;color:{couleur}}}"
+        "pre{white-space:pre-wrap;word-break:break-word;margin:0}"
+        "</style></head><body>"
+        f"<h1>{esc(titre)}</h1><pre>{esc(chr(10).join(lignes))}</pre>"
+        "</body></html>"
+    ), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 def audio_alsa_test_card():
     devices, raw = audio_detect_alsa_devices()
     options = []
+
+    # PINCABOS_AUDIO_TEST_PIPEWIRE_V1
+    # PipeWire tient les cartes en permanence : ses sorties viennent en tete,
+    # ce sont les seules testables sans arreter la session audio.
+    # PINCABOS_AUDIO_SORTIE_DEFAUT_V1
+    sorties_pw = audio_sorties_classees()
+    preferee = audio_sortie_preferee(sorties_pw)
+
+    for sortie in sorties_pw:
+        canaux = int(sortie.get("channels", 2) or 2)
+        libelle = sortie.get("description") or sortie["name"]
+        carte = ",".join(sortie.get("map") or [])
+        valeur = f'pw:{sortie["name"]}'
+        marque = " selected" if valeur == preferee else ""
+        options.append(
+            f'<option value="{esc(valeur)}" data-canaux="{canaux}"{marque}'
+            f' data-carte="{esc(carte)}" data-noms="{esc(",".join(audio_nom_position(p) for p in (sortie.get("map") or [])))}">'
+            f'{esc(libelle)} — {canaux} canaux — PipeWire</option>'
+        )
 
     for d in devices:
         hw = str(d.get("id", "") or "")
@@ -873,7 +1410,7 @@ def audio_alsa_test_card():
         desc = str(d.get("description", "") or "")
 
         plug = f"plughw:{card},{dev}" if card != "" and dev != "" else hw
-        label = f"{name} — {desc} — {plug} recommandé"
+        label = f"{name} — {desc} — {plug} — accès direct"
         options.append(f'<option value="{esc(plug)}">{esc(label)}</option>')
 
     if not options:
@@ -881,13 +1418,52 @@ def audio_alsa_test_card():
 
     raw_html = esc(raw or "")
 
+    # PINCABOS_AUDIO_CANAUX_DEFAUT_V1
+    canaux_preferes = next(
+        (
+            int(sortie.get("channels", 2) or 2)
+            for sortie in sorties_pw
+            if "pw:" + str(sortie["name"]) == preferee
+        ),
+        2,
+    )
+    canaux_options = "".join(
+        '<option value="%d"%s>%s</option>'
+        % (nombre, " selected" if nombre == canaux_preferes else "", libelle)
+        for nombre, libelle in (
+            (2, "2 canaux stéréo"),
+            (4, "4 canaux"),
+            (6, "6 canaux / 5.1"),
+            (8, "8 canaux / 7.1"),
+        )
+    )
+
+    # PINCABOS_AUDIO_PRISES_V1
+    prises = audio_prises_analogiques()
+    tableau_prises = audio_carte_prises_html(prises)
+    prises_par_position = json.dumps({
+        position: {"couleur": p["code"], "nom": p["couleur"],
+                   "branche": p["branche"], "role": p["role"]}
+        for p in prises for position in p["positions"]
+    }, ensure_ascii=False)
+
     return f"""
 <div class="card pco-audio-compact-card" id="pincabos-alsa-test-card">
-  <h2>Test audio ALSA rapide</h2>
+  <script id="pco-prises" type="application/json">{prises_par_position}</script>
+  <h2>Test des haut-parleurs</h2>
   <p>
-    Cette carte liste les sorties ALSA et lance un test court avec <code>speaker-test</code>.
-    Utilise d’abord <code>plughw:X,Y</code>, plus compatible que <code>hw:X,Y</code>.
+    Lance un test court avec <code>speaker-test</code>. Choisis une sortie
+    <strong>PipeWire</strong> : PipeWire tient les cartes en permanence, donc un
+    accès direct <code>hw:</code> / <code>plughw:</code> répondra
+    <code>Playback open error</code> tant qu’une session audio tourne.
   </p>
+  <p>
+    Pour vérifier un câblage SSF, clique un haut-parleur du schéma :
+    il annonce sa position à voix haute, et lui seul reçoit le son.
+  </p>
+  <p><small>Le schéma donne la disposition habituelle d’un cabinet, pour
+  situer les positions les unes par rapport aux autres. C’est le test,
+  position par position, qui dit ce qui est réellement branché où.</small></p>
 
   <table style="width:100%;">
     <tr>
@@ -902,10 +1478,16 @@ def audio_alsa_test_card():
       <td>Canaux</td>
       <td>
         <select name="channels" style="padding:7px;">
-          <option value="2">2 canaux stéréo</option>
-          <option value="4">4 canaux</option>
-          <option value="6">6 canaux / 5.1</option>
-          <option value="8">8 canaux / 7.1</option>
+          {canaux_options}
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td>Signal</td>
+      <td>
+        <select name="signal" style="padding:7px;">
+          <option value="wav">Nom des canaux — annoncé à voix haute</option>
+          <option value="sine">Sinusoïde 440 Hz</option>
         </select>
       </td>
     </tr>
@@ -914,12 +1496,206 @@ def audio_alsa_test_card():
   <form method="post" action="/audio-ssf/test-alsa-quick" target="pco-alsa-action-frame">
     <input type="hidden" name="device" id="pco-alsa-hidden-device" value="">
     <input type="hidden" name="channels" id="pco-alsa-hidden-channels" value="2">
+    <input type="hidden" name="signal" id="pco-alsa-hidden-signal" value="wav">
+    <input type="hidden" name="position" id="pco-alsa-hidden-position" value="">
+
+    <!-- PINCABOS_AUDIO_CAB_MAP_V1 -->
+    <div id="pco-hp-schema" style="margin:10px 0;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;">
+      <svg id="pco-hp-svg" viewBox="0 0 320 420" role="img"
+           aria-label="Schema du cabinet avec ses haut-parleurs"
+           style="width:230px;max-width:100%;height:auto;flex:0 0 auto;">
+        <!-- fronton -->
+        <rect x="62" y="8" width="196" height="122" rx="10"
+              fill="rgba(255,255,255,.04)" stroke="rgba(255,176,0,.45)" stroke-width="2"/>
+        <text x="160" y="122" text-anchor="middle" font-size="11"
+              fill="rgba(255,255,255,.38)">fronton</text>
+        <!-- corps du cabinet -->
+        <path d="M78 140 L242 140 L272 396 L48 396 Z"
+              fill="rgba(255,255,255,.04)" stroke="rgba(255,176,0,.45)" stroke-width="2"/>
+        <!-- lockbar -->
+        <rect x="46" y="386" width="228" height="14" rx="7"
+              fill="rgba(255,176,0,.18)" stroke="rgba(255,176,0,.45)" stroke-width="2"/>
+        <text x="160" y="414" text-anchor="middle" font-size="11"
+              fill="rgba(255,255,255,.38)">lockbar — côté joueur</text>
+        <g id="pco-hp-couche"></g>
+      </svg>
+      <div style="flex:1 1 200px;min-width:180px;">
+        <div id="pco-hp-legende" style="font-size:12px;opacity:.75;margin-bottom:6px;"></div>
+        <div id="pco-hp-restants" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+    </div>
+    <script>
+    (function () {{
+      var carte = document.getElementById("pincabos-alsa-test-card");
+      if (!carte) return;
+      var choix = carte.querySelector("select[name=device]");
+      var couche = document.getElementById("pco-hp-couche");
+      var restants = document.getElementById("pco-hp-restants");
+      var legende = document.getElementById("pco-hp-legende");
+      if (!choix || !couche) return;
+
+      var SVGNS = "http://www.w3.org/2000/svg";
+
+      // PINCABOS_AUDIO_CAB_MAP_V2
+      // Seules les deux voies avant sont sur le fronton. Tout le reste vit
+      // dans le corps du cabinet, sous le plateau : arriere en haut, caisson
+      // au milieu, laterales au lockbar, cote joueur.
+      var PLACES = {{
+        "front-left":   [104, 52],
+        "front-right":  [216, 52],
+        "front-center": [160, 182],
+        "rear-left":    [100, 214],
+        "rear-right":   [220, 214],
+        "lfe":          [160, 280],
+        "rear-center":  [160, 330],
+        "side-left":    [100, 368],
+        "side-right":   [220, 368],
+        "mono":         [160, 280]
+      }};
+
+      // PINCABOS_AUDIO_VOIX_V1 — on designe la position par son nom.
+      function envoyer(code) {{
+        document.getElementById("pco-alsa-hidden-device").value = choix.value;
+        document.getElementById("pco-alsa-hidden-channels").value =
+          choix.selectedOptions[0].dataset.canaux || "2";
+        document.getElementById("pco-alsa-hidden-signal").value = "wav";
+        document.getElementById("pco-alsa-hidden-position").value = code;
+        couche.closest("form").submit();
+      }}
+
+      var PRISES = {{}};
+      try {{
+        PRISES = JSON.parse(document.getElementById("pco-prises").textContent);
+      }} catch (e) {{ PRISES = {{}}; }}
+
+      function enceinte(x, y, nom, canal, caisson) {{
+        var prise = PRISES[canal] || {{}};
+        var teinte = prise.couleur || "#ff8a00";
+        var vide = prise.branche === false;
+        var g = document.createElementNS(SVGNS, "g");
+        g.setAttribute("transform", "translate(" + (x - 17) + "," + (y - 21) + ")");
+        g.style.cursor = "pointer";
+        g.setAttribute("tabindex", "0");
+        g.setAttribute("role", "button");
+        g.setAttribute("aria-label", nom);
+
+        var corps = document.createElementNS(SVGNS, "rect");
+        corps.setAttribute("width", "34");
+        corps.setAttribute("height", "42");
+        corps.setAttribute("rx", "5");
+        corps.setAttribute("fill", vide ? "rgba(255,255,255,.04)" : "rgba(255,138,0,.20)");
+        corps.setAttribute("stroke", teinte);
+        corps.setAttribute("stroke-width", "2");
+        if (vide) corps.setAttribute("stroke-dasharray", "4 3");
+        g.appendChild(corps);
+        g.setAttribute("opacity", vide ? "0.5" : "1");
+
+        var cone = document.createElementNS(SVGNS, "circle");
+        cone.setAttribute("cx", "17");
+        cone.setAttribute("cy", caisson ? "21" : "27");
+        cone.setAttribute("r", caisson ? "12" : "9");
+        cone.setAttribute("fill", "none");
+        cone.setAttribute("stroke", teinte);
+        cone.setAttribute("stroke-width", "2");
+        g.appendChild(cone);
+
+        var centre = document.createElementNS(SVGNS, "circle");
+        centre.setAttribute("cx", "17");
+        centre.setAttribute("cy", caisson ? "21" : "27");
+        centre.setAttribute("r", "3");
+        centre.setAttribute("fill", teinte);
+        g.appendChild(centre);
+
+        if (!caisson) {{
+          var aigu = document.createElementNS(SVGNS, "circle");
+          aigu.setAttribute("cx", "17");
+          aigu.setAttribute("cy", "10");
+          aigu.setAttribute("r", "4");
+          aigu.setAttribute("fill", "none");
+          aigu.setAttribute("stroke", teinte);
+          aigu.setAttribute("stroke-width", "2");
+          g.appendChild(aigu);
+        }}
+
+        var titre = document.createElementNS(SVGNS, "title");
+        titre.textContent = nom
+          + (prise.nom ? " — prise " + prise.nom.toLowerCase() : "")
+          + (vide ? " (prise vide)" : "")
+          + " — cliquer pour jouer";
+        g.appendChild(titre);
+
+        function jouer() {{
+          corps.setAttribute("fill", "rgba(255,138,0,.75)");
+          g.setAttribute("opacity", "1");
+          if (legende) legende.textContent = "Envoi sur : " + nom;
+          envoyer(canal);
+        }}
+
+        g.addEventListener("click", jouer);
+        g.addEventListener("keydown", function (e) {{
+          if (e.key === "Enter" || e.key === " ") {{ e.preventDefault(); jouer(); }}
+        }});
+        g.addEventListener("mouseenter", function () {{
+          corps.setAttribute("fill", "rgba(255,138,0,.45)");
+          if (legende) {{
+            legende.textContent = nom
+              + (prise.nom ? " — prise " + prise.nom.toLowerCase() : "")
+              + (vide ? " — cette prise est vide" : "");
+          }}
+        }});
+        g.addEventListener("mouseleave", function () {{
+          corps.setAttribute("fill", vide ? "rgba(255,255,255,.04)" : "rgba(255,138,0,.20)");
+        }});
+
+        return g;
+      }}
+
+      function dessiner() {{
+        couche.replaceChildren();
+        restants.replaceChildren();
+        var option = choix.selectedOptions[0];
+        var codes = (option && option.dataset.carte || "").split(",").filter(Boolean);
+        var noms = (option && option.dataset.noms || "").split(",").filter(Boolean);
+
+        if (!codes.length) {{
+          legende.textContent =
+            "Cette sortie ne declare pas ses positions : utilise le bouton de test complet.";
+          return;
+        }}
+
+        legende.textContent = "Clique un haut-parleur pour n'envoyer le son que la.";
+
+        codes.forEach(function (code, i) {{
+          var nom = noms[i] || code;
+          var place = PLACES[code.trim()];
+          if (place) {{
+            couche.appendChild(enceinte(place[0], place[1], nom, code.trim(),
+                                        code.trim() === "lfe"));
+            return;
+          }}
+          // Position inconnue du schema : bouton nomme, plutot que rien.
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "button secondary";
+          b.style.cssText = "padding:6px 10px;font-size:12px;";
+          b.textContent = nom;
+          b.addEventListener("click", function () {{ envoyer(code.trim()); }});
+          restants.appendChild(b);
+        }});
+      }}
+
+      choix.addEventListener("change", dessiner);
+      dessiner();
+    }})();
+    </script>
     <p style="margin:6px 0 8px 0;">
       <button class="button" type="submit"
         onclick="
           const card=this.closest('.card');
           document.getElementById('pco-alsa-hidden-device').value=card.querySelector('select[name=device]').value;
           document.getElementById('pco-alsa-hidden-channels').value=card.querySelector('select[name=channels]').value;
+          document.getElementById('pco-alsa-hidden-signal').value=card.querySelector('select[name=signal]').value;
+          document.getElementById('pco-alsa-hidden-position').value='';
         ">
         Tester 2 secondes
       </button>
@@ -927,7 +1703,10 @@ def audio_alsa_test_card():
     </p>
   </form>
 
-  <p><small>Si <code>hw:X,Y</code> retourne <code>Bad address</code>, essaie le même périphérique en <code>plughw:X,Y</code>.</small></p>
+  <p><small><code>Playback open error</code> sur un accès direct signifie que
+  PipeWire tient déjà la carte : passe par la sortie PipeWire correspondante.</small></p>
+
+  {tableau_prises}
 
   <details style="margin-top:8px;" open>
     <summary>Log test audio</summary>
@@ -987,6 +1766,23 @@ def audio_wav_test_card():
     devices, _raw = audio_detect_alsa_devices()
     device_options = []
 
+    # PINCABOS_AUDIO_WAV_PIPEWIRE_V1
+    # Sorties PipeWire en tete : ce sont les seules multicanal, et les seules
+    # jouables sans se heurter a une carte que PipeWire tient deja.
+    # PINCABOS_AUDIO_SORTIE_DEFAUT_V1 — meme preselection que le test.
+    sorties_pw = audio_sorties_classees()
+    preferee = audio_sortie_preferee(sorties_pw)
+
+    for sortie in sorties_pw:
+        canaux = int(sortie.get("channels", 2) or 2)
+        libelle = sortie.get("description") or sortie["name"]
+        valeur = f'pw:{sortie["name"]}'
+        marque = " selected" if valeur == preferee else ""
+        device_options.append(
+            f'<option value="{esc(valeur)}"{marque}>'
+            f'{esc(libelle)} — {canaux} canaux — PipeWire</option>'
+        )
+
     for d in devices:
         hw = str(d.get("id", "") or "")
         card = str(d.get("card", "") or "")
@@ -994,12 +1790,12 @@ def audio_wav_test_card():
         name = str(d.get("name", hw) or hw)
         desc = str(d.get("description", "") or "")
         plug = f"plughw:{card},{dev}" if card != "" and dev != "" else hw
-        selected = " selected" if plug == "plughw:2,0" else ""
+        selected = ""  # PINCABOS_AUDIO_SORTIE_DEFAUT_V1 : la sortie PipeWire prime
         label = f"{name} — {desc} — {plug}"
         device_options.append(f'<option value="{esc(plug)}"{selected}>{esc(label)}</option>')
 
     if not device_options:
-        device_options.append('<option value="">Aucune sortie ALSA détectée</option>')
+        device_options.append('<option value="">Aucune sortie audio détectée</option>')
 
     return f"""
 <div class="card pco-audio-compact-card" id="pincabos-wav-test-card">
@@ -1231,11 +2027,9 @@ def audio_pactl_find_sink_for_alsa_card(card):
     if str(card).strip() == "":
         return ""
 
-    cmd = [
-        "runuser", "-u", "pinball", "--",
-        "bash", "-lc",
-        "export XDG_RUNTIME_DIR=/run/user/1000; pactl list sinks 2>/dev/null"
-    ]
+    # PINCABOS_AUDIO_WAV_PIPEWIRE_V1 — prefixe commun : runuser seulement
+    # depuis root, sans quoi l'appel echoue et la sortie parait introuvable.
+    cmd = audio_session_prefix() + ["/usr/bin/pactl", "list", "sinks"]
 
     rc, out, err = audio_system_run(cmd, timeout=6)
     if rc != 0 or not out.strip():
@@ -1586,7 +2380,6 @@ def pincabos_audio_ssf_page_fixed():
     try:
         saved_rows = f"""
 <table>
-  <tr><td>Mode audio</td><td><code>{esc(cfg.get('audio_mode', ''))}</code></td></tr>
   <tr><td>Backend</td><td><code>{esc(cfg.get('audio_backend', ''))}</code></td></tr>
   <tr><td>Backbox / ROM / Musique</td><td><code>{esc(cfg.get('backbox_device', ''))}</code></td></tr>
   <tr><td>Playfield / SSF</td><td><code>{esc(cfg.get('playfield_device', ''))}</code></td></tr>
@@ -1750,6 +2543,8 @@ def pincabos_audio_ssf_page_fixed():
   Ils sont maintenant dans SSF Commander.
 </p>
 
+{audio_carte_surround_html()}
+
 <div class="grid pco-audio-grid-tests">
   {pincabos_safe_audio_alsa_card()}
   {audio_wav_test_card()}
@@ -1779,63 +2574,213 @@ def pincabos_audio_ssf_page_fixed():
     return page("Audio / SSF V2", body)
 
 
+@route("/audio-ssf/surround", methods=["POST"])
+def audio_ssf_surround():
+    """PINCABOS_AUDIO_SURROUND_UI_V1"""
+    mode = request.form.get("mode", "").strip()
+
+    if mode not in {cle for cle, _, _ in PINCABOS_SURROUND_MODES}:
+        return audio_reponse_lisible("Mode inconnu", [mode], ok=False)
+
+    # La règle sudo n'autorise que ces trois modes, écrits en toutes lettres :
+    # aucun argument libre n'atteint l'outil.
+    resultat = audio_run_cmd(
+        f"/usr/bin/sudo -n {PINCABOS_SURROUND_OUTIL} enable {mode} 2>&1"
+    )
+
+    ok = "GO:" in resultat
+    suite = []
+
+    # PINCABOS_AUDIO_SURROUND_SUIVI_V1
+    # Le nom du peripherique change avec le mode. Sans report, VPX cherche une
+    # sortie disparue et retombe sur le peripherique par defaut, en stereo.
+    if ok:
+        # PINCABOS_AUDIO_SURROUND_SUIVI_V2
+        # La sortie est detruite puis recreee : on la laisse revenir avant de
+        # lire son nom, sinon on ecrit dans le vide.
+        import time as _time
+
+        libelle = ""
+        for _ in range(10):
+            sorties = audio_sorties_classees()
+            attendus = 2 if mode == "stereo" else (6 if mode == "5.1" else 8)
+            # PINCABOS_AUDIO_CARD_MATCH_V2 — le nombre de canaux ne suffit
+            # pas : sur deux cartes analogiques, il designe la mauvaise.
+            carte = audio_carte_retenue()
+            candidate = next(
+                (
+                    x for x in sorties
+                    if int(x.get("channels", 2) or 2) == attendus
+                    and (carte is None or x.get("carte") == carte)
+                ),
+                None,
+            )
+            if candidate:
+                libelle = candidate.get("description") or candidate["name"]
+                break
+            _time.sleep(1)
+
+        if libelle:
+            try:
+                suite = _pco_vpx_write_audio(libelle, libelle,
+                                             audio_ini_read_key(
+                                                 str(PINCABOS_VPX_AUDIO_INI),
+                                                 "Player", "Sound3D") or "0")
+                suite = [f"VPX pointe maintenant sur : {libelle}"] + list(suite)
+            except Exception as exc:
+                suite = [f"VPX non mis à jour : {exc}"]
+        else:
+            suite = ["Sortie non revenue à temps : VPX n'a pas été redirigé.",
+                     "Ouvre la page Audio et enregistre la configuration."]
+
+    return audio_reponse_lisible(
+        f"Mode {mode} appliqué" if ok else f"Mode {mode} refusé",
+        [resultat.strip() or "(aucune sortie)", ""] + suite + [
+            "",
+            "Recharge la page pour voir le nouveau schéma."],
+        ok=ok,
+    )
+
+
 @route("/audio-ssf/test-alsa-quick", methods=["POST"])
 def audio_ssf_test_alsa_quick():
+    """PINCABOS_AUDIO_TEST_RUN_V1 + PINCABOS_AUDIO_VOIX_V1"""
     device = request.form.get("device", "").strip()
     channels = request.form.get("channels", "2").strip()
+    signal = request.form.get("signal", "wav").strip()
+    position = request.form.get("position", "").strip()
 
     if not device:
-        return "ERREUR: aucun périphérique ALSA sélectionné.", 400, {"Content-Type": "text/plain; charset=utf-8"}
-
-    if channels not in ["2", "4", "6", "8"]:
-        channels = "2"
-
-    try:
-        cmd = [
-            "/usr/bin/timeout",
-            "3",
-            "/usr/bin/speaker-test",
-            "-D",
-            device,
-            "-c",
-            channels,
-            "-t",
-            "sine",
-            "-f",
-            "440",
-            "-l",
-            "1",
-        ]
-
-        r = subprocess.run(
-            cmd,
-            text=True,
-            capture_output=True,
-            timeout=5,
+        return audio_reponse_lisible(
+            "Aucune sortie sélectionnée",
+            ["Choisis une sortie dans la liste, puis relance le test."],
+            ok=False,
         )
 
-        out = []
-        out.append("Commande: " + " ".join(cmd))
-        out.append("")
-        out.append("Code retour: " + str(r.returncode))
-        out.append("")
-        if r.stdout:
-            out.append("STDOUT:")
-            out.append(r.stdout)
-        if r.stderr:
-            out.append("STDERR:")
-            out.append(r.stderr)
+    if channels not in ("2", "4", "6", "8"):
+        channels = "2"
+    if signal not in ("wav", "sine"):
+        signal = "wav"
 
-        return "\n".join(out), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    # La sortie demandée doit figurer parmi celles que le système déclare :
+    # rien de ce qui vient du formulaire n'est transmis tel quel.
+    sorties = audio_pipewire_sinks()
+    connues = {f"pw:{x['name']}" for x in sorties}
+    for d in audio_detect_alsa_devices()[0]:
+        connues.add(str(d.get("id") or ""))
+        connues.add(f"plughw:{d.get('card')},{d.get('device')}")
 
-    except Exception as e:
-        return "Erreur test ALSA: " + str(e), 500, {"Content-Type": "text/plain; charset=utf-8"}
+    if device not in connues:
+        return audio_reponse_lisible(
+            "Sortie inconnue",
+            [f"{device} n'est plus déclarée par le système.",
+             "Rafraîchis la page pour recharger la liste."],
+            ok=False,
+        )
+
+    # PINCABOS_AUDIO_VOIX_V1
+    # Un haut-parleur désigné par son nom : le son est placé dans le canal
+    # qui porte ce nom, et annoncé dans la langue du cabinet.
+    if position and device.startswith("pw:"):
+        if position not in PINCABOS_POSITION_FFMPEG:
+            return audio_reponse_lisible(
+                "Position inconnue", [position], ok=False,
+            )
+
+        sink = device[3:]
+        carte = next(
+            (x.get("map") or [] for x in sorties if x["name"] == sink), []
+        )
+        if position not in carte:
+            return audio_reponse_lisible(
+                "Position absente de cette sortie",
+                [f"{position} n'existe pas sur {sink}.",
+                 "Positions disponibles : " + ", ".join(carte)],
+                ok=False,
+            )
+
+        ok, detail = audio_jouer_position(sink, position, len(carte))
+        return audio_reponse_lisible(
+            "Annonce jouée" if ok else "Annonce impossible",
+            [f"Sortie   : {sink}",
+             f"Langue   : {audio_langue_voix()}",
+             "",
+             detail],
+            ok=ok,
+        )
+
+    # Tour complet : speaker-test annonce lui-même chaque canal.
+    secondes = 4 + int(channels) * 3 if signal == "wav" else 4
+
+    test = ["/usr/bin/speaker-test", "-c", channels, "-t", signal, "-l", "1"]
+    if signal == "sine":
+        test += ["-f", "440"]
+
+    if device.startswith("pw:"):
+        # Le PCM s'appelle « pipewire » — « pulse » est le plugin de
+        # PulseAudio, absent ici — et la sortie visée se choisit par
+        # PIPEWIRE_NODE.
+        cmd = (
+            audio_session_prefix()
+            + [f"PIPEWIRE_NODE={device[3:]}", "/usr/bin/timeout", str(secondes)]
+            + test + ["-D", "pipewire"]
+        )
+        route_lisible = f"PipeWire → {device[3:]}"
+    else:
+        cmd = ["/usr/bin/timeout", str(secondes)] + test + ["-D", device]
+        route_lisible = f"accès direct → {device}"
+
+    try:
+        r = subprocess.run(
+            cmd, text=True, capture_output=True, timeout=secondes + 6,
+        )
+    except Exception as exc:
+        return audio_reponse_lisible("Test impossible", [str(exc)], ok=False)
+
+    sortie = (r.stdout or "") + (r.stderr or "")
+
+    lignes = [
+        f"Sortie   : {route_lisible}",
+        f"Canaux   : {channels} — tour complet",
+        f"Signal   : {'nom des canaux' if signal == 'wav' else 'sinusoïde 440 Hz'}",
+        "",
+    ]
+
+    # timeout coupe speaker-test en pleine lecture : « Interrupted system
+    # call » est la fin normale de l'essai, pas une panne.
+    ok = (
+        r.returncode in (0, 124)
+        and "open error" not in sortie.lower()
+        and "unknown pcm" not in sortie.lower()
+    )
+
+    if "unknown pcm" in sortie.lower():
+        lignes += [
+            "Le pont ALSA vers PipeWire est absent (paquet pipewire-alsa).",
+            "",
+        ]
+    elif "open error" in sortie.lower() and not device.startswith("pw:"):
+        lignes += [
+            "Le périphérique est occupé : PipeWire tient la carte en permanence.",
+            "Reprends le test sur la sortie PipeWire correspondante.",
+            "",
+        ]
+    elif ok:
+        lignes += ["Test joué. Note quels haut-parleurs ont répondu.", ""]
+
+    lignes += [sortie.strip() or "(aucune sortie)"]
+
+    return audio_reponse_lisible(
+        "Test terminé" if ok else "Test en échec", lignes, ok=ok,
+    )
 
 
 @route("/audio-ssf/system-volume/get", methods=["GET"])
 def audio_ssf_system_volume_get():
     device = request.args.get("device", "").strip()
-    return audio_system_volume_get(device), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return audio_reponse_lisible(
+        "Volume système", str(audio_system_volume_get(device)).splitlines(), ok=True,
+    )
 
 
 @route("/audio-ssf/system-volume/apply", methods=["POST"])
@@ -1843,7 +2788,11 @@ def audio_ssf_system_volume_apply():
     device = request.form.get("device", "").strip()
     volume = request.form.get("volume", "70")
     balance = request.form.get("balance", "0")
-    return audio_system_volume_apply(volume, balance, device), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return audio_reponse_lisible(
+        "Volume appliqué",
+        str(audio_system_volume_apply(volume, balance, device)).splitlines(),
+        ok=True,
+    )
 
 
 @route("/audio-ssf/system-volume/meter-html", methods=["GET", "POST"])
@@ -2042,17 +2991,25 @@ def audio_ssf_test_wav():
     ).strip()
 
     if not wav_file:
-        return "ERREUR: aucun fichier WAV sélectionné.", 400, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible(
+            "Aucun fichier WAV sélectionné",
+            ["Choisis un fichier dans la liste, puis relance la lecture."],
+            ok=False,
+        )
 
     if not device:
-        return "ERREUR: aucune sortie ALSA sélectionnée.", 400, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible(
+            "Aucune sortie sélectionnée",
+            ["Choisis une sortie dans la liste, puis relance la lecture."],
+            ok=False,
+        )
 
     wav_path = Path(wav_file)
 
     try:
         resolved = wav_path.resolve()
     except Exception as e:
-        return f"ERREUR chemin WAV invalide: {e}", 400, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible("Chemin WAV invalide", [str(e)], ok=False)
 
     allowed_roots = [
         Path("/opt/pincabos/media").resolve(),
@@ -2060,13 +3017,15 @@ def audio_ssf_test_wav():
     ]
 
     if not resolved.exists() or not resolved.is_file():
-        return f"ERREUR fichier WAV absent: {resolved}", 404, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible("Fichier WAV absent", [str(resolved)], ok=False)
 
     if resolved.suffix.lower() not in [".wav", ".wave"]:
-        return f"ERREUR fichier non WAV: {resolved}", 400, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible("Ce fichier n\'est pas un WAV", [str(resolved)], ok=False)
 
     if not any(str(resolved).startswith(str(root) + "/") or resolved == root for root in allowed_roots):
-        return f"ERREUR chemin WAV non autorisé: {resolved}", 403, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible(
+            "Chemin WAV non autorisé", [str(resolved)], ok=False,
+        )
 
     # Nettoie les anciens tests et les captures VU courtes avant lecture.
     for kill_cmd in [
@@ -2080,16 +3039,20 @@ def audio_ssf_test_wav():
         except Exception:
             pass
 
-    card, dev = audio_parse_alsa_hw(device)
-    sink = audio_pactl_find_sink_for_alsa_card(card) if card != "" else ""
+    # PINCABOS_AUDIO_WAV_PIPEWIRE_V1
+    # Une sortie PipeWire choisie explicitement est utilisee telle quelle ;
+    # sinon on cherche celle qui correspond a la carte ALSA demandee. L'acces
+    # direct ne reste qu'en dernier recours : PipeWire tient les cartes en
+    # permanence, il repondra « Device or resource busy ».
+    if device.startswith("pw:"):
+        sink = device[3:]
+    else:
+        card, dev = audio_parse_alsa_hw(device)
+        sink = audio_pactl_find_sink_for_alsa_card(card) if card != "" else ""
 
-    # Si PipeWire connaît cette carte, on utilise pw-play.
-    # Ça évite le conflit "Device or resource busy" avec ALSA direct.
     if sink:
-        cmd = [
-            "runuser", "-u", "pinball", "--",
-            "bash", "-lc",
-            f"export XDG_RUNTIME_DIR=/run/user/1000; pw-play --target {sink} {shlex.quote(str(resolved))}"
+        cmd = audio_session_prefix() + [
+            "/usr/bin/pw-play", "--target", sink, str(resolved),
         ]
         printable = f"pw-play --target {sink} {resolved}"
     else:
@@ -2114,21 +3077,24 @@ def audio_ssf_test_wav():
                 out += ["", "STDOUT:", stdout]
             if stderr:
                 out += ["", "STDERR:", stderr]
-            return "\n".join(out), 200, {"Content-Type": "text/plain; charset=utf-8"}
+            return audio_reponse_lisible(
+                "Lecture terminée" if proc.returncode == 0 else "Lecture en échec",
+                out, ok=proc.returncode == 0,
+            )
 
         except subprocess.TimeoutExpired:
-            return (
-                "Lecture WAV lancée.\n"
-                f"PID: {proc.pid}\n"
-                f"Fichier: {resolved}\n"
-                f"Sortie: {device}\n"
-                + (f"PipeWire sink: {sink}" if sink else "Mode: ALSA direct"),
-                200,
-                {"Content-Type": "text/plain; charset=utf-8"},
+            return audio_reponse_lisible(
+                "Lecture en cours",
+                [f"Fichier : {resolved}",
+                 f"Sortie  : {sink or device}",
+                 f"Routage : {'PipeWire' if sink else 'accès direct ALSA'}",
+                 "",
+                 "Utilise « Stop audio » pour interrompre."],
+                ok=True,
             )
 
     except Exception as e:
-        return f"Erreur lancement WAV: {e}", 500, {"Content-Type": "text/plain; charset=utf-8"}
+        return audio_reponse_lisible("Lancement impossible", [str(e)], ok=False)
 
 
 @route("/audio-ssf/test-wav-stop", methods=["POST"])
@@ -2145,7 +3111,7 @@ def audio_ssf_test_wav_stop_fixed():
             out.append(" ".join(cmd) + f" => {r.returncode}")
         except Exception as e:
             out.append(" ".join(cmd) + f" => ERREUR {e}")
-    return "Stop audio demandé.\n" + "\n".join(out), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return audio_reponse_lisible("Lecture interrompue", out, ok=True)
 
 
 

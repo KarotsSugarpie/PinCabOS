@@ -159,6 +159,10 @@ def discover_monitors():
         name = item["name"]
 
         monitors.append({
+            # PINCABOS_APP_SCREEN_INDEX_V1
+            # Rang de la sortie tel que le serveur X la declare : c'est ce
+            # rang que VPinFE utilise comme identifiant d'ecran.
+            "app_index": len(monitors),
             "name": name,
             "x": int(item["x"]),
             "y": int(item["y"]),
@@ -502,9 +506,13 @@ def refresh(prepare=False):
                     log(f"Adoption: {cand['name']} -> {r}")
 
 
+    # PINCABOS_APP_SCREEN_INDEX_V1
+    # Surtout pas enumerate(monitors) : monitors est trie de gauche a droite,
+    # ce qui redonnerait 0/1/2 dans l'ordre du cabinet et non dans celui des
+    # sorties. VPinFE lit l'ordre des sorties.
     app_indexes = {
-        monitor["name"]: index
-        for index, monitor in enumerate(monitors)
+        monitor["name"]: monitor["app_index"]
+        for monitor in monitors
     }
 
     expected = bindings.get("roles", {}) if isinstance(bindings, dict) else {}

@@ -1074,45 +1074,59 @@ function renderWheelCarousel(options = {}) {
         return;
     }
 
-    const cardsByIndex = new Map(
-        Array.from(carousel.children).map((card) => [Number(card.dataset.itemIndex), card])
-    );
-    const nextIndexSet = new Set(nextVisible.map(({ index }) => index));
+    // PINCABOS_WHEEL_SMALL_SET_V1
+    // Les cartes sont reperees par leur POSITION dans la roue, pas par la
+    // table qu'elles portent : avec moins de tables que d'emplacements, la
+    // meme table occupe plusieurs positions et un reperage par table les
+    // confond. La position, elle, reste unique.
     const enteringOffset = delta > 0 ? 3 : -3;
     const enteringStartOffset = delta > 0 ? 4 : -4;
     const exitingTargetOffset = delta > 0 ? -4 : 4;
 
-    nextVisible.forEach(({ index, offset }) => {
-        let card = cardsByIndex.get(index);
-
-        if (!card) {
-            card = buildWheelCard(index, enteringStartOffset);
-            carousel.appendChild(card);
-        }
-
-        card.dataset.tableIndex = String(index);
-        card.dataset.itemIndex = String(index);
-        if (offset === enteringOffset && !cardsByIndex.has(index)) {
-            applyWheelCardLayout(card, enteringStartOffset);
-            requestAnimationFrame(() => applyWheelCardLayout(card, offset));
-        } else {
-            applyWheelCardLayout(card, offset);
-        }
-    });
+    let positionsConnues = true;
 
     Array.from(carousel.children).forEach((card) => {
-        const index = Number(card.dataset.itemIndex);
-        if (nextIndexSet.has(index)) {
+        if (card.dataset.exiting === "1") {
             return;
         }
 
-        applyWheelCardLayout(card, exitingTargetOffset);
-        window.setTimeout(() => {
-            if (!nextIndexSet.has(Number(card.dataset.itemIndex)) && card.parentNode === carousel) {
-                card.remove();
-            }
-        }, 260);
+        const positionActuelle = Number(card.dataset.offset);
+        if (!Number.isFinite(positionActuelle)) {
+            positionsConnues = false;
+            return;
+        }
+
+        // Chaque carte avance d'un cran ; son contenu reste juste, puisque la
+        // table selectionnee a bouge du meme cran.
+        const positionSuivante = positionActuelle - delta;
+
+        if (Math.abs(positionSuivante) > 3) {
+            card.dataset.exiting = "1";
+            applyWheelCardLayout(card, exitingTargetOffset);
+            window.setTimeout(() => {
+                if (card.parentNode === carousel) {
+                    card.remove();
+                }
+            }, 260);
+            return;
+        }
+
+        applyWheelCardLayout(card, positionSuivante);
     });
+
+    // Une carte dont on ignore la position : on repart d'un rendu complet
+    // plutot que de laisser la roue dans un etat qu'on ne sait pas decrire.
+    if (!positionsConnues) {
+        renderWheelCarousel({ animate: false });
+        return;
+    }
+
+    const carteEntrante = buildWheelCard(
+        wrapIndex(currentIndex + enteringOffset, itemCount),
+        enteringStartOffset
+    );
+    carousel.appendChild(carteEntrante);
+    requestAnimationFrame(() => applyWheelCardLayout(carteEntrante, enteringOffset));
 
     renderedWheelCenterIndex = currentIndex;
 }
