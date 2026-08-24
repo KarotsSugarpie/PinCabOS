@@ -234,7 +234,8 @@ def cartes_pactl() -> list[dict]:
         if nom:
             if courante:
                 cartes.append(courante)
-            courante = {"nom": nom.group(1), "alsa": -1, "surround": False}
+            courante = {"nom": nom.group(1), "alsa": -1,
+                        "surround": False, "profils": set()}
             continue
         if not courante:
             continue
@@ -242,6 +243,13 @@ def cartes_pactl() -> list[dict]:
         numero = re.match(r"^\s*alsa\.card\s*=\s*\"?(\d+)\"?", ligne)
         if numero:
             courante["alsa"] = int(numero.group(1))
+        # PINCABOS_AUDIO_CARD_MATCH_V3 — les profils appartiennent a CETTE
+        # carte : les relever globalement ferait annoncer les capacites d'une
+        # autre.
+        courante["profils"].update(
+            re.findall(r"(output:analog-surround-\d+|output:analog-stereo)(?=[:+])",
+                       ligne)
+        )
         if "analog-surround" in ligne:
             courante["surround"] = True
 
@@ -297,8 +305,17 @@ def nom_carte_pactl(carte: int) -> str:
 
 
 def profils_disponibles(nom: str) -> list[str]:
-    detail = pactl("list", "cards").stdout
-    return sorted(set(re.findall(r"(output:analog-surround-\d+|output:analog-stereo)(?=[:+])", detail)))
+    """Profils de CETTE carte.
+
+    PINCABOS_AUDIO_CARD_MATCH_V3
+
+    Les chercher dans la sortie entiere revenait a preter a une carte les
+    capacites de sa voisine, et a proposer un mode la ou il ne s'applique pas.
+    """
+    for carte in cartes_pactl():
+        if carte["nom"] == nom:
+            return sorted(carte["profils"])
+    return []
 
 
 def appliquer_profil(nom: str, profil: str) -> str:
