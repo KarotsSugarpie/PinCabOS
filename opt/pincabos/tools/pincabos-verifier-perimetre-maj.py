@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Verifie ce qu'une mise a jour GitHub laisse passer, et ce qu'elle refuse.
+
+PINCABOS_UPDATE_SCOPE_V2
+
+Le filtre de chemins decide, fichier par fichier, de ce qu'une release
+installe. Trop etroit, il livre une fonction a moitie — une unite sans son
+binaire, un binaire sans son activation — ce qui est plus mauvais que ne rien
+livrer. Trop large, il autorise une release a ecraser les tables et les
+reglages du joueur.
+
+Ce controle verifie les deux bords a la fois, contre la fonction reellement
+presente dans le moteur de mise a jour.
+
+  pincabos-verifier-perimetre-maj.py   -> 0 si le perimetre est juste
+"""
+import importlib.util
+import sys
+from pathlib import Path
+
+MOTEUR = Path(__file__).resolve().parents[1] / "update/pincabos_updates.py"
+
+DOIT_PASSER = [
+    "opt/pincabos/web/app.py",
+    "opt/pincabos/scripts/pincabos-screen-topology.py",
+    "opt/pincabos/tools/pincabos-generer-voix-audio.py",
+    "opt/pincabos/media/audio-voix/fr/side-left.opus",
+    "opt/pincabos/installer-gui/app.py",
+    "usr/local/lib/pincabos/pincabos-dashboard-live-webrtc",
+    "usr/local/libexec/pincabos/pincabos-vpinfe-focus-playfield",
+    "usr/local/sbin/pincabos-audio-surround",
+    "etc/systemd/system/pincabos-audio-surround.service",
+    "etc/systemd/system/multi-user.target.wants/pincabos-audio-surround.service",
+    "etc/systemd/system/pincabos-vpinfe.service.wants/pincabos-vpinfe-focus.service",
+    "etc/systemd/system/pincabos-gui-kiosk.service.d/10-wait-for-wizard.conf",
+    "etc/sudoers.d/pincabos-audio-surround",
+    "home/pinball/.config/openbox/autostart",
+    "home/pinball/.config/vpinfe/themes/PinCabOS/theme.js",
+]
+
+DOIT_BLOQUER = [
+    # Donnees du joueur : une release n'a rien a y ecrire.
+    "home/pinball/Tables/ma-table.vpx",
+    "home/pinball/.config/vpinfe/vpinfe.ini",
+    "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+    # Unites qui ne sont pas a PinCabOS.
+    "etc/systemd/system/getty@tty1.service.d/override.conf",
+    "etc/systemd/system/multi-user.target.wants/ssh.service",
+    # Systeme.
+    "etc/passwd",
+    "etc/shadow",
+    # Sorties d'echappement.
+    "../../etc/shadow",
+    "/etc/shadow",
+    # Repertoires exclus de longue date.
+    "opt/pincabos/web/.venv/lib/x.py",
+    "opt/pincabos/logs/hier.log",
+    # Media hors annonces : les tables et videos ne passent pas par la.
+    "opt/pincabos/media/tables/gros.mp4",
+]
+
+
+def charger():
+    spec = importlib.util.spec_from_file_location("pco_updates", MOTEUR)
+    module = importlib.util.module_from_spec(spec)
+    garde = sys.argv
+    sys.argv = ["pincabos-verifier-perimetre-maj"]
+    try:
+        spec.loader.exec_module(module)
+    except SystemExit:
+        pass
+    finally:
+        sys.argv = garde
+    return module.allowed
+
+
+def main() -> int:
+    allowed = charger()
+    echecs = 0
+
+    for chemin in DOIT_PASSER:
+        if not allowed(chemin):
+            echecs += 1
+            print("  ECHEC  devrait passer  : " + chemin)
+
+    for chemin in DOIT_BLOQUER:
+        if allowed(chemin):
+            echecs += 1
+            print("  ECHEC  devrait bloquer : " + chemin)
+
+    total = len(DOIT_PASSER) + len(DOIT_BLOQUER)
+    if echecs:
+        print()
+        print("  " + str(echecs) + " erreur(s) sur " + str(total) + " cas")
+        return 1
+
+    print("  " + str(total) + " cas verifies : perimetre juste des deux cotes")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

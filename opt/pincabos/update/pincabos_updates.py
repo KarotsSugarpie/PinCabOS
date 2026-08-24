@@ -94,14 +94,31 @@ def sha256(path):
     return h.hexdigest()
 
 def allowed(rel):
+    # PINCABOS_UPDATE_SCOPE_V2
     if not rel or rel.startswith('/') or '..' in Path(rel).parts: return False
     prefixes=(
-      'opt/pincabos/web/','opt/pincabos/bin/','opt/pincabos/script/','opt/pincabos/update/','opt/pincabos/modules/',
-      'usr/local/bin/pincabos-','usr/local/sbin/pincabos-','etc/systemd/system/pincabos-',
+      'opt/pincabos/web/','opt/pincabos/bin/','opt/pincabos/script/','opt/pincabos/scripts/',
+      'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/media/audio-voix/',
+      'opt/pincabos/installer-gui/',
+      'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
+      'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',
       'etc/lightdm/lightdm.conf.d/','etc/tmpfiles.d/pincabos-','etc/udev/rules.d/','etc/sudoers.d/','etc/polkit-1/rules.d/'
     )
-    exact={'usr/local/bin/getpcos','usr/local/sbin/getpcos'}
+    # Fichiers que PinCabOS ecrit lui-meme dans le compte du joueur. Chemins
+    # EXACTS : ouvrir un repertoire ici autoriserait une release a ecraser les
+    # donnees du joueur.
+    exact={'usr/local/bin/getpcos','usr/local/sbin/getpcos',
+           'home/pinball/.config/openbox/autostart'}
     if rel in exact: return True
+    # Sous systemd, la regle porte sur le NOM du fichier et non sur le chemin :
+    # sans cela « multi-user.target.wants/pincabos-x.service » tombe dehors et
+    # l'unite arrive sans son activation.
+    # Le nom du fichier, ou celui d'un repertoire de surcharge : un drop-in
+    # s'appelle « 10-x.conf » mais vit dans « pincabos-y.service.d ».
+    if rel.startswith('etc/systemd/system/') and any(
+            part.startswith('pincabos-') for part in Path(rel).parts[3:]):
+        return True
+    if rel.startswith('home/pinball/.config/vpinfe/themes/'): return True
     if not rel.startswith(prefixes): return False
     forbidden=('opt/pincabos/web/.venv/','opt/pincabos/web/backups/','opt/pincabos/build/','opt/pincabos/backups/','opt/pincabos/logs/')
     return not rel.startswith(forbidden) and '__pycache__' not in Path(rel).parts and not rel.endswith(('.pyc','.pyo'))
