@@ -1,0 +1,10 @@
+[Unit]
+Description=PinCabOS - watch the screen configuration to refresh the boot splash
+Documentation=https://pincabos.cc/
+
+[Path]
+PathChanged=/opt/pincabos/config/screens/screens.json
+Unit=pincabos-splash-sync.service
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Belt and braces for the live installer.
+#
+# The unit files now carry proper conditions (see pincabos-finalize-firstboot.*
+# and pincabos-final-graphical-guard.service), so this should be a no-op on a
+# current image. It stays as a safety net for older units and for anything that
+# might grab vt1 while the installer kiosk owns it.
+#
+# --runtime => masks live only in /run: the INSTALLED system is untouched and
+# keeps its normal first-boot behaviour.
+set -u
+systemctl mask --runtime --now \
+  pincabos-finalize-firstboot.timer \
+  pincabos-finalize-firstboot.service \
+  pincabos-final-graphical-guard.service \
+  pincabos-switch-graphical-vt.service \
+  pincabos-vpinfe.service \
+  lightdm.service \
+  display-manager.service \
+  getty@tty1.service \
+  casper-md5check.service \
+  2>/dev/null || true
+exit 0

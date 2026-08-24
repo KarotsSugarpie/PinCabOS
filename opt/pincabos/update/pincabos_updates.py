@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, hashlib, json, os, shutil, subprocess, sys, tempfile, urllib.request
+import argparse, hashlib, json, os, re, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
 
 CONFIG = Path('/etc/pincabos/updates.json')
@@ -94,14 +94,54 @@ def sha256(path):
     return h.hexdigest()
 
 def allowed(rel):
+    # PINCABOS_UPDATE_SCOPE_V2
     if not rel or rel.startswith('/') or '..' in Path(rel).parts: return False
     prefixes=(
-      'opt/pincabos/web/','opt/pincabos/bin/','opt/pincabos/script/','opt/pincabos/update/','opt/pincabos/modules/',
-      'usr/local/bin/pincabos-','usr/local/sbin/pincabos-','etc/systemd/system/pincabos-',
-      'etc/lightdm/lightdm.conf.d/','etc/tmpfiles.d/pincabos-','etc/udev/rules.d/','etc/sudoers.d/','etc/polkit-1/rules.d/'
+      'opt/pincabos/web/','opt/pincabos/bin/','opt/pincabos/script/','opt/pincabos/scripts/',
+      'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/media/audio-voix/',
+      'opt/pincabos/installer-gui/',
+      'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
+      'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',
     )
-    exact={'usr/local/bin/getpcos','usr/local/sbin/getpcos'}
+    # Fichiers que PinCabOS ecrit lui-meme dans le compte du joueur. Chemins
+    # EXACTS : ouvrir un repertoire ici autoriserait une release a ecraser les
+    # donnees du joueur.
+    exact={'usr/local/bin/getpcos','usr/local/sbin/getpcos',
+           'home/pinball/.config/openbox/autostart'}
     if rel in exact: return True
+    # Sous systemd, la regle porte sur le NOM du fichier et non sur le chemin :
+    # sans cela « multi-user.target.wants/pincabos-x.service » tombe dehors et
+    # l'unite arrive sans son activation.
+    # PINCABOS_UPDATE_SCOPE_V3
+    # Trois formes legitimes, et rien d'autre : l'unite, sa propre surcharge,
+    # son lien d'activation. Un « pincabos-*.conf » depose dans le repertoire
+    # de surcharge d'un service tiers n'en fait pas partie.
+    if rel.startswith('etc/systemd/system/'):
+        reste = rel[len('etc/systemd/system/'):].split('/')
+        if len(reste) == 1:
+            return reste[0].startswith('pincabos-')
+        if len(reste) == 2:
+            conteneur, fichier = reste
+            if conteneur.endswith('.d'):
+                return conteneur.startswith('pincabos-')
+            if conteneur.endswith(('.wants', '.requires')):
+                return fichier.startswith('pincabos-')
+        return False
+    # PINCABOS_UPDATE_SCOPE_V4
+    # Repertoires de /etc ou un fichier de trop donne les pleins pouvoirs :
+    # le fichier doit etre a nous, reconnu a son nom. Le prefixe numerique
+    # d'ordonnancement est retire avant l'examen (91-pincabos-..., 99-pincab-...).
+    SENSIBLES = ('etc/sudoers.d/', 'etc/polkit-1/rules.d/', 'etc/udev/rules.d/',
+                 'etc/lightdm/lightdm.conf.d/', 'etc/tmpfiles.d/')
+    for base in SENSIBLES:
+        if rel.startswith(base):
+            reste = rel[len(base):]
+            # un seul niveau : ces emplacements n'ont pas de sous-repertoire
+            if not reste or '/' in reste:
+                return False
+            return re.sub(r'^\d+[-_]', '', reste).startswith('pincab')
+
+    if rel.startswith('home/pinball/.config/vpinfe/themes/PinCabOS/'): return True
     if not rel.startswith(prefixes): return False
     forbidden=('opt/pincabos/web/.venv/','opt/pincabos/web/backups/','opt/pincabos/build/','opt/pincabos/backups/','opt/pincabos/logs/')
     return not rel.startswith(forbidden) and '__pycache__' not in Path(rel).parts and not rel.endswith(('.pyc','.pyo'))

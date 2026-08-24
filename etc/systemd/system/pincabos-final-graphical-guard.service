@@ -6,6 +6,7 @@ After=local-fs.target systemd-sysusers.service systemd-user-sessions.service dbu
 Before=getty@tty1.service
 Wants=network-online.target
 ConditionPathExists=/opt/pincabos
+ConditionKernelCommandLine=!pincabos.installer
 
 [Service]
 Type=oneshot

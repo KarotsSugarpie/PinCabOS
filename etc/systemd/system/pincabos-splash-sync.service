@@ -1,0 +1,14 @@
+[Unit]
+Description=PinCabOS - regenerate the boot splash from the screen configuration
+Documentation=https://pincabos.cc/
+ConditionPathExists=/opt/pincabos/config/screens/screens.json
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-splash-sync
+# Regenerating the initrd takes a while; it must not hold up the boot.
+TimeoutStartSec=10min
+
+[Install]
+WantedBy=multi-user.target

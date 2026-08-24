@@ -63,25 +63,61 @@ def backglass_window_geometry() -> dict[str, str]:
     fulldmd = role_geometry("fulldmd")
     if not backglass or not fulldmd or backglass == fulldmd:
         return {}
-    _, _, largeur, hauteur = backglass
-    return {"BackglassWidth": str(largeur), "BackglassHeight": str(hauteur)}
+    x, y, largeur, hauteur = backglass
+    # PINCABOS_FRONT_WINDOWS_FROM_SCREENS_V1
+    # La position compte autant que la taille : sans elle VPX ouvre la fenetre
+    # sur le premier ecran et il faut la deplacer apres coup.
+    return {
+        "BackglassWidth": str(largeur),
+        "BackglassHeight": str(hauteur),
+        "BackglassWndX": str(x),
+        "BackglassWndY": str(y),
+    }
 
 
 BACKGLASS_WINDOW = backglass_window_geometry()
 TABLES_ROOT = Path(sys.argv[2]).resolve()
 TARGET_VPX = Path(sys.argv[3]).resolve() if sys.argv[3] else None
 
-SCOREVIEW_WINDOW = {
-    "ScoreViewOutput": "1",
-    "ScoreViewDisplay": "",
-    "ScoreViewFullScreen": "0",
-    "ScoreViewWndX": "0",
-    "ScoreViewWndY": "0",
-    "ScoreViewWidth": "1920",
-    "ScoreViewHeight": "1200",
-    "ScoreViewFSWidth": "1920",
-    "ScoreViewFSHeight": "1200",
-}
+def scoreview_window() -> dict[str, str]:
+    """Fenetre Score View posee sur l'ecran qui porte le role fulldmd.
+
+    PINCABOS_FRONT_WINDOWS_FROM_SCREENS_V1
+    Les valeurs etaient ecrites en dur a (0,0) 1920x1200, donc sur le premier
+    ecran : la fenetre atterrissait sur le playfield ou le backglass et devait
+    etre deplacee ensuite. On la pose directement au bon endroit.
+
+    Sur un fronton d'un seul ecran, ou si les roles manquent, on garde
+    exactement les anciennes valeurs.
+    """
+    base = {
+        "ScoreViewOutput": "1",
+        "ScoreViewDisplay": "",
+        "ScoreViewFullScreen": "0",
+        "ScoreViewWndX": "0",
+        "ScoreViewWndY": "0",
+        "ScoreViewWidth": "1920",
+        "ScoreViewHeight": "1200",
+        "ScoreViewFSWidth": "1920",
+        "ScoreViewFSHeight": "1200",
+    }
+    backglass = role_geometry("backglass")
+    fulldmd = role_geometry("fulldmd")
+    if not backglass or not fulldmd or backglass == fulldmd:
+        return base
+    x, y, largeur, hauteur = fulldmd
+    base.update({
+        "ScoreViewWndX": str(x),
+        "ScoreViewWndY": str(y),
+        "ScoreViewWidth": str(largeur),
+        "ScoreViewHeight": str(hauteur),
+        "ScoreViewFSWidth": str(largeur),
+        "ScoreViewFSHeight": str(hauteur),
+    })
+    return base
+
+
+SCOREVIEW_WINDOW = scoreview_window()
 
 SCOREVIEW_DISABLED_OUTPUT = dict(SCOREVIEW_WINDOW)
 SCOREVIEW_DISABLED_OUTPUT["ScoreViewOutput"] = "0"

@@ -790,14 +790,35 @@ echo "==============================================================="
 [ -d "$TARGET" ] || { echo "ERROR: target missing: $TARGET"; exit 1; }
 findmnt "$TARGET" >/dev/null || { echo "ERROR: $TARGET not mounted"; exit 1; }
 
+# PINCABOS_LIVE_SQUASHFS_V1
+# Two payload shapes are supported:
+#   - live model : the ISO *is* the system, shipped as casper/filesystem.squashfs
+#   - classic    : a split zstd tarball next to this helper
+LIVE_SQUASHFS="$PAYLOAD_DIR/../casper/filesystem.squashfs"
+
 echo
 echo "=== 1) Verify chunks ==="
-( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256 )
+if [ -f "$LIVE_SQUASHFS" ]; then
+  echo "Live squashfs detected, checksum already verified by casper at boot."
+else
+  ( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256 )
+fi
 
 echo
 echo "=== 2) Extract rootfs ==="
-cat "$PAYLOAD_DIR"/pincabos-rootfs-cab-v8.1g.tar.zst.part-* \
-  | tar --acls --xattrs --numeric-owner -I zstd -xpf - -C "$TARGET"
+if [ -f "$LIVE_SQUASHFS" ]; then
+  # Progress bar left on purpose: the graphical installer parses it.
+  unsquashfs -f -d "$TARGET" "$LIVE_SQUASHFS"
+  # Strip what only makes sense on live media.
+  rm -f "$TARGET/etc/pincabos-live" \
+        "$TARGET/etc/netplan/01-pincabos-live-dhcp.yaml"
+  rm -f "$TARGET/etc/systemd/system/pincabos-gui-install.target" \
+        "$TARGET/etc/systemd/system/pincabos-gui-install-prepare.service" \
+        "$TARGET/usr/local/sbin/pincabos-gui-install-prepare"
+else
+  cat "$PAYLOAD_DIR"/pincabos-rootfs-cab-v8.1g.tar.zst.part-* \
+    | tar --acls --xattrs --numeric-owner -I zstd -xpf - -C "$TARGET"
+fi
 
 
 echo
@@ -4562,6 +4583,13 @@ regional_setup() {
         [recap_title]="Regional configuration"
         [recap_continue]="Continue" [recap_change]="Change"
         [mode_title]="PinCabOS install mode"
+        [mode_up]="Update an existing PinCabOS (keep tables and settings)" [mode_upb]="Reinstalls over an existing install. Tables, media and screen/audio/network settings are kept."
+        [disks_upgrade]="Available target disks — UPDATE AN EXISTING INSTALL"
+        [up_scan]="Looking for an existing PinCabOS installation"
+        [up_found]="Existing installation found, settings will be kept"
+        [up_none]="No PinCabOS installation found on this disk"
+        [up_saved]="Settings saved"
+        [up_restored]="Settings restored"
         [mode_1]="Erase a full disk and install PinCabOS" [mode_1b]="Recommended for a dedicated pincab."
         [mode_2]="Install PinCabOS into existing unallocated space" [mode_2b]="Dualboot mode. Does NOT resize existing partitions."
         [mode_3]="Rescue shell" [mode_4]="Reboot"
@@ -4593,6 +4621,13 @@ regional_setup() {
         [recap_title]="Configuration régionale"
         [recap_continue]="Continuer" [recap_change]="Modifier"
         [mode_title]="Mode d'installation PinCabOS"
+        [mode_up]="Mettre à jour un PinCabOS existant (conserver tables et réglages)" [mode_upb]="Réinstalle par-dessus une installation existante. Tables, médias et réglages écrans/audio/réseau sont conservés."
+        [disks_upgrade]="Disques cibles disponibles — MISE À JOUR"
+        [up_scan]="Recherche d'une installation PinCabOS existante"
+        [up_found]="Installation existante trouvée, les réglages seront conservés"
+        [up_none]="Aucune installation PinCabOS sur ce disque"
+        [up_saved]="Réglages sauvegardés"
+        [up_restored]="Réglages restaurés"
         [mode_1]="Effacer un disque entier et installer PinCabOS" [mode_1b]="Recommandé pour un pincab dédié."
         [mode_2]="Installer dans l'espace non alloué existant" [mode_2b]="Mode dualboot. Ne redimensionne AUCUNE partition."
         [mode_3]="Console de secours" [mode_4]="Redémarrer"
@@ -4625,6 +4660,13 @@ regional_setup() {
         [recap_continue]="Weiter" [recap_change]="Ändern"
         [mode_title]="PinCabOS-Installationsmodus"
         [mode_1]="Gesamte Festplatte löschen und PinCabOS installieren" [mode_1b]="Empfohlen für einen dedizierten Pincab."
+        [mode_up]="Vorhandenes PinCabOS aktualisieren (Tische und Einstellungen behalten)" [mode_upb]="Installiert ueber eine bestehende Installation. Tische, Medien und Bildschirm-/Audio-/Netzwerkeinstellungen bleiben erhalten."
+        [disks_upgrade]="Verfuegbare Ziellaufwerke — AKTUALISIERUNG"
+        [up_scan]="Suche nach vorhandener PinCabOS-Installation"
+        [up_found]="Vorhandene Installation gefunden, Einstellungen bleiben erhalten"
+        [up_none]="Keine PinCabOS-Installation auf diesem Laufwerk"
+        [up_saved]="Einstellungen gesichert"
+        [up_restored]="Einstellungen wiederhergestellt"
         [mode_2]="In vorhandenen unpartitionierten Bereich installieren" [mode_2b]="Dualboot-Modus. Partitionen werden NICHT verkleinert."
         [mode_3]="Rettungskonsole" [mode_4]="Neu starten"
         [disks_full]="Verfügbare Ziellaufwerke — VOLLSTÄNDIGES LÖSCHEN"
@@ -4656,6 +4698,13 @@ regional_setup() {
         [recap_continue]="Continua" [recap_change]="Modifica"
         [mode_title]="Modalità di installazione PinCabOS"
         [mode_1]="Cancella un intero disco e installa PinCabOS" [mode_1b]="Consigliato per un pincab dedicato."
+        [mode_up]="Aggiorna un PinCabOS esistente (mantieni tavoli e impostazioni)" [mode_upb]="Reinstalla sopra un'installazione esistente. Tavoli, media e impostazioni schermi/audio/rete sono mantenuti."
+        [disks_upgrade]="Dischi di destinazione — AGGIORNAMENTO"
+        [up_scan]="Ricerca di un'installazione PinCabOS esistente"
+        [up_found]="Installazione esistente trovata, le impostazioni saranno mantenute"
+        [up_none]="Nessuna installazione PinCabOS su questo disco"
+        [up_saved]="Impostazioni salvate"
+        [up_restored]="Impostazioni ripristinate"
         [mode_2]="Installa nello spazio non allocato esistente" [mode_2b]="Modalità dualboot. NON ridimensiona le partizioni."
         [mode_3]="Console di ripristino" [mode_4]="Riavvia"
         [disks_full]="Dischi di destinazione — CANCELLAZIONE TOTALE"
@@ -4687,6 +4736,13 @@ regional_setup() {
         [recap_continue]="Continuar" [recap_change]="Cambiar"
         [mode_title]="Modo de instalación PinCabOS"
         [mode_1]="Borrar un disco completo e instalar PinCabOS" [mode_1b]="Recomendado para un pincab dedicado."
+        [mode_up]="Actualizar un PinCabOS existente (conservar mesas y ajustes)" [mode_upb]="Reinstala sobre una instalacion existente. Mesas, medios y ajustes de pantallas/audio/red se conservan."
+        [disks_upgrade]="Discos de destino — ACTUALIZACION"
+        [up_scan]="Buscando una instalacion PinCabOS existente"
+        [up_found]="Instalacion existente encontrada, se conservaran los ajustes"
+        [up_none]="No hay instalacion PinCabOS en este disco"
+        [up_saved]="Ajustes guardados"
+        [up_restored]="Ajustes restaurados"
         [mode_2]="Instalar en el espacio no asignado existente" [mode_2b]="Modo dualboot. NO redimensiona particiones."
         [mode_3]="Consola de rescate" [mode_4]="Reiniciar"
         [disks_full]="Discos de destino — BORRADO TOTAL"
@@ -4983,15 +5039,22 @@ apply_target_orientation() {
         [ -f "$THEME.pcosorig" ] || cp "$THEME" "$THEME.pcosorig"
 
         cat > "$THEME" <<'PLYSCRIPT'
-# PinCabOS rotation-aware splash v5.2 (installer-generated)
+# PinCabOS rotation-aware splash v6 (installer-generated)
+# PINCABOS_SPLASH_INSTALLER_PER_SCREEN_V1
+#
+# Une illustration par ecran, a la taille de cet ecran, et la rotation ne
+# s'applique qu'a la sortie primaire — le playfield. Plymouth ouvre une
+# surface par sortie video et les fait toutes partir de l'origine : dessiner
+# sans indice recopiait sur le fronton un visuel calcule pour le playfield.
+#
+# Des que les ecrans sont configures, pincabos-splash-sync remplace ce theme
+# par une version qui connait la resolution de chaque role.
+#
 # La barre est posee en coordonnees ECRAN (jamais de Rotate() sur la barre :
 # Rotate recadre dans le canevas d origine et transforme la barre en pastille).
 rot = __ROT_DEG__;
 PI = 3.14159265358979;
-rad = rot * PI / 180;
-sw = Window.GetWidth();
-sh = Window.GetHeight();
-if (rot == 90 || rot == 270) { lw = sh; lh = sw; } else { lw = sw; lh = sh; }
+pf = 0;
 
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
@@ -4999,23 +5062,48 @@ Window.SetBackgroundBottomColor(0, 0, 0);
 bg0 = Image("pincabos.png");
 iw = bg0.GetWidth();
 ih = bg0.GetHeight();
-scale = lw / iw;
-if (ih * scale > lh) scale = lh / ih;
-bw = iw * scale;
-bh = ih * scale;
-bg = bg0.Scale(bw, bh);
-if (rot != 0) bg = bg.Rotate(rad);
-bgs = Sprite(bg);
-bgs.SetX((sw - bg.GetWidth()) / 2);
-bgs.SetY((sh - bg.GetHeight()) / 2);
-bgs.SetZ(-100);
+
+fonds = [];
+i = 0;
+while (i < 8) {
+    sw = Window.GetWidth(i);
+    if (sw > 0) {
+        sh = Window.GetHeight(i);
+        ox = Window.GetX(i);
+        oy = Window.GetY(i);
+
+        r = 0;
+        if (i == pf) r = rot;
+        if (r == 90 || r == 270) { lw = sh; lh = sw; } else { lw = sw; lh = sh; }
+
+        scale = lw / iw;
+        if (ih * scale > lh) scale = lh / ih;
+        img = bg0.Scale(iw * scale, ih * scale);
+        if (r != 0) img = img.Rotate(r * PI / 180);
+
+        fonds[i] = Sprite(img);
+        fonds[i].SetX(ox + (sw - img.GetWidth()) / 2);
+        fonds[i].SetY(oy + (sh - img.GetHeight()) / 2);
+        fonds[i].SetZ(-100);
+
+        if (i == pf) {
+            pf_ox = ox; pf_oy = oy;
+            pf_sw = sw; pf_sh = sh;
+            pf_lw = lw; pf_lh = lh;
+            pf_bw = iw * scale; pf_bh = ih * scale;
+        }
+    }
+    i++;
+}
+
+sw = pf_sw; sh = pf_sh;
+lw = pf_lw; lh = pf_lh;
+bw = pf_bw; bh = pf_bh;
 
 bar_width = bw * 0.193;
 bar_height = 6;
-off_lx = (lw - bw) / 2;
-off_ly = (lh - bh) / 2;
-bar_lx = off_lx + (bw - bar_width) / 2;
-bar_ly = off_ly + bh * 0.728;
+bar_lx = (lw - bw) / 2 + (bw - bar_width) / 2;
+bar_ly = (lh - bh) / 2 + bh * 0.728;
 
 box_image = Image("progress_box.png");
 bar_image = Image("progress_bar.png");
@@ -5024,19 +5112,19 @@ box_sprite = Sprite();
 box_sprite.SetZ(10);
 if (rot == 0) {
     box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-    box_sprite.SetX(bar_lx); box_sprite.SetY(bar_ly);
+    box_sprite.SetX(pf_ox + bar_lx); box_sprite.SetY(pf_oy + bar_ly);
 }
 if (rot == 180) {
     box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-    box_sprite.SetX(sw - bar_lx - bar_width); box_sprite.SetY(sh - bar_ly - bar_height);
+    box_sprite.SetX(pf_ox + sw - bar_lx - bar_width); box_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
 }
 if (rot == 90) {
     box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-    box_sprite.SetX(sw - bar_ly - bar_height); box_sprite.SetY(bar_lx);
+    box_sprite.SetX(pf_ox + sw - bar_ly - bar_height); box_sprite.SetY(pf_oy + bar_lx);
 }
 if (rot == 270) {
     box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-    box_sprite.SetX(bar_ly); box_sprite.SetY(sh - bar_lx - bar_width);
+    box_sprite.SetX(pf_ox + bar_ly); box_sprite.SetY(pf_oy + sh - bar_lx - bar_width);
 }
 
 bar_sprite = Sprite();
@@ -5057,19 +5145,19 @@ fun refresh_callback() {
     if (cw < 1) cw = 1;
     if (rot == 0) {
         bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(bar_lx); bar_sprite.SetY(bar_ly);
+        bar_sprite.SetX(pf_ox + bar_lx); bar_sprite.SetY(pf_oy + bar_ly);
     }
     if (rot == 180) {
         bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(sw - bar_lx - cw); bar_sprite.SetY(sh - bar_ly - bar_height);
+        bar_sprite.SetX(pf_ox + sw - bar_lx - cw); bar_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
     }
     if (rot == 90) {
         bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(sw - bar_ly - bar_height); bar_sprite.SetY(bar_lx);
+        bar_sprite.SetX(pf_ox + sw - bar_ly - bar_height); bar_sprite.SetY(pf_oy + bar_lx);
     }
     if (rot == 270) {
         bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(bar_ly); bar_sprite.SetY(sh - bar_lx - cw);
+        bar_sprite.SetX(pf_ox + bar_ly); bar_sprite.SetY(pf_oy + sh - bar_lx - cw);
     }
 }
 
@@ -5252,11 +5340,17 @@ check_payload() {
     exit 1
   }
 
-  (
-    cd "$PAYLOAD_DIR"
-    sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
-    sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
-  )
+  # PINCABOS_LIVE_SQUASHFS_V1 — same two shapes as the deployment helper.
+  if [ -f "$PAYLOAD_DIR/../casper/filesystem.squashfs" ]; then
+    echo "Live squashfs detected, already verified by casper at boot."
+    ( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256 )
+  else
+    (
+      cd "$PAYLOAD_DIR"
+      sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
+      sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
+    )
+  fi
 
   echo
   pco_go "payload checksums valid"
@@ -5530,6 +5624,169 @@ full_disk_install() {
   final_boot_refresh "full"
 }
 
+# Settings kept across an update. Deliberately excludes locale, keyboard,
+# timezone and orientation: the wizard asks for those every time, restoring
+# them would silently undo the user's fresh choices.
+PCO_KEEP_PATHS=(
+  # Display identity of THIS machine. The payload deliberately wipes it so a
+  # fresh install redetects its own screens; on an update that would throw away
+  # the user's own configuration. screens.json is the source of truth here:
+  # pincabos-display-roles.py resyncs vpinfe.ini and VPinballX.ini from it, so
+  # losing it is enough to have backglass and fulldmd swap places at next boot.
+  "opt/pincabos/config/screens"
+  "opt/pincabos/config/display-aliases.env"
+  "opt/pincabos/state/screens-apply-last-success.flag"
+  "var/lib/pincabos/hardware-autoconfig.done"
+  "etc/X11/xorg.conf"
+  "etc/X11/xorg.conf.d"
+  # screen roles and window placement, as applied to the frontends
+  "home/pinball/.config/vpinfe/vpinfe.ini"
+  "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+  "home/pinball/.vpinball/VPinballX.ini"
+  # audio (volume and mute intent replayed at session start)
+  "home/pinball/.config/pincabos/audio-volume-widget.json"
+  # PINCABOS_KEEP_AUDIO_SURROUND_V1
+  # audio: multichannel mode and pin retask, replayed at boot. Without this an
+  # update drops the cabinet back to stereo and the SSF silently stops.
+  "opt/pincabos/config/audio/surround.json"
+  # PINCABOS_KEEP_AUDIO_LEGACY_V1
+  # Le payload efface ces quatre-la pour qu'une installation NEUVE n'herite
+  # pas de l'audio de la machine de construction. En mise a jour ce sont les
+  # reglages de l'utilisateur : routage SSF, peripheriques, effets Commander.
+  "opt/pincabos/config/audio-router.json"
+  "opt/pincabos/config/audio.json"
+  "opt/pincabos/config/audio-ssf.json"
+  "opt/pincabos/config/ssf-commander.json"
+  # PINCABOS_KEEP_INVENTORY_V1
+  # What the MACHINE learned and no image can hand back. This list comes from
+  # an inventory of what the system stores, not from what we remembered.
+  # I/O board: pairing and its cache, which rescanning does not reproduce
+  "opt/pincabos/config/dudescab"
+  # feedback: DOF api key, and the key bindings of Inputs Commander
+  "opt/pincabos/config/dof"
+  "opt/pincabos/config/inputs-commander.json"
+  # calibrations: measured on this cabinet, on these panels
+  "opt/pincabos/config/dmd-calibration.json"
+  "opt/pincabos/config/fulldmd-calibration.json"
+  "opt/pincabos/config/fulldmd-background.env"
+  # credentials and certificates
+  "opt/pincabos/config/admin-login.txt"
+  "opt/pincabos/config/pki"
+  # webapp: theme and where its windows go on this cabinet
+  "opt/pincabos/config/webapp-appearance"
+  "opt/pincabos/config/webapp-screen-targets.conf"
+  "opt/pincabos/config/webapp-screen-autostart.conf"
+  # media sources the user added
+  "opt/pincabos/config/media-hunter"
+  # launcher rules the user edited (the file says so in its own name)
+  "opt/pincabos/config/hybrid-launcher"
+  # network: PinCabOS netplan file and NetworkManager profiles (Wi-Fi keys)
+  "etc/netplan/99-pincabos-network.yaml"
+  "etc/NetworkManager/system-connections"
+  # media and databases the user has accumulated
+  "var/lib/pincabos/media-hunter"
+  "home/pinball/.config/vpinfe/vpsdb.json"
+  "home/pinball/.config/vpinfe/roms.json"
+  "home/pinball/.config/vpinfe/collections.ini"
+  # dashboard arrangement
+  "home/pinball/.config/pincabos/dashboard-layout.json"
+  "home/pinball/.config/pincabos/dashboard-mode.json"
+  "home/pinball/.config/pincabos/dashboard-layout-simple.json"
+  "home/pinball/.config/pincabos/dashboard-layout-pro.json"
+  # cab identity
+  "etc/pincabos/system-name.conf"
+)
+
+PCO_KEEP_DIR="/run/pincabos-keep"
+
+save_user_settings() {
+  rm -rf "$PCO_KEEP_DIR"
+  mkdir -p "$PCO_KEEP_DIR"
+
+  # PINCABOS_KEEP_SPACE_CHECK_V1
+  # /run est en memoire vive, et deux entrees de la liste n'ont pas de borne
+  # connue : les medias et la base VPSdb. On mesure avant de copier, et on
+  # refuse en annoncant le chiffre plutot que d'echouer au milieu sur un cp.
+  local besoin=0 dispo=0 p taille
+  for p in "${PCO_KEEP_PATHS[@]}"; do
+    [ -e "$TARGET/$p" ] || continue
+    taille="$(du -sk --apparent-size "$TARGET/$p" 2>/dev/null | cut -f1)"
+    besoin=$((besoin + ${taille:-0}))
+  done
+  dispo="$(df -Pk "$PCO_KEEP_DIR" | awk 'NR==2 {print $4}')"
+  # Marge : /run sert aussi au reste du systeme pendant l'installation.
+  if [ "$besoin" -gt 0 ] && [ $((besoin + 65536)) -gt "${dispo:-0}" ]; then
+    pco_error "Not enough room in $PCO_KEEP_DIR to set your settings aside: $((besoin / 1024)) MB needed, $((${dispo:-0} / 1024)) MB free. Nothing has been touched."
+    return 1
+  fi
+
+  local kept=0 p
+  for p in "${PCO_KEEP_PATHS[@]}"; do
+    [ -e "$TARGET/$p" ] || continue
+    mkdir -p "$PCO_KEEP_DIR/$(dirname "$p")"
+    cp -a "$TARGET/$p" "$PCO_KEEP_DIR/$p"
+    kept=$((kept + 1))
+  done
+  pco_go "$(t up_saved) ($kept)"
+}
+
+restore_user_settings() {
+  local restored=0 p
+  for p in "${PCO_KEEP_PATHS[@]}"; do
+    [ -e "$PCO_KEEP_DIR/$p" ] || continue
+    mkdir -p "$TARGET/$(dirname "$p")"
+    rm -rf "$TARGET/$p"
+    cp -a "$PCO_KEEP_DIR/$p" "$TARGET/$p"
+    restored=$((restored + 1))
+  done
+  # Owners are not carried by the archive: give the pinball files back.
+  if [ -d "$TARGET/home/pinball" ]; then
+    chroot "$TARGET" chown -R pinball:pinball /home/pinball/.config 2>/dev/null || true
+  fi
+  rm -rf "$PCO_KEEP_DIR"
+  pco_go "$(t up_restored) ($restored)"
+}
+
+upgrade_install() {
+  choose_disk "$(t disks_upgrade)"
+  part_paths_for_disk "$DISK"
+
+  echo
+  pco_step "$(t up_scan)"
+  [ -b "$ROOT_PART" ] || { pco_error "$(t up_none)"; return 1; }
+
+  unmount_disk_mounts "$DISK"
+  prepare_target_mount
+  mount "$ROOT_PART" "$TARGET" || { pco_error "$(t up_none)"; return 1; }
+
+  # An update must not be able to wipe a stranger's disk: refuse anything that
+  # is not recognisably a PinCabOS root.
+  if [ ! -d "$TARGET/opt/pincabos" ] || [ ! -d "$TARGET/home/pinball" ]; then
+    umount -R "$TARGET" 2>/dev/null || true
+    pco_error "$(t up_none)"
+    return 1
+  fi
+  pco_go "$(t up_found)"
+
+  mkdir -p "$TARGET/boot/efi"
+  if [ -b "$EFI_PART" ]; then
+    mount "$EFI_PART" "$TARGET/boot/efi" || true
+  fi
+  mountpoint -q "$TARGET/boot/efi" || {
+    umount -R "$TARGET" 2>/dev/null || true
+    pco_error "EFI partition not mounted, aborting update"
+    return 1
+  }
+
+  save_user_settings
+  # unsquashfs -f overwrites in place: system files are refreshed, everything
+  # outside the image (tables, media next to them) is left alone.
+  install_payload "upgrade"
+  restore_user_settings
+  write_fstab "$ROOT_PART" "$EFI_PART"
+  final_boot_refresh "upgrade"
+}
+
 find_efi_partition() {
   local disk="$1"
 
@@ -5696,9 +5953,12 @@ while true; do
   echo "  [2] $(t mode_2)"
   echo "      $(t mode_2b)"
   echo
-  echo "  [3] $(t mode_3)"
+  echo "  [3] $(t mode_up)"
+  echo "      $(t mode_upb)"
   echo
-  echo "  [4] $(t mode_4)"
+  echo "  [4] $(t mode_3)"
+  echo
+  echo "  [5] $(t mode_4)"
   echo
   pco_prompt "$(t choice): "
   if [ -n "${PCO_ANS_MODE:-}" ]; then MODE="$PCO_ANS_MODE"; echo "$MODE"; else read -r MODE; fi
@@ -5706,8 +5966,9 @@ while true; do
   case "$MODE" in
     1) full_disk_install; break ;;
     2) dualboot_install; break ;;
-    3) bash ;;
-    4) reboot ;;
+    3) upgrade_install && break ;;
+    4) bash ;;
+    5) reboot ;;
     *) echo "$(t invalid)" ;;
   esac
 done

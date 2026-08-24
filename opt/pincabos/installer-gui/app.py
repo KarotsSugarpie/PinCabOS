@@ -41,13 +41,20 @@ def index():
                            defaults=json.dumps(REGIONAL_DEFAULTS), demo=DEMO)
 
 
-@app.route("/api/disks")
-def disks():
+def disques_reels():
+    """Disques que cette machine porte reellement.
+
+    PINCABOS_WIZARD_LOCAL_ONLY_V1
+
+    Sert a la fois a remplir la liste et a valider le choix : une expression
+    reguliere accepte /dev/nvme0n1 sur une machine qui n'en a pas, une
+    enumeration decrit la machine devant soi.
+    """
     if DEMO:
-        return jsonify([
+        return [
             {"dev": "/dev/nvme0n1", "size": "931,5G", "model": "Samsung 980 PRO 1TB"},
             {"dev": "/dev/sda", "size": "223,6G", "model": "Crucial BX500 240GB"},
-        ])
+        ]
     out = subprocess.run(
         ["lsblk", "-J", "-d", "-o", "NAME,SIZE,TYPE,MODEL"],
         capture_output=True, text=True, timeout=10).stdout
@@ -56,7 +63,12 @@ def disks():
         if d.get("type") == "disk" and not d["name"].startswith(("loop", "sr", "zram")):
             found.append({"dev": "/dev/" + d["name"], "size": d.get("size", "?"),
                           "model": (d.get("model") or "").strip() or "Disque"})
-    return jsonify(found)
+    return found
+
+
+@app.route("/api/disks")
+def disks():
+    return jsonify(disques_reels())
 
 
 @app.route("/api/keyboard", methods=["POST"])
@@ -82,7 +94,8 @@ def keyboard():
 ANSWER_RULES = {
     "lang": re.compile(r"^[a-z]{2,3}$"),
     "locale": re.compile(r"^[A-Za-z][A-Za-z0-9._@-]{1,31}$"),
-    "xkb": re.compile(r"^[a-z]{2,3}$"),
+    # PINCABOS_ANSWERS_QUOTING_V2 — base.lst contient latam, brai, custom.
+    "xkb": re.compile(r"^[a-z]{2,8}$"),
     "xkb_variant": re.compile(r"^[a-z0-9_-]{0,31}$"),
     "tz": re.compile(r"^[A-Za-z][A-Za-z0-9_+-]{0,31}(/[A-Za-z0-9_+-]{1,31}){0,2}$"),
     "orient": re.compile(r"^[1-4]$"),
@@ -93,13 +106,20 @@ ANSWER_RULES = {
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]|\x1b[c()][0-9A-B]?")
 
+# Barre de progression d'unsquashfs : [===|   ]  1234/5678  27%
+UNSQUASHFS_RE = re.compile(r"\]\s+\d+\s*/\s*\d+\s+(\d+)%")
+DEPLOY_FROM, DEPLOY_TO = 45, 72
+
 
 @app.route("/api/install", methods=["POST"])
 def install():
     a = request.get_json(force=True)
     if a.get("confirm", "").strip().upper() != "INSTALL PINCABOS":
         return jsonify({"error": "bad-confirm"}), 400
-    if not re.fullmatch(r"/dev/[a-z0-9]+", a.get("disk", "")) and not DEMO:
+    # PINCABOS_WIZARD_LOCAL_ONLY_V1
+    # Le disque demande doit figurer parmi ceux que la machine porte : la
+    # forme seule ne dit pas si le disque existe.
+    if a.get("disk", "") not in {d["dev"] for d in disques_reels()}:
         return jsonify({"error": "bad-disk"}), 400
 
     # PINCABOS_ANSWERS_QUOTING_V1
@@ -160,6 +180,7 @@ def progress():
             return
         pos = 0
         pct = 2
+        envoye = 0
         while pct < 100:
             if INSTALL_LOG.exists():
                 text = INSTALL_LOG.read_text(errors="replace")
@@ -168,6 +189,13 @@ def progress():
                     for marker, p in PHASES:
                         if marker.lower() in line.lower():
                             pct = max(pct, p)
+                    # progression fine pendant l'extraction du rootfs
+                    if DEPLOY_FROM <= pct < DEPLOY_TO:
+                        m = UNSQUASHFS_RE.search(line)
+                        if m:
+                            part = min(100, int(m.group(1)))
+                            pct = max(pct, DEPLOY_FROM
+                                      + (DEPLOY_TO - DEPLOY_FROM) * part // 100)
                     # log lisible : sans ANSI, sans lignes decoratives ni art figlet
                     clean = ANSI_RE.sub("", line).strip()
                     if not clean:
@@ -175,7 +203,12 @@ def progress():
                     readable = sum(c.isalnum() or c in " ,.:;()/'\"-_" for c in clean)
                     if readable / len(clean) < 0.6:
                         continue
+                    envoye = pct
                     yield f"data: {json.dumps({'pct': pct, 'log': clean})}\n\n"
+            # la barre avance meme si aucune ligne lisible n'est apparue
+            if pct != envoye:
+                envoye = pct
+                yield f"data: {json.dumps({'pct': pct})}\n\n"
             time.sleep(1)
         yield f"data: {json.dumps({'pct': 100, 'label': 'done'})}\n\n"
     return Response(stream(), mimetype="text/event-stream")
@@ -183,10 +216,21 @@ def progress():
 
 @app.route("/api/reboot", methods=["POST"])
 def reboot():
+    # PINCABOS_WIZARD_LOCAL_ONLY_V1
+    # Un point d'entree qui redemarre la machine ne peut pas etre plus ouvert
+    # que celui qui l'installe.
+    a = request.get_json(force=True, silent=True) or {}
+    if a.get("confirm", "").strip().upper() != "INSTALL PINCABOS":
+        return jsonify({"error": "bad-confirm"}), 400
     if not DEMO:
         subprocess.Popen(["systemctl", "reboot"])
     return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8046, threaded=True)
+    # PINCABOS_WIZARD_LOCAL_ONLY_V1
+    # Le kiosk qui affiche l'assistant tourne sur cette machine et interroge
+    # 127.0.0.1. Ecouter partout exposait l'installation au reseau entier.
+    # Une installation pilotee a distance reste possible, mais elle se demande.
+    app.run(host=os.environ.get("PCO_WIZARD_BIND", "127.0.0.1"),
+            port=8046, threaded=True)

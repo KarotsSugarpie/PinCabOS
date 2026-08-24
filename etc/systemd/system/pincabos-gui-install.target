@@ -1,0 +1,11 @@
+[Unit]
+Description=PinCabOS graphical installer (live media)
+Documentation=https://pincabos.cc/
+# Built on basic.target ONLY: multi-user/graphical would pull
+# pincabos-final-graphical-guard, which forces lightdm + vpinfe onto vt1 and
+# steals the VT from the installer kiosk.
+Requires=basic.target pincabos-gui-install-prepare.service
+After=basic.target pincabos-gui-install-prepare.service systemd-logind.service
+Wants=systemd-logind.service pincabos-gui-wizard.service pincabos-gui-kiosk.service
+Conflicts=getty@tty1.service graphical.target multi-user.target
+AllowIsolate=yes
