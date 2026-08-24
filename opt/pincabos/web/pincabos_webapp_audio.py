@@ -905,6 +905,11 @@ def audio_pipewire_sinks():
         elif depouillee.startswith("Sample Specification:") and courant:
             m = re.search(r"(\d+)ch", depouillee)
             courant["channels"] = int(m.group(1)) if m else 2
+        elif depouillee.startswith("alsa.card ") and courant:
+            # PINCABOS_AUDIO_CARD_MATCH_V2 — de quelle carte ALSA vient ce sink.
+            m = re.search(r"(\d+)", depouillee)
+            if m:
+                courant["carte"] = int(m.group(1))
         elif depouillee.startswith("Channel Map:") and courant:
             # PINCABOS_AUDIO_PER_SPEAKER_V1 — l'ordre des canaux d'un 7.1
             # n'est pas universel : on prend celui que la sortie declare.
@@ -1193,6 +1198,36 @@ def audio_carte_prises_html(prises):
 
 
 # PINCABOS_AUDIO_SORTIE_DEFAUT_V1
+def audio_carte_retenue():
+    """Numero ALSA de la carte que le cabinet utilise pour son multicanal.
+
+    PINCABOS_AUDIO_CARD_MATCH_V2
+    """
+    try:
+        nom = str(json.loads(
+            Path("/opt/pincabos/config/audio/surround.json")
+            .read_text(encoding="utf-8")
+        ).get("card") or "")
+    except Exception:
+        return None
+
+    if not nom:
+        return None
+
+    for sortie in audio_pipewire_sinks():
+        if nom.endswith(sortie.get("nom_carte", "")) and sortie.get("carte") is not None:
+            return sortie["carte"]
+
+    # Le nom PipeWire d'une carte et celui d'un sink partagent leur suffixe
+    # materiel : alsa_card.pci-0000_00_1f.3 / alsa_output.pci-0000_00_1f.3...
+    suffixe = nom.split(".", 1)[-1]
+    for sortie in audio_pipewire_sinks():
+        if suffixe and suffixe in sortie.get("name", ""):
+            return sortie.get("carte")
+
+    return None
+
+
 def audio_sortie_preferee(sorties):
     """Sortie a preselectionner : celle de VPX, sinon la plus capable."""
     if not sorties:
@@ -1204,7 +1239,17 @@ def audio_sortie_preferee(sorties):
             if (sortie.get("description") or "").strip() == attendue:
                 return f"pw:{sortie['name']}"
 
-    plus_capable = max(sorties, key=lambda x: int(x.get("channels", 2) or 2))
+    # PINCABOS_AUDIO_CARD_MATCH_V2
+    # A defaut du nom exact, on reste sur la carte que le cabinet a choisie
+    # pour son multicanal : la plus capable des autres cartes ne le sert pas.
+    retenues = sorties
+    carte = audio_carte_retenue()
+    if carte is not None:
+        memes = [x for x in sorties if x.get("carte") == carte]
+        if memes:
+            retenues = memes
+
+    plus_capable = max(retenues, key=lambda x: int(x.get("channels", 2) or 2))
     return f"pw:{plus_capable['name']}"
 
 
@@ -2559,10 +2604,14 @@ def audio_ssf_surround():
         for _ in range(10):
             sorties = audio_sorties_classees()
             attendus = 2 if mode == "stereo" else (6 if mode == "5.1" else 8)
+            # PINCABOS_AUDIO_CARD_MATCH_V2 — le nombre de canaux ne suffit
+            # pas : sur deux cartes analogiques, il designe la mauvaise.
+            carte = audio_carte_retenue()
             candidate = next(
                 (
                     x for x in sorties
                     if int(x.get("channels", 2) or 2) == attendus
+                    and (carte is None or x.get("carte") == carte)
                 ),
                 None,
             )

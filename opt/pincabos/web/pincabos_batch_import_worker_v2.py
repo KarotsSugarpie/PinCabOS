@@ -429,20 +429,27 @@ def finalize_job(job_id: str, stopped: bool = False) -> None:
             label = "Terminé"
             queue.add_event(job, f"SMART BATCH TERMINÉ — {summary}.")
 
-        # PINCABOS_IMPORT_REFRESH_FRONTEND_V1
-        # La relance a lieu dans le verrou : le job est deja dans son etat
-        # final, et l'evenement doit apparaitre dans le meme journal que le
-        # resume d'import.
-        if not stopped and not job.get("stop_requested"):
-            note = refresh_frontend(ok_count)
-            if note:
-                queue.add_event(job, note)
+        # PINCABOS_IMPORT_LOCK_V1
+        # La relance du frontend attend un service, jusqu'a une minute. La
+        # faire ici bloquerait la file entiere pendant ce temps : ni la page
+        # ni un autre import ne pourraient lire l'etat. On note seulement
+        # qu'elle est a faire, et on la fait le verrou relache.
+        relance = ok_count if not stopped and not job.get("stop_requested") else 0
 
         queue.refresh_progress(job, label, "")
         queue.cleanup_uploads(job)
         queue.save_job_unlocked(job)
         if queue.active_job_id_unlocked() == job_id:
             queue.set_active_unlocked(None)
+
+    # PINCABOS_IMPORT_LOCK_V1 — hors du verrou.
+    note = refresh_frontend(relance)
+    if note:
+        with queue.state_lock(True):
+            job = queue.load_job_unlocked(job_id)
+            if job:
+                queue.add_event(job, note)
+                queue.save_job_unlocked(job)
 
 
 def fail_job(job_id: str, error: str) -> None:

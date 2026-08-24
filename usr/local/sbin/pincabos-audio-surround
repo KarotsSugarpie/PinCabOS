@@ -382,6 +382,19 @@ def cmd_enable(mode: str, session: bool) -> int:
             return 1
         journal.append(f"broche 0x{broche:02x} reaffectee en sortie laterale")
 
+    # PINCABOS_AUDIO_PIN_ORDER_V1
+    # Rendre la broche arrete et relance PipeWire : le faire APRES avoir pose
+    # le profil laissait WirePlumber reprendre la main en stereo. Le dernier
+    # geste doit etre celui qu'on veut voir survivre.
+    rendue = False
+    if mode != "7.1":
+        erreur = restaurer_broches(codec, arreter_session=session)
+        if erreur:
+            journal.append(f"prise non rendue ({erreur})")
+        elif lire_config().get("pin_retask"):
+            journal.append("prise rendue a son role d'origine")
+            rendue = True
+
     nom = nom_carte_pactl(carte)
     if not nom:
         print("NOGO: carte non visible depuis la session PipeWire")
@@ -406,13 +419,8 @@ def cmd_enable(mode: str, session: bool) -> int:
         config["pin_retask"] = {f"0x{b:02x}": f"0x{v:08x}" for b, v in actuels.items()} \
             or ({f"0x{candidat[0]:02x}": f"0x{candidat[1]:08x}"} if candidat else {})
     else:
-        # PINCABOS_AUDIO_PIN_RESTORE_V1 — effacer la trace ne suffit pas :
-        # sans cela la prise reste une sortie jusqu'au redemarrage.
-        erreur = restaurer_broches(codec, arreter_session=session)
-        if erreur:
-            journal.append(f"prise non rendue ({erreur})")
-        elif config.get("pin_retask"):
-            journal.append("prise rendue a son role d'origine")
+        # PINCABOS_AUDIO_PIN_ORDER_V1 — la broche a deja ete rendue plus haut,
+        # avant que le profil ne soit pose.
         config["pin_retask"] = {}
     ecrire_config(config)
 
