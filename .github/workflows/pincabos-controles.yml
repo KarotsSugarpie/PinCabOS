@@ -65,8 +65,13 @@ jobs:
 
       - name: Unites systemd
         run: |
+          # Une unite masquee est un lien vers /dev/null : elle est
+          # legitimement vide, et la lire comme un fichier de configuration
+          # n'a pas de sens. Le depot en compte 163.
           erreurs=0
           while IFS= read -r f; do
+            [ -L "$f" ] && continue
+            [ -s "$f" ] || continue
             grep -q '^\[Unit\]\|^\[Service\]\|^\[Install\]\|^\[Path\]\|^\[Timer\]' "$f" \
               || { echo "::error file=$f::unite systemd sans section"; erreurs=1; }
           done < <(git ls-files 'etc/systemd/system/pincabos-*.service' 'etc/systemd/system/pincabos-*.timer' 'etc/systemd/system/pincabos-*.path')
