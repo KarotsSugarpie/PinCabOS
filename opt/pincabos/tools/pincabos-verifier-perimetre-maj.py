@@ -34,6 +34,13 @@ DOIT_PASSER = [
     "etc/systemd/system/pincabos-vpinfe.service.wants/pincabos-vpinfe-focus.service",
     "etc/systemd/system/pincabos-gui-kiosk.service.d/10-wait-for-wizard.conf",
     "etc/sudoers.d/pincabos-audio-surround",
+    # Prefixe numerique d'ordonnancement : la moitie des fichiers livres
+    # dans ces repertoires en portent un.
+    "etc/sudoers.d/91-pincabos-dashboard-admin",
+    "etc/polkit-1/rules.d/49-pincabos-pinball-root.rules",
+    "etc/udev/rules.d/99-pincab-ledwiz.rules",
+    "etc/lightdm/lightdm.conf.d/50-pincabos.conf",
+    "etc/tmpfiles.d/pincabos-dudescab.conf",
     "home/pinball/.config/openbox/autostart",
     "home/pinball/.config/vpinfe/themes/PinCabOS/theme.js",
     # Surcharge d'une unite PinCabOS : le drop-in ne porte pas notre nom,
@@ -55,6 +62,14 @@ DOIT_BLOQUER = [
     "etc/systemd/system/a/b/pincabos-profond.conf",
     # Un theme qui n'est pas le notre reste la propriete du joueur.
     "home/pinball/.config/vpinfe/themes/Revolution/theme.js",
+    # Repertoires de /etc ou un fichier de trop donne les pleins pouvoirs.
+    # Y etre range ne suffit pas : le fichier doit etre a nous.
+    "etc/sudoers.d/00-porte-derobee",
+    "etc/sudoers.d/README",
+    "etc/polkit-1/rules.d/10-tout-permis.rules",
+    "etc/udev/rules.d/ubuntu--vg-ubuntu--lv.rules",
+    "etc/lightdm/lightdm.conf.d/01_debian.conf",
+    "etc/sudoers.d/sous/pincabos-x",
     # Systeme.
     "etc/passwd",
     "etc/shadow",

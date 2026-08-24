@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, hashlib, json, os, shutil, subprocess, sys, tempfile, urllib.request
+import argparse, hashlib, json, os, re, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
 
 CONFIG = Path('/etc/pincabos/updates.json')
@@ -102,7 +102,6 @@ def allowed(rel):
       'opt/pincabos/installer-gui/',
       'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
       'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',
-      'etc/lightdm/lightdm.conf.d/','etc/tmpfiles.d/pincabos-','etc/udev/rules.d/','etc/sudoers.d/','etc/polkit-1/rules.d/'
     )
     # Fichiers que PinCabOS ecrit lui-meme dans le compte du joueur. Chemins
     # EXACTS : ouvrir un repertoire ici autoriserait une release a ecraser les
@@ -128,6 +127,20 @@ def allowed(rel):
             if conteneur.endswith(('.wants', '.requires')):
                 return fichier.startswith('pincabos-')
         return False
+    # PINCABOS_UPDATE_SCOPE_V4
+    # Repertoires de /etc ou un fichier de trop donne les pleins pouvoirs :
+    # le fichier doit etre a nous, reconnu a son nom. Le prefixe numerique
+    # d'ordonnancement est retire avant l'examen (91-pincabos-..., 99-pincab-...).
+    SENSIBLES = ('etc/sudoers.d/', 'etc/polkit-1/rules.d/', 'etc/udev/rules.d/',
+                 'etc/lightdm/lightdm.conf.d/', 'etc/tmpfiles.d/')
+    for base in SENSIBLES:
+        if rel.startswith(base):
+            reste = rel[len(base):]
+            # un seul niveau : ces emplacements n'ont pas de sous-repertoire
+            if not reste or '/' in reste:
+                return False
+            return re.sub(r'^\d+[-_]', '', reste).startswith('pincab')
+
     if rel.startswith('home/pinball/.config/vpinfe/themes/PinCabOS/'): return True
     if not rel.startswith(prefixes): return False
     forbidden=('opt/pincabos/web/.venv/','opt/pincabos/web/backups/','opt/pincabos/build/','opt/pincabos/backups/','opt/pincabos/logs/')

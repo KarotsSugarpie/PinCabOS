@@ -1,0 +1,121 @@
+# Controles PinCabOS, avant fusion.
+#
+# Le depot n'avait qu'un workflow, et il se declenche APRES la fusion : rien
+# ne s'oppose donc a ce qu'une regression entre. Ce workflow-ci s'execute sur
+# chaque pull request et rend un verdict avant.
+#
+# Il ne remplace pas une relecture humaine : il pose les questions qu'une
+# relecture oublie parce qu'elles sont fastidieuses — un fichier livre qui
+# n'arriverait jamais par mise a jour, un reglage efface sans le vouloir, une
+# validation qui laisse passer une commande, un moule si etroit qu'il refuse
+# des installations legitimes.
+#
+# Pour en faire une barriere : Settings > Branches > protection de main, et
+# cocher « Require status checks to pass ». Sans cela il informe, il n'empeche
+# rien.
+
+name: Controles PinCabOS
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  controles:
+    name: Coherence et surete
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntaxe Python
+        run: |
+          erreurs=0
+          while IFS= read -r f; do
+            python3 -c "import ast,sys;ast.parse(open(sys.argv[1],encoding='utf-8',errors='surrogateescape').read())" "$f" \
+              || { echo "::error file=$f::syntaxe Python"; erreurs=1; }
+          done < <(git ls-files '*.py' | grep -v '__pycache__')
+          # Les executables sans extension : shebang python
+          while IFS= read -r f; do
+            head -1 "$f" | grep -q 'python' || continue
+            python3 -c "import ast,sys;ast.parse(open(sys.argv[1],encoding='utf-8',errors='surrogateescape').read())" "$f" \
+              || { echo "::error file=$f::syntaxe Python"; erreurs=1; }
+          done < <(git ls-files 'usr/local/sbin/*' 'usr/local/bin/*' 'usr/local/libexec/*')
+          exit $erreurs
+
+      - name: Syntaxe Bash
+        run: |
+          erreurs=0
+          while IFS= read -r f; do
+            head -1 "$f" | grep -qE 'bash|/sh' || continue
+            bash -n "$f" || { echo "::error file=$f::syntaxe Bash"; erreurs=1; }
+          done < <(git ls-files '*.sh' 'usr/local/sbin/*' 'usr/local/bin/*' 'usr/local/libexec/*' 'usr/local/lib/*')
+          exit $erreurs
+
+      - name: Syntaxe JavaScript des themes
+        run: |
+          erreurs=0
+          while IFS= read -r f; do
+            node --check "$f" || { echo "::error file=$f::syntaxe JavaScript"; erreurs=1; }
+          done < <(git ls-files 'home/pinball/.config/vpinfe/themes/*/*.js')
+          exit $erreurs
+
+      - name: Unites systemd
+        run: |
+          erreurs=0
+          while IFS= read -r f; do
+            grep -q '^\[Unit\]\|^\[Service\]\|^\[Install\]\|^\[Path\]\|^\[Timer\]' "$f" \
+              || { echo "::error file=$f::unite systemd sans section"; erreurs=1; }
+          done < <(git ls-files 'etc/systemd/system/pincabos-*.service' 'etc/systemd/system/pincabos-*.timer' 'etc/systemd/system/pincabos-*.path')
+          exit $erreurs
+
+      - name: Regles sudo
+        run: |
+          erreurs=0
+          while IFS= read -r f; do
+            [ "$(basename "$f")" = README ] && continue
+            visudo -c -q -f "$f" || { echo "::error file=$f::regle sudo invalide"; erreurs=1; }
+          done < <(git ls-files 'etc/sudoers.d/*')
+          exit $erreurs
+
+      - name: Le fichier de reponses de l'installeur reste inerte
+        run: python3 opt/pincabos/tools/pincabos-verifier-reponses-installeur.py
+
+      - name: Une release atteint ce qu'elle livre, et rien de plus
+        run: python3 opt/pincabos/tools/pincabos-verifier-perimetre-maj.py
+
+      - name: Une mise a jour n'efface aucun reglage non declare
+        run: python3 opt/pincabos/tools/pincabos-verifier-preservation.py --racine .
+
+      - name: Les fichiers modifies arriveraient par mise a jour
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          python3 - <<'PY'
+          import importlib.util, subprocess, sys
+          spec = importlib.util.spec_from_file_location(
+              "upd", "opt/pincabos/update/pincabos_updates.py")
+          m = importlib.util.module_from_spec(spec)
+          sys.argv = ["controle"]
+          try:
+              spec.loader.exec_module(m)
+          except SystemExit:
+              pass
+
+          base = subprocess.run(["git", "merge-base", "FETCH_HEAD", "HEAD"],
+                                capture_output=True, text=True).stdout.strip()
+          fichiers = subprocess.run(["git", "diff", "--name-only", base, "HEAD"],
+                                    capture_output=True, text=True).stdout.split()
+
+          # Ce qui n'appartient pas au systeme livre n'a pas a etre livrable.
+          hors_image = (".github/", "README", "docs/")
+          candidats = [f for f in fichiers if not f.startswith(hors_image)]
+          dehors = [f for f in candidats if not m.allowed(f)]
+
+          for f in dehors:
+              print(f"::error file={f}::livre par cette PR mais hors du perimetre des mises a jour")
+          print(f"{len(candidats) - len(dehors)}/{len(candidats)} fichiers atteignables par mise a jour")
+          sys.exit(1 if dehors else 0)
+          PY
