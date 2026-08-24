@@ -293,8 +293,13 @@ def main() -> int:
     print(f"  theme ecrit : {resume}")
     print(f"  rotation appliquee au playfield seul : {rot}")
 
-    if not args.no_initrd:
-        regenerer_initrd()
+    # PINCABOS_FAIL_LOUDLY_V1
+    # L'empreinte dit « ce theme est en place ». Ne l'ecrire qu'une fois le
+    # theme reellement parti dans l'initrd : sinon le passage suivant conclut
+    # « rien a faire » et le cabinet garde l'ancien splash pour toujours.
+    if not args.no_initrd and not regenerer_initrd():
+        print("  empreinte non enregistree : le theme sera repose au prochain essai")
+        return 1
 
     EMPREINTE.parent.mkdir(parents=True, exist_ok=True)
     EMPREINTE.write_text(signature + "\n", encoding="utf-8")
