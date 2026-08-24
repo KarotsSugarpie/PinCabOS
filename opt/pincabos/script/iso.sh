@@ -5694,6 +5694,24 @@ PCO_KEEP_DIR="/run/pincabos-keep"
 save_user_settings() {
   rm -rf "$PCO_KEEP_DIR"
   mkdir -p "$PCO_KEEP_DIR"
+
+  # PINCABOS_KEEP_SPACE_CHECK_V1
+  # /run est en memoire vive, et deux entrees de la liste n'ont pas de borne
+  # connue : les medias et la base VPSdb. On mesure avant de copier, et on
+  # refuse en annoncant le chiffre plutot que d'echouer au milieu sur un cp.
+  local besoin=0 dispo=0 p taille
+  for p in "${PCO_KEEP_PATHS[@]}"; do
+    [ -e "$TARGET/$p" ] || continue
+    taille="$(du -sk --apparent-size "$TARGET/$p" 2>/dev/null | cut -f1)"
+    besoin=$((besoin + ${taille:-0}))
+  done
+  dispo="$(df -Pk "$PCO_KEEP_DIR" | awk 'NR==2 {print $4}')"
+  # Marge : /run sert aussi au reste du systeme pendant l'installation.
+  if [ "$besoin" -gt 0 ] && [ $((besoin + 65536)) -gt "${dispo:-0}" ]; then
+    pco_error "Not enough room in $PCO_KEEP_DIR to set your settings aside: $((besoin / 1024)) MB needed, $((${dispo:-0} / 1024)) MB free. Nothing has been touched."
+    return 1
+  fi
+
   local kept=0 p
   for p in "${PCO_KEEP_PATHS[@]}"; do
     [ -e "$TARGET/$p" ] || continue
