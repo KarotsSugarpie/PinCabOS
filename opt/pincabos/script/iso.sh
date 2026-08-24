@@ -5649,6 +5649,29 @@ PCO_KEEP_PATHS=(
   # audio: multichannel mode and pin retask, replayed at boot. Without this an
   # update drops the cabinet back to stereo and the SSF silently stops.
   "opt/pincabos/config/audio/surround.json"
+  # PINCABOS_KEEP_INVENTORY_V1
+  # What the MACHINE learned and no image can hand back. This list comes from
+  # an inventory of what the system stores, not from what we remembered.
+  # I/O board: pairing and its cache, which rescanning does not reproduce
+  "opt/pincabos/config/dudescab"
+  # feedback: DOF api key, and the key bindings of Inputs Commander
+  "opt/pincabos/config/dof"
+  "opt/pincabos/config/inputs-commander.json"
+  # calibrations: measured on this cabinet, on these panels
+  "opt/pincabos/config/dmd-calibration.json"
+  "opt/pincabos/config/fulldmd-calibration.json"
+  "opt/pincabos/config/fulldmd-background.env"
+  # credentials and certificates
+  "opt/pincabos/config/admin-login.txt"
+  "opt/pincabos/config/pki"
+  # webapp: theme and where its windows go on this cabinet
+  "opt/pincabos/config/webapp-appearance"
+  "opt/pincabos/config/webapp-screen-targets.conf"
+  "opt/pincabos/config/webapp-screen-autostart.conf"
+  # media sources the user added
+  "opt/pincabos/config/media-hunter"
+  # launcher rules the user edited (the file says so in its own name)
+  "opt/pincabos/config/hybrid-launcher"
   # network: PinCabOS netplan file and NetworkManager profiles (Wi-Fi keys)
   "etc/netplan/99-pincabos-network.yaml"
   "etc/NetworkManager/system-connections"
