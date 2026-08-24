@@ -68,7 +68,7 @@ jobs:
               --limit 100 \
               --json number,mergedAt \
               --jq \
-              'sort_by(.mergedAt) | last | .number'
+              'sort_by([.mergedAt, .number]) | last | .number'
           )"
 
           if [[ -z "$latest" || "$latest" == "null" ]]; then
