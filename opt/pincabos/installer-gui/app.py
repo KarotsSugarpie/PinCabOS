@@ -9,6 +9,7 @@ Deux modes :
 import json
 import os
 import re
+import shlex
 import subprocess
 import time
 from pathlib import Path
@@ -75,6 +76,21 @@ def keyboard():
     return jsonify({"ok": True})
 
 
+# PINCABOS_ANSWERS_QUOTING_V1
+# Ce que le moteur sait faire de chaque reponse. Une valeur hors de ce moule
+# est refusee : la corriger reviendrait a deviner l'intention.
+ANSWER_RULES = {
+    "lang": re.compile(r"^[a-z]{2,3}$"),
+    "locale": re.compile(r"^[A-Za-z][A-Za-z0-9._@-]{1,31}$"),
+    "xkb": re.compile(r"^[a-z]{2,3}$"),
+    "xkb_variant": re.compile(r"^[a-z0-9_-]{0,31}$"),
+    "tz": re.compile(r"^[A-Za-z][A-Za-z0-9_+-]{0,31}(/[A-Za-z0-9_+-]{1,31}){0,2}$"),
+    "orient": re.compile(r"^[1-4]$"),
+    "mode": re.compile(r"^[1-3]$"),
+    "disk": re.compile(r"^/dev/[a-z0-9]+$"),
+}
+
+
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]|\x1b[c()][0-9A-B]?")
 
 
@@ -85,11 +101,28 @@ def install():
         return jsonify({"error": "bad-confirm"}), 400
     if not re.fullmatch(r"/dev/[a-z0-9]+", a.get("disk", "")) and not DEMO:
         return jsonify({"error": "bad-disk"}), 400
+
+    # PINCABOS_ANSWERS_QUOTING_V1
+    # Toutes les reponses sont confrontees a leur moule, pas seulement le
+    # disque : l'installateur charge ce fichier avec « . », en root.
+    reponses = {}
+    for cle, moule in ANSWER_RULES.items():
+        if cle not in a:
+            continue
+        valeur = str(a[cle])
+        if not moule.match(valeur):
+            return jsonify({"error": f"bad-{cle.replace('_', '-')}"}), 400
+        reponses[cle] = valeur
+
+    if "mode" not in reponses:
+        return jsonify({"error": "bad-mode"}), 400
+
     RUN_DIR.mkdir(parents=True, exist_ok=True)
+    # shlex.quote produit une chaine que le shell relit comme une donnee et
+    # jamais comme du code : la seconde barriere, si la premiere cedait.
     ANSWERS.write_text("".join(
-        f'PCO_ANS_{k.upper()}="{a[k]}"\n'
-        for k in ("lang", "locale", "xkb", "xkb_variant", "tz", "orient", "mode", "disk")
-        if k in a), encoding="utf-8")
+        f"PCO_ANS_{cle.upper()}={shlex.quote(valeur)}\n"
+        for cle, valeur in reponses.items()), encoding="utf-8")
     if DEMO:
         return jsonify({"ok": True, "demo": True})
     subprocess.Popen(  # le moteur existant, en mode reponses (contrat partage TUI/GUI)
