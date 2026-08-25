@@ -281,10 +281,23 @@ Ne créer aucun fork avant d'avoir démontré que l'API plugin existante ne suff
 - [ ] Reproduire la réplication d'entrées du plugin `remote-control`.
 - [ ] Exporter au minimum un tick, une bille et un flipper depuis l'instance maître.
 - [ ] Appliquer ces états dans l'instance réplique sans calcul contradictoire.
+- [ ] Jouer manuellement une courte partie instrumentée et enregistrer les entrées avec leur tick monotone : Start, flippers, plunger et nudge.
+- [ ] Enregistrer simultanément un flux `PCOSREC v0` contenant le snapshot initial, les seeds aléatoires, les événements, les états physiques essentiels et un checksum par tick.
+- [ ] Relancer la même table dans une instance VPX neuve à partir du même snapshot et réinjecter uniquement les entrées enregistrées.
+- [ ] Comparer à chaque tick la position et la vitesse des billes, les angles des flippers, les switches, les timers et les checksums pour mesurer toute dérive déterministe.
+- [ ] Effectuer un second replay en injectant directement le flux d'états enregistré dans une instance réplique dont la physique contradictoire est désactivée ou neutralisée.
+- [ ] Afficher en direct l'exécution originale enregistrée et le replay côte à côte, ou avec un overlay fantôme, ainsi qu'un compteur de dérive.
+- [ ] Conserver le fichier d'enregistrement, les logs de comparaison, les versions, les hashes de la table et de la configuration, et une courte capture vidéo comme artefacts de preuve.
 - [ ] Mesurer le coût CPU, le temps par tick et la stabilité du rendu.
 - [ ] Vérifier qu'aucun message arbitraire ne peut exécuter du code.
 
-**GO Phase 3 :** deux VPX locaux affichent la même bille et le même flipper à partir d'un maître unique.
+**Décision d'architecture après replay :**
+
+- Si le replay des entrées reste identique, le lockstep déterministe peut rester candidat.
+- Si les entrées divergent mais que le replay des états est fidèle, retenir le modèle maître/réplique avec deltas et snapshots autoritaires.
+- Si le replay des états diverge, déclarer NOGO et identifier les états ou hooks VPX/PinMAME manquants avant tout essai réseau.
+
+**GO Phase 3 :** deux VPX locaux affichent la même bille et le même flipper à partir d'un maître unique, et une nouvelle instance peut rejouer en direct l'enregistrement avec une dérive mesurée et acceptable.
 
 ### Phase 4 — protocole PinCabOS Sync V1
 
@@ -462,6 +475,7 @@ Ne créer aucun fork avant d'avoir démontré que l'API plugin existante ne suff
 | 2026-08-24 | Phase 0 — architecture | GO — plan maître migratoire accepté | Brouillon initial |
 | 2026-08-24 | Inventaire GitHub initial | GO — dépôt PinCabOS et briques existantes confirmés | Publication bloquée par GitHub `403 Resource not accessible by integration`; aucun commit créé |
 | 2026-08-24 | Reconnexion GitHub | GO — accès `push` et `admin` confirmé sur `KarotsSugarpie/PinCabOS` | Checklist publiée dans `DEV/` sur `main` |
+| 2026-08-24 | Phase 3 — scénario Record/Replay | Planifié — test local d'enregistrement, réinjection et comparaison live ajouté; non exécuté | Mise à jour du document de référence |
 
 ## Prochaine action
 
