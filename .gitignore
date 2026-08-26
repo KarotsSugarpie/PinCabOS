@@ -364,3 +364,8 @@
 # FIN PINCABOS DISASTER RECOVERY
 # ============================================================
 
+/home/pinball/vpinfe.pre-*/
+/home/pinball/pincabos-*-20*/
+/root/pincabos-final-safety-*/
+/root/pincabos-merge-preview-*/
+/root/pincabos-merge-preview-*.txt

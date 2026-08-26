@@ -1,0 +1,1 @@
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-gitpush-root.sh
