@@ -9,7 +9,7 @@
 - **Fichier :** `DEV/PINCABOS_CHAT_AV_CHECKLIST.md`
 - **Branche :** `main`
 - **Dernière mise à jour :** 2026-08-26
-- **État global :** moteur SFU central et signaling HTTPS publics validés; provenance et inventaire du Control Hub actif audités; audit de sécurité source V1.1 terminé sans clé privée ni secret Python structurel exposé; classification finale des littéraux potentiellement sensibles requise avant import GitHub; média WAN réel pas encore prouvé depuis un réseau externe.
+- **État global :** moteur SFU central et signaling HTTPS publics validés; provenance, inventaire et audit de publication du Control Hub actif validés; aucun credential codé en dur confirmé par l’audit V1.2; source serveur autorisée à passer à l’import GitHub canonique; média WAN réel pas encore prouvé depuis un réseau externe.
 
 ## Règles non négociables
 
@@ -57,13 +57,17 @@
 - [x] Runtime de données confirmé hors arbre source : `/var/lib/pincabos-release/...`.
 - [x] Aucun marqueur de clé privée trouvé dans la source candidate.
 - [x] Audit structurel Python : `app.secret_key` et mot de passe SMTP proviennent de l'environnement; tokens sensibles observés sont générés ou issus des requêtes, aucune valeur n'a été affichée.
-- [ ] Classifier les littéraux haute-entropie signalés par l'audit sans afficher leur contenu et confirmer qu'aucun credential codé en dur n'est présent.
-- [ ] Versionner ensuite cette source déployée dans GitHub sans créer de doublon fonctionnel ni modifier le runtime pendant l'import initial.
+- [x] Audit publication V1.2 : Python `HIGH=0`; les sept `MEDIUM` sont des comparaisons ou le fallback non secret `PINCABOS_BASE_URL`.
+- [x] Audit publication V1.2 : aucun pattern de token connu détecté dans JS/HTML.
+- [x] Les 14 `HIGH` JS/HTML ont été classés comme faux positifs de l’heuristique : identifiants de messages/validation UI tels que `current_password_invalid`, `password_mismatch`, `password_letter_required` et `invalid_or_expired_token`, pas des credentials.
+- [x] Variables d’environnement sensibles `PINCABOS_TURNSTILE_SECRET` et `PINCABOS_SMTP_PASSWORD` confirmées sans fallback secret codé en dur.
+- [x] Source candidate déclarée **publiable** à l’issue de l’audit V1.2.
+- [ ] Versionner cette source déployée dans GitHub sans créer de doublon fonctionnel ni modifier le runtime pendant l'import initial.
 - [ ] Comparer les SHA du code déployé avec la source GitHub canonique après import.
 - [ ] Déclarer officiellement le chemin GitHub canonique du serveur pincabos.cc.
 - [ ] Documenter la route/app d'intégration A/V exacte avant modification applicative.
 
-> **Décision 2026-08-26 :** aucune nouvelle implémentation parallèle ne sera créée. La source actuellement exécutée sur `.55` doit d'abord être auditée sans fuite de secret, puis importée telle quelle dans GitHub et devenir la référence canonique avant toute modification A/V.
+> **Décision 2026-08-26 :** aucune nouvelle implémentation parallèle ne sera créée. La source actuellement exécutée sur `.55`, maintenant auditée et autorisée à la publication, doit être importée telle quelle dans GitHub et devenir la référence canonique avant toute modification A/V.
 
 ## C. Moteur central LiveKit
 
@@ -204,8 +208,8 @@
 
 ## K. Prochaine étape autorisée
 
-1. **Classifier sémantiquement les littéraux haute-entropie signalés par l'audit V1.1 sans afficher leur contenu.**
-2. Si aucun credential codé en dur n'est confirmé, versionner la source active `/opt/pincabos-release-center` dans GitHub sans modifier le runtime `.55`.
+1. **Créer un snapshot propre de la source active `/opt/pincabos-release-center` sans backups, bytecode, DB, secrets, caches ni données utilisateur.**
+2. Importer ce snapshot dans GitHub sans modifier le runtime `.55`.
 3. Comparer immédiatement les SHA GitHub avec les SHA déployés et déclarer le chemin GitHub canonique.
 4. Choisir ensuite seulement la méthode de génération JWT/LiveKit côté serveur.
 5. Ajouter l'API serveur dans le vrai `pincabos_control_hub_v27.py` canonique.
@@ -245,7 +249,16 @@
 - **GO** audit structurel Python : `app.secret_key` et SMTP password lus depuis l'environnement; tokens observés générés ou fournis par les requêtes.
 - **GO** `gh` absent et `/opt/pincabos-release-center` toujours non-worktree Git.
 - **GO** Release Center et LiveKit actifs; HTTP site et LiveKit = 200 après audit.
-- **À CLASSIFIER** littéraux haute-entropie signalés dans Python/JS/HTML; aucune valeur n'a été affichée.
+
+### 2026-08-26 — Audit publication V1.2
+
+- **GO** Python : `HIGH=0`, `MEDIUM=7`; les `MEDIUM` correspondent à des comparaisons et au fallback non secret de `PINCABOS_BASE_URL`.
+- **GO** JS/HTML : aucun pattern connu de token/credential détecté.
+- **GO** les 14 `HIGH` JS/HTML sont des identifiants/messages de validation UI, pas des secrets opérationnels.
+- **GO** `PINCABOS_TURNSTILE_SECRET` et `PINCABOS_SMTP_PASSWORD` sont lus depuis l’environnement sans fallback secret.
+- **GO** aucun marqueur de clé privée.
+- **GO** Release Center et LiveKit restent actifs; HTTP site et LiveKit = 200.
+- **DÉCISION** source candidate approuvée pour préparation du snapshot et import GitHub canonique.
 
 ---
 
