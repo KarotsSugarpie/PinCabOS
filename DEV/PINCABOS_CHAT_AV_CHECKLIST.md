@@ -9,7 +9,7 @@
 - **Fichier :** `DEV/PINCABOS_CHAT_AV_CHECKLIST.md`
 - **Branche :** `main`
 - **Dernière mise à jour :** 2026-08-26
-- **État global :** moteur SFU central et signaling HTTPS publics validés; provenance du Control Hub actif auditée; source serveur à versionner dans GitHub avant intégration LiveKit; média WAN réel pas encore prouvé depuis un réseau externe.
+- **État global :** moteur SFU central et signaling HTTPS publics validés; provenance et inventaire du Control Hub actif audités; audit de sécurité source V1.1 terminé sans clé privée ni secret Python structurel exposé; classification finale des littéraux potentiellement sensibles requise avant import GitHub; média WAN réel pas encore prouvé depuis un réseau externe.
 
 ## Règles non négociables
 
@@ -46,17 +46,24 @@
 - [x] `app.py` importe et enregistre directement `register_control_hub_v27`.
 - [x] Routes Control Hub actives confirmées sous `/api/control-hub/...`.
 - [x] Chat texte actuel identifié : polling GET/POST périodique toutes les 4 secondes, sans moteur WebRTC/SFU existant avant ce chantier.
-- [x] SHA déployés enregistrés : `app.py` = `b7398e5c092cc2e3ebcedd754fcc0634a995bb09a8a4a579fb5d420123bdd472`; module Hub = `0ee74053ddfd08569edb2629ddd60cff754b785517650c89ab81b533f6b95c0a`; JS = `38ae8bf8bf9dfecfe63b295042cd2449bf1720730b6711fec9962e12f5354bed`.
+- [x] SHA déployés enregistrés : `app.py` = `b7398e5c092cc2e3ebcedd754fcc0634a995bb09a8a4a579fb5d420123bdd472`; module Hub = `0ee74053ddfd08569edb2629ddd60cff754b785517650c89ab81b533f6b95c0a`; JS = `38ae8bf8bf9dfecfe63b295042cd2449bf1720730b6711fec9962e12f5354bed`; CSS = `4fdc3eeba580ada0e0f7914885252117d6479fabd3af30a726fe65ddf8faf27f`.
 - [x] `/opt/pincabos-release-center` confirmé comme **non-worktree Git**.
+- [x] GitHub CLI (`gh`) absent sur `.55`; aucun besoin de l'installer pour l'audit.
 - [x] Aucun paquet Debian ne revendique `app.py`, `pincabos_control_hub_v27.py` ou `pincabos-control-hub-v27.js`.
 - [x] Recherche GitHub `main` : aucune copie de `pincabos-release-center`, `pincabos_control_hub_v27.py` ou du Control Hub actif retrouvée.
 - [x] Provenance auditée : la source active de `.55` est actuellement la seule source complète prouvée pour ce Control Hub.
-- [ ] Versionner cette source déployée dans GitHub sans créer de doublon fonctionnel ni modifier le runtime pendant l'import initial.
+- [x] Liste candidate de fichiers source de premier niveau établie.
+- [x] Exclusions permanentes établies : `backups/`, `__pycache__/`, `*.pyc`, DB/SQLite, `.env`, clés/certificats privés, logs, caches et données utilisateurs.
+- [x] Runtime de données confirmé hors arbre source : `/var/lib/pincabos-release/...`.
+- [x] Aucun marqueur de clé privée trouvé dans la source candidate.
+- [x] Audit structurel Python : `app.secret_key` et mot de passe SMTP proviennent de l'environnement; tokens sensibles observés sont générés ou issus des requêtes, aucune valeur n'a été affichée.
+- [ ] Classifier les littéraux haute-entropie signalés par l'audit sans afficher leur contenu et confirmer qu'aucun credential codé en dur n'est présent.
+- [ ] Versionner ensuite cette source déployée dans GitHub sans créer de doublon fonctionnel ni modifier le runtime pendant l'import initial.
 - [ ] Comparer les SHA du code déployé avec la source GitHub canonique après import.
 - [ ] Déclarer officiellement le chemin GitHub canonique du serveur pincabos.cc.
 - [ ] Documenter la route/app d'intégration A/V exacte avant modification applicative.
 
-> **Décision 2026-08-26 :** aucune nouvelle implémentation parallèle ne sera créée. La source actuellement exécutée sur `.55` doit d'abord être importée telle quelle dans GitHub et devenir la référence canonique avant toute modification A/V.
+> **Décision 2026-08-26 :** aucune nouvelle implémentation parallèle ne sera créée. La source actuellement exécutée sur `.55` doit d'abord être auditée sans fuite de secret, puis importée telle quelle dans GitHub et devenir la référence canonique avant toute modification A/V.
 
 ## C. Moteur central LiveKit
 
@@ -197,12 +204,13 @@
 
 ## K. Prochaine étape autorisée
 
-1. **Versionner la source active `/opt/pincabos-release-center` dans GitHub sans modifier le runtime `.55`.**
-2. Comparer immédiatement les SHA GitHub avec les SHA déployés et déclarer le chemin GitHub canonique.
-3. Choisir ensuite seulement la méthode de génération JWT/LiveKit côté serveur.
-4. Ajouter l'API serveur dans le vrai `pincabos_control_hub_v27.py` canonique.
-5. Faire un premier test navigateur caméra/micro.
-6. Prouver le média WAN avec deux réseaux distincts.
+1. **Classifier sémantiquement les littéraux haute-entropie signalés par l'audit V1.1 sans afficher leur contenu.**
+2. Si aucun credential codé en dur n'est confirmé, versionner la source active `/opt/pincabos-release-center` dans GitHub sans modifier le runtime `.55`.
+3. Comparer immédiatement les SHA GitHub avec les SHA déployés et déclarer le chemin GitHub canonique.
+4. Choisir ensuite seulement la méthode de génération JWT/LiveKit côté serveur.
+5. Ajouter l'API serveur dans le vrai `pincabos_control_hub_v27.py` canonique.
+6. Faire un premier test navigateur caméra/micro.
+7. Prouver le média WAN avec deux réseaux distincts.
 
 ## Journal des validations
 
@@ -227,7 +235,17 @@
 - **GO** aucune source équivalente retrouvée dans `KarotsSugarpie/PinCabOS` `main`.
 - **GO** SHA de référence du déploiement enregistrés.
 - **GO** Python 3.13, Flask et Gunicorn présents; JWT et SDK LiveKit absents avant intégration.
-- **PROCHAINE ÉTAPE** importer la source déployée dans GitHub telle quelle avant toute modification applicative A/V.
+
+### 2026-08-26 — Audit sécurité avant import GitHub
+
+- **GO** liste candidate de source de premier niveau établie.
+- **GO** exclusions permanentes : backups, bytecode, DB, `.env`, clés/certificats privés, logs, caches et données utilisateur.
+- **GO** DB, avatars, cache VPS et clé worldmap confirmés sous `/var/lib/pincabos-release/`, hors arbre source à versionner.
+- **GO** aucun marqueur de clé privée détecté.
+- **GO** audit structurel Python : `app.secret_key` et SMTP password lus depuis l'environnement; tokens observés générés ou fournis par les requêtes.
+- **GO** `gh` absent et `/opt/pincabos-release-center` toujours non-worktree Git.
+- **GO** Release Center et LiveKit actifs; HTTP site et LiveKit = 200 après audit.
+- **À CLASSIFIER** littéraux haute-entropie signalés dans Python/JS/HTML; aucune valeur n'a été affichée.
 
 ---
 
