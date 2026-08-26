@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import threading
 import time
+import urllib.request
 from pathlib import Path
 from urllib.parse import quote
 
@@ -262,11 +263,11 @@ BASE_REGISTRY = {
     "system": {"title": "Système", "subtitle": "Hôte, noyau et disponibilité", "category": "Système", "kind": "system", "w": 3, "h": 3},
     "cpu": {"title": "CPU", "subtitle": "Utilisation processeur", "category": "Système", "kind": "cpu", "w": 3, "h": 3},
     "memory": {"title": "Mémoire", "subtitle": "RAM utilisée et libre", "category": "Système", "kind": "memory", "w": 3, "h": 3},
-    "storage": {"title": "HDD / stockage", "subtitle": "Racine et bibliothèque", "category": "Système", "kind": "storage", "w": 3, "h": 3},
+    "storage": {"title": "HDD / stockage", "subtitle": "Disques, partitions et utilisation", "category": "Système", "kind": "storage", "w": 3, "h": 3},
     "gpu": {"title": "GPU / écrans", "subtitle": "NVIDIA, VRAM et pilote", "category": "Système", "kind": "gpu", "w": 3, "h": 3},
     "services": {"title": "Services", "subtitle": "État et contrôles sécurisés", "category": "Système", "kind": "services", "w": 4, "h": 6},
     "time": {"title": "Heure / NTP", "subtitle": "Fuseau, source et synchronisation", "category": "Système", "kind": "time", "w": 4, "h": 5},
-    "network": {"title": "Réseau", "subtitle": "IP, passerelle, DNS et Internet", "category": "Système", "kind": "network", "w": 4, "h": 6},
+    "network": {"title": "Réseau", "subtitle": "IP, passerelle, IP Internet et lien", "category": "Système", "kind": "network", "w": 4, "h": 6},
     "journal": {"title": "Journal WebApp", "subtitle": "Derniers événements du tableau de bord", "category": "Système", "kind": "journal", "w": 4, "h": 4},
     "tables": {"title": "Bibliothèque Tables", "subtitle": "Tables VPX installées", "category": "Pinball", "kind": "tables", "w": 3, "h": 3},
     "engine": {"title": "Moteur Pinball", "subtitle": "VPX, VPinFE et disponibilité", "category": "Pinball", "kind": "engine", "w": 3, "h": 3},
@@ -854,15 +855,1149 @@ def vpx_process_state():
 
 
 # === PINCABOS_DASHBOARD_REALTIME_HDD_NETWORK_V1 ===
+# PINCABOS_STORAGE_MACOS_V2
+#
+# Stockage PinCabOS :
+# - inventaire des disques physiques par lsblk
+# - connecteur NVMe / SATA / USB / autre
+# - partitions visibles sur une seule ligne
+# - utilisation REELLE de Tables / logs / backups
+# - autres partitions réservées séparément
+# - cache 60 secondes afin de ne pas lancer du -sb
+#   à chaque refresh du Dashboard.
+
+_PCO_STORAGE_CACHE = {
+    "at": 0.0,
+    "value": None,
+}
+
+
+def storage_inventory(force=False):
+    import json
+    import os
+    import shutil
+    import subprocess
+    import time
+
+    now = time.monotonic()
+
+    cached = _PCO_STORAGE_CACHE.get("value")
+
+    if (
+        not force
+        and cached is not None
+        and now - float(
+            _PCO_STORAGE_CACHE.get("at") or 0.0
+        ) < 60.0
+    ):
+        return cached
+
+
+    def _run(args, timeout=15):
+        try:
+            result = subprocess.run(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
+
+            if result.returncode != 0:
+                return ""
+
+            return result.stdout.strip()
+
+        except Exception:
+            return ""
+
+
+    def _json(args, timeout=15):
+        raw = _run(
+            args,
+            timeout=timeout,
+        )
+
+        if not raw:
+            return {}
+
+        try:
+            return json.loads(raw)
+        except Exception:
+            return {}
+
+
+    def _human(value):
+        try:
+            value = int(value or 0)
+        except Exception:
+            value = 0
+
+        units = (
+            "B",
+            "KiB",
+            "MiB",
+            "GiB",
+            "TiB",
+            "PiB",
+        )
+
+        amount = float(value)
+        index = 0
+
+        while (
+            amount >= 1024.0
+            and index < len(units) - 1
+        ):
+            amount /= 1024.0
+            index += 1
+
+        if index == 0:
+            return f"{int(amount)} {units[index]}"
+
+        if amount >= 100:
+            return f"{amount:.0f} {units[index]}"
+
+        if amount >= 10:
+            return f"{amount:.1f} {units[index]}"
+
+        return f"{amount:.2f} {units[index]}"
+
+
+    def _du(pathname):
+        if not os.path.isdir(pathname):
+            return 0
+
+        raw = _run(
+            [
+                "du",
+                "-sbx",
+                pathname,
+            ],
+            timeout=20,
+        )
+
+        if not raw:
+            return 0
+
+        try:
+            return int(
+                raw.split()[0]
+            )
+        except Exception:
+            return 0
+
+
+    def _normalize_source(source):
+        source = str(
+            source or ""
+        ).strip()
+
+        if "[" in source:
+            source = source.split(
+                "[",
+                1,
+            )[0]
+
+        return source
+
+
+    def _source_for(pathname):
+        if not os.path.exists(pathname):
+            return ""
+
+        return _normalize_source(
+            _run(
+                [
+                    "findmnt",
+                    "-n",
+                    "-o",
+                    "SOURCE",
+                    "-T",
+                    pathname,
+                ],
+                timeout=5,
+            )
+        )
+
+
+    def _mounts(node):
+        raw = node.get("mountpoints")
+
+        if raw is None:
+            raw = node.get("mountpoint")
+
+        if raw is None:
+            return []
+
+        if isinstance(raw, str):
+            values = [raw]
+        elif isinstance(raw, list):
+            values = raw
+        else:
+            values = []
+
+        result = []
+
+        for item in values:
+            item = str(
+                item or ""
+            ).strip()
+
+            if item and item not in result:
+                result.append(item)
+
+        return result
+
+
+    def _connector(node):
+        name = str(
+            node.get("name") or ""
+        )
+
+        tran = str(
+            node.get("tran") or ""
+        ).strip().lower()
+
+        if name.startswith("nvme"):
+            return "NVMe"
+
+        if tran in {
+            "sata",
+            "ata",
+        }:
+            return "SATA"
+
+        if tran == "usb":
+            return "USB"
+
+        if tran in {
+            "sas",
+            "scsi",
+        }:
+            return tran.upper()
+
+        if name.startswith("mmcblk"):
+            return "eMMC / SD"
+
+        if tran:
+            return tran.upper()
+
+        return "Autre"
+
+
+    raw = _json(
+        [
+            "lsblk",
+            "-bJ",
+            "-o",
+            (
+                "NAME,PATH,TYPE,SIZE,MODEL,TRAN,"
+                "FSTYPE,LABEL,PARTLABEL,MOUNTPOINTS"
+            ),
+        ],
+        timeout=10,
+    )
+
+
+    blockdevices = list(
+        raw.get("blockdevices")
+        or []
+    )
+
+
+    # --------------------------------------------------------
+    # Catégories PinCabOS connues.
+    # --------------------------------------------------------
+
+    known_paths = (
+        (
+            "tables",
+            "/home/pinball/Tables",
+        ),
+        (
+            "logs",
+            "/opt/pincabos/logs",
+        ),
+        (
+            "logs",
+            "/var/log",
+        ),
+        (
+            "backup",
+            "/opt/pincabos/backups",
+        ),
+    )
+
+
+    known_by_source = {}
+
+    category_totals = {
+        "tables": 0,
+        "logs": 0,
+        "backup": 0,
+    }
+
+
+    for category, pathname in known_paths:
+
+        source = _source_for(
+            pathname
+        )
+
+        size = _du(
+            pathname
+        )
+
+        category_totals[
+            category
+        ] += size
+
+        if not source:
+            continue
+
+        known_by_source.setdefault(
+            source,
+            {
+                "tables": 0,
+                "logs": 0,
+                "backup": 0,
+            },
+        )
+
+        known_by_source[
+            source
+        ][category] += size
+
+
+    root_source = _source_for(
+        "/"
+    )
+
+
+    boot_sources = set()
+
+    for pathname in (
+        "/boot",
+        "/boot/efi",
+    ):
+        source = _source_for(
+            pathname
+        )
+
+        if source:
+            boot_sources.add(
+                source
+            )
+
+
+    colors = {
+        "system": "#ff453a",
+        "tables": "#30d158",
+        "logs": "#ffd60a",
+        "backup": "#0a84ff",
+        "unknown": "#ff6a3d",
+        "other": "#bf5af2",
+        "free": "rgba(255,255,255,.16)",
+    }
+
+
+    labels = {
+        "system": "Fichiers système",
+        "tables": "Tables",
+        "logs": "Logs",
+        "backup": "Backups",
+        "unknown": "Inconnu",
+        "other": "Autre partition",
+        "free": "Libre",
+    }
+
+
+    disks = []
+
+
+    for disk in blockdevices:
+
+        if str(
+            disk.get("type") or ""
+        ) != "disk":
+            continue
+
+
+        disk_name = str(
+            disk.get("name") or ""
+        )
+
+        disk_path = str(
+            disk.get("path")
+            or f"/dev/{disk_name}"
+        )
+
+        disk_size = int(
+            disk.get("size")
+            or 0
+        )
+
+        model = str(
+            disk.get("model")
+            or ""
+        ).strip()
+
+        if not model:
+            model = disk_name
+
+
+        connector = _connector(
+            disk
+        )
+
+
+        partitions = []
+        volumes = []
+
+
+        def _walk(node):
+            children = list(
+                node.get("children")
+                or []
+            )
+
+            node_type = str(
+                node.get("type")
+                or ""
+            )
+
+            if node_type == "part":
+
+                part_name = str(
+                    node.get("name")
+                    or ""
+                )
+
+                part_path = str(
+                    node.get("path")
+                    or f"/dev/{part_name}"
+                )
+
+                part_size = int(
+                    node.get("size")
+                    or 0
+                )
+
+                fstype = str(
+                    node.get("fstype")
+                    or ""
+                )
+
+                label = str(
+                    node.get("label")
+                    or ""
+                ).strip()
+
+                partlabel = str(
+                    node.get("partlabel")
+                    or ""
+                ).strip()
+
+                mounts = _mounts(
+                    node
+                )
+
+                partitions.append(
+                    {
+                        "name": part_name,
+                        "path": part_path,
+                        "size": part_size,
+                        "size_human": _human(
+                            part_size
+                        ),
+                        "fstype": fstype,
+                        "label": label,
+                        "partlabel": partlabel,
+                        "mountpoints": mounts,
+                    }
+                )
+
+
+            # Un volume feuille correspond à l'espace
+            # que nous devons classifier.
+            if (
+                node_type != "disk"
+                and not children
+            ):
+                volumes.append(
+                    node
+                )
+
+            # Cas disque sans table de partitions.
+            elif (
+                node_type == "disk"
+                and not children
+                and (
+                    node.get("fstype")
+                    or _mounts(node)
+                )
+            ):
+                volumes.append(
+                    node
+                )
+
+
+            for child in children:
+                _walk(
+                    child
+                )
+
+
+        _walk(
+            disk
+        )
+
+
+        segments = {
+            "system": 0,
+            "tables": 0,
+            "logs": 0,
+            "backup": 0,
+            "unknown": 0,
+            "other": 0,
+        }
+
+
+        for volume in volumes:
+
+            source = _normalize_source(
+                volume.get("path")
+                or ""
+            )
+
+            size = int(
+                volume.get("size")
+                or 0
+            )
+
+            fstype = str(
+                volume.get("fstype")
+                or ""
+            ).strip().lower()
+
+            name_text = " ".join(
+                [
+                    str(
+                        volume.get("name")
+                        or ""
+                    ),
+                    str(
+                        volume.get("label")
+                        or ""
+                    ),
+                    str(
+                        volume.get("partlabel")
+                        or ""
+                    ),
+                ]
+            ).lower()
+
+            mounts = _mounts(
+                volume
+            )
+
+
+            # Windows / Microsoft / partition étrangère
+            # identifiable : toute la partition est mauve,
+            # car cette capacité est réservée hors PinCabOS.
+            other_partition = (
+                fstype
+                in {
+                    "ntfs",
+                    "ntfs3",
+                    "exfat",
+                }
+                or "windows" in name_text
+                or "winre" in name_text
+                or "microsoft" in name_text
+            )
+
+
+            if other_partition:
+
+                segments[
+                    "other"
+                ] += size
+
+                continue
+
+
+            # Volume non monté : impossible d'en connaître
+            # l'utilisation réelle.
+            if not mounts:
+
+                if (
+                    fstype == "swap"
+                    or "efi" in name_text
+                    or "bios" in name_text
+                ):
+
+                    segments[
+                        "system"
+                    ] += size
+
+                else:
+
+                    segments[
+                        "unknown"
+                    ] += size
+
+                continue
+
+
+            # Préférer / puis le point de montage le plus court.
+            mounts = sorted(
+                mounts,
+                key=lambda value: (
+                    0
+                    if value == "/"
+                    else 1,
+                    len(value),
+                ),
+            )
+
+            mountpoint = mounts[0]
+
+
+            try:
+
+                used = int(
+                    shutil.disk_usage(
+                        mountpoint
+                    ).used
+                )
+
+            except Exception:
+
+                used = 0
+
+
+            known = known_by_source.get(
+                source,
+                {
+                    "tables": 0,
+                    "logs": 0,
+                    "backup": 0,
+                },
+            )
+
+
+            remaining = max(
+                0,
+                used,
+            )
+
+
+            # L'ordre empêche les valeurs du -sb de dépasser
+            # le "used" réel du filesystem en présence de
+            # fichiers sparse.
+            for category in (
+                "tables",
+                "logs",
+                "backup",
+            ):
+
+                value = min(
+                    max(
+                        0,
+                        int(
+                            known.get(category)
+                            or 0
+                        ),
+                    ),
+                    remaining,
+                )
+
+                segments[
+                    category
+                ] += value
+
+                remaining -= value
+
+
+            # Le reste de la partition racine / EFI fait partie
+            # du système PinCabOS.
+            if (
+                source == root_source
+                or source in boot_sources
+                or mountpoint == "/"
+                or mountpoint.startswith(
+                    "/boot"
+                )
+            ):
+
+                segments[
+                    "system"
+                ] += remaining
+
+            else:
+
+                # Filesystem monté mais non classifiable.
+                segments[
+                    "unknown"
+                ] += remaining
+
+
+        occupied = sum(
+            int(value or 0)
+            for value
+            in segments.values()
+        )
+
+
+        # Tout ce qui n'est pas occupé par les catégories
+        # ci-dessus est réellement disponible ou non alloué.
+        free = max(
+            0,
+            disk_size - occupied,
+        )
+
+
+        ordered = (
+            "system",
+            "tables",
+            "logs",
+            "backup",
+            "unknown",
+            "other",
+            "free",
+        )
+
+
+        segment_list = []
+
+        for key in ordered:
+
+            value = (
+                free
+                if key == "free"
+                else int(
+                    segments.get(key)
+                    or 0
+                )
+            )
+
+            percent = (
+                (value / disk_size) * 100.0
+                if disk_size > 0
+                else 0.0
+            )
+
+            segment_list.append(
+                {
+                    "key": key,
+                    "label": labels[key],
+                    "bytes": value,
+                    "human": _human(
+                        value
+                    ),
+                    "percent": percent,
+                    "color": colors[key],
+                }
+            )
+
+
+        part_text = []
+
+        for part in partitions:
+
+            bits = [
+                part["name"],
+            ]
+
+            if part["label"]:
+                bits.append(
+                    part["label"]
+                )
+
+            elif part["partlabel"]:
+                bits.append(
+                    part["partlabel"]
+                )
+
+            if part["fstype"]:
+                bits.append(
+                    part["fstype"].upper()
+                    if part["fstype"].lower()
+                    in {
+                        "vfat",
+                        "ntfs",
+                        "exfat",
+                    }
+                    else part["fstype"]
+                )
+
+            bits.append(
+                part["size_human"]
+            )
+
+            if part["mountpoints"]:
+                bits.append(
+                    ", ".join(
+                        part["mountpoints"]
+                    )
+                )
+
+            part_text.append(
+                " · ".join(
+                    bits
+                )
+            )
+
+
+        disks.append(
+            {
+                "name": disk_name,
+                "path": disk_path,
+                "model": model,
+                "connector": connector,
+                "size": disk_size,
+                "size_human": _human(
+                    disk_size
+                ),
+                "partitions": partitions,
+                "partitions_line": (
+                    "   |   ".join(
+                        part_text
+                    )
+                    if part_text
+                    else "Aucune partition détectée"
+                ),
+                "segments": segment_list,
+            }
+        )
+
+
+    models = " · ".join(
+        disk["model"]
+        for disk in disks
+    ) or "Modèle non lu"
+
+
+    # Clés historiques conservées afin de ne pas casser
+    # d'éventuels bindings JavaScript existants.
+    try:
+        root_usage = shutil.disk_usage(
+            "/"
+        )
+
+        root_total = int(
+            root_usage.total
+        )
+
+        root_used = int(
+            root_usage.used
+        )
+
+        root_free = int(
+            root_usage.free
+        )
+
+    except Exception:
+
+        root_total = 0
+        root_used = 0
+        root_free = 0
+
+
+    root_percent = (
+        root_used
+        / root_total
+        * 100.0
+        if root_total
+        else 0.0
+    )
+
+
+    tables_used = int(
+        category_totals["tables"]
+    )
+
+    tables_percent = (
+        tables_used
+        / root_total
+        * 100.0
+        if root_total
+        else 0.0
+    )
+
+
+    value = {
+        "models": models,
+        "disks": disks,
+        "categories": category_totals,
+
+        "root_percent": root_percent,
+        "root_used": _human(
+            root_used
+        ),
+        "root_free": _human(
+            root_free
+        ),
+
+        "tables_percent": tables_percent,
+        "tables_used": _human(
+            tables_used
+        ),
+        "tables_free": _human(
+            root_free
+        ),
+    }
+
+
+    _PCO_STORAGE_CACHE.update(
+        {
+            "at": now,
+            "value": value,
+        }
+    )
+
+    return value
+
+
 def storage_models():
-    models = run(
-        "lsblk -dn -o MODEL,TYPE 2>/dev/null | "
-        "awk '$NF == \"disk\" {$NF=\"\"; sub(/[[:space:]]+$/, \"\"); if (length($0)) print $0}' | "
-        "awk '!seen[$0]++' | paste -sd ' · ' -",
-        "",
-        3,
-    ).strip()
-    return models or "Modèle non lu"
+    return storage_inventory().get(
+        "models",
+        "Modèle non lu",
+    )
+
+
+def storage_widget_html(item):
+    import html as _html
+
+    def esc(value):
+        return _html.escape(
+            str(
+                value
+                if value is not None
+                else ""
+            )
+        )
+
+
+    disks = list(
+        item.get("disks")
+        or []
+    )
+
+
+    style = """
+<style>
+/* PINCABOS_STORAGE_MACOS_V2_VISUAL */
+.pco-storage-mac{
+  display:grid;
+  gap:14px;
+  min-width:0;
+}
+.pco-storage-disk{
+  display:grid;
+  gap:7px;
+  min-width:0;
+}
+.pco-storage-disk + .pco-storage-disk{
+  padding-top:13px;
+  border-top:1px solid rgba(255,255,255,.10);
+}
+.pco-storage-disk-head{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  min-width:0;
+  white-space:nowrap;
+}
+.pco-storage-disk-name{
+  color:#fff;
+  font-size:14px;
+  font-weight:800;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.pco-storage-disk-bus{
+  flex:0 0 auto;
+  color:#c6b5ff;
+  font-size:12px;
+  font-weight:800;
+}
+.pco-storage-disk-size{
+  flex:0 0 auto;
+  margin-left:auto;
+  color:rgba(255,255,255,.72);
+  font-size:11px;
+}
+.pco-storage-parts{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:rgba(255,255,255,.68);
+  font-size:10px;
+}
+.pco-storage-bar{
+  display:flex;
+  width:100%;
+  height:15px;
+  overflow:hidden;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    0 3px 12px rgba(0,0,0,.20);
+}
+.pco-storage-segment{
+  height:100%;
+  min-width:0;
+}
+.pco-storage-legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px 11px;
+  align-items:center;
+  color:rgba(255,255,255,.78);
+  font-size:9px;
+  line-height:1.35;
+}
+.pco-storage-legend-item{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  white-space:nowrap;
+}
+.pco-storage-dot{
+  display:inline-block;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  box-shadow:0 0 6px rgba(255,255,255,.08);
+}
+.pco-storage-legend-value{
+  color:rgba(255,255,255,.48);
+}
+</style>
+"""
+
+
+    if not disks:
+
+        return (
+            style
+            + '<div class="pco-storage-mac" '
+              'data-pco-storage-mac="2">'
+              '<span>Aucun disque détecté.</span>'
+              '</div>'
+        )
+
+
+    blocks = []
+
+
+    for disk in disks:
+
+        segment_html = []
+
+        legend_html = []
+
+
+        for segment in (
+            disk.get("segments")
+            or []
+        ):
+
+            percent = max(
+                0.0,
+                min(
+                    100.0,
+                    float(
+                        segment.get("percent")
+                        or 0.0
+                    ),
+                ),
+            )
+
+            if percent > 0.0:
+
+                segment_html.append(
+                    '<span '
+                    'class="pco-storage-segment" '
+                    f'style="width:{percent:.5f}%;'
+                    f'background:{esc(segment["color"])}" '
+                    f'title="{esc(segment["label"])} : '
+                    f'{esc(segment["human"])}">'
+                    '</span>'
+                )
+
+
+            legend_html.append(
+                '<span class="pco-storage-legend-item">'
+                '<i class="pco-storage-dot" '
+                f'style="background:{esc(segment["color"])}">'
+                '</i>'
+                f'<span>{esc(segment["label"])}</span>'
+                '<span class="pco-storage-legend-value">'
+                f'{esc(segment["human"])}'
+                '</span>'
+                '</span>'
+            )
+
+
+        blocks.append(
+            '<div class="pco-storage-disk" '
+            f'data-pco-storage-disk="{esc(disk["name"])}">'
+
+            '<div class="pco-storage-disk-head">'
+
+            '<span class="pco-storage-disk-name">'
+            f'{esc(disk["model"])}'
+            '</span>'
+
+            '<span class="pco-storage-disk-bus">'
+            f'{esc(disk["connector"])}'
+            '</span>'
+
+            '<span class="pco-storage-disk-size">'
+            f'{esc(disk["size_human"])}'
+            '</span>'
+
+            '</div>'
+
+            '<div class="pco-storage-parts" '
+            f'title="{esc(disk["partitions_line"])}">'
+            f'{esc(disk["partitions_line"])}'
+            '</div>'
+
+            '<div class="pco-storage-bar">'
+            + "".join(
+                segment_html
+            )
+            + '</div>'
+
+            '<div class="pco-storage-legend">'
+            + "".join(
+                legend_html
+            )
+            + '</div>'
+
+            '</div>'
+        )
+
+
+    return (
+        style
+        + '<div class="pco-storage-mac" '
+          'data-pco-storage-mac="2">'
+        + "".join(
+            blocks
+        )
+        + '</div>'
+    )
+
+
 
 
 
@@ -911,6 +2046,110 @@ _PCO_NETWORK_TRUECHART_LOCK = threading.Lock()
 _PCO_NETWORK_TRUECHART_LAST = {}
 
 
+# === PINCABOS_NETWORK_LAN_WAN_V6 ===
+#
+# IPv4 Internet publique du cabinet.
+# Lecture seule.
+# Cache 5 minutes pour l'API appelée chaque seconde.
+
+_PCO_NETWORK_WAN_LOCK = threading.Lock()
+
+_PCO_NETWORK_WAN_CACHE = {
+    "value": "Indisponible",
+    "expires": 0.0,
+}
+
+
+def _pco_public_wan_ip() -> str:
+    now = time.monotonic()
+
+    with _PCO_NETWORK_WAN_LOCK:
+        cached = str(
+            _PCO_NETWORK_WAN_CACHE.get("value")
+            or "Indisponible"
+        )
+
+        expires = float(
+            _PCO_NETWORK_WAN_CACHE.get("expires")
+            or 0.0
+        )
+
+        if now < expires:
+            return cached
+
+        detected = ""
+
+        for url in (
+            "https://api.ipify.org",
+            "https://checkip.amazonaws.com",
+            "https://icanhazip.com",
+        ):
+            try:
+                request = urllib.request.Request(
+                    url,
+                    headers={
+                        "User-Agent":
+                            "PinCabOS-Dashboard-Network/6",
+                        "Accept": "text/plain",
+                    },
+                )
+
+                with urllib.request.urlopen(
+                    request,
+                    timeout=2.5,
+                ) as response:
+                    candidate = (
+                        response
+                        .read(128)
+                        .decode("ascii", "ignore")
+                        .strip()
+                    )
+
+                address = ipaddress.ip_address(
+                    candidate
+                )
+
+                if (
+                    address.version == 4
+                    and address.is_global
+                ):
+                    detected = candidate
+                    break
+
+            except Exception:
+                continue
+
+        if detected:
+            _PCO_NETWORK_WAN_CACHE.update({
+                "value": detected,
+                "expires": now + 300.0,
+            })
+
+            return detected
+
+        if cached not in (
+            "",
+            "—",
+            "Indisponible",
+        ):
+            _PCO_NETWORK_WAN_CACHE.update({
+                "value": cached,
+                "expires": now + 60.0,
+            })
+
+            return cached
+
+        _PCO_NETWORK_WAN_CACHE.update({
+            "value": "Indisponible",
+            "expires": now + 30.0,
+        })
+
+        return "Indisponible"
+
+
+# === PINCABOS_NETWORK_LAN_WAN_V6 END ===
+
+
 def _pco_network_truechart_interface() -> str:
     value = primary_network_info().get("interface_label", "")
     value = str(value or "").strip()
@@ -927,6 +2166,7 @@ def network_traffic_snapshot() -> dict:
         "ip": str(base.get("ip") or "—"),
         "gateway": str(base.get("gateway") or "—"),
         "dns": str(base.get("dns") or "—"),
+        "wan_ip": _pco_public_wan_ip(),
         "addressing": str(base.get("addressing") or "—"),
         "internet": str(base.get("internet") or "Indisponible"),
         "mask": "—",
@@ -1176,7 +2416,7 @@ def status_snapshot(force=False):
             "system": {"host": run("hostname", "PinCabOS", 2), "kernel": run("uname -r", "—", 2), "uptime": uptime()},
             "cpu": {"percent": round(cpu_percent(), 1), "cores": run("nproc", "—", 2), "load": run("cut -d' ' -f1-3 /proc/loadavg", "—", 2)},
             "memory": {"percent": mem_pct, "used": human_size(mem_used), "total": human_size(mem_total)},
-            "storage": {"models": storage_models(), "root_percent": root_pct, "root_used": human_size(root_used), "root_free": human_size(root_free), "tables_percent": table_pct, "tables_used": human_size(table_used), "tables_free": human_size(table_free)},
+            "storage": storage_inventory(),
             "gpu": {"name": gpu[0], "temp": gpu[1], "util": gpu[2], "vram_used": gpu[3], "vram_total": gpu[4], "driver": gpu[5]},
             "services": services,
             "time": {"local": run("date '+%Y-%m-%d %H:%M:%S %Z'", "—", 2), "timezone": run("timedatectl show -p Timezone --value", "—", 2), "sync": run("timedatectl show -p NTPSynchronized --value", "no", 2), "source": run("chronyc -n sources 2>/dev/null | awk '$1 ~ /^\\^\\*/ {print $2; exit}'", "Aucune source", 3)},
@@ -1224,7 +2464,7 @@ def widget_content(widget_id, meta, data, csrf):
         return f'<div class="pco-value" data-pco-bind="memory.percent" data-pco-format="percent">{item["percent"]:.0f}%</div><p class="pco-caption">RAM utilisée</p>' + meter("RAM", item["percent"], f'{item["used"]} / {item["total"]}')
     if kind == "storage":
         item = data["storage"]
-        return meter("Racine", item["root_percent"], f'{item["root_used"]} · libre {item["root_free"]}') + meter("Tables", item["tables_percent"], f'{item["tables_used"]} · libre {item["tables_free"]}') + kv("Modèle disque", item["models"], "storage.models")
+        return storage_widget_html(item)
     if kind == "gpu":
         item = data["gpu"]
         percent = number(item["vram_used"]) / number(item["vram_total"]) * 100 if number(item["vram_total"]) else 0
@@ -2127,10 +3367,10 @@ def widget_content(widget_id, meta, data, csrf):
         item = data["network"]
         value = lambda key, fallback="—": html.escape(str(item.get(key) or fallback))
         return f'''<div class="pco-network-truechart" data-pco-network-widget="1">
-  <div class="pco-network-row pco-network-primary"><span>Adresse IP</span><strong data-pco-network-ip data-pco-bind="network.ip">{value("ip")}</strong></div>
+  <div class="pco-network-row pco-network-primary"><span>Adresse IP (LAN)</span><strong data-pco-network-ip data-pco-bind="network.ip">{value("ip")}</strong></div>
   <div class="pco-network-row"><span>Passerelle / masque</span><strong><b data-pco-network-gateway data-pco-bind="network.gateway">{value("gateway")}</b><i> / </i><b data-pco-network-mask>—</b></strong></div>
   <div class="pco-network-row"><span>Adressage</span><strong data-pco-network-addressing data-pco-bind="network.addressing">{value("addressing")}</strong></div>
-  <div class="pco-network-row"><span>DNS</span><strong data-pco-network-dns data-pco-bind="network.dns">{value("dns")}</strong></div>
+  <div class="pco-network-row"><span>IP Internet (WAN)</span><strong data-pco-network-wan>Lecture…</strong></div>
   <div class="pco-network-row pco-network-state"><span>Internet / lien</span><strong><b data-pco-network-internet data-pco-bind="network.internet">{value("internet")}</b><i> · </i><b data-pco-network-link>—</b></strong></div>
   <section class="pco-network-traffic" aria-label="Trafic réseau en direct">
     <div class="pco-network-traffic-head"><strong><span class="pco-network-dot"></span><span data-pco-network-interface>{value("interface_label")}</span></strong><small data-pco-network-speed>Trafic live</small></div>
@@ -2309,7 +3549,7 @@ def render_dashboard(page, esc, get_ip, service_status, pincabos_version):
   refreshClocks();
   window.setInterval(refreshClocks, 250);
 }})();
-</script><script src="/static/pincabos-dashboard-lobby.js?v=dashboard-modes-v1" defer></script><script src="/static/pincabos-live-jpeg-x11-v16.js?v=jpeg-x11-v16" defer></script></section>'''
+</script><script src="/static/pincabos-dashboard-lobby.js?v=dashboard-network-lan-wan-v6" defer></script><script src="/static/pincabos-live-jpeg-x11-v16.js?v=jpeg-x11-v16" defer></script></section>'''
     return page("Dashboard", body)
 
 # === PINCABOS_DASHBOARD_DIRECT_FUNCTION_LINKS_V1 START ===

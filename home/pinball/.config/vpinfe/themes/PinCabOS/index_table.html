@@ -44,30 +44,112 @@
           <span id="tableRuntime" class="table-meta-counter table-meta-counter-runtime">0000</span>
           <span id="tableStartCount" class="table-meta-counter table-meta-counter-starts">0000</span>
         </div>
-      
-        <!-- PINCABOS_POWERED_IP_HTML_V1 -->
+
+
+        <!-- PINCABOS_INFO_TITLE_V22 -->
         <div
-          id="pincab-powered-by"
-          class="pincab-powered-by"
-          aria-label="PinCabOS cabinet network address"
+          id="pincab-info-title"
+          class="pincab-info-title"
         >
-          <span class="pincab-powered-label">
-            <span class="pincab-powered-prefix">Powered By</span>
-            <span class="pincab-brand-pin">Pin</span><span class="pincab-brand-cab">Cab</span><span class="pincab-brand-os">OS</span>
-          </span>
-
-          <span class="pincab-powered-separator">
-            •
-          </span>
-
-          <span
-            id="pincabCabIp"
-            class="pincab-cab-ip"
-          >
-            IP...
-          </span>
+          <span class="pincab-info-title-pin">Pin</span><span class="pincab-info-title-cab">Cab</span><span class="pincab-info-title-os">OS</span><span class="pincab-info-title-rest"> Info:</span>
         </div>
-</section>
+
+        <!-- PINCABOS_IN_CARD_STATUS_V2 -->
+        <div
+          id="pincab-status-panel"
+          class="pincab-status-panel"
+          aria-label="PinCabOS cabinet and account status"
+        >
+          <div class="pincab-status-grid">
+
+            <div class="pincab-status-item">
+              <span class="pincab-status-label">
+                LINK
+              </span>
+              <span
+                id="pincabLinkState"
+                class="pincab-status-value pincab-link-state is-loading"
+              >
+                <span class="pincab-link-dot"></span>
+                ...
+              </span>
+            </div>
+
+            <div class="pincab-status-item">
+              <span class="pincab-status-label">
+                USER
+              </span>
+              <span
+                id="pincabLinkUser"
+                class="pincab-status-value"
+              >
+                ...
+              </span>
+            </div>
+
+            <div class="pincab-status-item">
+              <span class="pincab-status-label">
+                PINCAB
+              </span>
+              <span
+                id="pincabLinkCabinet"
+                class="pincab-status-value"
+              >
+                ...
+              </span>
+            </div>
+
+            <div class="pincab-status-item">
+              <span class="pincab-status-label">
+                AMIS
+              </span>
+              <span
+                id="pincabFriendRequests"
+                class="pincab-status-value"
+              >
+                0
+              </span>
+            </div>
+
+            <div class="pincab-status-item">
+              <span class="pincab-status-label">
+                OS LOCAL
+              </span>
+              <span
+                id="pincabOsLocal"
+                class="pincab-status-value"
+              >
+                ...
+              </span>
+            </div>
+
+            <div class="pincab-status-item">
+              <span class="pincab-status-label">
+                GITHUB
+              </span>
+              <span
+                id="pincabOsGithub"
+                class="pincab-status-value"
+              >
+                ...
+              </span>
+            </div>
+
+          </div>
+
+          <div class="pincab-status-footer">
+            <span class="pincab-status-ip-label">
+              IP
+            </span>
+            <span
+              id="pincabCabIp"
+              class="pincab-status-ip"
+            >
+              ...
+            </span>
+          </div>
+        </div>
+        </section>
     </div>
   </div>
 

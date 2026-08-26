@@ -1038,3 +1038,406 @@ body.window-table .pincab-cab-ip {
 }
 
 /* PINCABOS_POWERED_RIGHT_V1_END */
+
+/* PINCABOS_IN_CARD_STATUS_V2_CSS_BEGIN */
+
+/*
+ * PinCabOS status intégré au table-meta-panel existant.
+ * Ceci n'est PAS une carte flottante.
+ */
+
+body.window-table .pincab-status-panel {
+    width: 100%;
+    box-sizing: border-box;
+
+    margin-top: 1.05vh;
+    padding-top: 0.95vh;
+
+    border-top:
+        1px solid rgba(255, 122, 0, 0.40);
+
+    font-family:
+        "Roboto",
+        "Trebuchet MS",
+        Arial,
+        sans-serif;
+}
+
+body.window-table .pincab-status-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    column-gap: 1.15vw;
+    row-gap: 0.68vh;
+
+    width: 100%;
+}
+
+body.window-table .pincab-status-item {
+    min-width: 0;
+
+    display: flex;
+    align-items: baseline;
+
+    gap: 0.38em;
+
+    overflow: hidden;
+}
+
+body.window-table .pincab-status-label {
+    flex: 0 0 auto;
+
+    color: rgba(255, 255, 255, 0.52);
+
+    font-size: 1.00vh;
+    font-weight: 700;
+
+    letter-spacing: 0.07em;
+
+    white-space: nowrap;
+}
+
+body.window-table .pincab-status-value {
+    min-width: 0;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    color: #ffffff;
+
+    font-family:
+        "Roboto-Bold",
+        "Trebuchet MS",
+        Arial,
+        sans-serif;
+
+    font-size: 1.18vh;
+    font-weight: 700;
+
+    letter-spacing: 0.015em;
+}
+
+body.window-table .pincab-link-state {
+    display: inline-flex;
+    align-items: center;
+}
+
+body.window-table .pincab-link-dot {
+    width: 0.62em;
+    height: 0.62em;
+
+    margin-right: 0.42em;
+
+    flex: 0 0 auto;
+
+    border-radius: 50%;
+
+    background: #808080;
+
+    box-shadow:
+        0 0 0.45em rgba(255,255,255,0.18);
+}
+
+body.window-table
+.pincab-link-state.is-online
+.pincab-link-dot {
+    background: #29e67d;
+
+    box-shadow:
+        0 0 0.58em rgba(41,230,125,0.82);
+}
+
+body.window-table
+.pincab-link-state.is-offline
+.pincab-link-dot {
+    background: #ff4545;
+
+    box-shadow:
+        0 0 0.58em rgba(255,69,69,0.76);
+}
+
+body.window-table
+.pincab-link-state.is-unlinked
+.pincab-link-dot {
+    background: #ff8a18;
+
+    box-shadow:
+        0 0 0.58em rgba(255,138,24,0.75);
+}
+
+body.window-table
+#pincabFriendRequests.has-pending {
+    color: #ff9a36;
+
+    text-shadow:
+        0 0 0.55em rgba(255,122,0,0.50);
+}
+
+body.window-table
+#pincabOsGithub.has-different-version {
+    color: #ff9a36;
+}
+
+body.window-table .pincab-status-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+
+    gap: 0.45em;
+
+    margin-top: 0.70vh;
+
+    min-height: 1.35vh;
+}
+
+body.window-table .pincab-status-ip-label {
+    color: rgba(255,255,255,0.48);
+
+    font-size: 0.95vh;
+    font-weight: 700;
+
+    letter-spacing: 0.08em;
+}
+
+body.window-table .pincab-status-ip {
+    color: #ffe14f;
+
+    font-family:
+        "Roboto-Bold",
+        "Trebuchet MS",
+        Arial,
+        sans-serif;
+
+    font-size: 1.05vh;
+    font-weight: 700;
+
+    letter-spacing: 0.035em;
+}
+
+body.window-table
+.pincab-status-ip.is-unavailable {
+    color: rgba(255,255,255,0.40);
+}
+
+/* PINCABOS_IN_CARD_STATUS_V2_CSS_END */
+
+/* PINCABOS_INFO_VISUAL_V22_BEGIN */
+
+/* ============================================================
+   TITRE : PinCabOS Info:
+   ============================================================ */
+
+body.window-table .pincab-info-title {
+    width: 100%;
+    box-sizing: border-box;
+
+    margin-top: 1.05vh;
+    margin-bottom: 0.60vh;
+
+    padding-bottom: 0.48vh;
+
+    border-bottom:
+        1px solid rgba(255, 122, 0, 0.42);
+
+    font-family:
+        "Roboto-Bold",
+        "Trebuchet MS",
+        Arial,
+        sans-serif;
+
+    font-size: 1.40vh;
+    font-weight: 800;
+
+    letter-spacing: 0.035em;
+
+    text-align: left;
+
+    text-shadow:
+        0 0 0.55vh rgba(255,255,255,0.10);
+}
+
+body.window-table .pincab-info-title-pin {
+    color: #ff7a00;
+}
+
+body.window-table .pincab-info-title-cab {
+    color: #ffffff;
+}
+
+body.window-table .pincab-info-title-os {
+    color: #a86cff;
+}
+
+body.window-table .pincab-info-title-rest {
+    color: #ffffff;
+}
+
+
+/* Le panneau commence maintenant juste sous le titre. */
+
+body.window-table .pincab-info-title
++ .pincab-status-panel {
+    margin-top: 0;
+    padding-top: 0.35vh;
+    border-top: 0;
+}
+
+
+/* ============================================================
+   LINK
+   ============================================================ */
+
+/* CONNECTE = vert */
+
+body.window-table
+#pincabLinkState.is-online {
+    color: #3cff8b !important;
+
+    text-shadow:
+        0 0 0.55vh rgba(60,255,139,0.55);
+}
+
+body.window-table
+#pincabLinkState.is-online
+.pincab-link-dot {
+    background: #29e67d !important;
+
+    box-shadow:
+        0 0 0.75em rgba(41,230,125,0.95) !important;
+}
+
+
+/* HORS LIGNE = rouge */
+
+body.window-table
+#pincabLinkState.is-offline {
+    color: #ff5656 !important;
+
+    text-shadow:
+        0 0 0.55vh rgba(255,70,70,0.50);
+}
+
+body.window-table
+#pincabLinkState.is-offline
+.pincab-link-dot {
+    background: #ff3b3b !important;
+
+    box-shadow:
+        0 0 0.75em rgba(255,59,59,0.90) !important;
+}
+
+
+/* NON LIE = orange */
+
+body.window-table
+#pincabLinkState.is-unlinked {
+    color: #ff9a36 !important;
+
+    text-shadow:
+        0 0 0.55vh rgba(255,122,0,0.48);
+}
+
+body.window-table
+#pincabLinkState.is-unlinked
+.pincab-link-dot {
+    background: #ff8a18 !important;
+
+    box-shadow:
+        0 0 0.75em rgba(255,138,24,0.90) !important;
+}
+
+
+/* ============================================================
+   USER + PINCAB = MAUVE
+   ============================================================ */
+
+body.window-table #pincabLinkUser,
+body.window-table #pincabLinkCabinet {
+    color: #b978ff !important;
+
+    text-shadow:
+        0 0 0.50vh rgba(185,120,255,0.36);
+}
+
+
+/* ============================================================
+   DEMANDES D'AMIS
+   ============================================================ */
+
+/* 0 reste discret */
+
+body.window-table #pincabFriendRequests {
+    color: rgba(255,255,255,0.82);
+}
+
+
+/* Une ou plusieurs demandes = orange/rouge */
+
+body.window-table
+#pincabFriendRequests.has-pending {
+    color: #ff623d !important;
+
+    font-weight: 900 !important;
+
+    text-shadow:
+        0 0 0.40vh rgba(255,98,61,0.65),
+        0 0 0.85vh rgba(255,122,0,0.30);
+}
+
+
+/* ============================================================
+   VERSION
+   ============================================================ */
+
+body.window-table #pincabOsLocal {
+    color: #ffffff;
+}
+
+body.window-table #pincabOsGithub {
+    color: #ffffff;
+}
+
+/* Nouvelle version disponible = orange */
+
+body.window-table
+#pincabOsGithub.has-different-version {
+    color: #ff9a36 !important;
+
+    font-weight: 900;
+
+    text-shadow:
+        0 0 0.50vh rgba(255,122,0,0.42);
+}
+
+
+/* ============================================================
+   IP = JAUNE
+   ============================================================ */
+
+body.window-table #pincabCabIp,
+body.window-table .pincab-status-ip {
+    color: #ffe14f !important;
+
+    font-weight: 800;
+
+    text-shadow:
+        0 0 0.50vh rgba(255,225,79,0.35);
+}
+
+body.window-table .pincab-status-ip-label {
+    color: rgba(255,225,79,0.70) !important;
+}
+
+
+/* ============================================================
+   LABELS
+   ============================================================ */
+
+body.window-table .pincab-status-label {
+    color: rgba(255,255,255,0.56);
+}
+
+/* PINCABOS_INFO_VISUAL_V22_END */

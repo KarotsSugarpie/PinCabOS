@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh PinCabOS VPinFE in-card status
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=30s
+AccuracySec=5s
+Persistent=true
+Unit=pincabos-vpinfe-card-status.service
+
+[Install]
+WantedBy=timers.target

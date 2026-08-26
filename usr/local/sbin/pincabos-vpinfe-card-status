@@ -1,0 +1,613 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import subprocess
+import tempfile
+import time
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+
+THEME = Path(
+    "/home/pinball/.config/vpinfe/themes/PinCabOS"
+)
+
+OUTPUT = THEME / "pincabos-status.json"
+
+BRIDGE = Path(
+    "/usr/local/sbin/pincabos-account-bridge"
+)
+
+VERSION_STATE = Path(
+    "/var/lib/pincabos/updates/state.json"
+)
+
+VERSION_CONFIG = Path(
+    "/opt/pincabos/config/version.json"
+)
+
+UPDATE_CONFIG = Path(
+    "/etc/pincabos/updates.json"
+)
+
+CACHE_DIR = Path(
+    "/var/cache/pincabos/vpinfe-card"
+)
+
+GITHUB_CACHE = CACHE_DIR / "github.json"
+
+GITHUB_TTL = 900
+
+
+def read_json(path: Path, default=None):
+    try:
+        return json.loads(
+            path.read_text(
+                encoding="utf-8",
+                errors="ignore",
+            )
+        )
+    except Exception:
+        if default is None:
+            return {}
+        return default
+
+
+def parse_jsonish(text: str):
+    text = (text or "").strip()
+
+    if not text:
+        raise ValueError("empty")
+
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    first = text.find("{")
+    last = text.rfind("}")
+
+    if first >= 0 and last > first:
+        return json.loads(text[first:last + 1])
+
+    raise ValueError("no json")
+
+
+def get_path(data, *keys):
+    cur = data
+
+    for key in keys:
+        if not isinstance(cur, dict):
+            return None
+
+        cur = cur.get(key)
+
+    return cur
+
+
+def first(data, paths):
+    for path in paths:
+        value = get_path(data, *path)
+
+        if value not in (
+            None,
+            "",
+            [],
+            {},
+        ):
+            return value
+
+    return None
+
+
+def count_requests(value):
+    if value is None:
+        return 0
+
+    if isinstance(value, list):
+        return len(value)
+
+    if isinstance(value, dict):
+        # Certains endpoints renvoient
+        # {"count":2,"items":[...]}
+        for key in (
+            "count",
+            "total",
+            "pending",
+        ):
+            v = value.get(key)
+
+            if isinstance(v, (int, float)):
+                return max(0, int(v))
+
+        for key in (
+            "items",
+            "incoming",
+            "requests",
+        ):
+            if key in value:
+                return count_requests(
+                    value.get(key)
+                )
+
+        return len(value)
+
+    if isinstance(value, (int, float)):
+        return max(0, int(value))
+
+    return 0
+
+
+def recursive_friend_request_count(obj):
+    """
+    Dernier filet de securite :
+    cherche uniquement des structures dont
+    le nom indique demandes/amis/incoming.
+    """
+
+    if not isinstance(obj, dict):
+        return 0
+
+    candidates = []
+
+    for key, value in obj.items():
+        low = str(key).lower()
+
+        if (
+            "incoming" in low
+            or "friend_request" in low
+            or "friendrequest" in low
+            or "pending_request" in low
+        ):
+            candidates.append(
+                count_requests(value)
+            )
+
+        if isinstance(value, dict):
+            candidates.append(
+                recursive_friend_request_count(
+                    value
+                )
+            )
+
+    return max(candidates or [0])
+
+
+def account_context():
+    result = {
+        "connected": False,
+        "state": "NON LIE",
+        "user": "",
+        "cabinet": "",
+        "friend_requests": 0,
+    }
+
+    if not BRIDGE.exists():
+        result["state"] = "INDISPONIBLE"
+        return result
+
+    try:
+        cp = subprocess.run(
+            [str(BRIDGE), "context"],
+            capture_output=True,
+            text=True,
+            timeout=25,
+            check=False,
+        )
+
+    except Exception:
+        result["state"] = "HORS LIGNE"
+        return result
+
+    if cp.returncode != 0:
+        message = (
+            (cp.stdout or "")
+            + "\n"
+            + (cp.stderr or "")
+        ).lower()
+
+        if any(
+            marker in message
+            for marker in (
+                "non lie",
+                "non lié",
+                "not linked",
+                "not paired",
+                "pairing",
+                "aucune liaison",
+            )
+        ):
+            result["state"] = "NON LIE"
+        else:
+            result["state"] = "HORS LIGNE"
+
+        return result
+
+    try:
+        ctx = parse_jsonish(cp.stdout)
+
+    except Exception:
+        result["state"] = "HORS LIGNE"
+        return result
+
+    if not isinstance(ctx, dict):
+        result["state"] = "HORS LIGNE"
+        return result
+
+    username = first(
+        ctx,
+        (
+            ("user", "username"),
+            ("account", "username"),
+            ("owner", "username"),
+            ("profile", "username"),
+            ("username",),
+        ),
+    )
+
+    cabinet = first(
+        ctx,
+        (
+            ("cabinet", "cabinet_name"),
+            ("current_cabinet", "cabinet_name"),
+            ("device", "cabinet_name"),
+            ("cabinet", "name"),
+            ("cabinet_name",),
+        ),
+    )
+
+    incoming = first(
+        ctx,
+        (
+            ("requests", "incoming"),
+            ("friend_requests", "incoming"),
+            ("friend_requests",),
+            ("incoming_requests",),
+            ("requests_incoming",),
+            ("pending_friend_requests",),
+        ),
+    )
+
+    count = count_requests(incoming)
+
+    if count == 0:
+        count = recursive_friend_request_count(
+            ctx
+        )
+
+    result.update(
+        connected=True,
+        state="CONNECTE",
+        user=str(username or ""),
+        cabinet=str(cabinet or ""),
+        friend_requests=count,
+    )
+
+    return result
+
+
+def local_version():
+    state = read_json(
+        VERSION_STATE,
+        {},
+    )
+
+    config = read_json(
+        VERSION_CONFIG,
+        {},
+    )
+
+    installed_tag = str(
+        state.get("installed_version")
+        or config.get("installed_version")
+        or ""
+    )
+
+    display = str(
+        state.get("display_version")
+        or config.get("version")
+        or installed_tag
+        or "INCONNUE"
+    )
+
+    return {
+        "display": display,
+        "tag": installed_tag,
+    }
+
+
+def friendly_release(tag: str, name: str):
+    source = (
+        str(name or "").strip()
+        + " "
+        + str(tag or "").strip()
+    )
+
+    match = re.search(
+        r'\b(alpha|beta)[\s_-]*'
+        r'([0-9]+(?:\.[0-9]+)+)',
+        source,
+        re.I,
+    )
+
+    if match:
+        return (
+            match.group(1).capitalize()
+            + " "
+            + match.group(2)
+        )
+
+    tag = str(tag or "").strip()
+
+    if tag:
+        return tag[:28]
+
+    return "INDISPONIBLE"
+
+
+def release_matches(release, channel):
+    if not isinstance(release, dict):
+        return False
+
+    if release.get("draft"):
+        return False
+
+    tag = str(
+        release.get("tag_name")
+        or ""
+    ).lower()
+
+    channel = str(
+        channel or "beta"
+    ).lower()
+
+    if channel == "beta":
+        return (
+            "beta" in tag
+            or bool(
+                release.get("prerelease")
+            )
+        )
+
+    if channel == "alpha":
+        return "alpha" in tag
+
+    if channel in (
+        "stable",
+        "release",
+    ):
+        return (
+            not release.get("prerelease")
+            and "alpha" not in tag
+            and "beta" not in tag
+        )
+
+    return True
+
+
+def github_release(local_tag):
+    config = read_json(
+        UPDATE_CONFIG,
+        {},
+    )
+
+    repo = str(
+        config.get("repository")
+        or "KarotsSugarpie/PinCabOS"
+    )
+
+    channel = str(
+        config.get("channel")
+        or "beta"
+    )
+
+    CACHE_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    cached = read_json(
+        GITHUB_CACHE,
+        {},
+    )
+
+    try:
+        age = (
+            time.time()
+            - GITHUB_CACHE.stat().st_mtime
+        )
+    except Exception:
+        age = 10**9
+
+    if cached and age < GITHUB_TTL:
+        result = dict(cached)
+
+    else:
+        result = None
+
+        try:
+            url = (
+                "https://api.github.com/repos/"
+                + repo
+                + "/releases?per_page=30"
+            )
+
+            req = Request(
+                url,
+                headers={
+                    "User-Agent":
+                        "PinCabOS-VPinFE-Card/2",
+                    "Accept":
+                        "application/vnd.github+json",
+                },
+            )
+
+            with urlopen(
+                req,
+                timeout=15,
+            ) as response:
+                releases = json.loads(
+                    response.read()
+                        .decode("utf-8")
+                )
+
+            for release in releases:
+                if release_matches(
+                    release,
+                    channel,
+                ):
+                    tag = str(
+                        release.get(
+                            "tag_name"
+                        )
+                        or ""
+                    )
+
+                    name = str(
+                        release.get("name")
+                        or ""
+                    )
+
+                    result = {
+                        "ok": True,
+                        "repository": repo,
+                        "channel": channel,
+                        "tag": tag,
+                        "display":
+                            friendly_release(
+                                tag,
+                                name,
+                            ),
+                        "published_at":
+                            str(
+                                release.get(
+                                    "published_at"
+                                )
+                                or ""
+                            ),
+                    }
+
+                    break
+
+        except Exception:
+            result = None
+
+        if result:
+            tmp = (
+                GITHUB_CACHE
+                .with_suffix(".tmp")
+            )
+
+            tmp.write_text(
+                json.dumps(
+                    result,
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            os.chmod(tmp, 0o644)
+            os.replace(
+                tmp,
+                GITHUB_CACHE,
+            )
+
+        elif cached:
+            result = dict(cached)
+            result["ok"] = False
+
+        else:
+            result = {
+                "ok": False,
+                "repository": repo,
+                "channel": channel,
+                "tag": "",
+                "display": "INDISPONIBLE",
+                "published_at": "",
+            }
+
+    result["different"] = bool(
+        result.get("tag")
+        and local_tag
+        and str(result["tag"])
+            .lstrip("v")
+        != str(local_tag)
+            .lstrip("v")
+    )
+
+    return result
+
+
+def atomic_write(data):
+    fd, name = tempfile.mkstemp(
+        prefix=".pincabos-status-",
+        suffix=".json",
+        dir=str(THEME),
+    )
+
+    os.close(fd)
+    tmp = Path(name)
+
+    try:
+        tmp.write_text(
+            json.dumps(
+                data,
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        os.chmod(tmp, 0o644)
+
+        try:
+            import shutil
+
+            shutil.chown(
+                tmp,
+                user="pinball",
+                group="pinball",
+            )
+        except Exception:
+            pass
+
+        os.replace(
+            tmp,
+            OUTPUT,
+        )
+
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink()
+        except Exception:
+            pass
+
+
+def main():
+    local = local_version()
+    link = account_context()
+
+    github = github_release(
+        local.get("tag", "")
+    )
+
+    payload = {
+        "schema": 2,
+        "generated": int(time.time()),
+        "link": link,
+        "local": local,
+        "github": github,
+    }
+
+    atomic_write(payload)
+
+
+if __name__ == "__main__":
+    main()

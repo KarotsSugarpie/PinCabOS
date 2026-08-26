@@ -10949,13 +10949,81 @@ def tools_import_table_analyze():
     batch_dir = Path("/home/pinball/Downloads") / f"batch-{job_id}"
     batch_dir.mkdir(parents=True, exist_ok=True)
 
+    # PINCABOS_SMART_IMPORT_CLIENT_MTIME_V1
+    # Le mtime temporaire serveur n'est jamais une preuve
+    # de fraîcheur. File.lastModified vient du navigateur.
+    try:
+        client_mtimes = json.loads(
+            request.form.get(
+                "file_mtimes_json",
+                "[]",
+            )
+            or "[]"
+        )
+
+        if not isinstance(
+            client_mtimes,
+            list,
+        ):
+            client_mtimes = []
+
+    except Exception:
+        client_mtimes = []
+
+    if len(client_mtimes) != len(uploads):
+        # JS ancien/cache:
+        # date inconnue -> SHA-256 côté importeur.
+        client_mtimes = [0] * len(uploads)
+
     saved = []
-    for upload in uploads:
-        filename = secure_filename(upload.filename)
+
+    for upload_index, upload in enumerate(uploads):
+        filename = secure_filename(
+            upload.filename
+        )
+
         if not filename:
             continue
+
         dest = batch_dir / filename
         upload.save(dest)
+
+        try:
+            mtime_ms = float(
+                client_mtimes[
+                    upload_index
+                ]
+                or 0
+            )
+
+            if mtime_ms > 0:
+                mtime_seconds = (
+                    mtime_ms / 1000.0
+                )
+
+                os.utime(
+                    dest,
+                    (
+                        mtime_seconds,
+                        mtime_seconds,
+                    ),
+                )
+
+            else:
+                os.utime(
+                    dest,
+                    (0, 0),
+                )
+
+        except Exception:
+            try:
+                os.utime(
+                    dest,
+                    (0, 0),
+                )
+            except Exception:
+                pass
+
         saved.append(str(dest))
 
     if request.headers.get("X-PCOS-Async") == "1":
@@ -12104,11 +12172,30 @@ def tools_import_table_install():
         output = f"ERREUR lancement importeur: {e}"
         returncode = 1
 
-    try:
-        if batch_dir.exists() and imports_root in batch_dir.parents:
-            shutil.rmtree(batch_dir)
-    except Exception as e:
-        output += f"\n\nWARNING: impossible de supprimer le batch upload: {e}"
+    # PINCABOS_SMART_IMPORT_PRESERVE_FAILED_BATCH_V1
+    #
+    # Un batch réussi est supprimé.
+    # Un batch en erreur reste disponible pour diagnostic / reprise.
+    if returncode == 0:
+        try:
+            if (
+                batch_dir.exists()
+                and imports_root in batch_dir.parents
+            ):
+                shutil.rmtree(batch_dir)
+
+        except Exception as e:
+            output += (
+                "\n\nWARNING: impossible de supprimer "
+                f"le batch upload: {e}"
+            )
+
+    else:
+        output += (
+            "\n\nINFO: import en erreur — batch conservé "
+            "pour diagnostic/reprise : "
+            f"{batch_dir}"
+        )
 
     try:
         for work_root in [Path("/home/pinball/Downloads/work"), Path("/home/pinball/Downloads/work")]:

@@ -1,0 +1,30 @@
+logLevel: info
+api: false
+metrics: false
+pprof: false
+playback: false
+rtsp: false
+rtmp: false
+hls: false
+srt: false
+moq: false
+webrtc: true
+webrtcAddress: 192.168.254.237:8889
+webrtcEncryption: false
+webrtcAllowOrigins: ["http://192.168.254.237", "http://192.168.254.237:80", "http://192.168.254.237:8889"]
+webrtcLocalUDPAddress: 192.168.254.237:8189
+webrtcLocalTCPAddress: ""
+webrtcIPsFromInterfaces: false
+webrtcAdditionalHosts: ["192.168.254.237"]
+webrtcICEServers2: []
+authInternalUsers:
+  - user: any
+    pass:
+    ips: ["192.168.254.0/24"]
+    permissions:
+      - action: read
+        path: fulldmd
+paths:
+  fulldmd:
+    source: udp+mpegts://127.0.0.1:12002
+    record: false

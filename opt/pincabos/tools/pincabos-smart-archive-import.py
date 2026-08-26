@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # PinCabOS-File created by Karots Sugarpie
 import argparse
+import fcntl
+import hashlib
 import json
 import re
 import shutil
@@ -315,14 +317,1111 @@ def is_password_protected_error(exc):
     return "ARCHIVE PASSWORD REFUSÉE:" in str(exc)
 
 def copy_file(src, dest_dir, new_name=None):
+    # PINCABOS_COPY_FILE_ATOMIC_V2
+    #
+    # Ne jamais faire copy2() directement sur un fichier existant
+    # potentiellement possédé par root.
+    #
+    # copy2() copie d'abord vers un inode temporaire appartenant
+    # à l'utilisateur courant, puis Path.replace() remplace
+    # atomiquement la destination.
+    #
+    # Cela conserve les métadonnées copy2() sans appeler utime()
+    # sur l'ancien inode root-owned.
+
     src = Path(src)
     dest_dir = Path(dest_dir)
-    dest_dir.mkdir(parents=True, exist_ok=True)
 
-    dest = dest_dir / safe_name(new_name or src.name)
-    shutil.copy2(src, dest)
-    log(f"INSTALLÉ: {src} -> {dest}")
+    dest_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    dest = (
+        dest_dir
+        / safe_name(
+            new_name or src.name
+        )
+    )
+
+    with tempfile.NamedTemporaryFile(
+        prefix=f".{dest.name}.pincabos-copy-",
+        suffix=".tmp",
+        dir=str(dest_dir),
+        delete=False,
+    ) as handle:
+        temporary = Path(handle.name)
+
+    try:
+
+        shutil.copy2(
+            src,
+            temporary,
+        )
+
+        temporary.replace(
+            dest
+        )
+
+    finally:
+
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+    log(
+        f"INSTALLÉ: {src} -> {dest}"
+    )
+
     return dest
+
+# === PINCABOS_SMART_IMPORT_UPDATE_V1 START ===
+
+PINCABOS_SMART_IMPORT_MTIME_TOLERANCE = 2.0
+
+PINCABOS_SMART_IMPORT_BACKUP_ROOT = (
+    Path(
+        "/home/pinball/.local/share/"
+        "pincabos/backups/smart-import"
+    )
+)
+
+PINCABOS_SMART_IMPORT_LOCK = Path(
+    "/tmp/pincabos-smart-import.lock"
+)
+
+
+def pincabos_file_sha256(path):
+    digest = hashlib.sha256()
+
+    with Path(path).open("rb") as handle:
+        for chunk in iter(
+            lambda: handle.read(8 * 1024 * 1024),
+            b"",
+        ):
+            digest.update(chunk)
+
+    return digest.hexdigest()
+
+
+def pincabos_table_identity_key(name):
+    return standard_table_folder_name(
+        safe_name(name)
+    ).casefold()
+
+
+def pincabos_find_existing_table_dir(title):
+    wanted = pincabos_table_identity_key(title)
+
+    exact = (
+        TABLES_ROOT
+        / standard_table_folder_name(
+            safe_name(title)
+        )
+    )
+
+    if exact.exists():
+        if exact.is_symlink():
+            raise RuntimeError(
+                "NOGO: dossier de table symlink "
+                f"refusé: {exact}"
+            )
+
+        if not exact.is_dir():
+            raise RuntimeError(
+                "NOGO: destination de table "
+                f"non-dossier: {exact}"
+            )
+
+        return exact
+
+    matches = []
+
+    try:
+        for candidate in TABLES_ROOT.iterdir():
+            if (
+                not candidate.is_dir()
+                or candidate.is_symlink()
+            ):
+                continue
+
+            if (
+                pincabos_table_identity_key(
+                    candidate.name
+                )
+                == wanted
+            ):
+                matches.append(candidate)
+
+    except FileNotFoundError:
+        return exact
+
+    if len(matches) > 1:
+        raise RuntimeError(
+            "NOGO: plusieurs dossiers "
+            "correspondent au même nom normalisé: "
+            + " | ".join(
+                str(item)
+                for item in matches
+            )
+        )
+
+    return matches[0] if matches else exact
+
+
+def pincabos_read_existing_table_identity(
+    table_dir,
+):
+    table_dir = Path(table_dir)
+
+    result = {
+        "vpsid": "",
+        "title": table_dir.name,
+        "manifest": {},
+        "manifest_path": (
+            table_dir
+            / "pincabos-table-manifest.json"
+        ),
+        "info_path": None,
+    }
+
+    manifest_path = result["manifest_path"]
+    manifest_vpsid = ""
+
+    if manifest_path.is_file():
+        try:
+            manifest = json.loads(
+                manifest_path.read_text(
+                    encoding="utf-8",
+                    errors="replace",
+                )
+            )
+
+            if isinstance(manifest, dict):
+                result["manifest"] = manifest
+
+                manifest_vpsid = str(
+                    manifest.get(
+                        "vpsid",
+                        "",
+                    )
+                    or ""
+                ).strip()
+
+                manifest_title = str(
+                    manifest.get(
+                        "title",
+                        "",
+                    )
+                    or ""
+                ).strip()
+
+                if manifest_title:
+                    result["title"] = (
+                        manifest_title
+                    )
+
+        except Exception as exc:
+            raise RuntimeError(
+                "NOGO: manifest existant "
+                f"illisible: {manifest_path}: "
+                f"{exc}"
+            )
+
+    info_vpsid = ""
+
+    for info_path in sorted(
+        table_dir.glob("*.info")
+    ):
+        try:
+            payload = json.loads(
+                info_path.read_text(
+                    encoding="utf-8",
+                    errors="replace",
+                )
+            )
+
+            info = (
+                payload.get("Info", {})
+                if isinstance(payload, dict)
+                else {}
+            )
+
+            if not isinstance(info, dict):
+                continue
+
+            candidate_vpsid = str(
+                info.get("VPSId", "")
+                or ""
+            ).strip()
+
+            candidate_title = str(
+                info.get("Title", "")
+                or ""
+            ).strip()
+
+            if result["info_path"] is None:
+                result["info_path"] = info_path
+
+            if candidate_vpsid:
+                info_vpsid = candidate_vpsid
+                result["info_path"] = info_path
+
+                if candidate_title:
+                    result["title"] = (
+                        candidate_title
+                    )
+
+                break
+
+        except Exception:
+            continue
+
+    if (
+        manifest_vpsid
+        and info_vpsid
+        and manifest_vpsid != info_vpsid
+    ):
+        raise RuntimeError(
+            "NOGO: identité VPSId incohérente "
+            "entre manifest et .info: "
+            f"manifest={manifest_vpsid} "
+            f"info={info_vpsid}"
+        )
+
+    result["vpsid"] = (
+        manifest_vpsid
+        or info_vpsid
+    )
+
+    return result
+
+
+def pincabos_validate_existing_identity(
+    table_dir,
+    incoming_title,
+    incoming_vpsid,
+):
+    identity = (
+        pincabos_read_existing_table_identity(
+            table_dir
+        )
+    )
+
+    if (
+        pincabos_table_identity_key(
+            table_dir.name
+        )
+        != pincabos_table_identity_key(
+            incoming_title
+        )
+    ):
+        raise RuntimeError(
+            "NOGO: le nom normalisé de la "
+            "table existante ne correspond pas "
+            "à l'import: "
+            f"existant={table_dir.name!r} "
+            f"entrant={incoming_title!r}"
+        )
+
+    existing_vpsid = str(
+        identity.get("vpsid", "")
+        or ""
+    ).strip()
+
+    incoming_vpsid = str(
+        incoming_vpsid
+        or ""
+    ).strip()
+
+    if not existing_vpsid:
+        raise RuntimeError(
+            "NOGO: table existante sans "
+            "VPSId fiable. Mise à jour "
+            "automatique refusée."
+        )
+
+    if not incoming_vpsid:
+        raise RuntimeError(
+            "NOGO: import entrant sans VPSId. "
+            "Mise à jour automatique d'une "
+            "table existante refusée."
+        )
+
+    if existing_vpsid != incoming_vpsid:
+        raise RuntimeError(
+            "NOGO: même nom normalisé mais "
+            "VPSId différent. "
+            f"existant={existing_vpsid} "
+            f"entrant={incoming_vpsid}"
+        )
+
+    return identity
+
+
+def pincabos_safe_table_target(
+    table_dir,
+    relative,
+):
+    table_dir = Path(table_dir)
+    relative = Path(relative)
+
+    if (
+        relative.is_absolute()
+        or ".." in relative.parts
+    ):
+        raise RuntimeError(
+            "NOGO: chemin relatif invalide: "
+            f"{relative}"
+        )
+
+    root_real = table_dir.resolve()
+
+    destination = (
+        table_dir
+        / relative
+    )
+
+    parent_real = (
+        destination.parent.resolve()
+    )
+
+    if (
+        parent_real != root_real
+        and root_real
+        not in parent_real.parents
+    ):
+        raise RuntimeError(
+            "NOGO: destination hors table "
+            f"détectée: {destination}"
+        )
+
+    if destination.is_symlink():
+        raise RuntimeError(
+            "NOGO: destination symlink "
+            f"refusée: {destination}"
+        )
+
+    return destination
+
+
+def pincabos_compare_staged_file(
+    source,
+    destination,
+):
+    source = Path(source)
+    destination = Path(destination)
+
+    if not destination.exists():
+        return (
+            "new",
+            "destination absente",
+        )
+
+    if (
+        not destination.is_file()
+        or destination.is_symlink()
+    ):
+        raise RuntimeError(
+            "NOGO: destination existante "
+            f"non régulière: {destination}"
+        )
+
+    src_stat = source.stat()
+    dst_stat = destination.stat()
+
+    src_mtime = float(
+        src_stat.st_mtime
+    )
+
+    dst_mtime = float(
+        dst_stat.st_mtime
+    )
+
+    tolerance = (
+        PINCABOS_SMART_IMPORT_MTIME_TOLERANCE
+    )
+
+    # 0/1 = date volontairement inconnue.
+    if (
+        src_mtime <= 1
+        or dst_mtime <= 1
+    ):
+        same = (
+            pincabos_file_sha256(source)
+            == pincabos_file_sha256(
+                destination
+            )
+        )
+
+        if same:
+            return (
+                "identical",
+                "date inconnue + "
+                "SHA-256 identique",
+            )
+
+        return (
+            "update",
+            "date inconnue + "
+            "SHA-256 différent",
+        )
+
+    if (
+        src_mtime
+        > dst_mtime + tolerance
+    ):
+        return (
+            "update",
+            "entrant plus récent",
+        )
+
+    if (
+        src_mtime
+        < dst_mtime - tolerance
+    ):
+        return (
+            "older",
+            "entrant plus vieux",
+        )
+
+    same = (
+        pincabos_file_sha256(source)
+        == pincabos_file_sha256(
+            destination
+        )
+    )
+
+    if same:
+        return (
+            "identical",
+            "date équivalente + "
+            "SHA-256 identique",
+        )
+
+    return (
+        "update",
+        "date équivalente + "
+        "SHA-256 différent",
+    )
+
+
+def pincabos_build_staged_plan(
+    staged_table,
+    table_dir,
+):
+    staged_table = Path(staged_table)
+    table_dir = Path(table_dir)
+
+    staged_real = (
+        staged_table.resolve()
+    )
+
+    plan = []
+
+    for source in sorted(
+        staged_table.rglob("*")
+    ):
+        if source.is_symlink():
+            raise RuntimeError(
+                "NOGO: symlink entrant "
+                f"refusé: {source}"
+            )
+
+        if not source.is_file():
+            continue
+
+        relative = (
+            source.resolve()
+            .relative_to(staged_real)
+        )
+
+        destination = (
+            pincabos_safe_table_target(
+                table_dir,
+                relative,
+            )
+        )
+
+        action, reason = (
+            pincabos_compare_staged_file(
+                source,
+                destination,
+            )
+        )
+
+        plan.append({
+            "action": action,
+            "reason": reason,
+            "source": source,
+            "destination": destination,
+            "relative": relative,
+        })
+
+    return plan
+
+
+def pincabos_new_transaction(
+    table_dir,
+    existed_before,
+):
+    table_dir = Path(table_dir)
+
+    backup_root = None
+
+    if existed_before:
+        stamp = time.strftime(
+            "%Y%m%d-%H%M%S"
+        )
+
+        token = (
+            f"{time.time_ns() % 1000000000:09d}"
+        )
+
+        backup_root = (
+            PINCABOS_SMART_IMPORT_BACKUP_ROOT
+            / (
+                f"{stamp}-{token}-"
+                f"{safe_name(table_dir.name)}"
+            )
+        )
+
+        backup_root.mkdir(
+            parents=True,
+            exist_ok=False,
+        )
+
+    return {
+        "table_dir": table_dir,
+        "existed_before": bool(
+            existed_before
+        ),
+        "backup_root": backup_root,
+        "backed": {},
+        "created_files": [],
+        "created_dirs": [],
+    }
+
+
+def pincabos_tx_record_parent_dirs(
+    transaction,
+    destination,
+):
+    table_dir = Path(
+        transaction["table_dir"]
+    )
+
+    root_real = (
+        table_dir.resolve()
+    )
+
+    destination = Path(destination)
+    current = destination.parent
+
+    pending = []
+
+    while True:
+        current_real = (
+            current.resolve()
+        )
+
+        if current_real == root_real:
+            break
+
+        if (
+            root_real
+            not in current_real.parents
+        ):
+            raise RuntimeError(
+                "NOGO: parent hors table "
+                "pendant transaction: "
+                f"{current}"
+            )
+
+        if current.exists():
+            break
+
+        pending.append(current)
+        current = current.parent
+
+    for directory in reversed(
+        pending
+    ):
+        if (
+            directory
+            not in transaction[
+                "created_dirs"
+            ]
+        ):
+            transaction[
+                "created_dirs"
+            ].append(directory)
+
+
+def pincabos_tx_backup_existing(
+    transaction,
+    path,
+):
+    path = Path(path)
+
+    if not path.exists():
+        return
+
+    if (
+        path.is_symlink()
+        or not path.is_file()
+    ):
+        raise RuntimeError(
+            "NOGO: fichier de destination "
+            f"non régulier: {path}"
+        )
+
+    table_dir = Path(
+        transaction["table_dir"]
+    ).resolve()
+
+    relative = (
+        path.resolve()
+        .relative_to(table_dir)
+    )
+
+    key = relative.as_posix()
+
+    if key in transaction["backed"]:
+        return
+
+    backup_root = transaction.get(
+        "backup_root"
+    )
+
+    if backup_root is None:
+        return
+
+    backup_path = (
+        backup_root
+        / relative
+    )
+
+    backup_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    shutil.copy2(
+        path,
+        backup_path,
+    )
+
+    transaction["backed"][key] = (
+        str(backup_path)
+    )
+
+
+def pincabos_tx_prepare_write(
+    transaction,
+    destination,
+):
+    destination = Path(destination)
+
+    if destination.exists():
+        pincabos_tx_backup_existing(
+            transaction,
+            destination,
+        )
+    else:
+        pincabos_tx_record_parent_dirs(
+            transaction,
+            destination,
+        )
+
+        if (
+            destination
+            not in transaction[
+                "created_files"
+            ]
+        ):
+            transaction[
+                "created_files"
+            ].append(destination)
+
+
+def pincabos_rollback_transaction(
+    transaction,
+):
+    table_dir = Path(
+        transaction["table_dir"]
+    )
+
+    if not transaction[
+        "existed_before"
+    ]:
+        if table_dir.exists():
+            shutil.rmtree(table_dir)
+
+        return
+
+    for created in reversed(
+        transaction["created_files"]
+    ):
+        try:
+            Path(created).unlink()
+        except FileNotFoundError:
+            pass
+        except IsADirectoryError:
+            pass
+
+    for key, backup_name in (
+        transaction["backed"].items()
+    ):
+        relative = Path(key)
+
+        destination = (
+            pincabos_safe_table_target(
+                table_dir,
+                relative,
+            )
+        )
+
+        backup_path = Path(
+            backup_name
+        )
+
+        destination.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        copy_file(
+            backup_path,
+            destination.parent,
+            destination.name,
+        )
+
+    for directory in sorted(
+        transaction["created_dirs"],
+        key=lambda item: len(
+            Path(item).parts
+        ),
+        reverse=True,
+    ):
+        try:
+            Path(directory).rmdir()
+        except OSError:
+            pass
+
+
+def pincabos_apply_staged_plan(
+    plan,
+    transaction,
+):
+    stats = {
+        "new": 0,
+        "update": 0,
+        "identical": 0,
+        "older": 0,
+    }
+
+    for item in plan:
+        action = item["action"]
+
+        stats[action] += 1
+
+        if action in {
+            "identical",
+            "older",
+        }:
+            log(
+                f"{action.upper()}: "
+                f"{item['relative']} "
+                f"({item['reason']})"
+            )
+            continue
+
+        destination = Path(
+            item["destination"]
+        )
+
+        pincabos_tx_prepare_write(
+            transaction,
+            destination,
+        )
+
+        copy_file(
+            item["source"],
+            destination.parent,
+            destination.name,
+        )
+
+        log(
+            f"{action.upper()}: "
+            f"{item['relative']} "
+            f"({item['reason']})"
+        )
+
+    return stats
+
+
+def pincabos_remap_installed_to_relative(
+    installed,
+    staged_table,
+):
+    staged_real = Path(
+        staged_table
+    ).resolve()
+
+    out = {}
+
+    for category, values in (
+        installed or {}
+    ).items():
+        clean = []
+        seen = set()
+
+        for value in values:
+            candidate = Path(
+                str(value)
+            )
+
+            try:
+                relative = (
+                    candidate.resolve()
+                    .relative_to(
+                        staged_real
+                    )
+                )
+            except Exception:
+                continue
+
+            portable = (
+                relative.as_posix()
+            )
+
+            if (
+                portable
+                and portable not in seen
+            ):
+                seen.add(portable)
+                clean.append(portable)
+
+        out[category] = clean
+
+    return out
+
+
+def pincabos_merge_installed(
+    existing_manifest,
+    incoming_installed,
+):
+    merged = {}
+
+    old_installed = {}
+
+    if isinstance(
+        existing_manifest,
+        dict,
+    ):
+        candidate = (
+            existing_manifest.get(
+                "installed",
+                {},
+            )
+        )
+
+        if isinstance(
+            candidate,
+            dict,
+        ):
+            old_installed = candidate
+
+    categories = (
+        set(old_installed)
+        | set(
+            incoming_installed
+            or {}
+        )
+    )
+
+    for category in sorted(
+        categories
+    ):
+        values = []
+        seen = set()
+
+        for source_values in (
+            old_installed.get(
+                category,
+                [],
+            ),
+            (
+                incoming_installed
+                or {}
+            ).get(
+                category,
+                [],
+            ),
+        ):
+            if not isinstance(
+                source_values,
+                list,
+            ):
+                continue
+
+            for value in source_values:
+                portable = str(
+                    value or ""
+                ).strip().lstrip("/")
+
+                if (
+                    portable
+                    and portable
+                    not in seen
+                ):
+                    seen.add(portable)
+                    values.append(
+                        portable
+                    )
+
+        merged[category] = values
+
+    return merged
+
+
+def pincabos_atomic_write_json(
+    path,
+    payload,
+):
+    path = Path(path)
+
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with tempfile.NamedTemporaryFile(
+        prefix=(
+            f".{path.name}."
+            "pincabos-meta-"
+        ),
+        suffix=".tmp",
+        dir=str(path.parent),
+        delete=False,
+        mode="w",
+        encoding="utf-8",
+    ) as handle:
+        temporary = Path(
+            handle.name
+        )
+
+        json.dump(
+            payload,
+            handle,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+        handle.write("\n")
+        handle.flush()
+
+    try:
+        temporary.replace(path)
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def pincabos_write_transaction_record(
+    transaction,
+    stats,
+    incoming_vpsid,
+):
+    backup_root = (
+        transaction.get(
+            "backup_root"
+        )
+    )
+
+    if backup_root is None:
+        return
+
+    payload = {
+        "table": str(
+            transaction["table_dir"]
+        ),
+        "vpsid": str(
+            incoming_vpsid or ""
+        ),
+        "created_at": (
+            time.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        ),
+        "stats": stats,
+        "backed_files": sorted(
+            transaction["backed"]
+        ),
+        "created_files": [],
+    }
+
+    table_dir = Path(
+        transaction["table_dir"]
+    )
+
+    for item in transaction[
+        "created_files"
+    ]:
+        item = Path(item)
+
+        try:
+            payload[
+                "created_files"
+            ].append(
+                str(
+                    item.relative_to(
+                        table_dir
+                    )
+                )
+            )
+        except Exception:
+            pass
+
+    pincabos_atomic_write_json(
+        backup_root
+        / "transaction.json",
+        payload,
+    )
+
+
+def pincabos_log_update_summary(
+    stats,
+):
+    log("")
+    log(
+        "================================"
+        "=================="
+    )
+    log(
+        " Résumé mise à jour "
+        "Smart Import"
+    )
+    log(
+        "================================"
+        "=================="
+    )
+
+    log(
+        f"{stats.get('new', 0)} nouveaux · "
+        f"{stats.get('update', 0)} mis à jour · "
+        f"{stats.get('identical', 0)} déjà à jour · "
+        f"{stats.get('older', 0)} fichiers "
+        "entrants plus vieux ignorés"
+    )
+
+# === PINCABOS_SMART_IMPORT_UPDATE_V1 END ===
+
+
 
 def copy_dir_contents(src_dir, dest_dir):
     src_dir = Path(src_dir)
@@ -1619,63 +2718,148 @@ def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
 
     return installed
 
-def write_info_and_manifest(table_dir, title, manufacturer, year, rom, vpsid, ipdbid, installed):
+def write_info_and_manifest(
+    table_dir,
+    title,
+    manufacturer,
+    year,
+    rom,
+    vpsid,
+    ipdbid,
+    installed,
+    info_path_override=None,
+    existing_manifest=None,
+):
     # PINCABOS_MANIFEST_RELATIVE_PATHS_V1
+    # PINCABOS_SMART_IMPORT_UPDATE_V1
+
     table_dir = Path(table_dir)
     table_resolved = table_dir.resolve()
+
     normalized_installed = {}
 
-    for category, values in installed.items():
+    for category, values in (
+        installed or {}
+    ).items():
         clean_values = []
         seen_values = set()
 
         for value in values:
-            candidate = Path(str(value))
+            candidate = Path(
+                str(value)
+            )
 
             try:
                 if candidate.is_absolute():
-                    relative = candidate.resolve().relative_to(
-                        table_resolved
+                    relative = (
+                        candidate.resolve()
+                        .relative_to(
+                            table_resolved
+                        )
                     )
                 else:
                     relative = candidate
+
             except Exception:
                 continue
 
-            portable = relative.as_posix().lstrip("/")
+            portable = (
+                relative
+                .as_posix()
+                .lstrip("/")
+            )
 
-            if portable and portable not in seen_values:
-                seen_values.add(portable)
-                clean_values.append(portable)
+            if (
+                portable
+                and portable
+                not in seen_values
+            ):
+                seen_values.add(
+                    portable
+                )
+                clean_values.append(
+                    portable
+                )
 
-        normalized_installed[category] = clean_values
+        normalized_installed[
+            category
+        ] = clean_values
 
-    installed = normalized_installed
+    installed = (
+        normalized_installed
+    )
+
     info = {
         "Info": {
             "Title": title,
             "Manufacturer": manufacturer,
-            "Year": str(year or ""),
+            "Year": str(
+                year or ""
+            ),
             "Rom": rom,
             "VPSId": vpsid,
             "IPDBId": ipdbid,
         }
     }
 
-    info_path = table_dir / f"{safe_name(title)}.info"
-    info_path.write_text(json.dumps(info, indent=2, ensure_ascii=False), encoding="utf-8")
+    if info_path_override:
+        info_path = Path(
+            info_path_override
+        )
+
+        if (
+            info_path.parent.resolve()
+            != table_resolved
+            or info_path.suffix.lower()
+            != ".info"
+        ):
+            raise RuntimeError(
+                "NOGO: chemin .info "
+                f"invalide: {info_path}"
+            )
+    else:
+        info_path = (
+            table_dir
+            / (
+                f"{safe_name(title)}"
+                ".info"
+            )
+        )
+
+    now = time.strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    previous = (
+        existing_manifest
+        if isinstance(
+            existing_manifest,
+            dict,
+        )
+        else {}
+    )
 
     manifest = {
-        "format": "PinCabOS portable VPX table",
+        "format": (
+            "PinCabOS portable "
+            "VPX table"
+        ),
         "format_version": 6,
-        "model": "single-folder-portable-table",
+        "model": (
+            "single-folder-"
+            "portable-table"
+        ),
         "title": title,
         "manufacturer": manufacturer,
-        "year": str(year or ""),
+        "year": str(
+            year or ""
+        ),
         "rom": rom,
         "vpsid": vpsid,
         "ipdbid": ipdbid,
-        "table_dir": str(table_dir),
+        "table_dir": str(
+            table_dir
+        ),
         "layout": {
             "root": [
                 "*.vpx",
@@ -1685,37 +2869,87 @@ def write_info_and_manifest(table_dir, title, manufacturer, year, rom, vpsid, ip
                 "*.vbs",
                 "*.scv",
                 "*.pov",
-                "*.res"
+                "*.res",
             ],
-            "altsound": "pinmame/altsound/<name>/",
+            "altsound": (
+                "pinmame/altsound/"
+                "<name>/"
+            ),
             "cache": "cache/",
             "medias": "medias/",
             "music": "music/",
             "pinmame": {
-                "roms": "pinmame/roms/",
-                "nvram": "pinmame/nvram/",
-                "cfg": "pinmame/cfg/",
-                "ini": "pinmame/ini/",
-                "alias": "pinmame/alias.txt"
+                "roms": (
+                    "pinmame/roms/"
+                ),
+                "nvram": (
+                    "pinmame/nvram/"
+                ),
+                "cfg": (
+                    "pinmame/cfg/"
+                ),
+                "ini": (
+                    "pinmame/ini/"
+                ),
+                "alias": (
+                    "pinmame/"
+                    "alias.txt"
+                ),
             },
-            "pupvideos": "pupvideos/",
+            "pupvideos": (
+                "pupvideos/"
+            ),
             "scripts": "scripts/",
-            "serum": "pinmame/altcolor/<name>/",
-            "ultradmd": "<Table Name>.UltraDMD/",
+            "serum": (
+                "pinmame/altcolor/"
+                "<name>/"
+            ),
+            "ultradmd": (
+                "<Table Name>."
+                "UltraDMD/"
+            ),
             "user": "user/",
-            "vni": "pinmame/altcolor/<name>/",
-            "extras": "extras/"
+            "vni": (
+                "pinmame/altcolor/"
+                "<name>/"
+            ),
+            "extras": "extras/",
         },
-        "legacy_global_paths_used": False,
+        "legacy_global_paths_used": (
+            False
+        ),
         "installed": installed,
-        "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "created_at": str(
+            previous.get(
+                "created_at"
+            )
+            or now
+        ),
     }
 
-    manifest_path = table_dir / "pincabos-table-manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    if previous:
+        manifest[
+            "updated_at"
+        ] = now
+
+    pincabos_atomic_write_json(
+        info_path,
+        info,
+    )
+
+    manifest_path = (
+        table_dir
+        / "pincabos-table-manifest.json"
+    )
+
+    pincabos_atomic_write_json(
+        manifest_path,
+        manifest,
+    )
 
     log(f"META: {info_path}")
     log(f"META: {manifest_path}")
+
 
 
 def write_import_tree_log(table_dir, title, rom, installed):
@@ -1793,121 +3027,609 @@ def write_import_tree_log(table_dir, title, rom, installed):
 
 def main():
     ap = argparse.ArgumentParser()
+
     ap.add_argument("batch_dir")
-    ap.add_argument("--title", default="")
-    ap.add_argument("--manufacturer", default="")
-    ap.add_argument("--year", default="")
-    ap.add_argument("--vpsid", default="")
-    ap.add_argument("--rom", default="")
-    ap.add_argument("--ipdbid", default="")
+    ap.add_argument(
+        "--title",
+        default="",
+    )
+    ap.add_argument(
+        "--manufacturer",
+        default="",
+    )
+    ap.add_argument(
+        "--year",
+        default="",
+    )
+    ap.add_argument(
+        "--vpsid",
+        default="",
+    )
+    ap.add_argument(
+        "--rom",
+        default="",
+    )
+    ap.add_argument(
+        "--ipdbid",
+        default="",
+    )
+
     args = ap.parse_args()
 
-    batch_dir = Path(args.batch_dir)
+    batch_dir = Path(
+        args.batch_dir
+    )
+
     if not batch_dir.exists():
-        raise SystemExit(f"Batch introuvable: {batch_dir}")
-
-    title = standard_table_folder_name(safe_name(args.title or batch_dir.name))
-    manufacturer = args.manufacturer.strip()
-    year = str(args.year or "").strip()
-    vpsid = args.vpsid.strip()
-    ipdbid = args.ipdbid.strip()
-
-    TABLES_ROOT.mkdir(parents=True, exist_ok=True)
-
-    log("==================================================")
-    log(" PinCabOS Import - Portable VPX table complete")
-    log("==================================================")
-    log(f"Batch       : {batch_dir}")
-    log(f"Tables root : {TABLES_ROOT}")
-    log(f"Title       : {title}")
-
-    with tempfile.TemporaryDirectory(prefix="pincabos-portable-table-import-") as td:
-        extract_root = Path(td) / "extract"
-        extract_all_inputs(batch_dir, extract_root)
-
-        main_vpx = choose_main_vpx(extract_root)
-        if not main_vpx:
-            raise SystemExit("ERREUR: aucun fichier .vpx trouvé après extraction. Import refusé.")
-
-        # Analyse AVANT toute copie : ROM + nom exact du PuP-Pack.
-        identity = detect_import_identity(
-            extract_root,
-            args.rom,
-            main_vpx=main_vpx,
+        raise SystemExit(
+            "Batch introuvable: "
+            f"{batch_dir}"
         )
-        rom = identity["rom"]
-        pup_pack = identity["pup_pack"]
 
-        # PINCABOS_PUP_ALIAS_ROM_TRUTH_V1
-        if pup_pack:
-            bundled_roms = [
-                item
-                for item in list_files(extract_root)
-                if (
-                    item.suffix.lower() == ".zip"
-                    and archive_kind(item) == "rom_zip"
+    incoming_title = (
+        standard_table_folder_name(
+            safe_name(
+                args.title
+                or batch_dir.name
+            )
+        )
+    )
+
+    manufacturer = (
+        args.manufacturer.strip()
+    )
+
+    year = str(
+        args.year or ""
+    ).strip()
+
+    vpsid = (
+        args.vpsid.strip()
+    )
+
+    ipdbid = (
+        args.ipdbid.strip()
+    )
+
+    TABLES_ROOT.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    log(
+        "================================"
+        "=================="
+    )
+    log(
+        " PinCabOS Import - "
+        "Portable VPX table complete"
+    )
+    log(
+        "================================"
+        "=================="
+    )
+    log(
+        f"Batch       : {batch_dir}"
+    )
+    log(
+        f"Tables root : {TABLES_ROOT}"
+    )
+    log(
+        f"Title       : {incoming_title}"
+    )
+
+    with PINCABOS_SMART_IMPORT_LOCK.open(
+        "a+"
+    ) as lock_handle:
+
+        fcntl.flock(
+            lock_handle.fileno(),
+            fcntl.LOCK_EX,
+        )
+
+        try:
+            table_dir = (
+                pincabos_find_existing_table_dir(
+                    incoming_title
                 )
-            ]
+            )
 
-            if not bundled_roms:
-                if str(rom or "").casefold() != str(pup_pack).casefold():
-                    log(
-                        "ROM corrigée par alias PuP : "
-                        f"{rom or '(vide)'} -> {pup_pack}"
+            existed_before = (
+                table_dir.is_dir()
+            )
+
+            if existed_before:
+                existing_identity = (
+                    pincabos_validate_existing_identity(
+                        table_dir,
+                        incoming_title,
+                        vpsid,
                     )
-                rom = pup_pack
+                )
 
+                title = (
+                    table_dir.name
+                )
 
-        table_dir = TABLES_ROOT / title
-        ensure_table_tree(table_dir)
+                log(
+                    "MODE UPDATE            : "
+                    "nom normalisé identique "
+                    f"+ VPSId {vpsid}"
+                )
 
-        # PinCabOS portable: toujours créer le .vbs final à côté du .vpx.
-        # Utilise VPinballX-BGFX -extractvbs et refuse les VBS vides.
-        final_vbs = extract_vbs_from_vpx(main_vpx, table_dir)
-        if final_vbs:
-            log(f"VBS final extrait      : {final_vbs}")
-        else:
-            log("WARNING: VBS final non extrait. La table peut quand même fonctionner via script embarqué, mais l'import portable sera moins complet.")
+            else:
+                existing_identity = {
+                    "vpsid": "",
+                    "title": (
+                        incoming_title
+                    ),
+                    "manifest": {},
+                    "manifest_path": (
+                        table_dir
+                        / (
+                            "pincabos-table-"
+                            "manifest.json"
+                        )
+                    ),
+                    "info_path": None,
+                }
 
-        log("")
-        log("==================================================")
-        log(" Installation portable VPX")
-        log("==================================================")
-        log(f"VPX principal détecté : {main_vpx}")
-        log(f"ROM détectée          : {rom or '(aucune)'}")
-        log(
-            "PuP-Pack détecté       : "
-            f"{pup_pack or '(aucun / non explicite)'}"
-        )
-        log(f"Table dir             : {table_dir}")
+                title = incoming_title
 
-        installed = classify_and_install(extract_root, table_dir, rom, pup_pack=pup_pack)
+                log(
+                    "MODE INSTALL           : "
+                    "nouvelle table"
+                )
 
-    write_info_and_manifest(table_dir, title, manufacturer, year, rom, vpsid, ipdbid, installed)
+            with tempfile.TemporaryDirectory(
+                prefix=(
+                    "pincabos-portable-"
+                    "table-import-"
+                )
+            ) as td:
 
-    import_log_path = write_import_tree_log(table_dir, title, rom, installed)
+                work_root = Path(td)
 
-    try:
-        subprocess.run(["chown", "-R", "pinball:pinball", str(table_dir)], timeout=60, check=False)
-        subprocess.run(["chmod", "-R", "u+rwX,g+rwX,o+rX", str(table_dir)], timeout=60, check=False)
-    except Exception:
-        pass
+                extract_root = (
+                    work_root
+                    / "extract"
+                )
 
-    log("")
-    log("==================================================")
-    log(" Résumé")
-    log("==================================================")
-    for k, v in installed.items():
-        log(f"{k}: {len(v)}")
+                extract_all_inputs(
+                    batch_dir,
+                    extract_root,
+                )
 
-    log("")
-    log("=== Résultat table ===")
-    subprocess.run(["find", str(table_dir), "-maxdepth", "5", "-print"], check=False)
+                main_vpx = (
+                    choose_main_vpx(
+                        extract_root
+                    )
+                )
 
-    log("")
-    log(f"LOG TXT: {import_log_path}")
-    log("IMPORT OK - modèle portable VPX complet")
-    return 0
+                if not main_vpx:
+                    raise RuntimeError(
+                        "ERREUR: aucun "
+                        "fichier .vpx trouvé "
+                        "après extraction. "
+                        "Import refusé."
+                    )
+
+                identity = (
+                    detect_import_identity(
+                        extract_root,
+                        args.rom,
+                        main_vpx=main_vpx,
+                    )
+                )
+
+                rom = identity["rom"]
+
+                pup_pack = (
+                    identity["pup_pack"]
+                )
+
+                if pup_pack:
+                    bundled_roms = [
+                        item
+                        for item
+                        in list_files(
+                            extract_root
+                        )
+                        if (
+                            item.suffix.lower()
+                            == ".zip"
+                            and archive_kind(
+                                item
+                            )
+                            == "rom_zip"
+                        )
+                    ]
+
+                    if not bundled_roms:
+                        if (
+                            str(
+                                rom or ""
+                            ).casefold()
+                            != str(
+                                pup_pack
+                            ).casefold()
+                        ):
+                            log(
+                                "ROM corrigée "
+                                "par alias PuP : "
+                                f"{rom or '(vide)'} "
+                                f"-> {pup_pack}"
+                            )
+
+                        rom = pup_pack
+
+                staged_table = (
+                    work_root
+                    / "staged-tables"
+                    / title
+                )
+
+                ensure_table_tree(
+                    staged_table
+                )
+
+                final_vbs = (
+                    extract_vbs_from_vpx(
+                        main_vpx,
+                        staged_table,
+                    )
+                )
+
+                if final_vbs:
+                    log(
+                        "VBS staging extrait    : "
+                        f"{final_vbs}"
+                    )
+                else:
+                    log(
+                        "WARNING: VBS non "
+                        "extrait dans staging."
+                    )
+
+                log("")
+                log(
+                    "================================"
+                    "=================="
+                )
+                log(
+                    " Préparation portable "
+                    "VPX en staging"
+                )
+                log(
+                    "================================"
+                    "=================="
+                )
+                log(
+                    "VPX principal détecté : "
+                    f"{main_vpx}"
+                )
+                log(
+                    "ROM détectée          : "
+                    f"{rom or '(aucune)'}"
+                )
+                log(
+                    "PuP-Pack détecté       : "
+                    f"{pup_pack or '(aucun)'}"
+                )
+                log(
+                    "Staging table         : "
+                    f"{staged_table}"
+                )
+                log(
+                    "Table réelle          : "
+                    f"{table_dir}"
+                )
+
+                staged_installed = (
+                    classify_and_install(
+                        extract_root,
+                        staged_table,
+                        rom,
+                        pup_pack=pup_pack,
+                    )
+                )
+
+                incoming_installed = (
+                    pincabos_remap_installed_to_relative(
+                        staged_installed,
+                        staged_table,
+                    )
+                )
+
+                if existed_before:
+                    existing_identity = (
+                        pincabos_validate_existing_identity(
+                            table_dir,
+                            incoming_title,
+                            vpsid,
+                        )
+                    )
+
+                elif table_dir.exists():
+                    raise RuntimeError(
+                        "NOGO: la table est "
+                        "apparue pendant l'import."
+                    )
+
+                plan = (
+                    pincabos_build_staged_plan(
+                        staged_table,
+                        table_dir,
+                    )
+                )
+
+                transaction = (
+                    pincabos_new_transaction(
+                        table_dir,
+                        existed_before,
+                    )
+                )
+
+                try:
+                    stats = (
+                        pincabos_apply_staged_plan(
+                            plan,
+                            transaction,
+                        )
+                    )
+
+                    previous_manifest = (
+                        existing_identity.get(
+                            "manifest",
+                            {},
+                        )
+                        if existed_before
+                        else {}
+                    )
+
+                    if existed_before:
+                        installed = (
+                            pincabos_merge_installed(
+                                previous_manifest,
+                                incoming_installed,
+                            )
+                        )
+                    else:
+                        installed = (
+                            incoming_installed
+                        )
+
+                    existing_info_path = (
+                        existing_identity.get(
+                            "info_path"
+                        )
+                        if existed_before
+                        else None
+                    )
+
+                    info_target = (
+                        Path(
+                            existing_info_path
+                        )
+                        if existing_info_path
+                        else (
+                            table_dir
+                            / (
+                                f"{safe_name(title)}"
+                                ".info"
+                            )
+                        )
+                    )
+
+                    manifest_target = (
+                        table_dir
+                        / (
+                            "pincabos-table-"
+                            "manifest.json"
+                        )
+                    )
+
+                    pincabos_tx_prepare_write(
+                        transaction,
+                        info_target,
+                    )
+
+                    pincabos_tx_prepare_write(
+                        transaction,
+                        manifest_target,
+                    )
+
+                    write_info_and_manifest(
+                        table_dir,
+                        title,
+                        manufacturer,
+                        year,
+                        rom,
+                        vpsid,
+                        ipdbid,
+                        installed,
+                        info_path_override=(
+                            existing_info_path
+                        ),
+                        existing_manifest=(
+                            previous_manifest
+                        ),
+                    )
+
+                    pincabos_write_transaction_record(
+                        transaction,
+                        stats,
+                        vpsid,
+                    )
+
+                except Exception:
+                    log("")
+                    log(
+                        "ERREUR: commit "
+                        "Smart Import échoué — "
+                        "rollback."
+                    )
+
+                    pincabos_rollback_transaction(
+                        transaction
+                    )
+
+                    log(
+                        "ROLLBACK [OK] "
+                        "table restaurée."
+                    )
+
+                    raise
+
+                import_log_path = (
+                    write_import_tree_log(
+                        table_dir,
+                        title,
+                        rom,
+                        installed,
+                    )
+                )
+
+                try:
+                    subprocess.run(
+                        [
+                            "chown",
+                            "-R",
+                            "pinball:pinball",
+                            str(table_dir),
+                        ],
+                        timeout=60,
+                        check=False,
+                    )
+
+                    subprocess.run(
+                        [
+                            "chmod",
+                            "-R",
+                            "u+rwX,g+rwX,o+rX",
+                            str(table_dir),
+                        ],
+                        timeout=60,
+                        check=False,
+                    )
+
+                except Exception:
+                    pass
+
+                pincabos_log_update_summary(
+                    stats
+                )
+
+                if transaction.get(
+                    "backup_root"
+                ):
+                    log(
+                        "BACKUP UPDATE          : "
+                        f"{transaction['backup_root']}"
+                    )
+
+                log("")
+                log(
+                    "=== Résultat table ==="
+                )
+
+                subprocess.run(
+                    [
+                        "find",
+                        str(table_dir),
+                        "-maxdepth",
+                        "5",
+                        "-print",
+                    ],
+                    check=False,
+                )
+
+                log("")
+                log(
+                    f"LOG TXT: "
+                    f"{import_log_path}"
+                )
+
+                # Conserve le comportement
+                # LIVE ciblé existant.
+                try:
+                    tree_result = (
+                        subprocess.run(
+                            [
+                                (
+                                    "/opt/pincabos/"
+                                    "tools/"
+                                    "pincabos-table-tree.sh"
+                                ),
+                                "--apply",
+                                "--quiet",
+                                (
+                                    f"--table="
+                                    f"{table_dir}"
+                                ),
+                            ],
+                            capture_output=True,
+                            text=True,
+                            timeout=120,
+                            check=False,
+                        )
+                    )
+
+                    if (
+                        tree_result.returncode
+                        != 0
+                    ):
+                        detail = (
+                            (
+                                tree_result.stdout
+                                or ""
+                            )
+                            + "\n"
+                            + (
+                                tree_result.stderr
+                                or ""
+                            )
+                        ).strip()
+
+                        log(
+                            "WARNING: "
+                            "normalisation ciblée "
+                            "table-tree "
+                            "retour="
+                            f"{tree_result.returncode}"
+                        )
+
+                        if detail:
+                            log(detail)
+
+                    else:
+                        log(
+                            "Table-tree ciblé       : "
+                            f"{table_dir}"
+                        )
+
+                except Exception as exc:
+                    log(
+                        "WARNING: "
+                        "normalisation ciblée "
+                        "table-tree impossible: "
+                        f"{exc}"
+                    )
+
+                log(
+                    "IMPORT OK - modèle "
+                    "portable VPX complet "
+                    "avec update sécurisé"
+                )
+
+                return 0
+
+        finally:
+            fcntl.flock(
+                lock_handle.fileno(),
+                fcntl.LOCK_UN,
+            )
+
 
 
 # PINCABOS_FULLDMD_SMART_IMPORT_HOOK_V4
@@ -1940,23 +3662,6 @@ _pincabos_fulldmd_after_smart_import()
 # PINCABOS_FULLDMD_SMART_IMPORT_HOOK_V4_END
 
 
-# PINCABOS_TABLE_TREE_IMPORT_HOOK_V3
-import atexit as _pco_tree_atexit
-import subprocess as _pco_tree_subprocess
-
-
-def _pco_tree_after_import():
-    try:
-        _pco_tree_subprocess.run(
-            ['/opt/pincabos/tools/pincabos-table-tree.sh', "--apply", "--quiet"],
-            timeout=600,
-            check=False,
-        )
-    except Exception:
-        pass
-
-
-_pco_tree_atexit.register(_pco_tree_after_import)
-
+# PINCABOS_TABLE_TREE_IMPORT_TARGETED_V5_ENTRYPOINT
 if __name__ == "__main__":
     raise SystemExit(main())

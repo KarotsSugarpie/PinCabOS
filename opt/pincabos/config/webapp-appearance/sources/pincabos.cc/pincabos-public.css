@@ -1,0 +1,298 @@
+:root{
+    color-scheme:dark;
+
+    --pc-bg:#05060a;
+    --pc-panel:#0e1019;
+    --pc-panel2:#141724;
+
+    --pc-line:
+        rgba(255,255,255,.085);
+
+    --pc-text:#f7f8ff;
+    --pc-muted:#8d94aa;
+
+    --pc-orange:#ff8a1f;
+    --pc-white:#ffffff;
+    --pc-purple:#9464ff;
+    --pc-cyan:#2cdbff;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    margin:0;
+
+    min-height:100vh;
+
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    color:var(--pc-text);
+
+    background:
+        radial-gradient(
+            circle at 8% -5%,
+            rgba(255,138,31,.10),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 75% -10%,
+            rgba(148,100,255,.18),
+            transparent 36%
+        ),
+        radial-gradient(
+            circle at 100% 40%,
+            rgba(44,219,255,.07),
+            transparent 30%
+        ),
+        var(--pc-bg);
+
+    /*
+       Le decor reste attache au viewport.
+       Sa geometrie ne depend donc plus
+       de la hauteur de la page.
+    */
+    background-attachment:
+        fixed;
+}
+
+body:before{
+    content:"";
+
+    position:fixed;
+    inset:0;
+
+    pointer-events:none;
+
+    opacity:.45;
+
+    background-image:
+        linear-gradient(
+            rgba(255,255,255,.017) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,.017) 1px,
+            transparent 1px
+        );
+
+    background-size:
+        48px 48px;
+}
+
+.pc-page{
+    position:relative;
+    z-index:2;
+
+    width:min(
+        1260px,
+        calc(100% - 40px)
+    );
+
+    margin:auto;
+}
+
+.pc-header{
+    height:88px;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:24px;
+
+    border-bottom:
+        1px solid var(--pc-line);
+}
+
+.pc-brand{
+    display:inline-flex;
+    align-items:center;
+
+    text-decoration:none;
+
+    font-size:23px;
+    font-weight:950;
+
+    letter-spacing:-1.4px;
+}
+
+.pc-pin{
+    color:var(--pc-orange);
+}
+
+.pc-cab{
+    color:var(--pc-white);
+}
+
+.pc-os{
+    color:var(--pc-purple);
+}
+
+.pc-nav{
+    display:flex;
+    align-items:center;
+
+    gap:22px;
+}
+
+.pc-nav a{
+    color:#a4aabc;
+
+    text-decoration:none;
+
+    font-size:13px;
+
+    transition:.2s;
+}
+
+.pc-nav a:hover,
+.pc-nav a.active{
+    color:#fff;
+}
+
+.pc-language{
+    display:flex;
+
+    padding:4px;
+
+    border:
+        1px solid var(--pc-line);
+
+    border-radius:12px;
+
+    background:
+        rgba(255,255,255,.025);
+}
+
+.pc-language button{
+    border:0;
+
+    padding:
+        7px 10px;
+
+    border-radius:8px;
+
+    color:#7f879d;
+
+    background:transparent;
+
+    cursor:pointer;
+
+    font-size:11px;
+    font-weight:850;
+}
+
+.pc-language button.active{
+    color:white;
+
+    background:
+        rgba(148,100,255,.18);
+}
+
+.pc-mobile-nav{
+    display:flex;
+    align-items:center;
+    gap:17px;
+}
+
+.pc-button{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
+    min-height:50px;
+
+    padding:
+        0 22px;
+
+    border-radius:13px;
+
+    text-decoration:none;
+
+    color:white;
+
+    font-size:12px;
+    font-weight:850;
+
+    border:
+        1px solid var(--pc-line);
+
+    background:
+        rgba(255,255,255,.035);
+}
+
+.pc-button.primary{
+    border:0;
+
+    background:
+        linear-gradient(
+            110deg,
+            #ff8a1f,
+            #d56f22 25%,
+            #805df4 70%,
+            #9464ff
+        );
+
+    box-shadow:
+        0 18px 50px
+        rgba(119,81,238,.18);
+}
+
+.pc-eyebrow{
+    color:#c4aaff;
+
+    font-size:10px;
+    font-weight:900;
+
+    letter-spacing:3.2px;
+}
+
+.pc-card{
+    border:
+        1px solid var(--pc-line);
+
+    border-radius:22px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(18,20,32,.90),
+            rgba(9,10,17,.87)
+        );
+
+    box-shadow:
+        0 28px 80px
+        rgba(0,0,0,.22);
+}
+
+@media(max-width:850px){
+
+    .pc-nav a{
+        display:none;
+    }
+
+    .pc-page{
+        width:min(
+            100% - 24px,
+            1260px
+        );
+    }
+
+    .pc-header{
+        height:75px;
+    }
+}

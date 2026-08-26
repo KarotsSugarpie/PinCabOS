@@ -1,0 +1,18 @@
+network:
+  version: 2
+  ethernets:
+    NM-9e0d81b0-cf6d-40fb-bcdf-c965d5fea4ee:
+      renderer: NetworkManager
+      match:
+        name: "enp6s0"
+      dhcp4: true
+      dhcp6: true
+      wakeonlan: true
+      networkmanager:
+        uuid: "9e0d81b0-cf6d-40fb-bcdf-c965d5fea4ee"
+        name: "PinCabOS DHCP"
+        passthrough:
+          ethernet._: ""
+          ipv6.addr-gen-mode: "default"
+          ipv6.ip6-privacy: "-1"
+          proxy._: ""

@@ -1,0 +1,3 @@
+# PinCabOS account mirror: exact helpers only
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-account-bridge *
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-chat-backglass *

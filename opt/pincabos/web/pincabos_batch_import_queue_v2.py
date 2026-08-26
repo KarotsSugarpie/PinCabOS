@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pwd
 
 import datetime as _datetime
 import fcntl
@@ -41,10 +42,59 @@ def utc_now() -> str:
 
 
 def ensure_dirs() -> None:
-    for path in (RUN_DIR, UPLOAD_ROOT):
-        path.mkdir(parents=True, exist_ok=True, mode=0o2770)
+    # PINCABOS_BATCH_SHARED_DIR_OWNER_V3
+    #
+    # WebApp : pinball:pinball
+    # Worker : root:pinball
+    #
+    # Le staging partagé doit rester accessible
+    # peu importe lequel démarre en premier.
+
+    owner = None
+
+    try:
+        account = pwd.getpwnam(
+            "pinball"
+        )
+
+        owner = (
+            account.pw_uid,
+            account.pw_gid,
+        )
+
+    except KeyError:
+        pass
+
+    for path in (
+        RUN_DIR,
+        UPLOAD_ROOT,
+    ):
+        path.mkdir(
+            parents=True,
+            exist_ok=True,
+            mode=0o2770,
+        )
+
+        if (
+            owner is not None
+            and os.geteuid() == 0
+        ):
+            try:
+                os.chown(
+                    path,
+                    owner[0],
+                    owner[1],
+                )
+
+            except OSError:
+                pass
+
         try:
-            os.chmod(path, 0o2770)
+            os.chmod(
+                path,
+                0o2770,
+            )
+
         except OSError:
             pass
 

@@ -1181,7 +1181,7 @@
     const rx=Number(data.rx_mbps||0),tx=Number(data.tx_mbps||0);samples.push({rx,tx});if(samples.length>maxSamples)samples.shift();
     qa('[data-pco-network-widget="1"]').forEach(card=>{
       text(card,'[data-pco-network-ip]',data.ip);text(card,'[data-pco-network-gateway]',data.gateway);text(card,'[data-pco-network-mask]',data.mask);
-      text(card,'[data-pco-network-addressing]',data.addressing);text(card,'[data-pco-network-dns]',data.dns);text(card,'[data-pco-network-internet]',data.internet);
+      text(card,'[data-pco-network-addressing]',data.addressing);text(card,'[data-pco-network-wan]',data.wan_ip);text(card,'[data-pco-network-internet]',data.internet);
       text(card,'[data-pco-network-link]',data.link);text(card,'[data-pco-network-interface]',data.interface);text(card,'[data-pco-network-speed]',data.speed==='—'?'Trafic live':data.speed);
       text(card,'[data-pco-network-rx]',mbps(rx));text(card,'[data-pco-network-tx]',mbps(tx));qa('[data-pco-network-chart]',card).forEach(draw);
     });

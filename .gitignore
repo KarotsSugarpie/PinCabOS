@@ -186,7 +186,6 @@
 # Ancienne cle CA generee par les tests Sunshine
 /opt/pincabos/apps/sunshine-stream-test/**/cakey.pem
 /opt/pincabos/backups/
-/opt/pincabos/build/
 /opt/pincabos/cache/
 /opt/pincabos/config/admin-password.txt
 /opt/pincabos/config/webapp-secret.key
@@ -242,3 +241,126 @@
 # ecrits, deja exclus de l'ISO par iso.sh.
 # ------------------------------------------------------------
 /var/crash/
+
+# ============================================================
+# PINCABOS DISASTER RECOVERY - EXCLUSIONS
+# ============================================================
+
+# Python reconstructible
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Node reconstructible
+**/node_modules/
+
+# Backups / snapshots / copies
+**/backup/
+**/backups/
+**/*-backup/
+**/*-backups/
+**/*.bak
+**/*.bak.*
+**/*.bak-*
+**/*.before-*
+**/*before-*
+**/*.orig
+**/*.old
+**/*.bundle
+
+/home/pinball/vpinfe.pre-*
+/home/pinball/pincabos-*-20*
+/root/pincabos-final-safety-*
+/root/pincabos-merge-preview-*
+
+# Temp / cache
+/opt/pincabos/tmp/
+/opt/pincabos/cache/
+
+/opt/pincabos/build/output/
+/opt/pincabos/build/known-good/
+/opt/pincabos/build/legacy-package-builder/pilot-*/
+
+# Logs - partout
+**/*.log
+**/logs/
+
+# Sessions / historique utilisateur
+/home/*/.bash_history
+/root/.bash_history
+
+/home/*/.Xauthority
+/var/lib/lightdm/
+
+/home/*/.config/pulse/cookie
+
+/home/*/.config/gh/
+/root/.config/gh/
+
+/root/.config/vpinfe/
+
+/home/*/.local/share/Trash/
+/home/pinball/.local/state/wireplumber/
+**/*.lock
+
+# Secrets machine
+/root/.ssh/
+/home/*/.ssh/
+
+/etc/ssh/ssh_host_*_key
+/etc/ssh/ssh_host_*_key.pub
+
+/etc/shadow
+/etc/shadow-
+/etc/gshadow
+/etc/gshadow-
+
+/etc/ssl/private/
+/etc/NetworkManager/system-connections/
+
+/opt/pincabos/config/admin-password.txt
+/opt/pincabos/config/webapp-secret.key
+
+# Etat Linux regenerable
+/etc/machine-id
+/etc/ld.so.cache
+
+/var/lib/NetworkManager/
+/var/lib/lightdm/
+/var/lib/systemd/random-seed
+/var/lib/systemd/timers/
+/var/lib/logrotate/status
+/var/lib/plymouth/
+/var/lib/unattended-upgrades/
+/var/lib/ubuntu-advantage/
+/var/lib/dkms/
+
+# Tables utilisateur / gros contenu
+/home/pinball/Tables/
+/home/pinball/tables/
+/home/pinball/Imports/
+/home/pinball/Exports/
+/home/pinball/Downloads/
+
+# Runtime/jobs PinCabOS reconstructibles
+/var/lib/pincabos/batch-live-import/
+/var/lib/pincabos/batch-live/
+
+/var/lib/pincabos/media-recorder/history/
+/var/lib/pincabos/media-recorder/logs/
+/var/lib/pincabos/media-recorder/control.json
+
+/var/lib/pincabos/native-b2s-prelaunch-backups/
+
+/var/lib/pincabos/table-test/runs/
+
+/var/lib/pincabos/updates/
+
+/var/lib/pincabos-link/
+
+# ============================================================
+# FIN PINCABOS DISASTER RECOVERY
+# ============================================================
+

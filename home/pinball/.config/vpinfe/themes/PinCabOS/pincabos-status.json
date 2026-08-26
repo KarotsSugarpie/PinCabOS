@@ -1,0 +1,24 @@
+{
+  "schema": 2,
+  "generated": 1787788124,
+  "link": {
+    "connected": true,
+    "state": "CONNECTE",
+    "user": "Karots",
+    "cabinet": "Ultimate PinCabOS",
+    "friend_requests": 0
+  },
+  "local": {
+    "display": "Alpha 2.48",
+    "tag": "alpha2.48-beta.20260826.1"
+  },
+  "github": {
+    "ok": true,
+    "repository": "KarotsSugarpie/PinCabOS",
+    "channel": "beta",
+    "tag": "alpha2.48-beta.20260826.1",
+    "display": "Alpha 2.48",
+    "published_at": "2026-08-26T02:53:56Z",
+    "different": false
+  }
+}

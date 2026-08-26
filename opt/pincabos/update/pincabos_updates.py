@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+import stat
 import argparse, hashlib, json, os, re, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
 
@@ -17,10 +18,87 @@ def load_json(path, default=None):
     except Exception: return {} if default is None else default
 
 def save_json(path, data):
-    p=Path(path); p.parent.mkdir(parents=True, exist_ok=True)
-    tmp=p.with_suffix(p.suffix+'.tmp')
-    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False)+'\n', encoding='utf-8')
-    os.replace(tmp,p)
+    # PINCABOS_UPDATER_PRESERVE_METADATA_V3
+    #
+    # L'Updater peut tourner root.
+    # os.replace() doit conserver uid/gid/mode
+    # du fichier existant.
+
+    p = Path(path)
+
+    p.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    previous = None
+
+    try:
+        current = p.stat()
+
+        previous = (
+            current.st_uid,
+            current.st_gid,
+            stat.S_IMODE(current.st_mode),
+        )
+
+    except FileNotFoundError:
+        pass
+
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{p.name}.",
+        suffix=".tmp",
+        dir=str(p.parent),
+    )
+
+    os.close(fd)
+
+    temporary = Path(
+        temporary_name
+    )
+
+    try:
+        temporary.write_text(
+            json.dumps(
+                data,
+                indent=2,
+                ensure_ascii=False,
+            ) + "\n",
+            encoding="utf-8",
+        )
+
+        if previous is not None:
+            uid, gid, mode = previous
+
+            if os.geteuid() == 0:
+                os.chown(
+                    temporary,
+                    uid,
+                    gid,
+                )
+
+            os.chmod(
+                temporary,
+                mode,
+            )
+
+        else:
+            os.chmod(
+                temporary,
+                0o644,
+            )
+
+        os.replace(
+            temporary,
+            p,
+        )
+
+    finally:
+        try:
+            temporary.unlink()
+
+        except FileNotFoundError:
+            pass
 
 def config():
     d=load_json(CONFIG,{})

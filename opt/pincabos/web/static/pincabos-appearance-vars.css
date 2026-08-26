@@ -1,35 +1,35 @@
 /* PinCabOS Appearance Variables
- * Generated from: PinCabOS Classic Copie 1
- * Source: /opt/pincabos/config/webapp-appearance/custom/PinCabOS Classic Copie 1.json
+ * Generated from: PinCabOS.cc
+ * Source: /opt/pincabos/config/webapp-appearance/custom/PinCabOS.cc.json
  * Created by Karots Sugarpie
  * Safe layer: visual variables only, no layout change.
  */
 
 :root {
-  --pco-appearance-accent: #ffae00;
-  --pco-appearance-accent2: #ff4314;
-  --pco-appearance-purple: #5f2a91;
-  --pco-appearance-page-text: #ffffff;
-  --pco-appearance-muted-text: #d8b8ff;
-  --pco-appearance-card-bg: rgba(29, 11, 46, 0.76);
-  --pco-appearance-card-border: #ff7a00;
-  --pco-appearance-card-radius: 4px;
-  --pco-appearance-card-shadow: 0 0 25px rgba(255, 122, 0, 0.25);
-  --pco-appearance-button-bg: #ff7a00;
-  --pco-appearance-button-text: #160020;
-  --pco-appearance-button-radius: 4px;
-  --pco-appearance-secondary-bg: #5f2a91;
+  --pco-appearance-accent: #ff8a1f;
+  --pco-appearance-accent2: #9464ff;
+  --pco-appearance-purple: #9464ff;
+  --pco-appearance-page-text: #f7f8ff;
+  --pco-appearance-muted-text: #8d94aa;
+  --pco-appearance-card-bg: #0e1019;
+  --pco-appearance-card-border: #2a2e3f;
+  --pco-appearance-card-radius: 5px;
+  --pco-appearance-card-shadow: 0 18px 55px rgba(0, 0, 0, 0.34);
+  --pco-appearance-button-bg: #ff8a1f;
+  --pco-appearance-button-text: #05060a;
+  --pco-appearance-button-radius: 5px;
+  --pco-appearance-secondary-bg: #7303fc;
   --pco-appearance-secondary-text: #ffffff;
-  --pco-appearance-nav-active-bg: #ff7a00;
-  --pco-appearance-nav-active-text: #160020;
-  --pco-appearance-nav-panel-bg: rgba(12, 0, 22, 0.58);
-  --pco-appearance-nav-panel-border: rgba(255, 122, 0, 0.25);
-  --pco-appearance-input-bg: #050007;
-  --pco-appearance-input-border: #ff7a00;
-  --pco-appearance-input-text: #eeeeee;
-  --pco-appearance-table-bg: #050007;
+  --pco-appearance-nav-active-bg: #ff8a1f;
+  --pco-appearance-nav-active-text: #05060a;
+  --pco-appearance-nav-panel-bg: #141724;
+  --pco-appearance-nav-panel-border: #2a2e3f;
+  --pco-appearance-input-bg: #05060a;
+  --pco-appearance-input-border: #9464ff;
+  --pco-appearance-input-text: #f7f8ff;
+  --pco-appearance-table-bg: #0e1019;
   --pco-appearance-ok: #00ff99;
-  --pco-appearance-warn: #ffb000;
+  --pco-appearance-warn: #ff8a1f;
   --pco-appearance-bad: #ff5555;
 }
 

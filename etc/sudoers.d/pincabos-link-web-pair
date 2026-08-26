@@ -1,0 +1,2 @@
+# PinCabOS Link Web pairing - least privilege
+pinball ALL=(root) NOPASSWD: /usr/local/sbin/pincabos-link-web-pair *

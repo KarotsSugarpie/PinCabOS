@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "name": "PinCabOS.cc",
+  "kind": "preset",
+  "description": "Theme officiel inspire du CSS public pincabos.cc : noir profond, panneaux sombres, orange PinCabOS et mauve PinCabOS.cc.",
+  "created_by": "Karots Sugarpie",
+  "updated_at": "2026-08-25 09:46:45",
+  "source_css": "/opt/pincabos/config/webapp-appearance/sources/pincabos.cc/pincabos-public.css",
+  "source_url": "https://pincabos.cc/assets/pincabos-public.css?v=20260822-3",
+  "source_sha256": "c5b82d12358e1e615790339829fdc34aad01bf57687c4e22649263555d6e1642",
+  "tokens": {
+    "accent": "#ff8a1f",
+    "accent2": "#9464ff",
+    "purple": "#9464ff",
+
+    "page_text": "#f7f8ff",
+    "muted_text": "#8d94aa",
+
+    "card_bg": "#0e1019",
+    "card_border": "#2a2e3f",
+    "card_radius": "22px",
+    "card_shadow": "0 18px 55px rgba(0, 0, 0, 0.34)",
+
+    "button_bg": "#ff8a1f",
+    "button_text": "#05060a",
+    "button_radius": "13px",
+
+    "secondary_bg": "#9464ff",
+    "secondary_text": "#ffffff",
+
+    "nav_active_bg": "#ff8a1f",
+    "nav_active_text": "#05060a",
+    "nav_panel_bg": "#141724",
+    "nav_panel_border": "#2a2e3f",
+
+    "input_bg": "#05060a",
+    "input_border": "#9464ff",
+    "input_text": "#f7f8ff",
+
+    "table_bg": "#0e1019",
+
+    "ok": "#00ff99",
+    "warn": "#ff8a1f",
+    "bad": "#ff5555"
+  }
+}

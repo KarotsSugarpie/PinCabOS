@@ -53,6 +53,29 @@
     var form = finalInput.closest("form");
     var queue = [];
 
+    /* PINCABOS_SMART_IMPORT_CLIENT_MTIME_V1 */
+    var modifiedTimesInput = null;
+
+    if (form) {
+      modifiedTimesInput =
+        form.querySelector(
+          'input[name="file_mtimes_json"]'
+        );
+
+      if (!modifiedTimesInput) {
+        modifiedTimesInput =
+          document.createElement("input");
+
+        modifiedTimesInput.type = "hidden";
+        modifiedTimesInput.name =
+          "file_mtimes_json";
+
+        form.appendChild(
+          modifiedTimesInput
+        );
+      }
+    }
+
     var submitButton = form
       ? form.querySelector(
           'button[type="submit"], input[type="submit"]'
@@ -138,6 +161,17 @@
 
       finalInput.files = transfer.files;
       expectedInput.value = String(queue.length);
+
+      if (modifiedTimesInput) {
+        modifiedTimesInput.value =
+          JSON.stringify(
+            queue.map(function (file) {
+              return Number(
+                file.lastModified || 0
+              );
+            })
+          );
+      }
     }
 
     function updateSubmitButton() {

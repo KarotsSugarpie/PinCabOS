@@ -1,9 +1,0 @@
-[Updater] Preparing update v2.4.2 for linux-x64-slim
-[Updater] Downloading vpinfe-v2.4.2-linux-x64-slim.zip to /home/pinball/.config/vpinfe/updates/v2.4.2/linux-x64-slim/vpinfe-v2.4.2-linux-x64-slim.zip.part
-[Updater] Downloaded asset sha256=b7c8bcad0e8951e77ba973897da3c24bbcd7b17ba0254e0510fcf0c6e233fedb
-[Updater] Cached verified asset at /home/pinball/.config/vpinfe/updates/v2.4.2/linux-x64-slim/vpinfe-v2.4.2-linux-x64-slim.zip
-[Updater] Launching detached updater for v2.4.2
-[Updater] Shell script written to /home/pinball/.config/vpinfe/updates/v2.4.2/linux-x64-slim/apply_update.sh
-[Updater] Stage log: /home/pinball/.config/vpinfe/updates/v2.4.2/linux-x64-slim/apply_update.log
-[Updater] Install root: /home/pinball/vpinfe
-[Updater] Launch target: /home/pinball/vpinfe/vpinfe

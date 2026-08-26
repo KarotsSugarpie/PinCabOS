@@ -3,21 +3,79 @@ set -Eeuo pipefail
 
 TABLES_ROOT="/home/pinball/Tables"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-LOCK="/tmp/pincabos-table-tree.lock"
+# PINCABOS_TABLE_TREE_LOCK_V2
+LOCK_DIR="/home/pinball/.local/state/pincabos"
+LOCK="$LOCK_DIR/table-tree.lock"
 MODE="audit"
 QUIET=0
+TARGET_TABLE=""
 
+# PINCABOS_TABLE_TREE_TARGETED_V3
 for arg in "$@"; do
   case "$arg" in
     --apply) MODE="apply" ;;
     --audit) MODE="audit" ;;
     --quiet) QUIET=1 ;;
+    --table=*) TARGET_TABLE="${arg#--table=}" ;;
   esac
 done
 
 mkdir -p "$TABLES_ROOT" /opt/pincabos/logs
-exec 9>"$LOCK"
+
+# PINCABOS_TABLE_TREE_LOCK_V2
+#
+# Ce script peut être appelé par root ou par pinball.
+# Le lock appartient toujours au compte opérationnel pinball,
+# afin qu'un passage root ne bloque jamais un import suivant.
+
+if [[ "$(id -u)" -eq 0 ]]; then
+    install         -d         -m 0755         -o pinball         -g pinball         "$LOCK_DIR"
+
+    touch "$LOCK"
+    chown pinball:pinball "$LOCK"
+    chmod 0644 "$LOCK"
+else
+    mkdir -p "$LOCK_DIR"
+    touch "$LOCK"
+fi
+
+exec 9>>"$LOCK"
 flock -x 9
+
+
+# PINCABOS_TABLE_TREE_TARGETED_V3
+#
+# --table= accepte uniquement un dossier DIRECTEMENT
+# sous /home/pinball/Tables.
+#
+# Aucun chemin arbitraire, parent, symlink externe ou
+# dossier hors Tables n'est autorisé.
+
+TABLES_ROOT_REAL="$(readlink -f -- "$TABLES_ROOT")"
+TARGET_REAL=""
+
+if [[ -n "$TARGET_TABLE" ]]; then
+
+  TARGET_REAL="$(
+    readlink -f -- "$TARGET_TABLE" 2>/dev/null || true
+  )"
+
+  if [[ -z "$TARGET_REAL" ]]; then
+    echo "NOGO [X] Table cible introuvable : $TARGET_TABLE"
+    exit 2
+  fi
+
+  if [[ ! -d "$TARGET_REAL" ]]; then
+    echo "NOGO [X] Table cible non répertoire : $TARGET_REAL"
+    exit 2
+  fi
+
+  if [[ "$(dirname -- "$TARGET_REAL")" != "$TABLES_ROOT_REAL" ]]; then
+    echo "NOGO [X] Table cible hors racine directe : $TARGET_REAL"
+    exit 2
+  fi
+fi
+
 
 # Politique PinCabOS demandée :
 # - altsound et altcolor sont sous pinmame
@@ -284,18 +342,34 @@ process_table() {
 TOTAL=0
 DIRTY=0
 
-while IFS= read -r -d '' table; do
-  is_table_dir "$table" || continue
-  TOTAL=$((TOTAL + 1))
-  process_table "$table" || DIRTY=$((DIRTY + 1))
-done < <(
-  find "$TABLES_ROOT" \
-    -mindepth 1 \
-    -maxdepth 1 \
-    -type d \
-    ! -name '.*' \
-    -print0 | sort -z
-)
+# PINCABOS_TABLE_TREE_TARGETED_V3
+if [[ -n "$TARGET_REAL" ]]; then
+
+  TOTAL=1
+
+  if ! is_table_dir "$TARGET_REAL"; then
+    [[ "$QUIET" -eq 1 ]] || echo "NOGO [X] Aucun VPX : $TARGET_REAL"
+    DIRTY=1
+  else
+    process_table "$TARGET_REAL" || DIRTY=$((DIRTY + 1))
+  fi
+
+else
+
+  while IFS= read -r -d '' table; do
+    is_table_dir "$table" || continue
+    TOTAL=$((TOTAL + 1))
+    process_table "$table" || DIRTY=$((DIRTY + 1))
+  done < <(
+    find "$TABLES_ROOT" \
+      -mindepth 1 \
+      -maxdepth 1 \
+      -type d \
+      ! -name '.*' \
+      -print0 | sort -z
+  )
+
+fi
 
 LOOSE="$(
   find "$TABLES_ROOT" \

@@ -1,0 +1,9 @@
+[Unit]
+Description=PinCabOS Media Recorder - Job Watcher
+
+[Path]
+PathExists=/var/lib/pincabos/media-recorder/job.json
+Unit=pincabos-media-recorder-worker.service
+
+[Install]
+WantedBy=multi-user.target

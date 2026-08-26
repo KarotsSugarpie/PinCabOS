@@ -38,6 +38,7 @@ vpin.ready.then(async () => {
     applyMenuRotation();
 
     setupPinCabOSCabIp();
+    setupPinCabOSInCardStatus();
     if (windowName === "table") {
         vpin.registerInputHandler(handleInput);
         setupAttractMode();
@@ -1378,3 +1379,315 @@ window.addEventListener("resize", () => {
         renderWheelCarousel({ animate: false });
     }
 });
+
+
+// PINCABOS_IN_CARD_STATUS_V2_JS_BEGIN
+
+let pincabInCardStatusTimer = null;
+
+function getPinCabOSThemeStatusUrl() {
+    /*
+     * Route statique native VPinFE confirmee :
+     * /themes/PinCabOS/
+     */
+    try {
+        return new URL(
+            "/themes/PinCabOS/pincabos-status.json",
+            window.location.origin
+        ).toString();
+    } catch (error) {
+        console.warn(
+            "PinCabOS: unable to create status URL",
+            error
+        );
+
+        return null;
+    }
+}
+
+
+function setPinCabOSStatusText(id, value) {
+    const element =
+        document.getElementById(id);
+
+    if (!element) {
+        return;
+    }
+
+    const output =
+        value === undefined
+        || value === null
+        || String(value).trim() === ""
+            ? "-"
+            : String(value);
+
+    if (id === "pincabLinkState") {
+        const dot =
+            element.querySelector(
+                ".pincab-link-dot"
+            );
+
+        if (dot) {
+            const textNodes =
+                Array.from(
+                    element.childNodes
+                ).filter(
+                    node =>
+                        node.nodeType
+                        === Node.TEXT_NODE
+                );
+
+            for (const node of textNodes) {
+                node.remove();
+            }
+
+            element.appendChild(
+                document.createTextNode(
+                    output
+                )
+            );
+
+            return;
+        }
+    }
+
+    element.textContent = output;
+}
+
+
+function setPinCabOSLinkVisual(
+    connected,
+    state
+) {
+    const element =
+        document.getElementById(
+            "pincabLinkState"
+        );
+
+    if (!element) {
+        return;
+    }
+
+    element.classList.remove(
+        "is-loading",
+        "is-online",
+        "is-offline",
+        "is-unlinked"
+    );
+
+    if (connected) {
+        element.classList.add(
+            "is-online"
+        );
+
+        return;
+    }
+
+    const normalized =
+        String(state || "")
+            .toLowerCase();
+
+    if (
+        normalized.includes("non lie")
+        || normalized.includes("non lié")
+    ) {
+        element.classList.add(
+            "is-unlinked"
+        );
+    } else {
+        element.classList.add(
+            "is-offline"
+        );
+    }
+}
+
+
+function renderPinCabOSInCardStatus(data) {
+    if (!data || typeof data !== "object") {
+        return;
+    }
+
+    const link =
+        data.link
+        && typeof data.link === "object"
+            ? data.link
+            : {};
+
+    const local =
+        data.local
+        && typeof data.local === "object"
+            ? data.local
+            : {};
+
+    const github =
+        data.github
+        && typeof data.github === "object"
+            ? data.github
+            : {};
+
+    const state =
+        String(
+            link.state
+            || "HORS LIGNE"
+        );
+
+    setPinCabOSStatusText(
+        "pincabLinkState",
+        state
+    );
+
+    setPinCabOSLinkVisual(
+        Boolean(link.connected),
+        state
+    );
+
+    setPinCabOSStatusText(
+        "pincabLinkUser",
+        link.user
+    );
+
+    setPinCabOSStatusText(
+        "pincabLinkCabinet",
+        link.cabinet
+    );
+
+    const requests =
+        Math.max(
+            0,
+            Number(
+                link.friend_requests
+                || 0
+            ) || 0
+        );
+
+    setPinCabOSStatusText(
+        "pincabFriendRequests",
+        requests > 0
+            ? `${requests} EN ATTENTE`
+            : "0"
+    );
+
+    const requestElement =
+        document.getElementById(
+            "pincabFriendRequests"
+        );
+
+    if (requestElement) {
+        requestElement.classList.toggle(
+            "has-pending",
+            requests > 0
+        );
+    }
+
+    setPinCabOSStatusText(
+        "pincabOsLocal",
+        local.display
+        || local.tag
+        || "INCONNUE"
+    );
+
+    setPinCabOSStatusText(
+        "pincabOsGithub",
+        github.display
+        || "INDISPONIBLE"
+    );
+
+    const githubElement =
+        document.getElementById(
+            "pincabOsGithub"
+        );
+
+    if (githubElement) {
+        githubElement.classList.toggle(
+            "has-different-version",
+            Boolean(github.different)
+        );
+
+        if (github.tag) {
+            githubElement.title =
+                "GitHub: "
+                + String(github.tag);
+        } else {
+            githubElement.removeAttribute(
+                "title"
+            );
+        }
+    }
+}
+
+
+async function refreshPinCabOSInCardStatus() {
+    const url =
+        getPinCabOSThemeStatusUrl();
+
+    if (!url) {
+        return;
+    }
+
+    try {
+        const requestUrl =
+            new URL(url);
+
+        requestUrl.searchParams.set(
+            "_pco",
+            String(Date.now())
+        );
+
+        const response =
+            await fetch(
+                requestUrl.toString(),
+                {
+                    cache: "no-store",
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        renderPinCabOSInCardStatus(
+            data
+        );
+
+    } catch (error) {
+        console.warn(
+            "PinCabOS: unable to refresh in-card status",
+            error
+        );
+
+        setPinCabOSStatusText(
+            "pincabLinkState",
+            "HORS LIGNE"
+        );
+
+        setPinCabOSLinkVisual(
+            false,
+            "HORS LIGNE"
+        );
+    }
+}
+
+
+function setupPinCabOSInCardStatus() {
+    refreshPinCabOSInCardStatus();
+
+    if (pincabInCardStatusTimer) {
+        clearInterval(
+            pincabInCardStatusTimer
+        );
+    }
+
+    pincabInCardStatusTimer =
+        setInterval(
+            refreshPinCabOSInCardStatus,
+            15000
+        );
+}
+
+// PINCABOS_IN_CARD_STATUS_V2_JS_END
+
