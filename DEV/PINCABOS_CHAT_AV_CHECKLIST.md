@@ -9,7 +9,7 @@
 - **Fichier :** `DEV/PINCABOS_CHAT_AV_CHECKLIST.md`
 - **Branche :** `main`
 - **Dernière mise à jour :** 2026-08-26
-- **État global :** moteur SFU central et signaling HTTPS publics validés; source active du Control Hub auditée et déclarée publiable; snapshot canonique 31 fichiers créé et validé par SHA256 sans modification du runtime; chaîne cabinet Chat/Backglass canonique identifiée (`pincaboslink.py` + account bridge + agent + display helper) et présente dans GitHub; comparaison Git blob `.237` ↔ GitHub à terminer avant modification A/V; média WAN réel pas encore prouvé depuis un réseau externe.
+- **État global :** LiveKit central et signaling HTTPS publics validés; chaîne cabinet Chat texte canonique prouvée bit-à-bit; correctif `NoNewPrivileges`/`runuser` validé; décision prise de garder le Chat texte séparé et de créer une fenêtre **Lobby A/V dédiée** avec topologie 6 zones; détection 2/3 écrans canonique prouvée; chaîne de preview par rôles auditée; source DMD seule et contrat exact du lobby serveur restent à prouver; média WAN réel pas encore prouvé.
 
 ## Règles non négociables
 
@@ -23,8 +23,10 @@
 - [x] Le Chat A/V ne passe pas par VPinFE.
 - [x] Aucun enregistrement audio/vidéo par défaut.
 - [x] Caméra inactive par défaut; activation seulement après action/acceptation explicite.
+- [x] Micro inactif par défaut; activation seulement après action/acceptation explicite.
 - [x] Ne jamais journaliser mots de passe, cookies, secrets LiveKit, jetons de session, contenu des messages, audio ou vidéo.
 - [x] Pas de patch/overlay temporaire : retrouver et modifier la source canonique.
+- [x] Le Chat texte reste séparé de la fenêtre Lobby A/V.
 
 ## A. Cabinet — caméra et microphone
 
@@ -32,8 +34,8 @@
 - [x] Vidéo V4L2 détectée.
 - [x] Micro de la webcam détecté via PipeWire.
 - [x] PipeWire opérationnel.
-- [ ] Prouver `getUserMedia()` vidéo dans le navigateur du cabinet.
-- [ ] Prouver `getUserMedia()` audio dans le navigateur du cabinet.
+- [ ] Prouver `getUserMedia()` vidéo dans le navigateur de la **fenêtre Lobby A/V dédiée**.
+- [ ] Prouver `getUserMedia()` audio dans le navigateur de la fenêtre Lobby A/V dédiée.
 - [ ] Prouver le choix explicite du périphérique caméra/micro dans l'UI.
 - [ ] Vérifier que caméra et micro restent coupés avant acceptation d'un appel.
 
@@ -45,261 +47,226 @@
 - [x] Frontend actif identifié : `/opt/pincabos-release-center/pincabos-control-hub-v27.js`.
 - [x] `app.py` importe et enregistre directement `register_control_hub_v27`.
 - [x] Routes Control Hub actives confirmées sous `/api/control-hub/...`.
-- [x] Chat texte actuel identifié : polling GET/POST périodique toutes les 4 secondes, sans moteur WebRTC/SFU existant avant ce chantier.
-- [x] SHA déployés enregistrés : `app.py` = `b7398e5c092cc2e3ebcedd754fcc0634a995bb09a8a4a579fb5d420123bdd472`; module Hub = `0ee74053ddfd08569edb2629ddd60cff754b785517650c89ab81b533f6b95c0a`; JS = `38ae8bf8bf9dfecfe63b295042cd2449bf1720730b6711fec9962e12f5354bed`; CSS = `4fdc3eeba580ada0e0f7914885252117d6479fabd3af30a726fe65ddf8faf27f`.
-- [x] `/opt/pincabos-release-center` confirmé comme **non-worktree Git**.
-- [x] GitHub CLI (`gh`) absent sur `.55`; aucun besoin de l'installer pour l'audit.
-- [x] Aucun paquet Debian ne revendique `app.py`, `pincabos_control_hub_v27.py` ou `pincabos-control-hub-v27.js`.
-- [x] Recherche GitHub `main` : aucune copie de `pincabos-release-center`, `pincabos_control_hub_v27.py` ou du Control Hub actif retrouvée.
-- [x] Provenance auditée : la source active de `.55` est actuellement la seule source complète prouvée pour ce Control Hub.
-- [x] Liste candidate de fichiers source de premier niveau établie.
-- [x] Exclusions permanentes établies : `backups/`, `__pycache__/`, `*.pyc`, DB/SQLite, `.env`, clés/certificats privés, logs, caches et données utilisateurs.
-- [x] Runtime de données confirmé hors arbre source : `/var/lib/pincabos-release/...`.
-- [x] Aucun marqueur de clé privée trouvé dans la source candidate.
-- [x] Audit structurel Python : `app.secret_key` et mot de passe SMTP proviennent de l'environnement; tokens sensibles observés sont générés ou issus des requêtes, aucune valeur n'a été affichée.
-- [x] Audit publication V1.2 : Python `HIGH=0`; les sept `MEDIUM` sont des comparaisons ou le fallback non secret `PINCABOS_BASE_URL`.
-- [x] Audit publication V1.2 : aucun pattern de token connu détecté dans JS/HTML.
-- [x] Les 14 `HIGH` JS/HTML ont été classés comme faux positifs de l’heuristique : identifiants de messages/validation UI tels que `current_password_invalid`, `password_mismatch`, `password_letter_required` et `invalid_or_expired_token`, pas des credentials.
-- [x] Variables d’environnement sensibles `PINCABOS_TURNSTILE_SECRET` et `PINCABOS_SMTP_PASSWORD` confirmées sans fallback secret codé en dur.
-- [x] Source candidate déclarée **publiable** à l’issue de l’audit V1.2.
-- [x] Snapshot canonique créé depuis une whitelist exacte de **31 fichiers**.
+- [x] Chat texte actuel identifié : polling GET/POST toutes les 4 secondes, sans moteur WebRTC/SFU existant avant ce chantier.
+- [x] Source active `.55` auditée et déclarée publiable.
+- [x] Snapshot canonique créé depuis une whitelist exacte de 31 fichiers.
+- [x] Manifest SHA256 31/31 validé.
+- [x] SHA256 archive : `d201baf4250ea2614b2cc11c40ce8707c1e63d35d3a2c2890ea6237ab2caa8d7`.
 - [x] Snapshot exclut DB, backups, bytecode, `.env`, clés/certificats, logs, caches et données utilisateur.
-- [x] Manifest SHA256 contient 31 entrées et tous les fichiers extraits ont été validés `OK`.
-- [x] SHA256 de l'archive : `d201baf4250ea2614b2cc11c40ce8707c1e63d35d3a2c2890ea6237ab2caa8d7`.
-- [x] Non-régression après snapshot : SHA runtime inchangés; Release Center et LiveKit actifs; HTTP site et LiveKit = `200`.
-- [ ] Versionner ce snapshot dans GitHub sans créer de doublon fonctionnel ni modifier le runtime `.55`.
-- [ ] Comparer les SHA du code déployé avec la source GitHub canonique après import.
+- [x] Non-régression après snapshot : Release Center et LiveKit actifs; HTTP site et LiveKit = `200`.
+- [ ] Versionner le snapshot `.55` dans GitHub sous le chemin canonique prévu, sans doublon fonctionnel.
+- [ ] Comparer les SHA du code déployé `.55` avec la source GitHub après import.
 - [ ] Déclarer officiellement le chemin GitHub canonique du serveur pincabos.cc.
-- [ ] Documenter la route/app d'intégration A/V exacte avant modification applicative.
-
-> **Décision 2026-08-26 :** aucune nouvelle implémentation parallèle ne sera créée. La source actuellement exécutée sur `.55`, auditée, déclarée publiable et capturée dans un snapshot SHA-validé, doit être importée telle quelle dans GitHub et devenir la référence canonique avant toute modification A/V.
+- [ ] Auditer le **contrat exact du lobby multijoueur serveur** : room, membres/sièges, owner/local identity, ready, table, état de partie, scores/progression disponibles.
+- [ ] Documenter les routes exactes utilisées par la fenêtre Lobby A/V avant modification applicative.
 
 ## C. Moteur central LiveKit
 
-- [x] Architecture retenue : LiveKit SFU self-hosted central.
-- [x] Déploiement natif retenu sur `PinCabOS.CC` / `192.168.254.55`; aucun Docker ajouté sur ce serveur.
-- [x] LiveKit `v1.13.5` téléchargé depuis la release officielle.
-- [x] Checksum officiel vérifié avant installation.
-- [x] Service canonique créé : `pincabos-livekit.service`.
-- [x] Service `active`.
-- [x] Service `enabled`.
+- [x] LiveKit SFU self-hosted central retenu.
+- [x] LiveKit `v1.13.5` installé nativement sur `192.168.254.55`.
+- [x] Service `pincabos-livekit.service` actif/enabled.
 - [x] Compte système dédié `pincabos-livekit`.
-- [x] Configuration limitée à IPv4 locale `192.168.254.55`.
-- [x] Détection STUN de l'IP publique : `142.112.59.9`.
-- [x] Validation externe STUN rendue non bloquante derrière NAT.
-- [x] Limite LiveKit : 4 participants.
-- [x] Signal/API local : TCP `7880` actif.
-- [x] ICE/TCP : TCP `7881` actif.
-- [x] ICE/UDP mux : UDP `7882` actif.
-- [x] TURN/UDP : UDP `443` actif.
-- [x] Endpoint LiveKit local retourne HTTP `200`.
-- [x] Release Center non régressé après installation.
-- [x] SHA `app.py` inchangé après installation.
+- [x] Limite prévue : 4 participants.
+- [x] TCP `7880` signal/API actif.
+- [x] TCP `7881` ICE/TCP actif.
+- [x] UDP `7882` ICE/UDP actif.
+- [x] TURN/UDP `443` actif.
+- [x] IP publique annoncée : `142.112.59.9`.
+- [x] Endpoint local HTTP `200`.
 - [x] VPX/BGFX/VPinFE non modifiés par l'installation LiveKit.
-
-### Preuve validée — 2026-08-26
-
-- `livekit-server version 1.13.5`
-- `TCP7880=1 TCP7881=1 UDP7882=1 UDP443=1`
-- LiveKit annonce `nodeIP: 142.112.59.9`.
-- LiveKit annonce `rtc.portTCP: 7881`.
-- LiveKit annonce `rtc.portUDP: 7882`.
-- TURN annonce `turn.portUDP: 443`.
-- `pincabos-livekit.service` : `active (running)`.
 
 ## D. NPM / TLS / signaling public
 
-- [x] NPM confirmé sur `192.168.254.6`.
-- [x] NPM `2.15.1` confirmé.
-- [x] NPM conserve TCP `443` pour HTTPS.
-- [x] Support Nginx `stream` / `ssl_preread` présent, sans modification nécessaire pour la V1.
-- [x] `av.pincabos.cc` résout publiquement vers `142.112.59.9`.
-- [x] Résolution confirmée via résolveur local `192.168.254.1`.
-- [x] Résolution confirmée via `1.1.1.1`.
-- [x] Résolution confirmée via `8.8.8.8`.
-- [x] Proxy Host NPM canonique créé pour `av.pincabos.cc`.
-- [x] Backend NPM : `http://192.168.254.55:7880`.
-- [x] Support WebSocket activé dans NPM.
-- [x] Certificat Let's Encrypt valide pour `av.pincabos.cc`.
-- [x] HTTPS public `https://av.pincabos.cc/` retourne HTTP `200` avec TLS valide.
-- [x] Signaling public peut utiliser `wss://av.pincabos.cc`.
+- [x] NPM confirmé sur `192.168.254.6`, version `2.15.1`.
+- [x] TCP `443` NPM conservé pour HTTPS.
+- [x] `av.pincabos.cc` résout vers `142.112.59.9`.
+- [x] Proxy NPM vers `192.168.254.55:7880`.
+- [x] WebSocket activé.
+- [x] Certificat Let's Encrypt valide.
+- [x] `https://av.pincabos.cc/` retourne HTTP `200`.
+- [x] Signaling public prévu via `wss://av.pincabos.cc`.
 
 ## E. NAT / média WAN central
 
-- [x] Principe fixé : les redirections de ports existent uniquement sur l'infrastructure centrale, jamais chez l'utilisateur.
-- [ ] Prouver depuis Internet que TCP `7881` atteint `192.168.254.55:7881`.
-- [ ] Prouver depuis Internet que UDP `7882` atteint `192.168.254.55:7882`.
-- [ ] Prouver depuis Internet que UDP `443` atteint TURN sur `192.168.254.55:443`.
-- [ ] Tester depuis un réseau externe réel, pas depuis le même LAN.
+- [x] Redirections uniquement sur l'infrastructure centrale, jamais chez les utilisateurs.
+- [ ] Prouver depuis Internet que TCP `7881` atteint `.55:7881`.
+- [ ] Prouver depuis Internet que UDP `7882` atteint `.55:7882`.
+- [ ] Prouver depuis Internet que UDP `443` atteint TURN `.55:443`.
+- [ ] Tester depuis un réseau externe réel.
 - [ ] Prouver un échange média réel via ICE/UDP.
-- [ ] Prouver le fallback TURN/UDP.
-- [ ] Tester un réseau derrière CGNAT.
-- [ ] Tester un pare-feu réseau restrictif.
-- [ ] Ajouter plus tard TURN/TLS sur TCP `443` pour le dernier niveau de compatibilité réseau, sans casser le TCP/443 NPM existant.
-
-> **Important :** les sockets locaux LiveKit sont validés, mais la portée WAN des ports média n'est pas encore cochée tant qu'un client externe n'a pas réellement établi une session.
+- [ ] Prouver fallback TURN/UDP.
+- [ ] Tester derrière CGNAT.
+- [ ] Tester pare-feu restrictif.
+- [ ] Ajouter plus tard TURN/TLS TCP `443` sans casser NPM TCP443.
 
 ## F. Authentification et jetons LiveKit
 
-- [x] Environnement Python actif audité : `/usr/bin/python3.13`, préfixe `/usr`.
-- [x] Flask présent.
-- [x] Gunicorn présent.
-- [x] `jwt` absent avant intégration A/V.
-- [x] `livekit` et `livekit.api` absents avant intégration A/V.
-- [ ] Choisir l'intégration SDK/API LiveKit la moins intrusive dans la source canonique.
-- [ ] Lire `LIVEKIT_API_KEY` et `LIVEKIT_API_SECRET` depuis le fichier protégé; ne jamais les exposer au navigateur.
+- [x] Python 3.13, Flask et Gunicorn présents côté `.55`.
+- [x] `jwt` et SDK LiveKit absents avant intégration.
+- [ ] Choisir l'intégration SDK/API LiveKit la moins intrusive.
+- [ ] Lire `LIVEKIT_API_KEY` et `LIVEKIT_API_SECRET` depuis le fichier protégé; jamais au navigateur.
 - [ ] Générer des jetons LiveKit courts côté serveur uniquement.
-- [ ] Lier chaque jeton à l'utilisateur authentifié PinCabOS.
-- [ ] Lier chaque jeton à un lobby/appel précis.
-- [ ] Interdire de rejoindre une room arbitraire choisie par le client.
-- [ ] Limiter les permissions publish/subscribe aux besoins de l'appel.
-- [ ] Ajouter expiration courte et identifiant de session.
-- [ ] Ne jamais journaliser le jeton JWT complet.
-- [ ] Ajouter tests positifs et négatifs d'autorisation.
+- [ ] Lier chaque jeton à l'utilisateur authentifié et au lobby/appel exact.
+- [ ] Interdire une room arbitraire choisie par le client.
+- [ ] Limiter publish/subscribe aux besoins de l'appel.
+- [ ] Ajouter TTL court et identifiant de session.
+- [ ] Ne jamais journaliser le JWT complet.
+- [ ] Tests positifs/négatifs d'autorisation.
 
-## G. Appels individuels et de groupe
+## G. Appels / lobby A/V
 
+- [x] Fenêtre A/V décidée **séparée du Chat texte** et liée au lobby.
+- [x] Maximum 4 participants : 1 local + jusqu'à 3 invités.
+- [x] Le joueur local de chaque cabinet reste toujours en bas-centre.
+- [x] Les trois invités occupent les trois zones du haut dans un ordre déterministe de lobby.
+- [x] Les cartes ne changent pas de place selon le speaker actif.
 - [ ] Définir le contrat d'appel : `idle`, `ringing`, `accepted`, `connecting`, `connected`, `ended`, `declined`, `failed`.
-- [ ] Appel individuel ami → ami.
-- [ ] Appel de groupe lié au lobby.
+- [ ] Définir mapping lobby-seat → Guest 1/2/3 après exclusion du local.
 - [ ] Acceptation explicite avant caméra/micro.
 - [ ] Refus d'appel.
 - [ ] Hangup propre.
 - [ ] Reconnexion média contrôlée.
-- [ ] Empêcher un utilisateur non membre d'entrer dans la room.
-- [ ] Maximum 4 participants appliqué côté serveur et côté UI.
+- [ ] Empêcher un non-membre d'entrer dans la room.
+- [ ] Maximum 4 appliqué côté serveur et UI.
 
-## H. Client navigateur / backglass
+## H. Cabinet — source canonique Chat texte et orchestration Backglass
 
-- [x] WebApp cabinet actif identifié : `/opt/pincabos/web`, service `pincabos-webapp.service` sous Waitress.
-- [x] Frontend/route Chat cabinet canonique identifié : `/opt/pincabos/web/pincaboslink.py`.
-- [x] Route Backglass canonique : `GET /pincabos-link/chat-backglass`, générée par `_backglass_html()`, HTTP local `200`, `Cache-Control: no-store`.
-- [x] Chat texte cabinet existant identifié : contexte compte/amis, GET/POST chat, polling 4 s, bouton afficher/fermer Backglass.
-- [x] Chaîne existante identifiée : `pincabos-account-bridge` → `pincabos-chat-backglass-agent` → `pincabos-chat-backglass` → route locale WebApp.
-- [x] `pincabos-chat-backglass-agent.service` actif/enabled; processus réel UID/GID 0 (root).
-- [x] État sécurisé `/var/lib/pincabos-link` confirmé `0700 root:root`; échec manuel `pinball` expliqué par permissions.
-- [x] `backglass-get` et `status` réussissent dans le contexte root (`RC=0`).
-- [x] Helper display ouvre `http://127.0.0.1/pincabos-link/chat-backglass` avec Chrome/Chromium positionné sur l'écran configuré.
-- [x] Backglass physique confirmé : DP-1, `1920x1080+3840+0`; playfield HDMI-0 et FullDMD DP-2 restent séparés.
-- [x] Les composants existent dans GitHub `main` aux chemins `opt/pincabos/web/pincaboslink.py`, `usr/local/sbin/pincabos-account-bridge`, `usr/local/sbin/pincabos-chat-backglass-agent`, `usr/local/sbin/pincabos-chat-backglass` et `etc/systemd/system/pincabos-chat-backglass-agent.service`.
-- [ ] Prouver que les Git blob SHA des fichiers actifs `.237` correspondent exactement aux blobs GitHub `main` avant modification.
-- [ ] Ajouter le client LiveKit dans la route/frontend cabinet canonique, sans nouveau frontend parallèle.
-- [ ] Chat A/V affiché sur le Backglass.
-- [ ] Playfield VPX non modifié.
+- [x] WebApp cabinet : `/opt/pincabos/web`, `pincabos-webapp.service`.
+- [x] Chat texte canonique : `/opt/pincabos/web/pincaboslink.py`.
+- [x] Route Chat texte Backglass : `GET /pincabos-link/chat-backglass` → `_backglass_html()`.
+- [x] Chaîne canonique : `pincabos-account-bridge` → `pincabos-chat-backglass-agent` → `pincabos-chat-backglass` → route locale WebApp.
+- [x] Agent root et état `/var/lib/pincabos-link` `0700 root:root` prouvés.
+- [x] **5/5 Git blobs** des composants actifs `.237` prouvés identiques à GitHub avant modification.
+- [x] Bug `NoNewPrivileges=true` + `sudo -u pinball` identifié.
+- [x] Correctif canonique appliqué : `/usr/sbin/runuser -u pinball --`, `NoNewPrivileges` conservé.
+- [x] Correctif validé par vraie chaîne `backglass-set 1` → agent → OPEN puis restauration → CLOSED.
+- [x] GitHub commit du correctif helper : `efa90148cd9658b65606785d0e23fc1ceb20dd8a`.
+- [x] Nouveau Git blob helper : `88bf841f8f01c37d6f5f797cd018b91e4aa10234`.
+- [ ] **Restaurer `pincaboslink.py` texte canonique** sur `.237` : la V1 locale A/V expérimentale injectée dans le Chat texte est désormais obsolète.
+- [ ] Reprouver après restauration le SHA canonique `9eeaffd755fb84dac7bf68e415c1c7dcc6d2ce654a7b30965ff9ce33f6e71868` et la non-régression Chat texte.
+
+## I. Fenêtre Lobby A/V — topologie 6 zones
+
+- [x] Document de référence : `DEV/PINCABOS_CHAT_AV_LAYOUT_6_ZONES.md`.
+- [x] Topologie fixe 2×3 décidée : Guest1 / Guest2 / Guest3 en haut; Lobby/Game / Local / B2S en bas.
+- [x] Local toujours bas-centre sur son propre cabinet.
+- [x] Zone bas-gauche réservée aux données réelles du lobby/game, sans données inventées.
+- [x] Zone bas-droite réservée au miroir B2S local en lecture seule.
+- [x] Cabinet 3 écrans : FullDMD reste physiquement séparé.
+- [x] Cabinet 2 écrans : DMD intégré doit être rendu dans la fenêtre A/V.
+- [x] Trois placements DMD 2-écrans décidés : zone B2S, zone Lobby/Game, overlay carte locale.
+- [x] Préférence DMD locale/persistante par cabinet.
+- [ ] Définir la route WebApp canonique dédiée Lobby A/V; ne pas réutiliser la route Chat texte.
+- [ ] Créer l'orchestration dédiée ouverture/fermeture sans modifier VPinFE/VPX/BGFX.
+- [ ] Ajouter LiveKit dans cette fenêtre dédiée seulement après validation du layout local.
 - [ ] Micro OFF par défaut.
 - [ ] Caméra OFF par défaut.
 - [ ] Indicateurs caméra/micro visibles.
-- [ ] Grille 2 participants.
-- [ ] Grille 3 participants.
-- [ ] Grille 4 participants.
-- [ ] ScoreView reste indépendant; aucun score dupliqué dans le Chat.
-- [ ] Restaurer l'affichage normal du Backglass à la fermeture de l'appel.
+- [ ] Restaurer l'affichage normal du Backglass à la fermeture.
 
-## I. Contrôles de développement
+## J. Écrans / B2S / DMD miroir
 
-- [x] Décision temporaire : clavier uniquement pendant le développement A/V.
-- [ ] `C` : ouvrir Chat.
+- [x] `screens.json` identifié comme source canonique de topologie.
+- [x] Cabinet `.237` prouvé 3 écrans : HDMI-0 Playfield, DP-1 Backglass, DP-2 FullDMD.
+- [x] Détection 2/3 écrans déjà native : `fulldmd=None` si troisième écran absent.
+- [x] `pincabos-dashboard-live.service` / `pincabos-dashboard-live-capture` identifié comme producteur des previews par rôle.
+- [x] Mapping canonique preview : `screen0.jpg=Playfield`, `screen1.jpg=Backglass`, `screen2.jpg=FullDMD`.
+- [x] Capture dashboard-live basée sur `display-aliases.env`, X11grab, 5 fps; largeurs 640/480/360.
+- [x] `/api/fulldmd/dmd-overlay/preview` répond HTTP 200 JPEG/no-store sur `.237`.
+- [x] HQ preview absente pendant l'audit; fallback actif = `screen2.jpg` FullDMD complet 360×226.
+- [x] `pincabos-scoreview-x11-hq-preview.sh` audité : capture DP-2 plein écran à 4 fps; non adapté tel quel au mode 2 écrans.
+- [x] `pincabos_dmd_tuner.py::_screen_geometry()` audité : hypothèse DP-2 + fallback `1920x1200+5760+0`; **NOGO comme fondation générique 2 écrans**.
+- [x] `pincabos-dmd-bridge-helper` audité : helper de sauvegarde/configuration des coordonnées DMD, **pas un producteur de pixels**.
+- [ ] Identifier une source DMD seule/crop fiable indépendante de la fenêtre A/V pour éviter une capture récursive du Backglass en mode 2 écrans.
+- [ ] Clarifier les coordonnées DMD `local/real` et leur référentiel avant tout crop.
+- [ ] Généraliser toute géométrie via `screens.json`/rôle d'écran, jamais `DP-2` codé en dur.
+- [ ] Prouver le miroir B2S local sans modifier VPinFE/VPX/BGFX.
+
+## K. Contrôles de développement
+
+- [x] Clavier uniquement pendant le développement A/V.
 - [ ] `Enter` : accepter/rejoindre.
 - [ ] `Esc` : quitter/raccrocher.
 - [ ] `M` : mute/unmute micro.
 - [ ] `V` : caméra on/off.
-- [ ] Flèches : navigation.
+- [ ] Flèches : navigation/réglages si nécessaire.
 - [ ] Vérifier qu'aucune touche de développement n'interfère avec VPX pendant une partie.
-- [ ] Intégration des boutons physiques reportée jusqu'à accès physique au cabinet.
+- [ ] Intégration boutons physiques reportée jusqu'à audit réel des événements cabinet.
 
-## J. Tests d'acceptation A/V
+## L. Tests d'acceptation A/V
 
-- [ ] Test navigateur local avec caméra C270 réelle.
-- [ ] Test audio bidirectionnel entre deux utilisateurs.
-- [ ] Test vidéo bidirectionnel entre deux utilisateurs.
+- [ ] Test navigateur local avec caméra C270 réelle dans fenêtre Lobby A/V dédiée.
+- [ ] Test audio bidirectionnel 2 utilisateurs.
+- [ ] Test vidéo bidirectionnel 2 utilisateurs.
 - [ ] Test sur deux réseaux Internet distincts.
 - [ ] Test 3 participants.
 - [ ] Test 4 participants.
 - [ ] Test TURN/UDP forcé.
-- [ ] Test perte momentanée de réseau et reconnexion.
-- [ ] Test hangup/rejoin sans caméra fantôme ni micro restant ouvert.
-- [ ] Test aucune écriture/modification de VPX BGFX et VPinFE.
+- [ ] Test perte réseau/reconnexion.
+- [ ] Test hangup/rejoin sans caméra/micro fantôme.
+- [ ] Test mode 3 écrans : FullDMD séparé intact.
+- [ ] Test mode 2 écrans : DMD dans chacune des 3 positions configurables.
+- [ ] Test aucune capture récursive A/V dans la zone DMD/B2S.
+- [ ] Test aucune écriture/modification VPX BGFX VPinFE.
 - [ ] Test aucune donnée média enregistrée.
-- [ ] Mesurer CPU/RAM/bande passante du SFU à 2, 3 et 4 participants.
+- [ ] Mesurer CPU/RAM/bande passante SFU à 2/3/4 participants.
 
-## K. Prochaine étape autorisée
+## M. Prochaine étape autorisée
 
-1. **Comparer les Git blob SHA des cinq composants cabinet actifs (`pincaboslink.py`, account bridge, Chat agent, display helper et unit systemd) avec GitHub `main`.**
-2. Si les blobs concordent, déclarer officiellement cette chaîne comme source canonique cabinet et ne créer aucun doublon fonctionnel.
-3. Terminer en parallèle l'import canonique du snapshot `.55` dans GitHub et comparer ses SHA.
-4. Choisir ensuite la méthode de génération JWT/LiveKit côté serveur.
-5. Ajouter l'API serveur A/V dans le vrai `pincabos_control_hub_v27.py` canonique.
-6. Étendre la vraie route cabinet `/pincabos-link/chat-backglass` avec LiveKit et `getUserMedia()`, micro/caméra OFF par défaut.
-7. Faire un premier test navigateur caméra/micro puis prouver le média WAN avec deux réseaux distincts.
+1. **Restaurer le Chat texte canonique sur `.237`** en retirant la V1 A/V expérimentale injectée dans `pincaboslink.py`, avec backup/rollback et preuve SHA.
+2. Auditer sur `.237` le référentiel exact des coordonnées DMD runtime (`X/Y/W/H`) et la chaîne de capture possible pour obtenir un **DMD seul** sans recursion en mode 2 écrans.
+3. Auditer sur `.55` le contrat exact du lobby multijoueur dans `pincabos_control_hub_v27.py` avant de définir les 3 slots invités et la zone Lobby/Game.
+4. Terminer l'import canonique du snapshot `.55` dans GitHub avant toute modification serveur A/V.
+5. Définir ensuite la route WebApp cabinet dédiée **Lobby A/V** et son orchestrateur canonique.
+6. Valider localement la topologie 6 zones + B2S/DMD miroir sans LiveKit.
+7. Prouver `getUserMedia()` caméra/micro dans cette fenêtre dédiée.
+8. Ajouter JWT/LiveKit puis tester 2, 3 et 4 participants et le média WAN.
 
 ## Journal des validations
 
 ### 2026-08-26 — Infrastructure A/V centrale
 
-- **GO** LiveKit `1.13.5` installé nativement sur `192.168.254.55`.
-- **GO** service `pincabos-livekit.service` actif/enabled.
-- **GO** TCP 7880/7881 et UDP 7882/443 actifs localement.
-- **GO** IP publique LiveKit détectée : `142.112.59.9`.
-- **GO** `av.pincabos.cc` publié et résolu vers `142.112.59.9`.
-- **GO** NPM proxifie `av.pincabos.cc` vers `.55:7880` avec TLS valide.
-- **GO** signaling HTTPS public retourne `200`.
-- **GO** Release Center et site PinCabOS non régressés.
-- **À PROUVER** portée WAN réelle des transports média et session WebRTC depuis un réseau externe.
+- **GO** LiveKit `1.13.5`, services/sockets centraux et signaling HTTPS public validés.
+- **GO** `av.pincabos.cc` TLS/WebSocket public validé.
+- **À PROUVER** portée WAN réelle des transports média.
 
-### 2026-08-26 — Provenance Control Hub
+### 2026-08-26 — Source `.55`
 
-- **GO** service actif exécuté depuis `/opt/pincabos-release-center` sous Gunicorn.
-- **GO** `app.py` charge directement `pincabos_control_hub_v27.py`.
-- **GO** routes `/api/control-hub/...` et polling chat 4 s confirmés dans la source active.
-- **GO** répertoire actif confirmé hors Git et fichiers non revendiqués par un paquet Debian.
-- **GO** aucune source équivalente retrouvée dans `KarotsSugarpie/PinCabOS` `main`.
-- **GO** SHA de référence du déploiement enregistrés.
-- **GO** Python 3.13, Flask et Gunicorn présents; JWT et SDK LiveKit absents avant intégration.
+- **GO** Control Hub actif identifié et audité.
+- **GO** snapshot publiable exact 31 fichiers validé 31/31.
+- **GO** archive SHA256 `d201baf4250ea2614b2cc11c40ce8707c1e63d35d3a2c2890ea6237ab2caa8d7`.
+- **À FAIRE** import GitHub canonique et audit exact du contrat lobby.
 
-### 2026-08-26 — Audit sécurité avant import GitHub
+### 2026-08-26 — Provenance cabinet Chat texte
 
-- **GO** liste candidate de source de premier niveau établie.
-- **GO** exclusions permanentes : backups, bytecode, DB, `.env`, clés/certificats privés, logs, caches et données utilisateur.
-- **GO** DB, avatars, cache VPS et clé worldmap confirmés sous `/var/lib/pincabos-release/`, hors arbre source à versionner.
-- **GO** aucun marqueur de clé privée détecté.
-- **GO** audit structurel Python : `app.secret_key` et SMTP password lus depuis l'environnement; tokens observés générés ou fournis par les requêtes.
-- **GO** `gh` absent et `/opt/pincabos-release-center` toujours non-worktree Git.
-- **GO** Release Center et LiveKit actifs; HTTP site et LiveKit = 200 après audit.
+- **GO** cinq composants/units canoniques présents dans GitHub et déployés.
+- **GO** identité 5/5 Git blobs `.237` ↔ GitHub prouvée avant modification.
+- **GO** route Chat texte HTTP 200 et services critiques actifs.
 
-### 2026-08-26 — Audit publication V1.2
+### 2026-08-26 — Correctif orchestration Chat Backglass
 
-- **GO** Python : `HIGH=0`, `MEDIUM=7`; les `MEDIUM` correspondent à des comparaisons et au fallback non secret de `PINCABOS_BASE_URL`.
-- **GO** JS/HTML : aucun pattern connu de token/credential détecté.
-- **GO** les 14 `HIGH` JS/HTML sont des identifiants/messages de validation UI, pas des secrets opérationnels.
-- **GO** `PINCABOS_TURNSTILE_SECRET` et `PINCABOS_SMTP_PASSWORD` sont lus depuis l’environnement sans fallback secret.
-- **GO** aucun marqueur de clé privée.
-- **GO** Release Center et LiveKit restent actifs; HTTP site et LiveKit = 200.
-- **DÉCISION** source candidate approuvée pour préparation du snapshot et import GitHub canonique.
+- **GO** cause `NoNewPrivileges=true` + `sudo -u pinball` reproduite.
+- **GO** helper modifié canoniquement vers `runuser`; NNP conservé.
+- **GO** agent ouvre et referme la fenêtre via le vrai `backglass-set`.
+- **GO** VPinFE/VPX/BGFX intacts et services actifs.
 
-### 2026-08-26 — Snapshot source canonique V1
+### 2026-08-26 — Décision fenêtre Lobby A/V
 
-- **GO** whitelist exacte de 31 fichiers validée.
-- **GO** aucun type interdit présent dans la whitelist.
-- **GO** manifest SHA256 créé avec 31 entrées.
-- **GO** archive contient exactement la whitelist.
-- **GO** extraction temporaire validée : 31/31 fichiers `OK` contre le manifest.
-- **GO** SHA256 archive : `d201baf4250ea2614b2cc11c40ce8707c1e63d35d3a2c2890ea6237ab2caa8d7`.
-- **GO** aucun fichier runtime modifié, aucun service redémarré.
-- **GO** Release Center et LiveKit actifs; HTTP site et LiveKit = 200 après snapshot.
-- **PROCHAINE ÉTAPE** rapatrier l'archive et le manifest pour import GitHub canonique.
+- **DÉCISION** le Chat texte reste séparé.
+- **DÉCISION** fenêtre A/V dédiée liée au lobby.
+- **DÉCISION** topologie 6 zones : 3 invités en haut; Lobby/Game, Local, B2S en bas.
+- **DÉCISION** joueur local toujours bas-centre.
+- **DÉCISION** mode 2 écrans : DMD configurable B2S / Lobby / overlay local.
 
-### 2026-08-26 — Provenance cabinet Chat / Backglass
+### 2026-08-26 — Audit topologie et preview DMD
 
-- **GO** WebApp cabinet actif : `/opt/pincabos/web`, Waitress port 80.
-- **GO** route canonique Chat Backglass : `/opt/pincabos/web/pincaboslink.py` → `GET /pincabos-link/chat-backglass` → `_backglass_html()`.
-- **GO** route locale Backglass répond HTTP 200, `Content-Type: text/html`, `Cache-Control: no-store`.
-- **GO** Chat texte cabinet existant : contexte compte/amis, polling GET chat 4 s, POST message, présence et contrôle Backglass.
-- **GO** agent réel : `/usr/local/sbin/pincabos-chat-backglass-agent`, service actif/enabled, UID/GID 0.
-- **GO** `/var/lib/pincabos-link` est `0700 root:root`; test `pinball` échoue par permission, même test root réussit.
-- **GO** display helper : `/usr/local/sbin/pincabos-chat-backglass`, Chrome/Chromium sur route locale, positionnement écran configuré.
-- **GO** DP-1 confirmé Backglass `1920x1080+3840+0`; HDMI-0 playfield et DP-2 FullDMD séparés.
-- **GO** GitHub `main` contient déjà les cinq composants/units canoniques aux chemins correspondant au runtime.
-- **À PROUVER** identité bit-à-bit via Git blob SHA `.237` ↔ GitHub avant modification.
+- **GO** `screens.json` prouvé source de rôles et détection 2/3 écrans.
+- **GO** cabinet actuel = 3 écrans; FullDMD DP-2 séparé.
+- **GO** dashboard-live produit des previews role-aware `screen0/1/2` à 5 fps.
+- **GO** preview DMD HTTP existante mais fallback actuel = FullDMD complet, pas DMD seul.
+- **NOGO** `pincabos_dmd_tuner.py` et preview HQ actuels contiennent des hypothèses DP-2 spécifiques au cabinet actuel.
+- **GO** `pincabos-dmd-bridge-helper` fournit/configure les coordonnées mais ne produit pas les pixels.
+- **À PROUVER** source DMD seule non récursive pour mode 2 écrans.
 
 ---
 
