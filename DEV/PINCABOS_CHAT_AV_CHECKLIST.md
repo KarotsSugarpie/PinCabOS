@@ -9,7 +9,7 @@
 - **Fichier :** `DEV/PINCABOS_CHAT_AV_CHECKLIST.md`
 - **Branche :** `main`
 - **Dernière mise à jour :** 2026-08-26
-- **État global :** moteur SFU central et signaling HTTPS publics validés; intégration applicative Control Hub à faire; média WAN réel pas encore prouvé depuis un réseau externe.
+- **État global :** moteur SFU central et signaling HTTPS publics validés; provenance du Control Hub actif auditée; source serveur à versionner dans GitHub avant intégration LiveKit; média WAN réel pas encore prouvé depuis un réseau externe.
 
 ## Règles non négociables
 
@@ -40,14 +40,23 @@
 ## B. Source canonique pincabos.cc / Control Hub
 
 - [x] Application active identifiée : `/opt/pincabos-release-center`.
+- [x] Service actif confirmé : `pincabos-release-center.service`, Gunicorn, `WorkingDirectory=/opt/pincabos-release-center`.
 - [x] Module actif identifié : `/opt/pincabos-release-center/pincabos_control_hub_v27.py`.
 - [x] Frontend actif identifié : `/opt/pincabos-release-center/pincabos-control-hub-v27.js`.
-- [x] Chat texte actuel identifié : polling GET/POST périodique, sans moteur WebRTC/SFU existant avant ce chantier.
-- [ ] Retrouver/versionner la source serveur pincabos.cc dans GitHub sans créer de doublon parallèle.
-- [ ] Comparer les SHA du code déployé avec la future source GitHub canonique.
-- [ ] Documenter la route/app d'intégration A/V exacte avant modification.
+- [x] `app.py` importe et enregistre directement `register_control_hub_v27`.
+- [x] Routes Control Hub actives confirmées sous `/api/control-hub/...`.
+- [x] Chat texte actuel identifié : polling GET/POST périodique toutes les 4 secondes, sans moteur WebRTC/SFU existant avant ce chantier.
+- [x] SHA déployés enregistrés : `app.py` = `b7398e5c092cc2e3ebcedd754fcc0634a995bb09a8a4a579fb5d420123bdd472`; module Hub = `0ee74053ddfd08569edb2629ddd60cff754b785517650c89ab81b533f6b95c0a`; JS = `38ae8bf8bf9dfecfe63b295042cd2449bf1720730b6711fec9962e12f5354bed`.
+- [x] `/opt/pincabos-release-center` confirmé comme **non-worktree Git**.
+- [x] Aucun paquet Debian ne revendique `app.py`, `pincabos_control_hub_v27.py` ou `pincabos-control-hub-v27.js`.
+- [x] Recherche GitHub `main` : aucune copie de `pincabos-release-center`, `pincabos_control_hub_v27.py` ou du Control Hub actif retrouvée.
+- [x] Provenance auditée : la source active de `.55` est actuellement la seule source complète prouvée pour ce Control Hub.
+- [ ] Versionner cette source déployée dans GitHub sans créer de doublon fonctionnel ni modifier le runtime pendant l'import initial.
+- [ ] Comparer les SHA du code déployé avec la source GitHub canonique après import.
+- [ ] Déclarer officiellement le chemin GitHub canonique du serveur pincabos.cc.
+- [ ] Documenter la route/app d'intégration A/V exacte avant modification applicative.
 
-> **Écart actuel GitHub :** `pincabos_control_hub_v27.py` n'a pas été retrouvé dans `main` lors de la recherche GitHub du 2026-08-26. Ne pas inventer un autre composant; auditer et réconcilier la source déployée avant l'intégration A/V.
+> **Décision 2026-08-26 :** aucune nouvelle implémentation parallèle ne sera créée. La source actuellement exécutée sur `.55` doit d'abord être importée telle quelle dans GitHub et devenir la référence canonique avant toute modification A/V.
 
 ## C. Moteur central LiveKit
 
@@ -116,7 +125,11 @@
 
 ## F. Authentification et jetons LiveKit
 
-- [ ] Auditer l'environnement Python actuel du Release Center et ses dépendances avant toute installation.
+- [x] Environnement Python actif audité : `/usr/bin/python3.13`, préfixe `/usr`.
+- [x] Flask présent.
+- [x] Gunicorn présent.
+- [x] `jwt` absent avant intégration A/V.
+- [x] `livekit` et `livekit.api` absents avant intégration A/V.
 - [ ] Choisir l'intégration SDK/API LiveKit la moins intrusive dans la source canonique.
 - [ ] Lire `LIVEKIT_API_KEY` et `LIVEKIT_API_SECRET` depuis le fichier protégé; ne jamais les exposer au navigateur.
 - [ ] Générer des jetons LiveKit courts côté serveur uniquement.
@@ -184,11 +197,12 @@
 
 ## K. Prochaine étape autorisée
 
-1. **Auditer la source canonique du Control Hub déployé et la réconcilier avec GitHub.**
-2. Auditer les dépendances Python actives du Release Center.
-3. Ajouter ensuite seulement l'API serveur de génération de jetons LiveKit.
-4. Faire un premier test navigateur caméra/micro.
-5. Prouver le média WAN avec deux réseaux distincts.
+1. **Versionner la source active `/opt/pincabos-release-center` dans GitHub sans modifier le runtime `.55`.**
+2. Comparer immédiatement les SHA GitHub avec les SHA déployés et déclarer le chemin GitHub canonique.
+3. Choisir ensuite seulement la méthode de génération JWT/LiveKit côté serveur.
+4. Ajouter l'API serveur dans le vrai `pincabos_control_hub_v27.py` canonique.
+5. Faire un premier test navigateur caméra/micro.
+6. Prouver le média WAN avec deux réseaux distincts.
 
 ## Journal des validations
 
@@ -203,6 +217,17 @@
 - **GO** signaling HTTPS public retourne `200`.
 - **GO** Release Center et site PinCabOS non régressés.
 - **À PROUVER** portée WAN réelle des transports média et session WebRTC depuis un réseau externe.
+
+### 2026-08-26 — Provenance Control Hub
+
+- **GO** service actif exécuté depuis `/opt/pincabos-release-center` sous Gunicorn.
+- **GO** `app.py` charge directement `pincabos_control_hub_v27.py`.
+- **GO** routes `/api/control-hub/...` et polling chat 4 s confirmés dans la source active.
+- **GO** répertoire actif confirmé hors Git et fichiers non revendiqués par un paquet Debian.
+- **GO** aucune source équivalente retrouvée dans `KarotsSugarpie/PinCabOS` `main`.
+- **GO** SHA de référence du déploiement enregistrés.
+- **GO** Python 3.13, Flask et Gunicorn présents; JWT et SDK LiveKit absents avant intégration.
+- **PROCHAINE ÉTAPE** importer la source déployée dans GitHub telle quelle avant toute modification applicative A/V.
 
 ---
 
