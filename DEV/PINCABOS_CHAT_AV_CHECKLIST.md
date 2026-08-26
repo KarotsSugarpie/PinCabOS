@@ -9,7 +9,7 @@
 - **Fichier :** `DEV/PINCABOS_CHAT_AV_CHECKLIST.md`
 - **Branche :** `main`
 - **Dernière mise à jour :** 2026-08-26
-- **État global :** moteur SFU central et signaling HTTPS publics validés; provenance, inventaire et audit de publication du Control Hub actif validés; aucun credential codé en dur confirmé par l’audit V1.2; source serveur autorisée à passer à l’import GitHub canonique; média WAN réel pas encore prouvé depuis un réseau externe.
+- **État global :** moteur SFU central et signaling HTTPS publics validés; source active du Control Hub auditée et déclarée publiable; snapshot canonique 31 fichiers créé et validé par SHA256 sans modification du runtime; import GitHub du snapshot à faire; média WAN réel pas encore prouvé depuis un réseau externe.
 
 ## Règles non négociables
 
@@ -62,12 +62,17 @@
 - [x] Les 14 `HIGH` JS/HTML ont été classés comme faux positifs de l’heuristique : identifiants de messages/validation UI tels que `current_password_invalid`, `password_mismatch`, `password_letter_required` et `invalid_or_expired_token`, pas des credentials.
 - [x] Variables d’environnement sensibles `PINCABOS_TURNSTILE_SECRET` et `PINCABOS_SMTP_PASSWORD` confirmées sans fallback secret codé en dur.
 - [x] Source candidate déclarée **publiable** à l’issue de l’audit V1.2.
-- [ ] Versionner cette source déployée dans GitHub sans créer de doublon fonctionnel ni modifier le runtime pendant l'import initial.
+- [x] Snapshot canonique créé depuis une whitelist exacte de **31 fichiers**.
+- [x] Snapshot exclut DB, backups, bytecode, `.env`, clés/certificats, logs, caches et données utilisateur.
+- [x] Manifest SHA256 contient 31 entrées et tous les fichiers extraits ont été validés `OK`.
+- [x] SHA256 de l'archive : `d201baf4250ea2614b2cc11c40ce8707c1e63d35d3a2c2890ea6237ab2caa8d7`.
+- [x] Non-régression après snapshot : SHA runtime inchangés; Release Center et LiveKit actifs; HTTP site et LiveKit = `200`.
+- [ ] Versionner ce snapshot dans GitHub sans créer de doublon fonctionnel ni modifier le runtime `.55`.
 - [ ] Comparer les SHA du code déployé avec la source GitHub canonique après import.
 - [ ] Déclarer officiellement le chemin GitHub canonique du serveur pincabos.cc.
 - [ ] Documenter la route/app d'intégration A/V exacte avant modification applicative.
 
-> **Décision 2026-08-26 :** aucune nouvelle implémentation parallèle ne sera créée. La source actuellement exécutée sur `.55`, maintenant auditée et autorisée à la publication, doit être importée telle quelle dans GitHub et devenir la référence canonique avant toute modification A/V.
+> **Décision 2026-08-26 :** aucune nouvelle implémentation parallèle ne sera créée. La source actuellement exécutée sur `.55`, auditée, déclarée publiable et capturée dans un snapshot SHA-validé, doit être importée telle quelle dans GitHub et devenir la référence canonique avant toute modification A/V.
 
 ## C. Moteur central LiveKit
 
@@ -208,8 +213,8 @@
 
 ## K. Prochaine étape autorisée
 
-1. **Créer un snapshot propre de la source active `/opt/pincabos-release-center` sans backups, bytecode, DB, secrets, caches ni données utilisateur.**
-2. Importer ce snapshot dans GitHub sans modifier le runtime `.55`.
+1. **Rapatrier le snapshot canonique et son manifest, puis vérifier localement l'archive SHA256 `d201baf4250ea2614b2cc11c40ce8707c1e63d35d3a2c2890ea6237ab2caa8d7`.**
+2. Importer les 31 fichiers du snapshot dans GitHub sans modifier le runtime `.55`.
 3. Comparer immédiatement les SHA GitHub avec les SHA déployés et déclarer le chemin GitHub canonique.
 4. Choisir ensuite seulement la méthode de génération JWT/LiveKit côté serveur.
 5. Ajouter l'API serveur dans le vrai `pincabos_control_hub_v27.py` canonique.
@@ -259,6 +264,18 @@
 - **GO** aucun marqueur de clé privée.
 - **GO** Release Center et LiveKit restent actifs; HTTP site et LiveKit = 200.
 - **DÉCISION** source candidate approuvée pour préparation du snapshot et import GitHub canonique.
+
+### 2026-08-26 — Snapshot source canonique V1
+
+- **GO** whitelist exacte de 31 fichiers validée.
+- **GO** aucun type interdit présent dans la whitelist.
+- **GO** manifest SHA256 créé avec 31 entrées.
+- **GO** archive contient exactement la whitelist.
+- **GO** extraction temporaire validée : 31/31 fichiers `OK` contre le manifest.
+- **GO** SHA256 archive : `d201baf4250ea2614b2cc11c40ce8707c1e63d35d3a2c2890ea6237ab2caa8d7`.
+- **GO** aucun fichier runtime modifié, aucun service redémarré.
+- **GO** Release Center et LiveKit actifs; HTTP site et LiveKit = 200 après snapshot.
+- **PROCHAINE ÉTAPE** rapatrier l'archive et le manifest pour import GitHub canonique.
 
 ---
 
