@@ -14,8 +14,8 @@ Le Chat Audio/Vidéo doit utiliser une fenêtre Backglass dédiée, liée au lob
 │ INVITÉ 1           │ INVITÉ 2           │ INVITÉ 3           │
 │ vidéo + état A/V   │ vidéo + état A/V   │ vidéo + état A/V   │
 ├────────────────────┼────────────────────┼────────────────────┤
-│ STATS LOBBY / GAME │ JOUEUR LOCAL        │ B2S LOCAL           │
-│ lobby + partie     │ vidéo + état A/V    │ miroir live lecture │
+│ STATS LOBBY / GAME │ JOUEUR LOCAL       │ B2S LOCAL          │
+│ lobby + partie     │ vidéo + état A/V   │ miroir live lecture│
 │                    │                    │ seule               │
 └────────────────────┴────────────────────┴────────────────────┘
 ```
@@ -144,12 +144,27 @@ L'intégration des boutons physiques reste reportée jusqu'à audit réel des é
 - maximum 4 participants ;
 - aucune dépendance P2P directe obligatoire.
 
+## Preuve topologie / DMD — 2026-08-26
+
+Audit réel du cabinet `.237` :
+
+- **GO** `screens.json` est la source canonique de topologie et expose les rôles `playfield`, `backglass`, `fulldmd` ainsi que `all_screens` ;
+- **GO** cabinet de référence détecté en 3 écrans : HDMI-0 Playfield `3840x2160+0+0`, DP-1 Backglass `1920x1080+3840+0`, DP-2 FullDMD `1920x1200+5760+0` ;
+- **GO** la détection 2/3 écrans peut être basée sur la présence de `fulldmd` / le nombre d'entrées `all_screens`, sans nouvelle heuristique X11 ;
+- **GO** `/api/fulldmd/dmd-overlay/preview` existe et répond en JPEG avec `Cache-Control: no-store` ;
+- **GO** sur le cabinet actuel, la preview utilise le fallback `/run/pincabos-dashboard-live/screen2.jpg` lorsque `/run/pincabos-scoreview-x11-hq/preview.jpg` est absent ;
+- **IMPORTANT** ce fallback est une capture du FullDMD complet (360x226), pas un crop DMD seul ;
+- **GO** `pincabos-dashboard-live.service` produit actuellement `screen0.jpg`, `screen1.jpg`, `screen2.jpg` ;
+- **NOGO pour support 2 écrans tel quel** : `pincabos_dmd_tuner.py::_screen_geometry()` est encore codé en dur pour `DP-2` avec fallback `1920x1200+5760+0` ;
+- **DÉCISION** ne pas réutiliser cette hypothèse DP-2 dans la fenêtre A/V. La géométrie doit venir de `screens.json` et la source DMD doit être généralisée par rôle d'écran/crop en lecture seule.
+
 ## Prochaine preuve avant code UI final
 
-1. auditer la source canonique du lobby cabinet et son contrat de données ;
-2. auditer la source exacte permettant un miroir B2S local sans modifier VPinFE/VPX/BGFX ;
-3. auditer la source exacte du DMD/FullDMD et déterminer comment détecter proprement un cabinet 2 écrans versus 3 écrans ;
-4. définir le mapping lobby-seat → slots invités ;
-5. définir la préférence locale persistante de placement DMD (`B2S`, `Lobby/Game`, `overlay joueur local`) ;
-6. créer la route/module A/V canonique dans le WebApp existant, séparée du Chat texte ;
-7. valider la topologie 6 zones en local avant branchement LiveKit complet.
+1. auditer `pincabos-dashboard-live.service` et son producteur exact afin de connaître le mapping `screenN.jpg` ↔ rôle d'écran ;
+2. auditer le chemin de capture DMD/ScoreView (`pincabos-scoreview-x11-hq`, `pincabos-dmd-bridge-helper`, état runtime) et déterminer une source **DMD seul** ou un crop fiable ;
+3. généraliser conceptuellement la géométrie DMD à partir de `screens.json`, sans DP-2 codé en dur ;
+4. auditer la source canonique du lobby cabinet et son contrat de données ;
+5. définir le mapping lobby-seat → slots invités ;
+6. définir la préférence locale persistante de placement DMD (`B2S`, `Lobby/Game`, `overlay joueur local`) ;
+7. créer la route/module A/V canonique dans le WebApp existant, séparée du Chat texte ;
+8. valider la topologie 6 zones en local avant branchement LiveKit complet.
