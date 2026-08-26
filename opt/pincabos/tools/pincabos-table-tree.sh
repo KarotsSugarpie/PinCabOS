@@ -8,12 +8,15 @@ LOCK_DIR="/home/pinball/.local/state/pincabos"
 LOCK="$LOCK_DIR/table-tree.lock"
 MODE="audit"
 QUIET=0
+TARGET_TABLE=""
 
+# PINCABOS_TABLE_TREE_TARGETED_V3
 for arg in "$@"; do
   case "$arg" in
     --apply) MODE="apply" ;;
     --audit) MODE="audit" ;;
     --quiet) QUIET=1 ;;
+    --table=*) TARGET_TABLE="${arg#--table=}" ;;
   esac
 done
 
@@ -42,6 +45,37 @@ fi
 
 exec 9>>"$LOCK"
 flock -x 9
+
+# PINCABOS_TABLE_TREE_TARGETED_V3
+#
+# --table= accepte uniquement un dossier DIRECTEMENT
+# sous /home/pinball/Tables.
+#
+# Aucun chemin arbitraire, parent, symlink externe ou
+# dossier hors Tables n'est autorisé.
+TABLES_ROOT_REAL="$(readlink -f -- "$TABLES_ROOT")"
+TARGET_REAL=""
+
+if [[ -n "$TARGET_TABLE" ]]; then
+  TARGET_REAL="$(
+    readlink -f -- "$TARGET_TABLE" 2>/dev/null || true
+  )"
+
+  if [[ -z "$TARGET_REAL" ]]; then
+    echo "NOGO [X] Table cible introuvable : $TARGET_TABLE"
+    exit 2
+  fi
+
+  if [[ ! -d "$TARGET_REAL" ]]; then
+    echo "NOGO [X] Table cible non répertoire : $TARGET_REAL"
+    exit 2
+  fi
+
+  if [[ "$(dirname -- "$TARGET_REAL")" != "$TABLES_ROOT_REAL" ]]; then
+    echo "NOGO [X] Table cible hors racine directe : $TARGET_REAL"
+    exit 2
+  fi
+fi
 
 # Politique PinCabOS demandée :
 # - altsound et altcolor sont sous pinmame
@@ -157,8 +191,7 @@ safe_migrate_dir() {
   fi
 
   mkdir -p "$destination" "$(dirname "$journal")"
-  printf '%s | %s -> %s
-' "$(date -Is)" "$source" "$destination" >> "$journal"
+  printf '%s | %s -> %s\n' "$(date -Is)" "$source" "$destination" >> "$journal"
 
   # Déplace les fichiers au lieu de les recopier afin de ne pas doubler
   # plusieurs gigaoctets de médias sur les grosses collections.
@@ -176,12 +209,10 @@ safe_migrate_dir() {
 
     if [[ ! -e "$target" && ! -L "$target" ]]; then
       mv "$item" "$target"
-      printf 'MOVE | %s -> %s
-' "$item" "$target" >> "$journal"
+      printf 'MOVE | %s -> %s\n' "$item" "$target" >> "$journal"
     elif cmp -s "$item" "$target" 2>/dev/null; then
       rm -f "$item"
-      printf 'DUPLICATE-SUPPRIME | %s == %s
-' "$item" "$target" >> "$journal"
+      printf 'DUPLICATE-SUPPRIME | %s == %s\n' "$item" "$target" >> "$journal"
     else
       conflict_target="$conflict/$rel"
       mkdir -p "$(dirname "$conflict_target")"
@@ -191,8 +222,7 @@ safe_migrate_dir() {
         n=$((n + 1))
       done
       mv "$item" "$conflict_target"
-      printf 'CONFLIT-CONSERVE | %s -> %s
-' "$item" "$conflict_target" >> "$journal"
+      printf 'CONFLIT-CONSERVE | %s -> %s\n' "$item" "$conflict_target" >> "$journal"
     fi
   done < <(find "$source" -mindepth 1 -print0)
 
@@ -202,8 +232,7 @@ safe_migrate_dir() {
   if [[ -e "$source" || -L "$source" ]]; then
     mkdir -p "$(dirname "$leftover")"
     mv "$source" "$leftover"
-    printf 'LEFTOVER | %s -> %s
-' "$source" "$leftover" >> "$journal"
+    printf 'LEFTOVER | %s -> %s\n' "$source" "$leftover" >> "$journal"
   fi
 
   chown -R pinball:pinball "$destination" "$(dirname "$journal")" 2>/dev/null || true
@@ -308,18 +337,30 @@ process_table() {
 TOTAL=0
 DIRTY=0
 
-while IFS= read -r -d '' table; do
-  is_table_dir "$table" || continue
-  TOTAL=$((TOTAL + 1))
-  process_table "$table" || DIRTY=$((DIRTY + 1))
-done < <(
-  find "$TABLES_ROOT" \
-    -mindepth 1 \
-    -maxdepth 1 \
-    -type d \
-    ! -name '.*' \
-    -print0 | sort -z
-)
+# PINCABOS_TABLE_TREE_TARGETED_V3
+if [[ -n "$TARGET_REAL" ]]; then
+  TOTAL=1
+
+  if ! is_table_dir "$TARGET_REAL"; then
+    [[ "$QUIET" -eq 1 ]] || echo "NOGO [X] Aucun VPX : $TARGET_REAL"
+    DIRTY=1
+  else
+    process_table "$TARGET_REAL" || DIRTY=$((DIRTY + 1))
+  fi
+else
+  while IFS= read -r -d '' table; do
+    is_table_dir "$table" || continue
+    TOTAL=$((TOTAL + 1))
+    process_table "$table" || DIRTY=$((DIRTY + 1))
+  done < <(
+    find "$TABLES_ROOT" \
+      -mindepth 1 \
+      -maxdepth 1 \
+      -type d \
+      ! -name '.*' \
+      -print0 | sort -z
+  )
+fi
 
 LOOSE="$(
   find "$TABLES_ROOT" \
