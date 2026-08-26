@@ -3,7 +3,9 @@ set -Eeuo pipefail
 
 TABLES_ROOT="/home/pinball/Tables"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-LOCK="/tmp/pincabos-table-tree.lock"
+# PINCABOS_TABLE_TREE_LOCK_V2
+LOCK_DIR="/home/pinball/.local/state/pincabos"
+LOCK="$LOCK_DIR/table-tree.lock"
 MODE="audit"
 QUIET=0
 
@@ -16,7 +18,29 @@ for arg in "$@"; do
 done
 
 mkdir -p "$TABLES_ROOT" /opt/pincabos/logs
-exec 9>"$LOCK"
+
+# PINCABOS_TABLE_TREE_LOCK_V2
+#
+# Ce script peut être appelé par root ou par pinball.
+# Le lock appartient toujours au compte opérationnel pinball,
+# afin qu'un passage root ne bloque jamais un import suivant.
+if [[ "$(id -u)" -eq 0 ]]; then
+  install \
+    -d \
+    -m 0755 \
+    -o pinball \
+    -g pinball \
+    "$LOCK_DIR"
+
+  touch "$LOCK"
+  chown pinball:pinball "$LOCK"
+  chmod 0644 "$LOCK"
+else
+  mkdir -p "$LOCK_DIR"
+  touch "$LOCK"
+fi
+
+exec 9>>"$LOCK"
 flock -x 9
 
 # Politique PinCabOS demandée :
