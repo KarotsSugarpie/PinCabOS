@@ -315,13 +315,58 @@ def is_password_protected_error(exc):
     return "ARCHIVE PASSWORD REFUSÉE:" in str(exc)
 
 def copy_file(src, dest_dir, new_name=None):
+    # PINCABOS_COPY_FILE_ATOMIC_V2
+    #
+    # Ne jamais faire copy2() directement sur un fichier existant
+    # potentiellement possédé par root.
+    #
+    # copy2() copie d'abord vers un inode temporaire appartenant
+    # à l'utilisateur courant, puis Path.replace() remplace
+    # atomiquement la destination.
+    #
+    # Cela conserve les métadonnées copy2() sans appeler utime()
+    # sur l'ancien inode root-owned.
+
     src = Path(src)
     dest_dir = Path(dest_dir)
-    dest_dir.mkdir(parents=True, exist_ok=True)
 
-    dest = dest_dir / safe_name(new_name or src.name)
-    shutil.copy2(src, dest)
-    log(f"INSTALLÉ: {src} -> {dest}")
+    dest_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    dest = (
+        dest_dir
+        / safe_name(
+            new_name or src.name
+        )
+    )
+
+    with tempfile.NamedTemporaryFile(
+        prefix=f".{dest.name}.pincabos-copy-",
+        suffix=".tmp",
+        dir=str(dest_dir),
+        delete=False,
+    ) as handle:
+        temporary = Path(handle.name)
+
+    try:
+        shutil.copy2(
+            src,
+            temporary,
+        )
+        temporary.replace(
+            dest
+        )
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+    log(
+        f"INSTALLÉ: {src} -> {dest}"
+    )
     return dest
 
 def copy_dir_contents(src_dir, dest_dir):
@@ -597,7 +642,6 @@ def extract_vbs_from_vpx(vpx_path, dest_dir=None):
     ):
         if not root.is_dir():
             continue
-
         for pattern in ("VPinballX_BGFX", "VPinballX-BGFX", "VPinballX"):
             for candidate in root.rglob(pattern):
                 add_candidate(candidate)
@@ -1906,6 +1950,52 @@ def main():
 
     log("")
     log(f"LOG TXT: {import_log_path}")
+
+    # PINCABOS_TABLE_TREE_IMPORT_TARGETED_V5
+    #
+    # Une importation réussie ne doit normaliser que
+    # la table qui vient d'être créée.
+    #
+    # Ne jamais rescanner toute la bibliothèque ici.
+    try:
+        tree_result = subprocess.run(
+            [
+                "/opt/pincabos/tools/pincabos-table-tree.sh",
+                "--apply",
+                "--quiet",
+                f"--table={table_dir}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+
+        if tree_result.returncode != 0:
+            detail = (
+                (tree_result.stdout or "")
+                + "\n"
+                + (tree_result.stderr or "")
+            ).strip()
+
+            log(
+                "WARNING: normalisation ciblée table-tree "
+                f"retour={tree_result.returncode}"
+            )
+
+            if detail:
+                log(detail)
+        else:
+            log(
+                "Table-tree ciblé       : "
+                f"{table_dir}"
+            )
+    except Exception as exc:
+        log(
+            "WARNING: normalisation ciblée "
+            f"table-tree impossible: {exc}"
+        )
+
     log("IMPORT OK - modèle portable VPX complet")
     return 0
 
@@ -1940,23 +2030,6 @@ _pincabos_fulldmd_after_smart_import()
 # PINCABOS_FULLDMD_SMART_IMPORT_HOOK_V4_END
 
 
-# PINCABOS_TABLE_TREE_IMPORT_HOOK_V3
-import atexit as _pco_tree_atexit
-import subprocess as _pco_tree_subprocess
-
-
-def _pco_tree_after_import():
-    try:
-        _pco_tree_subprocess.run(
-            ['/opt/pincabos/tools/pincabos-table-tree.sh', "--apply", "--quiet"],
-            timeout=600,
-            check=False,
-        )
-    except Exception:
-        pass
-
-
-_pco_tree_atexit.register(_pco_tree_after_import)
-
+# PINCABOS_TABLE_TREE_IMPORT_TARGETED_V5_ENTRYPOINT
 if __name__ == "__main__":
     raise SystemExit(main())
