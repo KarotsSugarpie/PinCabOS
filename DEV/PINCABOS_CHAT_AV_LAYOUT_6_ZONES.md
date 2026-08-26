@@ -81,6 +81,32 @@ Non négociable :
 
 La source doit être auditée avant implémentation. Si possible, réutiliser la chaîne de capture X11/preview déjà canonique dans PinCabOS afin d'afficher une copie visuelle du B2S dans la zone A/V.
 
+## Cabinets à 2 écrans — DMD intégré au Backglass
+
+La topologie A/V doit détecter la configuration réelle du cabinet.
+
+### Cabinet 3 écrans
+
+Si le cabinet possède Playfield + Backglass + FullDMD séparé, le FullDMD reste sur son écran physique dédié et **n'est pas déplacé dans la fenêtre A/V**.
+
+### Cabinet 2 écrans
+
+Si le cabinet possède seulement Playfield + Backglass et que le DMD est normalement intégré au Backglass, la fenêtre A/V doit conserver le DMD visible à l'intérieur de la composition 6 zones.
+
+Le propriétaire du cabinet choisit **où son DMD local apparaît** parmi trois placements :
+
+1. **zone B2S** — le DMD est affiché dans/au-dessus de la zone bas-droite B2S ;
+2. **zone Lobby/Game** — le DMD est affiché dans/au-dessus de la zone bas-gauche Lobby/Game ;
+3. **overlay joueur local** — le DMD est affiché par-dessus la carte vidéo locale en bas-centre.
+
+Cette préférence est **locale au cabinet**, persistante, et ne change pas la disposition des autres cabinets du lobby. Chaque joueur peut donc choisir un placement DMD différent sur son propre cabinet.
+
+Le DMD intégré doit être un **miroir/flux visuel en lecture seule de l'affichage DMD déjà existant**. Il ne faut jamais modifier VPinFE, VPX, BGFX, le rendu DMD original ou la logique de jeu pour obtenir ce placement.
+
+Le placement DMD doit pouvoir être modifié dans les réglages de la fenêtre A/V/lobby, sans clavier ni souris dans la version finale. Pendant le développement, le choix peut être exposé dans l'interface WebApp ou avec les contrôles clavier temporaires.
+
+Si le DMD est placé en overlay sur la carte locale, il doit rester visuellement distinct de la vidéo et ne pas masquer les indicateurs essentiels micro/caméra/connexion.
+
 ## Fenêtre A/V dédiée
 
 La fenêtre A/V est distincte de la fenêtre Chat texte.
@@ -94,7 +120,8 @@ Comportement cible :
 5. LiveKit remplit les 3 slots invités + le slot local ;
 6. la zone Lobby/Game reçoit les données de session ;
 7. la zone B2S affiche le miroir live local ;
-8. à la fin de l'appel, caméra/micro sont libérés et l'affichage Backglass normal est restauré.
+8. sur un cabinet 2 écrans, le DMD local est rendu dans le placement choisi par le propriétaire ;
+9. à la fin de l'appel, caméra/micro sont libérés et l'affichage Backglass normal est restauré.
 
 ## Contrôles de développement
 
@@ -121,6 +148,8 @@ L'intégration des boutons physiques reste reportée jusqu'à audit réel des é
 
 1. auditer la source canonique du lobby cabinet et son contrat de données ;
 2. auditer la source exacte permettant un miroir B2S local sans modifier VPinFE/VPX/BGFX ;
-3. définir le mapping lobby-seat → slots invités ;
-4. créer la route/module A/V canonique dans le WebApp existant, séparée du Chat texte ;
-5. valider la topologie 6 zones en local avant branchement LiveKit complet.
+3. auditer la source exacte du DMD/FullDMD et déterminer comment détecter proprement un cabinet 2 écrans versus 3 écrans ;
+4. définir le mapping lobby-seat → slots invités ;
+5. définir la préférence locale persistante de placement DMD (`B2S`, `Lobby/Game`, `overlay joueur local`) ;
+6. créer la route/module A/V canonique dans le WebApp existant, séparée du Chat texte ;
+7. valider la topologie 6 zones en local avant branchement LiveKit complet.
