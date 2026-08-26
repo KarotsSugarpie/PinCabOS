@@ -9,7 +9,7 @@
 - **Fichier :** `DEV/PINCABOS_CHAT_AV_CHECKLIST.md`
 - **Branche :** `main`
 - **Dernière mise à jour :** 2026-08-26
-- **État global :** moteur SFU central et signaling HTTPS publics validés; source active du Control Hub auditée et déclarée publiable; snapshot canonique 31 fichiers créé et validé par SHA256 sans modification du runtime; import GitHub du snapshot à faire; média WAN réel pas encore prouvé depuis un réseau externe.
+- **État global :** moteur SFU central et signaling HTTPS publics validés; source active du Control Hub auditée et déclarée publiable; snapshot canonique 31 fichiers créé et validé par SHA256 sans modification du runtime; chaîne cabinet Chat/Backglass canonique identifiée (`pincaboslink.py` + account bridge + agent + display helper) et présente dans GitHub; comparaison Git blob `.237` ↔ GitHub à terminer avant modification A/V; média WAN réel pas encore prouvé depuis un réseau externe.
 
 ## Règles non négociables
 
@@ -171,8 +171,19 @@
 
 ## H. Client navigateur / backglass
 
-- [ ] Ajouter le client LiveKit à la source frontend canonique du Control Hub.
-- [ ] Aucun nouveau frontend parallèle ou overlay ajouté par-dessus le Control Hub.
+- [x] WebApp cabinet actif identifié : `/opt/pincabos/web`, service `pincabos-webapp.service` sous Waitress.
+- [x] Frontend/route Chat cabinet canonique identifié : `/opt/pincabos/web/pincaboslink.py`.
+- [x] Route Backglass canonique : `GET /pincabos-link/chat-backglass`, générée par `_backglass_html()`, HTTP local `200`, `Cache-Control: no-store`.
+- [x] Chat texte cabinet existant identifié : contexte compte/amis, GET/POST chat, polling 4 s, bouton afficher/fermer Backglass.
+- [x] Chaîne existante identifiée : `pincabos-account-bridge` → `pincabos-chat-backglass-agent` → `pincabos-chat-backglass` → route locale WebApp.
+- [x] `pincabos-chat-backglass-agent.service` actif/enabled; processus réel UID/GID 0 (root).
+- [x] État sécurisé `/var/lib/pincabos-link` confirmé `0700 root:root`; échec manuel `pinball` expliqué par permissions.
+- [x] `backglass-get` et `status` réussissent dans le contexte root (`RC=0`).
+- [x] Helper display ouvre `http://127.0.0.1/pincabos-link/chat-backglass` avec Chrome/Chromium positionné sur l'écran configuré.
+- [x] Backglass physique confirmé : DP-1, `1920x1080+3840+0`; playfield HDMI-0 et FullDMD DP-2 restent séparés.
+- [x] Les composants existent dans GitHub `main` aux chemins `opt/pincabos/web/pincaboslink.py`, `usr/local/sbin/pincabos-account-bridge`, `usr/local/sbin/pincabos-chat-backglass-agent`, `usr/local/sbin/pincabos-chat-backglass` et `etc/systemd/system/pincabos-chat-backglass-agent.service`.
+- [ ] Prouver que les Git blob SHA des fichiers actifs `.237` correspondent exactement aux blobs GitHub `main` avant modification.
+- [ ] Ajouter le client LiveKit dans la route/frontend cabinet canonique, sans nouveau frontend parallèle.
 - [ ] Chat A/V affiché sur le Backglass.
 - [ ] Playfield VPX non modifié.
 - [ ] Micro OFF par défaut.
@@ -213,13 +224,13 @@
 
 ## K. Prochaine étape autorisée
 
-1. **Rapatrier le snapshot canonique et son manifest, puis vérifier localement l'archive SHA256 `d201baf4250ea2614b2cc11c40ce8707c1e63d35d3a2c2890ea6237ab2caa8d7`.**
-2. Importer les 31 fichiers du snapshot dans GitHub sans modifier le runtime `.55`.
-3. Comparer immédiatement les SHA GitHub avec les SHA déployés et déclarer le chemin GitHub canonique.
-4. Choisir ensuite seulement la méthode de génération JWT/LiveKit côté serveur.
-5. Ajouter l'API serveur dans le vrai `pincabos_control_hub_v27.py` canonique.
-6. Faire un premier test navigateur caméra/micro.
-7. Prouver le média WAN avec deux réseaux distincts.
+1. **Comparer les Git blob SHA des cinq composants cabinet actifs (`pincaboslink.py`, account bridge, Chat agent, display helper et unit systemd) avec GitHub `main`.**
+2. Si les blobs concordent, déclarer officiellement cette chaîne comme source canonique cabinet et ne créer aucun doublon fonctionnel.
+3. Terminer en parallèle l'import canonique du snapshot `.55` dans GitHub et comparer ses SHA.
+4. Choisir ensuite la méthode de génération JWT/LiveKit côté serveur.
+5. Ajouter l'API serveur A/V dans le vrai `pincabos_control_hub_v27.py` canonique.
+6. Étendre la vraie route cabinet `/pincabos-link/chat-backglass` avec LiveKit et `getUserMedia()`, micro/caméra OFF par défaut.
+7. Faire un premier test navigateur caméra/micro puis prouver le média WAN avec deux réseaux distincts.
 
 ## Journal des validations
 
@@ -276,6 +287,19 @@
 - **GO** aucun fichier runtime modifié, aucun service redémarré.
 - **GO** Release Center et LiveKit actifs; HTTP site et LiveKit = 200 après snapshot.
 - **PROCHAINE ÉTAPE** rapatrier l'archive et le manifest pour import GitHub canonique.
+
+### 2026-08-26 — Provenance cabinet Chat / Backglass
+
+- **GO** WebApp cabinet actif : `/opt/pincabos/web`, Waitress port 80.
+- **GO** route canonique Chat Backglass : `/opt/pincabos/web/pincaboslink.py` → `GET /pincabos-link/chat-backglass` → `_backglass_html()`.
+- **GO** route locale Backglass répond HTTP 200, `Content-Type: text/html`, `Cache-Control: no-store`.
+- **GO** Chat texte cabinet existant : contexte compte/amis, polling GET chat 4 s, POST message, présence et contrôle Backglass.
+- **GO** agent réel : `/usr/local/sbin/pincabos-chat-backglass-agent`, service actif/enabled, UID/GID 0.
+- **GO** `/var/lib/pincabos-link` est `0700 root:root`; test `pinball` échoue par permission, même test root réussit.
+- **GO** display helper : `/usr/local/sbin/pincabos-chat-backglass`, Chrome/Chromium sur route locale, positionnement écran configuré.
+- **GO** DP-1 confirmé Backglass `1920x1080+3840+0`; HDMI-0 playfield et DP-2 FullDMD séparés.
+- **GO** GitHub `main` contient déjà les cinq composants/units canoniques aux chemins correspondant au runtime.
+- **À PROUVER** identité bit-à-bit via Git blob SHA `.237` ↔ GitHub avant modification.
 
 ---
 
