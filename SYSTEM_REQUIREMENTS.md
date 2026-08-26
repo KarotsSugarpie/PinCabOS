@@ -6,13 +6,13 @@ English follows below.
 
 ## 🇫🇷 Français
 
-### Base système officielle
+### Prérequis matériels et graphiques
 
-PinCabOS cible actuellement :
+PinCabOS installe et gère directement sa base système. L'utilisateur n'a donc pas à préinstaller Ubuntu ni à fournir un kernel Linux spécifique.
+
+Les prérequis concernent principalement le matériel et la compatibilité graphique :
 
 - Architecture : **x86-64 / AMD64**
-- Système : **Ubuntu 26.04 LTS 64 bits**
-- Kernel : **Linux 7.0 (pile GA Ubuntu 26.04 LTS)**
 - API graphique : **Vulkan fonctionnel requis**
 - Firmware recommandé : **UEFI x86-64**
 
@@ -42,8 +42,6 @@ Configuration de référence minimale :
 - 8 Go de RAM ;
 - NVIDIA GTX 1060 6 Go ou GPU dédié de classe comparable avec Vulkan fonctionnel ;
 - SSD 128 Go minimum ;
-- Ubuntu 26.04 LTS 64 bits ;
-- kernel Linux 7.0 ;
 - Vulkan validé avant l'utilisation de VPX.
 
 Certaines tables lourdes, PuP-Packs, médias haute résolution ou configurations multi-écrans peuvent dépasser ce niveau.
@@ -83,7 +81,7 @@ Pour les builds de développement actuels, la validation doit notamment couvrir 
 - VPX/BGFX ;
 - VPinFE ;
 - Playfield / Backglass / FullDMD ;
-- reprise après mise à jour du kernel ;
+- stabilité après mises à jour système PinCabOS ;
 - audio / SSF ;
 - périphériques USB et contrôleurs du cabinet.
 
@@ -95,32 +93,31 @@ Une bibliothèque de tables, médias, ROM, PuP-Packs, sauvegardes et packages pe
 
 ### Principe de compatibilité PinCabOS
 
-Une machine n'est pas considérée compatible uniquement parce qu'Ubuntu démarre.
+Une machine n'est pas considérée compatible uniquement parce que l'installation PinCabOS se termine.
 
 Avant de considérer un cabinet comme compatible PinCabOS, les points suivants doivent être validés :
 
-1. Ubuntu 26.04 LTS démarre normalement.
-2. Le kernel Linux 7.0 fonctionne avec le matériel du cabinet.
-3. Le pilote GPU est chargé correctement.
-4. Vulkan fonctionne.
-5. Les écrans sont détectés et assignables.
-6. L'audio est détecté.
-7. Les périphériques USB nécessaires sont présents.
-8. VPX démarre et exécute une table de test.
-9. VPinFE démarre et peut lancer VPX.
-10. Les fonctions PinCabOS essentielles restent stables après redémarrage.
+1. Le matériel démarre correctement avec PinCabOS.
+2. Le pilote GPU est chargé correctement.
+3. Vulkan fonctionne.
+4. Les écrans sont détectés et assignables.
+5. L'audio est détecté.
+6. Les périphériques USB nécessaires sont présents.
+7. VPX démarre et exécute une table de test.
+8. VPinFE démarre et peut lancer VPX.
+9. Les fonctions PinCabOS essentielles restent stables après redémarrage.
 
 ---
 
 ## 🇬🇧 English
 
-### Official system base
+### Hardware and graphics prerequisites
 
-PinCabOS currently targets:
+PinCabOS installs and manages its own system base directly. Users therefore do not need to preinstall Ubuntu or provide a specific Linux kernel.
+
+The prerequisites mainly concern hardware and graphics compatibility:
 
 - Architecture: **x86-64 / AMD64**
-- Operating system: **Ubuntu 26.04 LTS 64-bit**
-- Kernel: **Linux 7.0 (Ubuntu 26.04 LTS GA stack)**
 - Graphics API: **working Vulkan support required**
 - Recommended firmware: **x86-64 UEFI**
 
@@ -150,8 +147,6 @@ Minimum reference configuration:
 - 8 GB RAM;
 - NVIDIA GTX 1060 6 GB or comparable dedicated GPU with working Vulkan support;
 - 128 GB SSD minimum;
-- Ubuntu 26.04 LTS 64-bit;
-- Linux kernel 7.0;
 - Vulkan validated before using VPX.
 
 Heavy tables, PuP-Packs, high-resolution media and multi-display configurations may exceed this tier.
@@ -191,7 +186,7 @@ Current development validation should include:
 - VPX/BGFX;
 - VPinFE;
 - Playfield / Backglass / FullDMD;
-- recovery after kernel updates;
+- stability after PinCabOS system updates;
 - audio / SSF;
 - USB devices and cabinet controllers.
 
@@ -203,17 +198,16 @@ A real collection of tables, media, ROMs, PuP-Packs, backups and packages can qu
 
 ### PinCabOS compatibility principle
 
-A machine is not considered compatible simply because Ubuntu boots.
+A machine is not considered compatible simply because the PinCabOS installation completes.
 
 Before a cabinet is considered PinCabOS-compatible, the following must be validated:
 
-1. Ubuntu 26.04 LTS boots normally.
-2. Linux kernel 7.0 works with the cabinet hardware.
-3. The GPU driver loads correctly.
-4. Vulkan works.
-5. Displays are detected and can be assigned.
-6. Audio devices are detected.
-7. Required USB peripherals are present.
-8. VPX starts and runs a test table.
-9. VPinFE starts and can launch VPX.
-10. Essential PinCabOS functions remain stable after reboot.
+1. The hardware boots correctly with PinCabOS.
+2. The GPU driver loads correctly.
+3. Vulkan works.
+4. Displays are detected and can be assigned.
+5. Audio devices are detected.
+6. Required USB peripherals are present.
+7. VPX starts and runs a test table.
+8. VPinFE starts and can launch VPX.
+9. Essential PinCabOS functions remain stable after reboot.
