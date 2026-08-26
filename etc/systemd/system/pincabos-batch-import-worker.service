@@ -9,6 +9,9 @@ User=root
 Group=pinball
 WorkingDirectory=/opt/pincabos/web
 Environment=PYTHONUNBUFFERED=1
+Environment=TMPDIR=/var/tmp/pincabos-smart-import
+Environment=TEMP=/var/tmp/pincabos-smart-import
+Environment=TMP=/var/tmp/pincabos-smart-import
 Environment=PINCABOS_BATCH_IMPORT_LIVE_DIR=/var/lib/pincabos/batch-live-import
 ExecStart=/opt/pincabos/web/.venv/bin/python -u /opt/pincabos/web/pincabos_batch_import_worker_v2.py
 Restart=always
