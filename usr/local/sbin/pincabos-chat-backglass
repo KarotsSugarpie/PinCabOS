@@ -101,7 +101,7 @@ open_chat() {
     touch "$MARKER"
     chmod 0644 "$MARKER"
 
-    sudo -u pinball env \
+    /usr/sbin/runuser -u pinball -- env \
         DISPLAY=:0 \
         XAUTHORITY=/home/pinball/.Xauthority \
         HOME=/home/pinball \
