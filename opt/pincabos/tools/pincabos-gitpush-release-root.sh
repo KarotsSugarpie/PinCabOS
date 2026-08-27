@@ -167,7 +167,7 @@ echo "PR source        : #$LATEST_PR"
 echo
 echo "=== 4. SYNCHRONISATION VERSION SUR LE CABINET ==="
 
-python3 \
+python3 - \
     "$RELEASE_NUMBER" \
     "$DISPLAY_VERSION" <<'PY'
 import json
@@ -398,7 +398,7 @@ echo "=== 12. MEMORISATION DE LA SEQUENCE ==="
 
 mkdir -p /opt/pincabos/config
 
-python3 \
+python3 - \
     "$STATE" \
     "$RELEASE_NUMBER" \
     "$MANUAL_NEW" \
