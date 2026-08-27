@@ -27,11 +27,12 @@
 /* PINCABOS_LIVE_PLAYSTOP_V1 — boutons play/stop par tuile + global */
 .pco-live-toggle {
   position: absolute;
-  top: 13px;
-  right: 56px;            /* a gauche du bouton plein ecran (right:14px, ~36px large) */
+  top: 10px;              /* aligne sur le bouton plein ecran (top:10px, right:10px) */
+  right: 54px;            /* a sa gauche : 10 + 36 (largeur) + 8 (marge) */
   z-index: 31;            /* au-dessus du plein ecran (z-index 30) */
   width: 36px;
   height: 36px;
+  padding: 0;             /* centrage du glyphe, comme le plein ecran */
   border: 1px solid rgba(255, 255, 255, .22);
   border-radius: 8px;
   background: rgba(20, 20, 20, .55);
@@ -43,7 +44,8 @@
   align-items: center;
   justify-content: center;
 }
-.pco-live-toggle.pco-live-toggle-solo { right: 14px; }  /* pas de plein ecran : coin */
+/* Repli (plein ecran non detecte) : coin haut GAUCHE, jamais sous le plein ecran. */
+.pco-live-toggle.pco-live-toggle-solo { right: auto; left: 10px; }
 .pco-live-toggle:hover { background: rgba(255, 255, 255, .14); }
 .pco-live-toggle.is-playing {
   background: #2d6cdf;

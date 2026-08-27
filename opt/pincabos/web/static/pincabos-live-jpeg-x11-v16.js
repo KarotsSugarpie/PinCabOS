@@ -128,7 +128,10 @@
       // Le bouton plein ecran est en absolu en haut a droite de la tuile ;
       // on pose le play/stop dans le meme conteneur, juste a sa gauche, pour
       // qu'ils ne se recouvrent pas.
-      const fs = card.querySelector(".pincabos-live-fullscreen-open");
+      // Selecteur tolerant : le bouton plein ecran a ete versionne (-v3...),
+      // on matche toute variante de la classe pour ne pas se retrouver en
+      // position "solo" par erreur (ce qui recouvrirait le coin droit).
+      const fs = card.querySelector('[class*="pincabos-live-fullscreen-open"]');
       const host = (fs && fs.parentElement) ||
         card.querySelector(".pco-live-jpeg") || card.querySelector(".pco-card-body");
       if (!host) return;
