@@ -4,6 +4,7 @@ import argparse
 import fcntl
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -81,6 +82,51 @@ ROOT_EXTS = {
     ".scv",
     ".pov",
     ".res",
+}
+
+PINCABOS_VPXTOOL_VERSION = "0.33.8"
+PINCABOS_VPXTOOL_CANDIDATES = (
+    Path("/opt/pincabos/bin/vpxtool"),
+    Path("/usr/local/bin/vpxtool"),
+)
+PINCABOS_VPX_OLE_MAGIC = bytes.fromhex(
+    "d0cf11e0a1b11ae1"
+)
+PINCABOS_SMART_IMPORT_RESOURCE_MANIFEST = (
+    ".pincabos-smart-import-resources.json"
+)
+PINCABOS_VPSDB_PATH = Path(
+    "/home/pinball/.config/vpinfe/vpsdb.json"
+)
+PINCABOS_VPSDB_RESOURCE_KEYS = (
+    "tableFiles",
+    "b2sFiles",
+    "romFiles",
+    "pupPackFiles",
+    "altSoundFiles",
+    "altColorFiles",
+    "soundFiles",
+    "povFiles",
+    "mediaPackFiles",
+    "wheelArtFiles",
+    "topperFiles",
+    "ruleFiles",
+    "tutorialFiles",
+)
+PINCABOS_VPSDB_RESOURCE_TYPES = {
+    "tableFiles": "tableFile",
+    "b2sFiles": "b2sFile",
+    "romFiles": "romFile",
+    "pupPackFiles": "pupPackFile",
+    "altSoundFiles": "altSoundFile",
+    "altColorFiles": "altColorFile",
+    "soundFiles": "soundFile",
+    "povFiles": "povFile",
+    "mediaPackFiles": "mediaPackFile",
+    "wheelArtFiles": "wheelArtFile",
+    "topperFiles": "topperFile",
+    "ruleFiles": "ruleFile",
+    "tutorialFiles": "tutorialFile",
 }
 
 VNI_EXTS = {".pal", ".vni"}
@@ -184,6 +230,9 @@ def archive_kind(src):
 
     files = [x.lower().replace("\\", "/") for x in archive_file_list(src)]
     names = [Path(x).name.lower() for x in files]
+
+    if any(x.endswith(".dif") for x in files):
+        return "vpu_patch_archive"
 
     if any(x.endswith(".vpx") for x in files):
         return "table_archive"
@@ -470,6 +519,313 @@ def pincabos_find_existing_table_dir(title):
     return matches[0] if matches else exact
 
 
+def pincabos_load_resource_manifest(path, batch_dir):
+    path = Path(path)
+    batch_dir = Path(batch_dir).resolve()
+
+    if (
+        path.name != PINCABOS_SMART_IMPORT_RESOURCE_MANIFEST
+        or path.resolve().parent != batch_dir
+        or not path.is_file()
+    ):
+        raise RuntimeError(
+            "NOGO: inventaire VPS-ID absent ou hors du batch."
+        )
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(
+            f"NOGO: inventaire VPS-ID illisible: {exc}"
+        ) from exc
+
+    if (
+        not isinstance(payload, dict)
+        or payload.get("format")
+        != "PinCabOS Smart Import resources"
+        or not isinstance(payload.get("resources"), list)
+        or not str(payload.get("game_vpsid", "") or "").strip()
+    ):
+        raise RuntimeError("NOGO: inventaire VPS-ID invalide.")
+
+    seen_names = set()
+
+    for resource in payload["resources"]:
+        if not isinstance(resource, dict):
+            raise RuntimeError("NOGO: ressource VPS-ID invalide.")
+
+        stored_name = str(resource.get("stored_name", "") or "").strip()
+        vpsid = str(resource.get("vpsid", "") or "").strip()
+        game_vpsid = str(resource.get("game_vpsid", "") or "").strip()
+        expected_sha256 = str(resource.get("sha256", "") or "").strip().lower()
+        candidate = batch_dir / stored_name
+
+        if (
+            not stored_name
+            or Path(stored_name).name != stored_name
+            or stored_name.casefold() in seen_names
+        ):
+            raise RuntimeError(
+                f"NOGO: nom de ressource invalide: {stored_name!r}"
+            )
+
+        seen_names.add(stored_name.casefold())
+
+        if not vpsid or game_vpsid != str(payload["game_vpsid"]).strip():
+            raise RuntimeError(
+                f"NOGO: identité VPSDB incohérente pour {stored_name}."
+            )
+
+        if not candidate.is_file() or candidate.is_symlink():
+            raise RuntimeError(
+                f"NOGO: fichier inventorié absent ou non régulier: {candidate}"
+            )
+
+        if (
+            not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
+            or pincabos_file_sha256(candidate) != expected_sha256
+        ):
+            raise RuntimeError(
+                f"NOGO: SHA-256 du fichier modifié depuis l'analyse: {stored_name}"
+            )
+
+    actual_names = {
+        item.name.casefold()
+        for item in batch_dir.iterdir()
+        if item.is_file()
+        and item.name != PINCABOS_SMART_IMPORT_RESOURCE_MANIFEST
+    }
+
+    if actual_names != seen_names:
+        raise RuntimeError(
+            "NOGO: le contenu du batch ne correspond plus exactement "
+            "à l'inventaire VPS-ID analysé."
+        )
+
+    if any(
+        item.is_symlink() or item.is_dir()
+        for item in batch_dir.iterdir()
+    ):
+        raise RuntimeError(
+            "NOGO: sous-dossier ou lien inattendu dans le batch analysé."
+        )
+
+    resource_index = pincabos_vpsdb_resource_index()
+
+    if not resource_index:
+        raise RuntimeError(
+            "NOGO: VPSDB locale absente ou vide; les VPS-ID du batch "
+            "ne peuvent pas être revérifiés."
+        )
+
+    for resource in payload["resources"]:
+        vpsid = str(resource.get("vpsid", "") or "").strip()
+        expected = resource_index.get(vpsid.casefold(), [])
+
+        if len(expected) != 1:
+            raise RuntimeError(
+                "NOGO: VPS-ID absent ou ambigu dans la VPSDB locale: "
+                f"{vpsid}"
+            )
+
+        canonical = expected[0]
+
+        if (
+            str(resource.get("game_vpsid", "") or "").strip().casefold()
+            != canonical["game_vpsid"].casefold()
+            or str(resource.get("resource_type", "") or "").strip()
+            != canonical["resource_type"]
+        ):
+            raise RuntimeError(
+                "NOGO: type ou jeu VPSDB modifié depuis l'analyse pour "
+                f"{vpsid}."
+            )
+
+    primary_table_vpsid = str(
+        payload.get("primary_table_vpsid", "") or ""
+    ).strip().casefold()
+
+    if primary_table_vpsid and not any(
+        str(resource.get("vpsid", "") or "").strip().casefold()
+        == primary_table_vpsid
+        and resource.get("resource_type") == "tableFile"
+        for resource in payload["resources"]
+    ):
+        raise RuntimeError(
+            "NOGO: tableFile principale absente de l'inventaire VPS-ID."
+        )
+
+    return payload
+
+
+def pincabos_vpsdb_resource_index():
+    cached = getattr(
+        pincabos_vpsdb_resource_index,
+        "_cache",
+        None,
+    )
+
+    if cached is not None:
+        return cached
+
+    index = {}
+
+    try:
+        entries = json.loads(
+            PINCABOS_VPSDB_PATH.read_text(encoding="utf-8")
+        )
+    except Exception:
+        entries = []
+
+    if isinstance(entries, list):
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+
+            game_vpsid = str(entry.get("id", "") or "").strip()
+            if not game_vpsid:
+                continue
+
+            for resource_key, resource_type in (
+                PINCABOS_VPSDB_RESOURCE_TYPES.items()
+            ):
+                for resource in entry.get(resource_key, []):
+                    if not isinstance(resource, dict):
+                        continue
+
+                    vpsid = str(resource.get("id", "") or "").strip()
+                    if not vpsid:
+                        continue
+
+                    index.setdefault(vpsid.casefold(), []).append({
+                        "vpsid": vpsid,
+                        "game_vpsid": game_vpsid,
+                        "resource_type": resource_type,
+                        "resource_key": resource_key,
+                    })
+
+    pincabos_vpsdb_resource_index._cache = index
+    return index
+
+
+def pincabos_vpsdb_id_to_game_map():
+    cached = getattr(
+        pincabos_vpsdb_id_to_game_map,
+        "_cache",
+        None,
+    )
+
+    if cached is not None:
+        return cached
+
+    mapping = {}
+
+    try:
+        entries = json.loads(
+            PINCABOS_VPSDB_PATH.read_text(encoding="utf-8")
+        )
+    except Exception:
+        entries = []
+
+    if isinstance(entries, list):
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+
+            game_vpsid = str(entry.get("id", "") or "").strip()
+            if not game_vpsid:
+                continue
+
+            mapping[game_vpsid.casefold()] = game_vpsid
+
+            for key in PINCABOS_VPSDB_RESOURCE_KEYS:
+                for resource in entry.get(key, []):
+                    if not isinstance(resource, dict):
+                        continue
+
+                    resource_vpsid = str(resource.get("id", "") or "").strip()
+                    if resource_vpsid:
+                        mapping[resource_vpsid.casefold()] = game_vpsid
+
+    pincabos_vpsdb_id_to_game_map._cache = mapping
+    return mapping
+
+
+def pincabos_manifest_game_vpsids(manifest):
+    if not isinstance(manifest, dict):
+        return set()
+
+    values = set()
+    direct = str(manifest.get("game_vpsid", "") or "").strip()
+
+    if direct:
+        values.add(direct.casefold())
+
+    for resource in manifest.get("resources", []):
+        if not isinstance(resource, dict):
+            continue
+        candidate = str(resource.get("game_vpsid", "") or "").strip()
+        if candidate:
+            values.add(candidate.casefold())
+
+    legacy_vpsid = str(manifest.get("vpsid", "") or "").strip()
+    if legacy_vpsid:
+        mapped = pincabos_vpsdb_id_to_game_map().get(
+            legacy_vpsid.casefold(),
+            "",
+        )
+        if mapped:
+            values.add(mapped.casefold())
+
+    return values
+
+
+def pincabos_find_existing_table_dir_by_game(game_vpsid, title):
+    wanted = str(game_vpsid or "").strip().casefold()
+
+    if not wanted:
+        return pincabos_find_existing_table_dir(title)
+
+    matches = []
+
+    try:
+        candidates = sorted(TABLES_ROOT.iterdir())
+    except FileNotFoundError:
+        candidates = []
+
+    for candidate in candidates:
+        if not candidate.is_dir() or candidate.is_symlink():
+            continue
+
+        manifest_path = candidate / "pincabos-table-manifest.json"
+        manifest = {}
+
+        if manifest_path.is_file():
+            try:
+                manifest = json.loads(
+                    manifest_path.read_text(
+                        encoding="utf-8",
+                        errors="replace",
+                    )
+                )
+            except Exception:
+                continue
+
+        if wanted in pincabos_manifest_game_vpsids(manifest):
+            matches.append(candidate)
+
+    if len(matches) > 1:
+        raise RuntimeError(
+            "NOGO: plusieurs tables installées portent le même jeu VPSDB: "
+            + " | ".join(str(item) for item in matches)
+        )
+
+    if matches:
+        return matches[0]
+
+    return pincabos_find_existing_table_dir(title)
+
+
 def pincabos_read_existing_table_identity(
     table_dir,
 ):
@@ -602,6 +958,8 @@ def pincabos_validate_existing_identity(
     table_dir,
     incoming_title,
     incoming_vpsid,
+    parent_vpsid="",
+    game_vpsid="",
 ):
     identity = (
         pincabos_read_existing_table_identity(
@@ -635,6 +993,16 @@ def pincabos_validate_existing_identity(
         or ""
     ).strip()
 
+    parent_vpsid = str(
+        parent_vpsid
+        or ""
+    ).strip()
+
+    game_vpsid = str(
+        game_vpsid
+        or ""
+    ).strip()
+
     if not existing_vpsid:
         raise RuntimeError(
             "NOGO: table existante sans "
@@ -649,13 +1017,31 @@ def pincabos_validate_existing_identity(
             "table existante refusée."
         )
 
-    if existing_vpsid != incoming_vpsid:
+    if (
+        existing_vpsid != incoming_vpsid
+        and existing_vpsid != parent_vpsid
+        and not (
+            parent_vpsid
+            and game_vpsid
+            and existing_vpsid == game_vpsid
+        )
+    ):
         raise RuntimeError(
             "NOGO: même nom normalisé mais "
-            "VPSId différent. "
+            "VPSId différent et aucune relation "
+            "parent VPU Remix valide. "
             f"existant={existing_vpsid} "
-            f"entrant={incoming_vpsid}"
+            f"entrant={incoming_vpsid} "
+            f"parent={parent_vpsid or '(aucun)'} "
+            f"jeu={game_vpsid or '(aucun)'}"
         )
+
+    if existing_vpsid == incoming_vpsid:
+        identity["relation"] = "same"
+    elif existing_vpsid == parent_vpsid:
+        identity["relation"] = "vpu_parent"
+    else:
+        identity["relation"] = "vpu_game"
 
     return identity
 
@@ -1287,6 +1673,168 @@ def pincabos_merge_installed(
     return merged
 
 
+PINCABOS_RESOURCE_INSTALLED_CATEGORIES = {
+    "tableFile": ("root",),
+    "b2sFile": ("root",),
+    "romFile": ("pinmame_roms",),
+    "pupPackFile": ("pupvideos", "fonts"),
+    "altSoundFile": ("altsound",),
+    "altColorFile": ("pinmame_altcolor",),
+    "soundFile": ("music",),
+    "povFile": ("root",),
+    "mediaPackFile": ("medias",),
+    "wheelArtFile": ("medias",),
+    "topperFile": ("medias",),
+    "ruleFile": ("extras",),
+    "tutorialFile": ("extras",),
+}
+
+
+def pincabos_annotate_resource_inventory(
+    resource_manifest,
+    incoming_installed,
+    plan,
+):
+    if not isinstance(resource_manifest, dict):
+        return {}
+
+    payload = json.loads(json.dumps(resource_manifest))
+    accepted_paths = {
+        Path(item["relative"]).as_posix()
+        for item in plan
+        if item.get("action") != "older"
+    }
+    older_paths = {
+        Path(item["relative"]).as_posix()
+        for item in plan
+        if item.get("action") == "older"
+    }
+
+    for resource in payload.get("resources", []):
+        if not isinstance(resource, dict):
+            continue
+
+        resource_installed = resource.get("_incoming_installed", {})
+        categories = tuple(resource_installed) or (
+            PINCABOS_RESOURCE_INSTALLED_CATEGORIES.get(
+                str(resource.get("resource_type", "") or ""),
+                ("extras",),
+            )
+        )
+        candidates = []
+        seen = set()
+
+        for category in categories:
+            for value in (resource_installed or {}).get(category, []):
+                portable = str(value or "").strip().lstrip("/")
+                if portable and portable not in seen:
+                    seen.add(portable)
+                    candidates.append(portable)
+
+        installed_paths = [
+            value
+            for value in candidates
+            if value in accepted_paths
+        ]
+        skipped_older_paths = [
+            value
+            for value in candidates
+            if value in older_paths
+        ]
+
+        resource["installed_paths"] = installed_paths
+        resource["installed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+        if installed_paths:
+            resource["install_status"] = "installed-or-identical"
+        elif skipped_older_paths:
+            resource["install_status"] = "older-input-kept-existing"
+            resource["skipped_older_paths"] = skipped_older_paths
+        else:
+            raise RuntimeError(
+                "NOGO: aucune destination installable n'a été produite "
+                "pour la ressource VPSDB "
+                f"{resource.get('vpsid', '(vide)')} "
+                f"({resource.get('stored_name', 'fichier inconnu')})."
+            )
+
+        resource.pop("_extract_root", None)
+        resource.pop("_staged_installed", None)
+        resource.pop("_incoming_installed", None)
+
+    return payload
+
+
+def pincabos_merge_resource_inventory(
+    previous_manifest,
+    resource_manifest,
+):
+    merged = []
+    positions = {}
+
+    def append_or_replace(resource, incoming=False):
+        if not isinstance(resource, dict):
+            return
+
+        if (
+            incoming
+            and resource.get("install_status")
+            == "older-input-kept-existing"
+        ):
+            return
+
+        resource_type = str(resource.get("resource_type", "") or "").strip()
+        vpsid = str(resource.get("vpsid", "") or "").strip()
+
+        if not resource_type or not vpsid:
+            return
+
+        key = (resource_type.casefold(), vpsid.casefold())
+        clean = {
+            field: resource[field]
+            for field in (
+                "vpsid",
+                "game_vpsid",
+                "resource_type",
+                "resource_key",
+                "version",
+                "parent_vpsid",
+                "parent_version",
+                "features",
+                "comment",
+                "folder",
+                "file_name",
+                "table_format",
+                "original_name",
+                "stored_name",
+                "sha256",
+                "size",
+                "client_mtime_ms",
+                "contains_vpu_patch",
+                "installed_paths",
+                "installed_at",
+                "install_status",
+            )
+            if resource.get(field) not in (None, "", [], {})
+        }
+
+        if key in positions:
+            merged[positions[key]] = clean
+        else:
+            positions[key] = len(merged)
+            merged.append(clean)
+
+    if isinstance(previous_manifest, dict):
+        for resource in previous_manifest.get("resources", []):
+            append_or_replace(resource)
+
+    if isinstance(resource_manifest, dict):
+        for resource in resource_manifest.get("resources", []):
+            append_or_replace(resource, incoming=True)
+
+    return merged
+
+
 def pincabos_atomic_write_json(
     path,
     payload,
@@ -1441,17 +1989,60 @@ def copy_dir_contents(src_dir, dest_dir):
 
     return copied
 
-def extract_all_inputs(batch_dir, extract_root):
+def extract_all_inputs(batch_dir, extract_root, resource_manifest=None):
     batch_dir = Path(batch_dir)
     extract_root = Path(extract_root)
     extract_root.mkdir(parents=True, exist_ok=True)
 
+    resources_by_name = {}
+
+    if isinstance(resource_manifest, dict):
+        for index, resource in enumerate(resource_manifest.get("resources", [])):
+            if not isinstance(resource, dict):
+                continue
+
+            stored_name = str(resource.get("stored_name", "") or "").strip()
+            resource_root = (
+                extract_root
+                / (
+                    f"resource_{index:03d}_"
+                    f"{safe_name(resource.get('resource_type', 'file'))}_"
+                    f"{safe_name(resource.get('vpsid', 'unknown'))}"
+                )
+            )
+            resource_root.mkdir(parents=True, exist_ok=True)
+            resource["_extract_root"] = str(resource_root)
+            resource["_staged_installed"] = {}
+            resources_by_name[stored_name.casefold()] = (resource, resource_root)
+
     raw_dir = extract_root / "_raw_files"
-    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    if not resource_manifest:
+        raw_dir.mkdir(parents=True, exist_ok=True)
 
     for item in sorted(batch_dir.rglob("*")):
         if not item.is_file():
             continue
+
+        if item.name == PINCABOS_SMART_IMPORT_RESOURCE_MANIFEST:
+            continue
+
+        resource = None
+        item_extract_root = extract_root
+        item_raw_dir = raw_dir
+
+        if resource_manifest:
+            resolved = resources_by_name.get(item.name.casefold())
+
+            if resolved is None:
+                raise RuntimeError(
+                    "NOGO: fichier sans VPS-ID dans le batch analysé: "
+                    f"{item.name}"
+                )
+
+            resource, item_extract_root = resolved
+            item_raw_dir = item_extract_root / "_raw_files"
+            item_raw_dir.mkdir(parents=True, exist_ok=True)
 
         suffix = item.suffix.lower()
 
@@ -1459,10 +2050,10 @@ def extract_all_inputs(batch_dir, extract_root):
             kind = archive_kind(item)
 
             if kind == "rom_zip":
-                copy_file(item, raw_dir)
+                copy_file(item, item_raw_dir)
                 continue
 
-            dest = extract_root / ("archive_" + safe_name(item.stem))
+            dest = item_extract_root / ("archive_" + safe_name(item.stem))
             log("")
             log("==================================================")
             log(f"ARCHIVE: {item}")
@@ -1473,12 +2064,15 @@ def extract_all_inputs(batch_dir, extract_root):
             except RuntimeError as exc:
                 # Une table chiffrée est bloquante. Les composants annexes
                 # (AltSound, PuP, médias, VNI, etc.) sont ignorés proprement.
-                if is_password_protected_error(exc) and kind != "table_archive":
+                if is_password_protected_error(exc) and kind not in {
+                    "table_archive",
+                    "vpu_patch_archive",
+                }:
                     log(f"WARNING: ARCHIVE OPTIONNEL IGNORÉ — protégé par mot de passe: {item} | type={kind}")
                     continue
                 raise
         else:
-            copy_file(item, raw_dir)
+            copy_file(item, item_raw_dir)
 
     changed = True
     loop = 0
@@ -1512,7 +2106,10 @@ def extract_all_inputs(batch_dir, extract_root):
             try:
                 extract_archive(item, dest)
             except RuntimeError as exc:
-                if is_password_protected_error(exc) and kind != "table_archive":
+                if is_password_protected_error(exc) and kind not in {
+                    "table_archive",
+                    "vpu_patch_archive",
+                }:
                     log(f"WARNING: ARCHIVE INTERNE OPTIONNEL IGNORÉ — protégé par mot de passe: {item} | type={kind}")
                     item.rename(item.with_name("already_extracted_" + item.name))
                     changed = True
@@ -1528,6 +2125,327 @@ def choose_main_vpx(root):
         return None
     vpxs.sort(key=lambda p: p.stat().st_size if p.exists() else 0, reverse=True)
     return vpxs[0]
+
+
+def pincabos_find_vpxtool():
+    candidates = list(PINCABOS_VPXTOOL_CANDIDATES)
+    discovered = shutil.which("vpxtool")
+
+    if discovered:
+        candidates.append(Path(discovered))
+
+    seen = set()
+
+    for candidate in candidates:
+        candidate = Path(candidate)
+
+        try:
+            resolved = candidate.resolve(strict=True)
+        except Exception:
+            continue
+
+        if resolved in seen:
+            continue
+
+        seen.add(resolved)
+
+        if not resolved.is_file() or not os.access(resolved, os.X_OK):
+            continue
+
+        version_result = run(
+            [str(resolved), "--version"],
+            timeout=30,
+        )
+        version_text = (
+            (version_result.stdout or "")
+            + "\n"
+            + (version_result.stderr or "")
+        ).strip()
+
+        if (
+            version_result.returncode == 0
+            and f"v{PINCABOS_VPXTOOL_VERSION}" in version_text
+        ):
+            return resolved, version_text
+
+    raise RuntimeError(
+        "NOGO: moteur VPU Remix absent ou version invalide. "
+        "PinCabOS requiert /opt/pincabos/bin/vpxtool "
+        f"v{PINCABOS_VPXTOOL_VERSION}. Relancer RUN_02."
+    )
+
+
+def pincabos_vpu_patch_files(root):
+    return sorted(
+        item
+        for item in list_files(root)
+        if (
+            item.suffix.lower() == ".dif"
+            and not should_skip_file(item)
+        )
+    )
+
+
+def pincabos_vpu_select_base_vpx(
+    extract_root,
+    patch_path,
+    existing_table_dir=None,
+):
+    extract_root = Path(extract_root)
+    patch_path = Path(patch_path)
+
+    bundled = sorted(
+        item
+        for item in list_files(extract_root)
+        if (
+            item.suffix.lower() == ".vpx"
+            and not should_skip_file(item)
+        )
+    )
+
+    if len(bundled) == 1:
+        return bundled[0], "batch"
+
+    if len(bundled) > 1:
+        exact = [
+            item
+            for item in bundled
+            if item.stem.casefold() == patch_path.stem.casefold()
+        ]
+
+        if len(exact) == 1:
+            return exact[0], "batch"
+
+        raise RuntimeError(
+            "NOGO: plusieurs tables VPX sources dans le batch; "
+            "la source du patch .dif est ambiguë: "
+            + " | ".join(str(item) for item in bundled)
+        )
+
+    if existing_table_dir:
+        existing_table_dir = Path(existing_table_dir)
+        installed = sorted(
+            item
+            for item in existing_table_dir.glob("*.vpx")
+            if item.is_file() and not item.is_symlink()
+        )
+
+        if len(installed) == 1:
+            return installed[0], "installed_table"
+
+        if len(installed) > 1:
+            exact = [
+                item
+                for item in installed
+                if item.stem.casefold() == patch_path.stem.casefold()
+            ]
+
+            if len(exact) == 1:
+                return exact[0], "installed_table"
+
+            raise RuntimeError(
+                "NOGO: plusieurs VPX sont installés dans la table; "
+                "la source du patch .dif est ambiguë: "
+                + " | ".join(str(item) for item in installed)
+            )
+
+    raise RuntimeError(
+        "NOGO: patch VPU Remix détecté, mais aucune table VPX "
+        "source fiable n'est disponible. Importer la version parent "
+        "exacte indiquée par VPSDB avant le patch, ou joindre cette "
+        "table VPX au même batch."
+    )
+
+
+def pincabos_apply_vpu_patch(
+    extract_root,
+    existing_table_dir=None,
+    existing_vpsid="",
+    incoming_vpsid="",
+    expected_parent_version="",
+):
+    patches = pincabos_vpu_patch_files(extract_root)
+
+    if not patches:
+        return None
+
+    if len(patches) != 1:
+        raise RuntimeError(
+            "NOGO: PinCabOS accepte exactement un patch VPU Remix "
+            "par import; patches détectés: "
+            + " | ".join(str(item) for item in patches)
+        )
+
+    patch_path = patches[0]
+    source_vpx, source_kind = pincabos_vpu_select_base_vpx(
+        extract_root,
+        patch_path,
+        existing_table_dir=existing_table_dir,
+    )
+
+    if (
+        source_kind == "installed_table"
+        and existing_vpsid
+        and incoming_vpsid
+        and existing_vpsid == incoming_vpsid
+    ):
+        raise RuntimeError(
+            "NOGO: ce VPSId de patch est déjà installé. "
+            "PinCabOS refuse d'appliquer deux fois le même .dif."
+        )
+
+    vpxtool, engine_version = pincabos_find_vpxtool()
+    output_dir = Path(extract_root) / "_pincabos_vpu_patch_output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_vpx = output_dir / f"{safe_name(patch_path.stem)}.vpx"
+
+    if output_vpx.exists():
+        raise RuntimeError(
+            f"NOGO: sortie VPU Remix déjà présente: {output_vpx}"
+        )
+
+    source_sha256 = pincabos_file_sha256(source_vpx)
+    patch_sha256 = pincabos_file_sha256(patch_path)
+    source_table_version = ""
+
+    if source_kind == "installed_table" or expected_parent_version:
+        source_info_result = run(
+            [str(vpxtool), "info", "show", str(source_vpx)],
+            timeout=180,
+        )
+        source_info_text = (
+            (source_info_result.stdout or "")
+            + "\n"
+            + (source_info_result.stderr or "")
+        ).strip()
+
+        if (
+            source_info_result.returncode != 0
+            or "VPX Version:" not in source_info_text
+        ):
+            raise RuntimeError(
+                "NOGO: la table source du patch n'est pas un VPX "
+                "lisible par vpxtool"
+                + (
+                    f": {source_info_text[-3000:]}"
+                    if source_info_text
+                    else "."
+                )
+            )
+
+        version_match = re.search(
+            r"^\s*Version:\s*(.*?)\s*$",
+            source_info_text,
+            flags=re.MULTILINE,
+        )
+
+        if version_match:
+            source_table_version = version_match.group(1).strip()
+
+        if expected_parent_version:
+            expected_key = re.sub(
+                r"^v",
+                "",
+                str(expected_parent_version).strip().casefold(),
+            )
+            detected_key = re.sub(
+                r"^v",
+                "",
+                source_table_version.casefold(),
+            )
+
+            if not detected_key or detected_key != expected_key:
+                raise RuntimeError(
+                    "NOGO: version VPX source incompatible avec le "
+                    "parent VPSDB du patch. "
+                    f"attendue={expected_parent_version} "
+                    f"détectée={source_table_version or '(vide)'}"
+                )
+
+    log("")
+    log("==================================================")
+    log(" VPU Remix - reconstruction isolée")
+    log("==================================================")
+    log(f"SOURCE VPX             : {source_vpx}")
+    log(f"SOURCE TYPE            : {source_kind}")
+    log(f"SOURCE SHA256          : {source_sha256}")
+    if source_table_version:
+        log(f"SOURCE VERSION         : {source_table_version}")
+    log(f"PATCH DIF              : {patch_path}")
+    log(f"PATCH SHA256           : {patch_sha256}")
+
+    patch_result = run(
+        [
+            str(vpxtool),
+            "patch",
+            str(source_vpx),
+            str(patch_path),
+            str(output_vpx),
+        ],
+        timeout=1800,
+    )
+
+    if patch_result.returncode != 0:
+        detail = (
+            (patch_result.stdout or "")
+            + "\n"
+            + (patch_result.stderr or "")
+        ).strip()
+        raise RuntimeError(
+            "NOGO: vpxtool n'a pas pu appliquer le patch VPU Remix"
+            + (f": {detail[-3000:]}" if detail else ".")
+        )
+
+    if not output_vpx.is_file() or output_vpx.stat().st_size < 4096:
+        raise RuntimeError(
+            "NOGO: la reconstruction VPU Remix est absente ou trop petite."
+        )
+
+    with output_vpx.open("rb") as handle:
+        magic = handle.read(len(PINCABOS_VPX_OLE_MAGIC))
+
+    if magic != PINCABOS_VPX_OLE_MAGIC:
+        raise RuntimeError(
+            "NOGO: la reconstruction n'est pas un conteneur VPX/OLE valide."
+        )
+
+    info_result = run(
+        [str(vpxtool), "info", "show", str(output_vpx)],
+        timeout=180,
+    )
+    info_text = (
+        (info_result.stdout or "")
+        + "\n"
+        + (info_result.stderr or "")
+    ).strip()
+
+    if (
+        info_result.returncode != 0
+        or "VPX Version:" not in info_text
+    ):
+        raise RuntimeError(
+            "NOGO: vpxtool ne peut pas relire la table reconstruite"
+            + (f": {info_text[-3000:]}" if info_text else ".")
+        )
+
+    output_sha256 = pincabos_file_sha256(output_vpx)
+    log(f"SORTIE VPX             : {output_vpx}")
+    log(f"SORTIE SHA256          : {output_sha256}")
+    log("VALIDATION VPX         : GO")
+
+    return {
+        "output_path": str(output_vpx),
+        "engine": "vpxtool",
+        "engine_version": engine_version,
+        "source_kind": source_kind,
+        "source_file": source_vpx.name,
+        "source_sha256": source_sha256,
+        "source_table_version": source_table_version,
+        "patch_file": patch_path.name,
+        "patch_sha256": patch_sha256,
+        "output_file": output_vpx.name,
+        "output_sha256": output_sha256,
+    }
 
 def read_text_script(path):
     path = Path(path)
@@ -2342,7 +3260,14 @@ def should_skip_file(f):
     return "/already_extracted_" in text
 
 
-def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
+def classify_and_install(
+    extract_root,
+    table_dir,
+    rom,
+    pup_pack="",
+    main_vpx=None,
+    resource_manifest=None,
+):
     # PINCABOS_PORTABLE_LAYOUT_V2
     #
     # Une table est entièrement autonome :
@@ -2397,9 +3322,57 @@ def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
         "extras": [],
     }
 
+    resource_rows = (
+        resource_manifest.get("resources", [])
+        if isinstance(resource_manifest, dict)
+        else []
+    )
+    preferred_vpx = Path(main_vpx).resolve() if main_vpx else None
+    primary_table_vpsid = str(
+        (
+            resource_manifest.get("primary_table_vpsid", "")
+            if isinstance(resource_manifest, dict)
+            else ""
+        )
+        or ""
+    ).strip().casefold()
+
+    def resource_for_source(source):
+        try:
+            source_resolved = Path(source).resolve()
+        except Exception:
+            return None
+
+        for resource in resource_rows:
+            if not isinstance(resource, dict):
+                continue
+
+            root_value = str(resource.get("_extract_root", "") or "").strip()
+            if not root_value:
+                continue
+
+            try:
+                source_resolved.relative_to(Path(root_value).resolve())
+                return resource
+            except Exception:
+                continue
+
+        if preferred_vpx and source_resolved == preferred_vpx:
+            for resource in resource_rows:
+                if (
+                    isinstance(resource, dict)
+                    and str(resource.get("resource_type", "") or "")
+                    == "tableFile"
+                    and str(resource.get("vpsid", "") or "").strip().casefold()
+                    == primary_table_vpsid
+                ):
+                    return resource
+
+        return None
+
     copied = set()
 
-    def put(category, source, destination, new_name=None):
+    def put(category, source, destination, new_name=None, owner_resource=None):
         source = Path(source)
         destination = Path(destination)
 
@@ -2417,9 +3390,21 @@ def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
         copied.add(key)
         result = copy_file(source, destination, final_name)
         installed[category].append(str(result))
+
+        owner = owner_resource or resource_for_source(source)
+        if isinstance(owner, dict):
+            staged = owner.setdefault("_staged_installed", {})
+            staged.setdefault(category, []).append(str(result))
+
         return result
 
-    def copy_tree(category, source_dir, destination_dir, fonts_to_table=True):
+    def copy_tree(
+        category,
+        source_dir,
+        destination_dir,
+        fonts_to_table=True,
+        owner_resource=None,
+    ):
         source_dir = Path(source_dir)
         destination_dir = Path(destination_dir)
 
@@ -2427,17 +3412,155 @@ def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
             if not item.is_file():
                 continue
 
+            if should_skip_file(item):
+                continue
+
             suffix = item.suffix.lower()
 
             # Les fonts doivent toujours rester directement dans <table>/fonts/.
             if fonts_to_table and suffix in FONT_EXTS:
-                put("fonts", item, table_dir / "fonts", item.name)
+                put(
+                    "fonts",
+                    item,
+                    table_dir / "fonts",
+                    item.name,
+                    owner_resource=owner_resource,
+                )
                 continue
 
             relative = item.relative_to(source_dir)
-            put(category, item, destination_dir / relative.parent, relative.name)
+            put(
+                category,
+                item,
+                destination_dir / relative.parent,
+                relative.name,
+                owner_resource=owner_resource,
+            )
 
     excluded_dirs = set()
+
+    def resource_content_root(resource_root, folder=""):
+        current = Path(resource_root)
+        wanted_folder = str(folder or "").strip().casefold()
+
+        for _unused in range(5):
+            if looks_like_pup_dir(current):
+                break
+
+            if wanted_folder and current.name.casefold() == wanted_folder:
+                break
+
+            children = [
+                item
+                for item in current.iterdir()
+                if (
+                    item.is_dir()
+                    and not item.is_symlink()
+                    and any(
+                        candidate.is_file()
+                        and not should_skip_file(candidate)
+                        for candidate in item.rglob("*")
+                    )
+                )
+            ]
+            direct_files = [
+                item
+                for item in current.iterdir()
+                if item.is_file() and not should_skip_file(item)
+            ]
+
+            if direct_files or len(children) != 1:
+                break
+
+            current = children[0]
+
+        return current
+
+    # Les types VPSDB auxiliaires pilotent directement leur destination.
+    # Le classificateur historique reste ensuite actif pour tableFile, B2S,
+    # ROM, POV et les fichiers non couverts.
+    for resource in resource_rows:
+        if not isinstance(resource, dict):
+            continue
+
+        resource_type = str(resource.get("resource_type", "") or "").strip()
+        resource_root_value = str(resource.get("_extract_root", "") or "").strip()
+
+        if not resource_root_value:
+            continue
+
+        resource_root = Path(resource_root_value)
+        if not resource_root.is_dir():
+            continue
+
+        db_folder = safe_name(resource.get("folder", ""))
+        content_root = resource_content_root(resource_root, db_folder)
+
+        if resource_type == "pupPackFile":
+            destination_name = (
+                db_folder
+                or pup_pack_name
+                or safe_pup_pack_folder_name(content_root.name)
+                or table_title
+            )
+            destination = (
+                table_dir
+                / "pupvideos"
+                / safe_pup_pack_folder_name(destination_name)
+            )
+            log(
+                "PuP destination VPSDB   : "
+                f"{content_root} -> {destination}"
+            )
+            copy_tree(
+                "pupvideos",
+                content_root,
+                destination,
+                fonts_to_table=False,
+                owner_resource=resource,
+            )
+
+            for font in sorted(content_root.rglob("*")):
+                if font.is_file() and font.suffix.lower() in FONT_EXTS:
+                    put(
+                        "fonts",
+                        font,
+                        table_dir / "fonts",
+                        font.name,
+                        owner_resource=resource,
+                    )
+
+            excluded_dirs.add(resource_root.resolve())
+
+        elif resource_type == "altSoundFile":
+            destination = (
+                table_dir
+                / "pinmame"
+                / "altsound"
+                / safe_name(db_folder or rom_name)
+            )
+            copy_tree(
+                "altsound",
+                content_root,
+                destination,
+                owner_resource=resource,
+            )
+            excluded_dirs.add(resource_root.resolve())
+
+        elif resource_type == "altColorFile":
+            destination = (
+                table_dir
+                / "pinmame"
+                / "altcolor"
+                / safe_name(db_folder or rom_name)
+            )
+            copy_tree(
+                "pinmame_altcolor",
+                content_root,
+                destination,
+                owner_resource=resource,
+            )
+            excluded_dirs.add(resource_root.resolve())
 
     # 1) PuP : vraie racine avant un sous-dossier PupVideos.
     # PINCABOS_PUP_ROOT_FIRST_V1
@@ -2448,6 +3571,12 @@ def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
             resolved = candidate.resolve()
         except Exception:
             resolved = candidate
+
+        if any(
+            root == resolved or root in resolved.parents
+            for root in excluded_dirs
+        ):
+            continue
 
         if resolved not in true_pup_roots:
             true_pup_roots.append(resolved)
@@ -2605,6 +3734,22 @@ def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
     vpx_files = [f for f in all_files if f.suffix.lower() == ".vpx"]
     vpx_files.sort(key=lambda p: p.stat().st_size if p.exists() else 0, reverse=True)
 
+    if preferred_vpx:
+        preferred_matches = [
+            item
+            for item in vpx_files
+            if item.resolve() == preferred_vpx
+        ]
+
+        if len(preferred_matches) != 1:
+            raise RuntimeError(
+                "NOGO: le VPX principal validé n'est plus présent "
+                f"dans le staging: {preferred_vpx}"
+            )
+
+        vpx_files.remove(preferred_matches[0])
+        vpx_files.insert(0, preferred_matches[0])
+
     if vpx_files:
         put("root", vpx_files[0], table_dir, f"{table_title}.vpx")
 
@@ -2679,7 +3824,13 @@ def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
 
         # Configurations PinMAME.
         if suffix == ".ini":
-            if f.stem.lower() in vpx_stems:
+            if (
+                vpx_files
+                and f.stem.casefold()
+                == vpx_files[0].stem.casefold()
+            ):
+                put("root", f, table_dir, f"{table_title}.ini")
+            elif f.stem.lower() in vpx_stems:
                 put("root", f, table_dir, f.name)
             elif rom and f.stem.lower().startswith(str(rom).lower()):
                 put("pinmame_ini", f, table_dir / "pinmame" / "ini", f.name)
@@ -2729,6 +3880,8 @@ def write_info_and_manifest(
     installed,
     info_path_override=None,
     existing_manifest=None,
+    patch_info=None,
+    resource_manifest=None,
 ):
     # PINCABOS_MANIFEST_RELATIVE_PATHS_V1
     # PINCABOS_SMART_IMPORT_UPDATE_V1
@@ -2927,6 +4080,58 @@ def write_info_and_manifest(
         ),
     }
 
+    game_vpsid = str(
+        (
+            resource_manifest.get("game_vpsid", "")
+            if isinstance(resource_manifest, dict)
+            else ""
+        )
+        or previous.get("game_vpsid", "")
+        or ""
+    ).strip()
+
+    if game_vpsid:
+        manifest["game_vpsid"] = game_vpsid
+
+    resources = pincabos_merge_resource_inventory(
+        previous,
+        resource_manifest,
+    )
+
+    if resources:
+        manifest["resource_inventory_version"] = 1
+        manifest["resources"] = resources
+
+    patch_manifest = {}
+
+    if isinstance(patch_info, dict):
+        for key in (
+            "engine",
+            "engine_version",
+            "source_kind",
+            "source_file",
+            "source_sha256",
+            "source_table_version",
+            "patch_file",
+            "patch_sha256",
+            "output_file",
+            "output_sha256",
+            "parent_vpsid",
+            "parent_version",
+            "target_vpsid",
+            "target_version",
+        ):
+            value = patch_info.get(key)
+
+            if value not in (None, ""):
+                patch_manifest[key] = value
+
+    elif isinstance(previous.get("vpu_patch"), dict):
+        patch_manifest = dict(previous["vpu_patch"])
+
+    if patch_manifest:
+        manifest["vpu_patch"] = patch_manifest
+
     if previous:
         manifest[
             "updated_at"
@@ -3046,6 +4251,26 @@ def main():
         default="",
     )
     ap.add_argument(
+        "--parent-vpsid",
+        default="",
+    )
+    ap.add_argument(
+        "--game-vpsid",
+        default="",
+    )
+    ap.add_argument(
+        "--parent-version",
+        default="",
+    )
+    ap.add_argument(
+        "--target-version",
+        default="",
+    )
+    ap.add_argument(
+        "--resources-json",
+        default="",
+    )
+    ap.add_argument(
         "--rom",
         default="",
     )
@@ -3086,6 +4311,43 @@ def main():
     vpsid = (
         args.vpsid.strip()
     )
+
+    parent_vpsid = (
+        args.parent_vpsid.strip()
+    )
+
+    game_vpsid = (
+        args.game_vpsid.strip()
+    )
+
+    parent_version = (
+        args.parent_version.strip()
+    )
+
+    target_version = (
+        args.target_version.strip()
+    )
+
+    resource_manifest = {}
+
+    if args.resources_json.strip():
+        resource_manifest = pincabos_load_resource_manifest(
+            args.resources_json.strip(),
+            batch_dir,
+        )
+
+        manifest_game_vpsid = str(
+            resource_manifest.get("game_vpsid", "")
+            or ""
+        ).strip()
+
+        if game_vpsid and game_vpsid != manifest_game_vpsid:
+            raise RuntimeError(
+                "NOGO: game VPSId différent entre la commande "
+                "et l'inventaire par fichier."
+            )
+
+        game_vpsid = manifest_game_vpsid
 
     ipdbid = (
         args.ipdbid.strip()
@@ -3129,7 +4391,12 @@ def main():
 
         try:
             table_dir = (
-                pincabos_find_existing_table_dir(
+                pincabos_find_existing_table_dir_by_game(
+                    game_vpsid,
+                    incoming_title,
+                )
+                if resource_manifest
+                else pincabos_find_existing_table_dir(
                     incoming_title
                 )
             )
@@ -3138,12 +4405,44 @@ def main():
                 table_dir.is_dir()
             )
 
+            if existed_before and resource_manifest:
+                incoming_title = table_dir.name
+
+                if not vpsid:
+                    preliminary_identity = (
+                        pincabos_read_existing_table_identity(
+                            table_dir
+                        )
+                    )
+                    vpsid = str(
+                        preliminary_identity.get("vpsid", "")
+                        or ""
+                    ).strip()
+
+                    if not vpsid:
+                        raise RuntimeError(
+                            "NOGO: ressource auxiliaire destinée à une "
+                            "table existante sans VPSId principal fiable."
+                        )
+
+            if (
+                not existed_before
+                and resource_manifest
+                and not vpsid
+            ):
+                raise RuntimeError(
+                    "NOGO: les ressources VPSDB ne contiennent pas de "
+                    "tableFile et aucune table correspondante n'est installée."
+                )
+
             if existed_before:
                 existing_identity = (
                     pincabos_validate_existing_identity(
                         table_dir,
                         incoming_title,
                         vpsid,
+                        parent_vpsid=parent_vpsid,
+                        game_vpsid=game_vpsid,
                     )
                 )
 
@@ -3151,11 +4450,22 @@ def main():
                     table_dir.name
                 )
 
-                log(
-                    "MODE UPDATE            : "
-                    "nom normalisé identique "
-                    f"+ VPSId {vpsid}"
-                )
+                if existing_identity.get("relation") in {
+                    "vpu_parent",
+                    "vpu_game",
+                }:
+                    source_identity = existing_identity.get("vpsid", "")
+                    log(
+                        "MODE VPU UPDATE        : "
+                        f"source VPSId {source_identity} "
+                        f"-> patch VPSId {vpsid}"
+                    )
+                else:
+                    log(
+                        "MODE UPDATE            : "
+                        "nom normalisé identique "
+                        f"+ VPSId {vpsid}"
+                    )
 
             else:
                 existing_identity = {
@@ -3198,27 +4508,98 @@ def main():
                 extract_all_inputs(
                     batch_dir,
                     extract_root,
+                    resource_manifest=(
+                        resource_manifest
+                    ),
                 )
+
+                patch_info = pincabos_apply_vpu_patch(
+                    extract_root,
+                    existing_table_dir=(
+                        table_dir
+                        if existed_before
+                        else None
+                    ),
+                    existing_vpsid=(
+                        existing_identity.get("vpsid", "")
+                        if existed_before
+                        else ""
+                    ),
+                    incoming_vpsid=vpsid,
+                    expected_parent_version=parent_version,
+                )
+
+                if (
+                    existed_before
+                    and existing_identity.get("relation") in {
+                        "vpu_parent",
+                        "vpu_game",
+                    }
+                    and not patch_info
+                ):
+                    raise RuntimeError(
+                        "NOGO: transition VPSId parent -> mod refusée "
+                        "car aucun patch VPU Remix .dif n'a été détecté."
+                    )
+
+                if patch_info:
+                    patch_info["parent_vpsid"] = parent_vpsid
+                    patch_info["parent_version"] = parent_version
+                    patch_info["target_vpsid"] = vpsid
+                    patch_info["target_version"] = target_version
 
                 main_vpx = (
-                    choose_main_vpx(
-                        extract_root
-                    )
+                    Path(patch_info["output_path"])
+                    if patch_info
+                    else choose_main_vpx(extract_root)
                 )
 
-                if not main_vpx:
-                    raise RuntimeError(
-                        "ERREUR: aucun "
-                        "fichier .vpx trouvé "
-                        "après extraction. "
-                        "Import refusé."
+                identity_vpx = main_vpx
+
+                if not identity_vpx and existed_before and resource_manifest:
+                    installed_vpxs = sorted(
+                        item
+                        for item in table_dir.glob("*.vpx")
+                        if item.is_file() and not item.is_symlink()
                     )
+
+                    if len(installed_vpxs) != 1:
+                        raise RuntimeError(
+                            "NOGO: ressource auxiliaire détectée, mais la "
+                            "table installée ne contient pas exactement un VPX "
+                            "fiable: "
+                            + " | ".join(str(item) for item in installed_vpxs)
+                        )
+
+                    identity_vpx = installed_vpxs[0]
+                    log(
+                        "MODE RESSOURCE         : VPX existant conservé "
+                        f"({identity_vpx})"
+                    )
+
+                if not identity_vpx:
+                    raise RuntimeError(
+                        "NOGO: aucune table VPX source et aucune table "
+                        "correspondante déjà installée. Import refusé."
+                    )
+
+                provided_rom = args.rom
+
+                if (
+                    not provided_rom
+                    and existed_before
+                    and isinstance(existing_identity.get("manifest"), dict)
+                ):
+                    provided_rom = str(
+                        existing_identity["manifest"].get("rom", "")
+                        or ""
+                    ).strip()
 
                 identity = (
                     detect_import_identity(
                         extract_root,
-                        args.rom,
-                        main_vpx=main_vpx,
+                        provided_rom,
+                        main_vpx=identity_vpx,
                     )
                 )
 
@@ -3245,7 +4626,14 @@ def main():
                         )
                     ]
 
-                    if not bundled_roms:
+                    if (
+                        not bundled_roms
+                        and not (
+                            resource_manifest
+                            and existed_before
+                            and provided_rom
+                        )
+                    ):
                         if (
                             str(
                                 rom or ""
@@ -3278,6 +4666,8 @@ def main():
                         main_vpx,
                         staged_table,
                     )
+                    if main_vpx
+                    else None
                 )
 
                 if final_vbs:
@@ -3306,7 +4696,7 @@ def main():
                 )
                 log(
                     "VPX principal détecté : "
-                    f"{main_vpx}"
+                    f"{main_vpx or '(VPX existant conservé)'}"
                 )
                 log(
                     "ROM détectée          : "
@@ -3331,8 +4721,29 @@ def main():
                         staged_table,
                         rom,
                         pup_pack=pup_pack,
+                        main_vpx=main_vpx,
+                        resource_manifest=(
+                            resource_manifest
+                        ),
                     )
                 )
+
+                if final_vbs:
+                    final_vbs_text = str(final_vbs)
+                    if final_vbs_text not in staged_installed["root"]:
+                        staged_installed["root"].append(final_vbs_text)
+
+                    primary_key = str(vpsid or "").strip().casefold()
+                    for resource in resource_manifest.get("resources", []):
+                        if (
+                            isinstance(resource, dict)
+                            and resource.get("resource_type") == "tableFile"
+                            and str(resource.get("vpsid", "") or "")
+                            .strip().casefold() == primary_key
+                        ):
+                            resource.setdefault("_staged_installed", {}) \
+                                .setdefault("root", []).append(final_vbs_text)
+                            break
 
                 incoming_installed = (
                     pincabos_remap_installed_to_relative(
@@ -3341,12 +4752,25 @@ def main():
                     )
                 )
 
+                for resource in resource_manifest.get("resources", []):
+                    if not isinstance(resource, dict):
+                        continue
+
+                    resource["_incoming_installed"] = (
+                        pincabos_remap_installed_to_relative(
+                            resource.get("_staged_installed", {}),
+                            staged_table,
+                        )
+                    )
+
                 if existed_before:
                     existing_identity = (
                         pincabos_validate_existing_identity(
                             table_dir,
                             incoming_title,
                             vpsid,
+                            parent_vpsid=parent_vpsid,
+                            game_vpsid=game_vpsid,
                         )
                     )
 
@@ -3398,6 +4822,14 @@ def main():
                         installed = (
                             incoming_installed
                         )
+
+                    annotated_resource_manifest = (
+                        pincabos_annotate_resource_inventory(
+                            resource_manifest,
+                            incoming_installed,
+                            plan,
+                        )
+                    )
 
                     existing_info_path = (
                         existing_identity.get(
@@ -3453,6 +4885,10 @@ def main():
                         ),
                         existing_manifest=(
                             previous_manifest
+                        ),
+                        patch_info=patch_info,
+                        resource_manifest=(
+                            annotated_resource_manifest
                         ),
                     )
 

@@ -123,7 +123,7 @@ def register_pincabos_impexp_routes(app, app_globals):
       <section class="pco-ie-card"><h3><span>1.</span> Analyser une archive</h3><p>La première étape prépare le lot sans publier de table dans votre collection.</p>
         <form method="post" action="/tools/import-table/analyze" enctype="multipart/form-data">
           <!-- PINCABOS_SMART_IMPORT_REAL_QUEUE_V1 -->
-          <link rel="stylesheet" href="/static/pincabos-smart-import-queue-real-v1.css?v=1">
+          <link rel="stylesheet" href="/static/pincabos-smart-import-queue-real-v1.css?v=2">
 
           <div class="pco-ie-field">
             Archives ou fichiers associés
@@ -194,7 +194,7 @@ def register_pincabos_impexp_routes(app, app_globals):
             </div>
           </div>
 
-          <script src="/static/pincabos-smart-import-queue-real-v1.js?v=1"></script>
+          <script src="/static/pincabos-smart-import-queue-real-v1.js?v=2"></script>
           <div class="pco-ie-actions"><button class="pco-ie-primary" type="submit">🔍 Analyser l’import</button><a class="button pco-ie-muted" href="/tools/commander">🗂️ PinCab Explorer</a><a class="button pco-ie-muted" href="/tools">← Outils</a></div>
         </form><div class="pco-ie-note">ⓘ L’analyse ne modifie pas la collection de tables.</div>
         <div class="pco-ie-workflow" aria-label="État du cheminement Smart Import"><div class="pco-ie-workflow-step is-ready"><b><i>1</i>Prêt à analyser</b><span>Ajoute les fichiers puis lance l’analyse.</span></div><div class="pco-ie-workflow-step"><b><i>2</i>Association</b><span>Détection table, dépendances et VPSdb.</span></div><div class="pco-ie-workflow-step"><b><i>3</i>Installation</b><span>Confirmation avant toute publication.</span></div></div>

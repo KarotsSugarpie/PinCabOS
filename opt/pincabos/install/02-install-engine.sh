@@ -77,6 +77,14 @@ ROMS_DIR="/opt/pincabos/apps/vpinball/PinMAME/roms"
 VPINFE_DIR="/opt/pincabos/apps/frontend/vpinfe/current"
 VPINFE_INI="/opt/pincabos/config/vpinfe/vpinfe.ini"
 
+# Moteur open source utilisé uniquement pour reconstruire les patches
+# VPU Remix (.dif). La version et les empreintes sont volontairement
+# épinglées afin qu'une mise à jour amont ne change jamais le binaire installé.
+VPXTOOL_VERSION="0.33.8"
+VPXTOOL_RELEASE_BASE="https://github.com/francisdb/vpxtool/releases/download/v${VPXTOOL_VERSION}"
+VPXTOOL_APP_ROOT="/opt/pincabos/apps/vpxtool"
+VPXTOOL_BIN="/opt/pincabos/bin/vpxtool"
+
 mkdir -p "$LOG_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
@@ -107,6 +115,82 @@ pco_nogo() {
 run_cmd() {
   echo "+ $*"
   "$@"
+}
+
+install_vpxtool() {
+  pco_step "A2" "Install verified VPU Remix patch engine"
+
+  local machine archive_name expected_sha release_dir temp_dir archive_file extracted_bin
+  machine="$(uname -m)"
+
+  case "$machine" in
+    x86_64|amd64)
+      archive_name="vpxtool-linux-x86_64-v${VPXTOOL_VERSION}.tar.gz"
+      expected_sha="06b8f77b22b86a1f64dc4f623d8a35fb7e976d9f25c48d51c8966c8ad85cf6f0"
+      ;;
+    aarch64|arm64)
+      archive_name="vpxtool-linux-aarch64-v${VPXTOOL_VERSION}.tar.gz"
+      expected_sha="9a3411bd2a735ff320d9624112835b2a3a388aaca28d715ca1e2d4df26c7270a"
+      ;;
+    *)
+      pco_nogo "ERR-02-VPXTOOL-ARCH-001" "Unsupported vpxtool architecture: $machine"
+      ;;
+  esac
+
+  if [ -x "$VPXTOOL_BIN" ] \
+    && "$VPXTOOL_BIN" --version 2>/dev/null | grep -Fq "v${VPXTOOL_VERSION}" \
+    && "$VPXTOOL_BIN" patch --help >/dev/null 2>&1
+  then
+    pco_go "vpxtool v${VPXTOOL_VERSION} already installed"
+    return 0
+  fi
+
+  temp_dir="$(mktemp -d /tmp/pincabos-vpxtool-install.XXXXXX)"
+  archive_file="$temp_dir/$archive_name"
+  release_dir="$VPXTOOL_APP_ROOT/$VPXTOOL_VERSION"
+
+  if ! curl -fL --retry 4 --retry-delay 2 \
+    "$VPXTOOL_RELEASE_BASE/$archive_name" \
+    -o "$archive_file"
+  then
+    rm -rf -- "$temp_dir"
+    pco_nogo "ERR-02-VPXTOOL-DOWNLOAD-001" "Unable to download $archive_name"
+  fi
+
+  if [ "$(sha256sum "$archive_file" | awk '{print $1}')" != "$expected_sha" ]; then
+    rm -rf -- "$temp_dir"
+    pco_nogo "ERR-02-VPXTOOL-SHA256-001" "SHA256 mismatch for $archive_name"
+  fi
+
+  mkdir -p "$temp_dir/extract"
+  if ! tar --no-same-owner -xzf "$archive_file" -C "$temp_dir/extract"; then
+    rm -rf -- "$temp_dir"
+    pco_nogo "ERR-02-VPXTOOL-EXTRACT-001" "Unable to extract verified vpxtool archive"
+  fi
+
+  extracted_bin="$(find "$temp_dir/extract" -type f -name vpxtool -print -quit)"
+  if [ -z "$extracted_bin" ] || [ ! -f "$extracted_bin" ]; then
+    rm -rf -- "$temp_dir"
+    pco_nogo "ERR-02-VPXTOOL-CONTENT-001" "vpxtool binary missing from verified archive"
+  fi
+
+  mkdir -p "$release_dir" "$VPXTOOL_APP_ROOT" "$(dirname "$VPXTOOL_BIN")"
+  install -m 0755 "$extracted_bin" "$release_dir/vpxtool"
+
+  ln -sfn "$release_dir" "$VPXTOOL_APP_ROOT/.current.new"
+  mv -Tf "$VPXTOOL_APP_ROOT/.current.new" "$VPXTOOL_APP_ROOT/current"
+  ln -sfn "$VPXTOOL_APP_ROOT/current/vpxtool" "${VPXTOOL_BIN}.new"
+  mv -Tf "${VPXTOOL_BIN}.new" "$VPXTOOL_BIN"
+
+  rm -rf -- "$temp_dir"
+
+  if ! "$VPXTOOL_BIN" --version 2>/dev/null | grep -Fq "v${VPXTOOL_VERSION}" \
+    || ! "$VPXTOOL_BIN" patch --help >/dev/null 2>&1
+  then
+    pco_nogo "ERR-02-VPXTOOL-VERIFY-001" "Installed vpxtool did not pass validation"
+  fi
+
+  pco_go "vpxtool v${VPXTOOL_VERSION} installed with pinned SHA256"
 }
 
 apt_install() {
@@ -1246,6 +1330,7 @@ main() {
   install_official_web_package
   restore_or_create_webapp
   restore_sanitized_tools
+  install_vpxtool
   pco_go "RUN_02 skips final Plymouth; RUN_03 is the single owner"
   write_global_paths_config
   pco_import_golden_runtime_package || true

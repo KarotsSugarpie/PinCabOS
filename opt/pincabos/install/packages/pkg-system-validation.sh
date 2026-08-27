@@ -23,6 +23,14 @@ done
 command -v 7z >/dev/null 2>&1 && pco_go "Command available: 7z" || pco_warn "7z missing; archive support reduced"
 command -v ttyd >/dev/null 2>&1 && pco_go "Optional ttyd available" || pco_warn "Optional ttyd missing"
 
+if [ -x /opt/pincabos/bin/vpxtool ] \
+  && /opt/pincabos/bin/vpxtool patch --help >/dev/null 2>&1
+then
+  pco_go "VPU Remix patch engine available: /opt/pincabos/bin/vpxtool"
+else
+  pco_nogo_soft "Missing or invalid VPU Remix patch engine: /opt/pincabos/bin/vpxtool"
+fi
+
 [ -x /opt/pincabos/bin/vpx.sh ] && pco_go "VPX wrapper exists: /opt/pincabos/bin/vpx.sh" || pco_nogo_soft "Missing /opt/pincabos/bin/vpx.sh"
 [ -x /opt/pincabos/apps/vpinball/VPinballX-BGFX ] && pco_go "VPX BGFX binary exists" || pco_nogo_soft "Missing /opt/pincabos/apps/vpinball/VPinballX-BGFX"
 [ -f /home/pinball/.vpinball/VPinballX.ini ] && pco_go "VPX INI exists" || pco_nogo_soft "Missing VPinballX.ini"

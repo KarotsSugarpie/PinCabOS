@@ -52,9 +52,11 @@
 
     var form = finalInput.closest("form");
     var queue = [];
+    var vpsIdsByKey = Object.create(null);
 
     /* PINCABOS_SMART_IMPORT_CLIENT_MTIME_V1 */
     var modifiedTimesInput = null;
+    var fileVpsIdsInput = null;
 
     if (form) {
       modifiedTimesInput =
@@ -72,6 +74,24 @@
 
         form.appendChild(
           modifiedTimesInput
+        );
+      }
+
+      fileVpsIdsInput =
+        form.querySelector(
+          'input[name="file_vpsids_json"]'
+        );
+
+      if (!fileVpsIdsInput) {
+        fileVpsIdsInput =
+          document.createElement("input");
+
+        fileVpsIdsInput.type = "hidden";
+        fileVpsIdsInput.name =
+          "file_vpsids_json";
+
+        form.appendChild(
+          fileVpsIdsInput
         );
       }
     }
@@ -172,6 +192,17 @@
             })
           );
       }
+
+      if (fileVpsIdsInput) {
+        fileVpsIdsInput.value =
+          JSON.stringify(
+            queue.map(function (file) {
+              return String(
+                vpsIdsByKey[fileKey(file)] || ""
+              ).trim();
+            })
+          );
+      }
     }
 
     function updateSubmitButton() {
@@ -199,6 +230,8 @@
       queue = queue.filter(function (file) {
         return fileKey(file) !== key;
       });
+
+      delete vpsIdsByKey[key];
 
       synchronizeFinalInput();
       render();
@@ -232,6 +265,33 @@
       info.appendChild(name);
       info.appendChild(metadata);
 
+      var vpsField = document.createElement("label");
+      vpsField.className = "pco-smart-import-file-vps";
+
+      var vpsLabel = document.createElement("span");
+      vpsLabel.textContent = "VPS-ID";
+
+      var vpsInput = document.createElement("input");
+      vpsInput.type = "text";
+      vpsInput.className = "pco-smart-import-file-vps-input";
+      vpsInput.placeholder = "Ex. K0A0V15Ui_";
+      vpsInput.value = vpsIdsByKey[fileKey(file)] || "";
+      vpsInput.autocomplete = "off";
+      vpsInput.spellcheck = false;
+      vpsInput.setAttribute(
+        "aria-label",
+        "VPS-ID de " + file.name
+      );
+
+      vpsInput.addEventListener("input", function () {
+        vpsIdsByKey[fileKey(file)] = vpsInput.value;
+        synchronizeFinalInput();
+        vpsInput.classList.remove("is-missing");
+      });
+
+      vpsField.appendChild(vpsLabel);
+      vpsField.appendChild(vpsInput);
+
       var remove = document.createElement("button");
       remove.type = "button";
       remove.className = "pco-smart-import-file-remove";
@@ -248,6 +308,7 @@
 
       row.appendChild(type);
       row.appendChild(info);
+      row.appendChild(vpsField);
       row.appendChild(remove);
 
       return row;
@@ -310,6 +371,7 @@
 
         existingKeys.add(key);
         queue.push(file);
+        vpsIdsByKey[key] = "";
         added += 1;
       });
 
@@ -390,7 +452,8 @@
     clearButton.addEventListener(
       "click",
       function () {
-        queue = [];
+          queue = [];
+          vpsIdsByKey = Object.create(null);
 
         synchronizeFinalInput();
         render();
@@ -425,6 +488,32 @@
             showMessage(
               "Le nombre de fichiers attachés ne correspond pas " +
               "au nombre affiché.",
+              "error"
+            );
+
+            return;
+          }
+
+          var missingVpsIds = queue.filter(function (file) {
+            return !String(
+              vpsIdsByKey[fileKey(file)] || ""
+            ).trim();
+          });
+
+          if (missingVpsIds.length > 0) {
+            event.preventDefault();
+
+            list.querySelectorAll(
+              ".pco-smart-import-file-vps-input"
+            ).forEach(function (input) {
+              input.classList.toggle(
+                "is-missing",
+                !input.value.trim()
+              );
+            });
+
+            showMessage(
+              "Entre le VPS-ID de chaque fichier avant l’analyse.",
               "error"
             );
 

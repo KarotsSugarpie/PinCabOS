@@ -48,13 +48,48 @@
 
 .pco-smart-import-file-row {
   display: grid;
-  grid-template-columns: 58px minmax(0,1fr) auto;
+  grid-template-columns: 58px minmax(0,1fr) minmax(170px,240px) auto;
   align-items: center;
   gap: 10px;
   padding: 9px 10px;
   border: 1px solid rgba(255,255,255,.1);
   border-radius: 9px;
   background: rgba(255,255,255,.045);
+}
+
+.pco-smart-import-file-vps {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pco-smart-import-file-vps span {
+  color: #ffb04a;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.pco-smart-import-file-vps-input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px !important;
+  border: 1px solid rgba(255,166,66,.45) !important;
+  border-radius: 8px !important;
+  background: rgba(5,2,9,.88) !important;
+  color: #fff !important;
+  font: 700 12px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace !important;
+}
+
+.pco-smart-import-file-vps-input:focus {
+  border-color: #ff9a2f !important;
+  box-shadow: 0 0 0 2px rgba(255,138,31,.16);
+  outline: none;
+}
+
+.pco-smart-import-file-vps-input.is-missing {
+  border-color: #ff626d !important;
+  box-shadow: 0 0 0 2px rgba(255,70,85,.13);
 }
 
 .pco-smart-import-file-type {
@@ -123,6 +158,10 @@
 
   .pco-smart-import-file-row {
     grid-template-columns: 52px minmax(0,1fr);
+  }
+
+  .pco-smart-import-file-vps {
+    grid-column: 1 / -1;
   }
 
   .pco-smart-import-file-remove {
