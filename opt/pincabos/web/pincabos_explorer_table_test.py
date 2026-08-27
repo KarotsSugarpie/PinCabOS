@@ -33,7 +33,7 @@ ROM_ROOTS = (
     Path("/opt/pincabos/apps/vpinball/PinMAME/roms"),
     Path("/home/pinball/.vpinball/pinmame/roms"),
     Path("/home/pinball/.local/share/VPinballX/PinMAME/roms"),
-    Path("/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/PinMAME/roms"),
+    Path("/home/pinball/vpx/PinMAME/roms"),
 )
 
 _LOCK = threading.RLock()

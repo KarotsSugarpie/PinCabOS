@@ -5817,7 +5817,7 @@ def pincabos_vpinball_local_version():
 
     candidates = [
         Path("/opt/pincabos/bin/vpx-vpinfe-default.sh"),
-        Path("/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX"),
+        Path("/home/pinball/vpx/VPinballX_BGFX"),
         Path("/opt/pincabos/bin/vpx-vpinfe-default.sh"),
     ]
 
@@ -5859,7 +5859,7 @@ def pincabos_vpinball_local_version():
                 return "VPX BGFX installé"
             return "VPX installé"
 
-    if Path('/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64').is_dir():
+    if Path('/home/pinball/vpx').is_dir():
         return "VPX installé"
 
     return "non détectée"
@@ -15945,10 +15945,10 @@ def _pco_dashboard_plus_final_detect_vpx():
 
     candidates = [
         "/opt/pincabos/bin/vpx-vpinfe-default.sh",
-        "/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX",
-        "/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX",
-        "/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX",
-        "/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX",
+        "/home/pinball/vpx/VPinballX_BGFX",
+        "/home/pinball/vpx/VPinballX_BGFX",
+        "/home/pinball/vpx/VPinballX_BGFX",
+        "/home/pinball/vpx/VPinballX_BGFX",
     ]
 
     existing = [x for x in candidates if os.path.exists(x)]
