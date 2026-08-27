@@ -5693,6 +5693,9 @@ PCO_KEEP_PATHS=(
   "home/pinball/.config/pincabos/dashboard-mode.json"
   "home/pinball/.config/pincabos/dashboard-layout-simple.json"
   "home/pinball/.config/pincabos/dashboard-layout-pro.json"
+  # preferences changed from the WebApp and release state of this machine
+  "opt/pincabos/config/sample-tables.json"
+  "opt/pincabos/config/gitpush-release-sequence.json"
   # cab identity
   "etc/pincabos/system-name.conf"
 )
