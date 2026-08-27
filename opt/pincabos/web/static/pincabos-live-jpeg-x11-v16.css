@@ -23,3 +23,62 @@
 #pco-lobby .pco-live.pco-live-jpeg .pco-live-state strong {
   color: #ffb000;
 }
+
+/* PINCABOS_LIVE_PLAYSTOP_V1 — boutons play/stop par tuile + global */
+.pco-live-toggle {
+  position: absolute;
+  top: 13px;
+  right: 56px;            /* a gauche du bouton plein ecran (right:14px, ~36px large) */
+  z-index: 31;            /* au-dessus du plein ecran (z-index 30) */
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 8px;
+  background: rgba(20, 20, 20, .55);
+  color: #e8e8e8;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pco-live-toggle.pco-live-toggle-solo { right: 14px; }  /* pas de plein ecran : coin */
+.pco-live-toggle:hover { background: rgba(255, 255, 255, .14); }
+.pco-live-toggle.is-playing {
+  background: #2d6cdf;
+  border-color: #2d6cdf;
+  color: #fff;
+}
+
+#pco-live-global {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  background: rgba(255, 255, 255, .06);
+  color: #e8e8e8;
+  cursor: pointer;
+}
+#pco-live-global.is-playing { background: #2d6cdf; border-color: #2d6cdf; color: #fff; }
+
+/* Tuile en pause : image masquee + voile discret */
+.pco-live-jpeg.is-paused img { visibility: hidden; }
+.pco-live-jpeg.is-paused {
+  position: relative;
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(255, 255, 255, .03) 0 10px,
+      rgba(255, 255, 255, .06) 10px 20px);
+}
+.pco-live-jpeg.is-paused::after {
+  content: "⏸ en pause";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, .55);
+  font-size: 13px;
+  letter-spacing: .04em;
+  pointer-events: none;
+}
