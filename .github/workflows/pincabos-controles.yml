@@ -43,7 +43,7 @@ jobs:
             head -1 "$f" | grep -q 'python' || continue
             python3 -c "import ast,sys;ast.parse(open(sys.argv[1],encoding='utf-8',errors='surrogateescape').read())" "$f" \
               || { echo "::error file=$f::syntaxe Python"; erreurs=1; }
-          done < <(git ls-files 'usr/local/sbin/*' 'usr/local/bin/*' 'usr/local/libexec/*')
+          done < <(git ls-files 'usr/local/sbin/*' 'usr/local/bin/*' 'usr/local/libexec/*' 'opt/pincabos/tools/*')
           exit $erreurs
 
       - name: Syntaxe Bash

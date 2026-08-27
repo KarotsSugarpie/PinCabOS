@@ -647,6 +647,17 @@ def registry_for_request():
         "image": "PCOSUpdateVPinFE.png",
         "image_url": "/static/pincabos-assets/PCOSUpdateVPinFE.png",
     }
+    result["tool_vpxtool_update"] = {
+        "title": "Update vpxtool",
+        "subtitle": "Moteur .dif / VPU Remix — version et mise à jour",
+        "category": "Pinball",
+        "kind": "tool",
+        "w": 2,
+        "h": 3,
+        "href": "/tools/vpxtool/update",
+        "image": "PCOSUpdateVPX.png",
+        "image_url": "/static/pincabos-assets/PCOSUpdateVPX.png",
+    }
     # === PINCABOS_DASHBOARD_SHORTCUTS_FAMILIES_LOGOS_V1 END ===
 
     # PINCABOS_AUDIO_VOLUME_DASHBOARD_WIDGET_V2_REGISTRY

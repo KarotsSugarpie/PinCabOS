@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+"""Mise a jour de vpxtool, sur le modele de l'updater VPinFE.
+
+PINCABOS_VPXTOOL_UPDATER_V1
+
+Contexte : vpxtool (moteur des mods .dif / VPU Remix) etait installe par
+install_vpxtool() dans 02-install-engine.sh. Or cet engine ne tourne plus sur
+une install fraiche : il est garde par le flag final-go, deja present dans
+l'image. Resultat, sur un cab neuf vpxtool n'arrivait jamais et l'import levait
+"NOGO: moteur VPU Remix absent... Relancer RUN_02" — un remede impossible.
+
+Cet updater rend vpxtool autonome, exactement comme VPinFE :
+  * le binaire est embarque dans l'ISO (present des le premier boot, hors ligne)
+  * il vit dans un emplacement inscriptible, remplace par bascule de lien
+  * il se met a jour independamment des releases de l'OS
+
+La version et les empreintes viennent d'un manifeste unique,
+/opt/pincabos/update/vpxtool-release.json, lu aussi par l'etape de build qui
+embarque le binaire. Une seule source de verite : bumper le manifeste suffit,
+l'ISO comme l'updater suivent.
+
+  pincabos-vpxtool-update --status     etat installe / cible (JSON, sans reseau)
+  pincabos-vpxtool-update --check      idem, code retour 1 si une MAJ manque
+  pincabos-vpxtool-update --install    telecharge la cible, verifie, installe
+  pincabos-vpxtool-update --rollback   rebascule vers la version precedente
+"""
+from __future__ import annotations
+
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+import platform
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.request
+from pathlib import Path
+
+MANIFESTE = Path("/opt/pincabos/update/vpxtool-release.json")
+APP_ROOT = Path("/opt/pincabos/apps/vpxtool")
+BIN = Path("/opt/pincabos/bin/vpxtool")
+STATE = Path("/opt/pincabos/state/vpxtool-update-state.json")
+LOCK = Path("/run/lock/pincabos-vpxtool-update.lock")
+
+ARCHS = {
+    "x86_64": "x86_64",
+    "amd64": "x86_64",
+    "aarch64": "aarch64",
+    "arm64": "aarch64",
+}
+
+
+def manifeste() -> dict:
+    return json.loads(MANIFESTE.read_text(encoding="utf-8"))
+
+
+def arch() -> str:
+    machine = platform.machine().lower()
+    if machine not in ARCHS:
+        raise RuntimeError(f"architecture non supportee : {machine}")
+    return ARCHS[machine]
+
+
+def cible(man: dict) -> tuple[str, str, str]:
+    """(version, url de l'archive, sha256 attendu) pour cette architecture."""
+    version = man["version"]
+    a = arch()
+    sha = man["sha256"][a]
+    base = man["release_base_template"].format(version=version)
+    nom = man["archive_template"].format(arch=a, version=version)
+    return version, f"{base}/{nom}", sha
+
+
+def version_installee() -> str | None:
+    if not (BIN.exists() or BIN.is_symlink()):
+        return None
+    try:
+        sortie = subprocess.run(
+            [str(BIN), "--version"], capture_output=True, text=True, timeout=30
+        )
+    except Exception:
+        return None
+    texte = ((sortie.stdout or "") + " " + (sortie.stderr or "")).strip()
+    # "vpxtool git:v0.33.8" -> 0.33.8
+    for jeton in texte.replace(":", " ").split():
+        if jeton.startswith("v") and jeton[1:2].isdigit():
+            return jeton[1:]
+    return None
+
+
+def empreinte(chemin: Path) -> str:
+    h = hashlib.sha256()
+    with chemin.open("rb") as f:
+        for bloc in iter(lambda: f.read(1 << 20), b""):
+            h.update(bloc)
+    return h.hexdigest()
+
+
+def ecrire_etat(installee: str | None, version_cible: str) -> None:
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    donnees = {
+        "component": "vpxtool",
+        "installed": installee,
+        "target": version_cible,
+        "up_to_date": installee == version_cible,
+    }
+    tmp = STATE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(donnees, indent=2) + "\n", encoding="utf-8")
+    os.replace(tmp, STATE)
+
+
+def etat() -> dict:
+    man = manifeste()
+    version_cible, _, _ = cible(man)
+    installee = version_installee()
+    ecrire_etat(installee, version_cible)
+    return {
+        "installed": installee,
+        "target": version_cible,
+        "up_to_date": installee == version_cible,
+    }
+
+
+def poser(version: str, source_bin: Path) -> None:
+    """Installe le binaire par bascule de lien, comme l'updater VPinFE.
+
+        apps/vpxtool/<version>/vpxtool   (fichier reel)
+        apps/vpxtool/current   -> <version>
+        bin/vpxtool            -> current/vpxtool
+    """
+    rep_version = APP_ROOT / version
+    rep_version.mkdir(parents=True, exist_ok=True)
+    cible_bin = rep_version / "vpxtool"
+    # Au rollback, la version cible est deja en place : on ne recopie que si la
+    # source differe (cas d'une nouvelle installation).
+    if Path(source_bin).resolve() != cible_bin.resolve():
+        shutil.copyfile(source_bin, cible_bin)
+    cible_bin.chmod(0o755)
+
+    lien_courant = APP_ROOT / ".current.new"
+    if lien_courant.is_symlink() or lien_courant.exists():
+        lien_courant.unlink()
+    lien_courant.symlink_to(version)
+    os.replace(lien_courant, APP_ROOT / "current")
+
+    BIN.parent.mkdir(parents=True, exist_ok=True)
+    lien_bin = Path(str(BIN) + ".new")
+    if lien_bin.is_symlink() or lien_bin.exists():
+        lien_bin.unlink()
+    lien_bin.symlink_to(APP_ROOT / "current" / "vpxtool")
+    os.replace(lien_bin, BIN)
+
+
+def valider() -> None:
+    sortie = subprocess.run(
+        [str(BIN), "--version"], capture_output=True, text=True, timeout=30
+    )
+    texte = (sortie.stdout or "") + (sortie.stderr or "")
+    man = manifeste()
+    if f"v{man['version']}" not in texte:
+        raise RuntimeError("le binaire installe ne rend pas la version attendue")
+    if subprocess.run([str(BIN), "patch", "--help"],
+                      capture_output=True).returncode != 0:
+        raise RuntimeError("la sous-commande 'patch' est absente du binaire")
+
+
+def installer() -> int:
+    man = manifeste()
+    version_cible, url, sha = cible(man)
+
+    if version_installee() == version_cible:
+        print(f"vpxtool v{version_cible} deja installe")
+        etat()
+        return 0
+
+    with tempfile.TemporaryDirectory(prefix="pincabos-vpxtool-") as tmp:
+        archive = Path(tmp) / "vpxtool.tar.gz"
+        print(f"telechargement de vpxtool v{version_cible}...")
+        with urllib.request.urlopen(url, timeout=120) as reponse:
+            archive.write_bytes(reponse.read())
+
+        obtenu = empreinte(archive)
+        if obtenu != sha:
+            print(f"NOGO: empreinte non conforme\n  attendu {sha}\n  obtenu  {obtenu}")
+            return 1
+
+        extrait = Path(tmp) / "x"
+        extrait.mkdir()
+        subprocess.run(["tar", "--no-same-owner", "-xzf", str(archive),
+                        "-C", str(extrait)], check=True)
+        binaire = next(extrait.rglob("vpxtool"), None)
+        if binaire is None or not binaire.is_file():
+            print("NOGO: binaire vpxtool absent de l'archive verifiee")
+            return 1
+
+        poser(version_cible, binaire)
+
+    valider()
+    ecrire_etat(version_cible, version_cible)
+    print(f"vpxtool v{version_cible} installe (empreinte epinglee)")
+    return 0
+
+
+def rollback() -> int:
+    if not APP_ROOT.is_dir():
+        print("NOGO: aucune version installee")
+        return 1
+    courant = None
+    lien = APP_ROOT / "current"
+    if lien.is_symlink():
+        courant = os.readlink(lien)
+    versions = sorted(
+        (p.name for p in APP_ROOT.iterdir()
+         if p.is_dir() and not p.is_symlink() and (p / "vpxtool").is_file()),
+        key=lambda v: [(0, int(x)) if x.isdigit() else (1, x)
+                       for x in v.split(".")],
+    )
+    precedentes = [v for v in versions if v != courant]
+    if not precedentes:
+        print("NOGO: pas de version precedente conservee")
+        return 1
+    vers = precedentes[-1]
+    poser(vers, APP_ROOT / vers / "vpxtool")
+    print(f"rebascule sur vpxtool v{vers}")
+    ecrire_etat(vers, manifeste()["version"])
+    return 0
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description=__doc__)
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("--status", action="store_true")
+    g.add_argument("--check", action="store_true")
+    g.add_argument("--install", action="store_true")
+    g.add_argument("--rollback", action="store_true")
+    args = p.parse_args()
+
+    if args.status or args.check:
+        e = etat()
+        print(json.dumps(e, indent=2))
+        return 0 if (args.status or e["up_to_date"]) else 1
+
+    LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with LOCK.open("w") as verrou:
+        try:
+            fcntl.flock(verrou.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("NOGO: une operation vpxtool est deja en cours")
+            return 75
+        if args.install:
+            return installer()
+        if args.rollback:
+            return rollback()
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
