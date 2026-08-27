@@ -12,7 +12,8 @@ IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'}
 VIDEO_EXTS = {'.mp4', '.webm', '.avi', '.mov', '.mkv'}
 AUDIO_EXTS = {'.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac', '.wma', '.mid', '.midi'}
 ROM_EXTS = {'.zip'}
-TABLE_EXTS = {'.vpx', '.directb2s', '.info'}
+TABLE_EXTS = {'.vpx', '.dif', '.directb2s', '.info'}
+VPU_PATCH_EXTS = {'.dif'}
 
 MEDIA_NAMES = {
     'audio.mp3', 'audio.wav',
@@ -62,6 +63,7 @@ def analyze_zip(zip_path: str | Path) -> dict:
         'media_keyword': 0,
         'nested_zip': 0,
         'table': 0,
+        'vpu_patch': 0,
         'other': 0,
     }
 
@@ -72,6 +74,7 @@ def analyze_zip(zip_path: str | Path) -> dict:
         'media_named': [],
         'nested_zip': [],
         'table': [],
+        'vpu_patch': [],
         'other': [],
     }
 
@@ -122,6 +125,12 @@ def analyze_zip(zip_path: str | Path) -> dict:
                 samples['table'].append(member)
             matched = True
 
+        if ext in VPU_PATCH_EXTS:
+            counts['vpu_patch'] += 1
+            if len(samples['vpu_patch']) < 8:
+                samples['vpu_patch'].append(member)
+            matched = True
+
         if not matched:
             counts['other'] += 1
             if len(samples['other']) < 8:
@@ -130,7 +139,13 @@ def analyze_zip(zip_path: str | Path) -> dict:
     recommendation = 'ask'
     reason = 'contenu ambigu'
 
-    if (
+    if counts['vpu_patch'] >= 1:
+        recommendation = 'ask'
+        reason = 'patch VPU Remix détecté; utiliser Smart Import'
+    elif counts['table'] >= 1:
+        recommendation = 'ask'
+        reason = 'zip contient une table ou des fichiers mixtes'
+    elif (
         counts['nested_zip'] == 0
         and counts['audio'] >= 2
         and counts['image'] == 0
@@ -160,10 +175,6 @@ def analyze_zip(zip_path: str | Path) -> dict:
     elif counts['nested_zip'] >= 1 and counts['audio'] == 0 and counts['image'] == 0:
         recommendation = 'rom'
         reason = 'zip contenant zip(s), possiblement pack ROM'
-    elif counts['table'] >= 1:
-        recommendation = 'ask'
-        reason = 'zip contient une table ou des fichiers mixtes'
-
     return {
         'ok': True,
         'zip': str(zp),

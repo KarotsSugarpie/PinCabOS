@@ -128,8 +128,75 @@ def compact_entry(entry: dict[str, Any], points: int) -> dict[str, Any]:
     }
 
 
+def compact_table_file(
+    entry: dict[str, Any],
+    table_file: dict[str, Any],
+    points: int,
+) -> dict[str, Any]:
+    result = compact_entry(entry, points)
+    table_vpsid = str(table_file.get("id") or "").strip()
+    parent_vpsid = str(table_file.get("parentId") or "").strip()
+    parent_version = ""
+
+    if parent_vpsid:
+        for candidate in entry.get("tableFiles", []):
+            if (
+                isinstance(candidate, dict)
+                and str(candidate.get("id") or "").strip() == parent_vpsid
+            ):
+                parent_version = str(candidate.get("version") or "").strip()
+                break
+
+    result.update({
+        "id": table_vpsid,
+        "vpsid": table_vpsid,
+        "vpsId": table_vpsid,
+        "game_vpsid": str(entry.get("id") or "").strip(),
+        "parent_vpsid": parent_vpsid,
+        "parent_version": parent_version,
+        "version": str(table_file.get("version") or "").strip(),
+        "features": [
+            str(value)
+            for value in table_file.get("features", [])
+            if str(value).strip()
+        ],
+        "comment": str(table_file.get("comment") or "").strip(),
+        "resource_type": "tableFile",
+        "game": {
+            "id": str(entry.get("id") or "").strip(),
+            "name": str(entry.get("name") or "").strip(),
+        },
+    })
+
+    return result
+
+
 def matches(entries: list[dict[str, Any]], query: str, rom: str, limit: int) -> list[dict[str, Any]]:
     query_n = norm(query)
+
+    # Un identifiant de fichier de table (par exemple un mod .dif) doit
+    # conserver son propre VPSId et sa relation parentId. L'ancien matcher
+    # ramenait seulement l'identifiant générique du jeu, ce qui empêchait de
+    # prouver qu'un patch ciblait bien la table installée.
+    exact_table_files: list[dict[str, Any]] = []
+
+    if query_n:
+        for entry in entries:
+            for table_file in entry.get("tableFiles", []):
+                if not isinstance(table_file, dict):
+                    continue
+
+                if norm(table_file.get("id")) == query_n:
+                    exact_table_files.append(
+                        compact_table_file(
+                            entry,
+                            table_file,
+                            1_500_000,
+                        )
+                    )
+
+    if exact_table_files:
+        return exact_table_files[:max(1, min(limit, 20))]
 
     exact_id = [
         entry for entry in entries

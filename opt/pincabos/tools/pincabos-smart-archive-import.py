@@ -4,6 +4,7 @@ import argparse
 import fcntl
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -82,6 +83,15 @@ ROOT_EXTS = {
     ".pov",
     ".res",
 }
+
+PINCABOS_VPXTOOL_VERSION = "0.33.8"
+PINCABOS_VPXTOOL_CANDIDATES = (
+    Path("/opt/pincabos/bin/vpxtool"),
+    Path("/usr/local/bin/vpxtool"),
+)
+PINCABOS_VPX_OLE_MAGIC = bytes.fromhex(
+    "d0cf11e0a1b11ae1"
+)
 
 VNI_EXTS = {".pal", ".vni"}
 SERUM_EXTS = {".crz", ".serum"}
@@ -184,6 +194,9 @@ def archive_kind(src):
 
     files = [x.lower().replace("\\", "/") for x in archive_file_list(src)]
     names = [Path(x).name.lower() for x in files]
+
+    if any(x.endswith(".dif") for x in files):
+        return "vpu_patch_archive"
 
     if any(x.endswith(".vpx") for x in files):
         return "table_archive"
@@ -602,6 +615,8 @@ def pincabos_validate_existing_identity(
     table_dir,
     incoming_title,
     incoming_vpsid,
+    parent_vpsid="",
+    game_vpsid="",
 ):
     identity = (
         pincabos_read_existing_table_identity(
@@ -635,6 +650,16 @@ def pincabos_validate_existing_identity(
         or ""
     ).strip()
 
+    parent_vpsid = str(
+        parent_vpsid
+        or ""
+    ).strip()
+
+    game_vpsid = str(
+        game_vpsid
+        or ""
+    ).strip()
+
     if not existing_vpsid:
         raise RuntimeError(
             "NOGO: table existante sans "
@@ -649,13 +674,31 @@ def pincabos_validate_existing_identity(
             "table existante refusée."
         )
 
-    if existing_vpsid != incoming_vpsid:
+    if (
+        existing_vpsid != incoming_vpsid
+        and existing_vpsid != parent_vpsid
+        and not (
+            parent_vpsid
+            and game_vpsid
+            and existing_vpsid == game_vpsid
+        )
+    ):
         raise RuntimeError(
             "NOGO: même nom normalisé mais "
-            "VPSId différent. "
+            "VPSId différent et aucune relation "
+            "parent VPU Remix valide. "
             f"existant={existing_vpsid} "
-            f"entrant={incoming_vpsid}"
+            f"entrant={incoming_vpsid} "
+            f"parent={parent_vpsid or '(aucun)'} "
+            f"jeu={game_vpsid or '(aucun)'}"
         )
+
+    if existing_vpsid == incoming_vpsid:
+        identity["relation"] = "same"
+    elif existing_vpsid == parent_vpsid:
+        identity["relation"] = "vpu_parent"
+    else:
+        identity["relation"] = "vpu_game"
 
     return identity
 
@@ -1473,7 +1516,10 @@ def extract_all_inputs(batch_dir, extract_root):
             except RuntimeError as exc:
                 # Une table chiffrée est bloquante. Les composants annexes
                 # (AltSound, PuP, médias, VNI, etc.) sont ignorés proprement.
-                if is_password_protected_error(exc) and kind != "table_archive":
+                if is_password_protected_error(exc) and kind not in {
+                    "table_archive",
+                    "vpu_patch_archive",
+                }:
                     log(f"WARNING: ARCHIVE OPTIONNEL IGNORÉ — protégé par mot de passe: {item} | type={kind}")
                     continue
                 raise
@@ -1512,7 +1558,10 @@ def extract_all_inputs(batch_dir, extract_root):
             try:
                 extract_archive(item, dest)
             except RuntimeError as exc:
-                if is_password_protected_error(exc) and kind != "table_archive":
+                if is_password_protected_error(exc) and kind not in {
+                    "table_archive",
+                    "vpu_patch_archive",
+                }:
                     log(f"WARNING: ARCHIVE INTERNE OPTIONNEL IGNORÉ — protégé par mot de passe: {item} | type={kind}")
                     item.rename(item.with_name("already_extracted_" + item.name))
                     changed = True
@@ -1528,6 +1577,327 @@ def choose_main_vpx(root):
         return None
     vpxs.sort(key=lambda p: p.stat().st_size if p.exists() else 0, reverse=True)
     return vpxs[0]
+
+
+def pincabos_find_vpxtool():
+    candidates = list(PINCABOS_VPXTOOL_CANDIDATES)
+    discovered = shutil.which("vpxtool")
+
+    if discovered:
+        candidates.append(Path(discovered))
+
+    seen = set()
+
+    for candidate in candidates:
+        candidate = Path(candidate)
+
+        try:
+            resolved = candidate.resolve(strict=True)
+        except Exception:
+            continue
+
+        if resolved in seen:
+            continue
+
+        seen.add(resolved)
+
+        if not resolved.is_file() or not os.access(resolved, os.X_OK):
+            continue
+
+        version_result = run(
+            [str(resolved), "--version"],
+            timeout=30,
+        )
+        version_text = (
+            (version_result.stdout or "")
+            + "\n"
+            + (version_result.stderr or "")
+        ).strip()
+
+        if (
+            version_result.returncode == 0
+            and f"v{PINCABOS_VPXTOOL_VERSION}" in version_text
+        ):
+            return resolved, version_text
+
+    raise RuntimeError(
+        "NOGO: moteur VPU Remix absent ou version invalide. "
+        "PinCabOS requiert /opt/pincabos/bin/vpxtool "
+        f"v{PINCABOS_VPXTOOL_VERSION}. Relancer RUN_02."
+    )
+
+
+def pincabos_vpu_patch_files(root):
+    return sorted(
+        item
+        for item in list_files(root)
+        if (
+            item.suffix.lower() == ".dif"
+            and not should_skip_file(item)
+        )
+    )
+
+
+def pincabos_vpu_select_base_vpx(
+    extract_root,
+    patch_path,
+    existing_table_dir=None,
+):
+    extract_root = Path(extract_root)
+    patch_path = Path(patch_path)
+
+    bundled = sorted(
+        item
+        for item in list_files(extract_root)
+        if (
+            item.suffix.lower() == ".vpx"
+            and not should_skip_file(item)
+        )
+    )
+
+    if len(bundled) == 1:
+        return bundled[0], "batch"
+
+    if len(bundled) > 1:
+        exact = [
+            item
+            for item in bundled
+            if item.stem.casefold() == patch_path.stem.casefold()
+        ]
+
+        if len(exact) == 1:
+            return exact[0], "batch"
+
+        raise RuntimeError(
+            "NOGO: plusieurs tables VPX sources dans le batch; "
+            "la source du patch .dif est ambiguë: "
+            + " | ".join(str(item) for item in bundled)
+        )
+
+    if existing_table_dir:
+        existing_table_dir = Path(existing_table_dir)
+        installed = sorted(
+            item
+            for item in existing_table_dir.glob("*.vpx")
+            if item.is_file() and not item.is_symlink()
+        )
+
+        if len(installed) == 1:
+            return installed[0], "installed_table"
+
+        if len(installed) > 1:
+            exact = [
+                item
+                for item in installed
+                if item.stem.casefold() == patch_path.stem.casefold()
+            ]
+
+            if len(exact) == 1:
+                return exact[0], "installed_table"
+
+            raise RuntimeError(
+                "NOGO: plusieurs VPX sont installés dans la table; "
+                "la source du patch .dif est ambiguë: "
+                + " | ".join(str(item) for item in installed)
+            )
+
+    raise RuntimeError(
+        "NOGO: patch VPU Remix détecté, mais aucune table VPX "
+        "source fiable n'est disponible. Importer la version parent "
+        "exacte indiquée par VPSDB avant le patch, ou joindre cette "
+        "table VPX au même batch."
+    )
+
+
+def pincabos_apply_vpu_patch(
+    extract_root,
+    existing_table_dir=None,
+    existing_vpsid="",
+    incoming_vpsid="",
+    expected_parent_version="",
+):
+    patches = pincabos_vpu_patch_files(extract_root)
+
+    if not patches:
+        return None
+
+    if len(patches) != 1:
+        raise RuntimeError(
+            "NOGO: PinCabOS accepte exactement un patch VPU Remix "
+            "par import; patches détectés: "
+            + " | ".join(str(item) for item in patches)
+        )
+
+    patch_path = patches[0]
+    source_vpx, source_kind = pincabos_vpu_select_base_vpx(
+        extract_root,
+        patch_path,
+        existing_table_dir=existing_table_dir,
+    )
+
+    if (
+        source_kind == "installed_table"
+        and existing_vpsid
+        and incoming_vpsid
+        and existing_vpsid == incoming_vpsid
+    ):
+        raise RuntimeError(
+            "NOGO: ce VPSId de patch est déjà installé. "
+            "PinCabOS refuse d'appliquer deux fois le même .dif."
+        )
+
+    vpxtool, engine_version = pincabos_find_vpxtool()
+    output_dir = Path(extract_root) / "_pincabos_vpu_patch_output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_vpx = output_dir / f"{safe_name(patch_path.stem)}.vpx"
+
+    if output_vpx.exists():
+        raise RuntimeError(
+            f"NOGO: sortie VPU Remix déjà présente: {output_vpx}"
+        )
+
+    source_sha256 = pincabos_file_sha256(source_vpx)
+    patch_sha256 = pincabos_file_sha256(patch_path)
+    source_table_version = ""
+
+    if source_kind == "installed_table" or expected_parent_version:
+        source_info_result = run(
+            [str(vpxtool), "info", "show", str(source_vpx)],
+            timeout=180,
+        )
+        source_info_text = (
+            (source_info_result.stdout or "")
+            + "\n"
+            + (source_info_result.stderr or "")
+        ).strip()
+
+        if (
+            source_info_result.returncode != 0
+            or "VPX Version:" not in source_info_text
+        ):
+            raise RuntimeError(
+                "NOGO: la table source du patch n'est pas un VPX "
+                "lisible par vpxtool"
+                + (
+                    f": {source_info_text[-3000:]}"
+                    if source_info_text
+                    else "."
+                )
+            )
+
+        version_match = re.search(
+            r"^\s*Version:\s*(.*?)\s*$",
+            source_info_text,
+            flags=re.MULTILINE,
+        )
+
+        if version_match:
+            source_table_version = version_match.group(1).strip()
+
+        if expected_parent_version:
+            expected_key = re.sub(
+                r"^v",
+                "",
+                str(expected_parent_version).strip().casefold(),
+            )
+            detected_key = re.sub(
+                r"^v",
+                "",
+                source_table_version.casefold(),
+            )
+
+            if not detected_key or detected_key != expected_key:
+                raise RuntimeError(
+                    "NOGO: version VPX source incompatible avec le "
+                    "parent VPSDB du patch. "
+                    f"attendue={expected_parent_version} "
+                    f"détectée={source_table_version or '(vide)'}"
+                )
+
+    log("")
+    log("==================================================")
+    log(" VPU Remix - reconstruction isolée")
+    log("==================================================")
+    log(f"SOURCE VPX             : {source_vpx}")
+    log(f"SOURCE TYPE            : {source_kind}")
+    log(f"SOURCE SHA256          : {source_sha256}")
+    if source_table_version:
+        log(f"SOURCE VERSION         : {source_table_version}")
+    log(f"PATCH DIF              : {patch_path}")
+    log(f"PATCH SHA256           : {patch_sha256}")
+
+    patch_result = run(
+        [
+            str(vpxtool),
+            "patch",
+            str(source_vpx),
+            str(patch_path),
+            str(output_vpx),
+        ],
+        timeout=1800,
+    )
+
+    if patch_result.returncode != 0:
+        detail = (
+            (patch_result.stdout or "")
+            + "\n"
+            + (patch_result.stderr or "")
+        ).strip()
+        raise RuntimeError(
+            "NOGO: vpxtool n'a pas pu appliquer le patch VPU Remix"
+            + (f": {detail[-3000:]}" if detail else ".")
+        )
+
+    if not output_vpx.is_file() or output_vpx.stat().st_size < 4096:
+        raise RuntimeError(
+            "NOGO: la reconstruction VPU Remix est absente ou trop petite."
+        )
+
+    with output_vpx.open("rb") as handle:
+        magic = handle.read(len(PINCABOS_VPX_OLE_MAGIC))
+
+    if magic != PINCABOS_VPX_OLE_MAGIC:
+        raise RuntimeError(
+            "NOGO: la reconstruction n'est pas un conteneur VPX/OLE valide."
+        )
+
+    info_result = run(
+        [str(vpxtool), "info", "show", str(output_vpx)],
+        timeout=180,
+    )
+    info_text = (
+        (info_result.stdout or "")
+        + "\n"
+        + (info_result.stderr or "")
+    ).strip()
+
+    if (
+        info_result.returncode != 0
+        or "VPX Version:" not in info_text
+    ):
+        raise RuntimeError(
+            "NOGO: vpxtool ne peut pas relire la table reconstruite"
+            + (f": {info_text[-3000:]}" if info_text else ".")
+        )
+
+    output_sha256 = pincabos_file_sha256(output_vpx)
+    log(f"SORTIE VPX             : {output_vpx}")
+    log(f"SORTIE SHA256          : {output_sha256}")
+    log("VALIDATION VPX         : GO")
+
+    return {
+        "output_path": str(output_vpx),
+        "engine": "vpxtool",
+        "engine_version": engine_version,
+        "source_kind": source_kind,
+        "source_file": source_vpx.name,
+        "source_sha256": source_sha256,
+        "source_table_version": source_table_version,
+        "patch_file": patch_path.name,
+        "patch_sha256": patch_sha256,
+        "output_file": output_vpx.name,
+        "output_sha256": output_sha256,
+    }
 
 def read_text_script(path):
     path = Path(path)
@@ -2342,7 +2712,13 @@ def should_skip_file(f):
     return "/already_extracted_" in text
 
 
-def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
+def classify_and_install(
+    extract_root,
+    table_dir,
+    rom,
+    pup_pack="",
+    main_vpx=None,
+):
     # PINCABOS_PORTABLE_LAYOUT_V2
     #
     # Une table est entièrement autonome :
@@ -2605,6 +2981,24 @@ def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
     vpx_files = [f for f in all_files if f.suffix.lower() == ".vpx"]
     vpx_files.sort(key=lambda p: p.stat().st_size if p.exists() else 0, reverse=True)
 
+    preferred_vpx = Path(main_vpx).resolve() if main_vpx else None
+
+    if preferred_vpx:
+        preferred_matches = [
+            item
+            for item in vpx_files
+            if item.resolve() == preferred_vpx
+        ]
+
+        if len(preferred_matches) != 1:
+            raise RuntimeError(
+                "NOGO: le VPX principal validé n'est plus présent "
+                f"dans le staging: {preferred_vpx}"
+            )
+
+        vpx_files.remove(preferred_matches[0])
+        vpx_files.insert(0, preferred_matches[0])
+
     if vpx_files:
         put("root", vpx_files[0], table_dir, f"{table_title}.vpx")
 
@@ -2679,7 +3073,13 @@ def classify_and_install(extract_root, table_dir, rom, pup_pack=""):
 
         # Configurations PinMAME.
         if suffix == ".ini":
-            if f.stem.lower() in vpx_stems:
+            if (
+                vpx_files
+                and f.stem.casefold()
+                == vpx_files[0].stem.casefold()
+            ):
+                put("root", f, table_dir, f"{table_title}.ini")
+            elif f.stem.lower() in vpx_stems:
                 put("root", f, table_dir, f.name)
             elif rom and f.stem.lower().startswith(str(rom).lower()):
                 put("pinmame_ini", f, table_dir / "pinmame" / "ini", f.name)
@@ -2729,6 +3129,7 @@ def write_info_and_manifest(
     installed,
     info_path_override=None,
     existing_manifest=None,
+    patch_info=None,
 ):
     # PINCABOS_MANIFEST_RELATIVE_PATHS_V1
     # PINCABOS_SMART_IMPORT_UPDATE_V1
@@ -2927,6 +3328,36 @@ def write_info_and_manifest(
         ),
     }
 
+    patch_manifest = {}
+
+    if isinstance(patch_info, dict):
+        for key in (
+            "engine",
+            "engine_version",
+            "source_kind",
+            "source_file",
+            "source_sha256",
+            "source_table_version",
+            "patch_file",
+            "patch_sha256",
+            "output_file",
+            "output_sha256",
+            "parent_vpsid",
+            "parent_version",
+            "target_vpsid",
+            "target_version",
+        ):
+            value = patch_info.get(key)
+
+            if value not in (None, ""):
+                patch_manifest[key] = value
+
+    elif isinstance(previous.get("vpu_patch"), dict):
+        patch_manifest = dict(previous["vpu_patch"])
+
+    if patch_manifest:
+        manifest["vpu_patch"] = patch_manifest
+
     if previous:
         manifest[
             "updated_at"
@@ -3046,6 +3477,22 @@ def main():
         default="",
     )
     ap.add_argument(
+        "--parent-vpsid",
+        default="",
+    )
+    ap.add_argument(
+        "--game-vpsid",
+        default="",
+    )
+    ap.add_argument(
+        "--parent-version",
+        default="",
+    )
+    ap.add_argument(
+        "--target-version",
+        default="",
+    )
+    ap.add_argument(
         "--rom",
         default="",
     )
@@ -3085,6 +3532,22 @@ def main():
 
     vpsid = (
         args.vpsid.strip()
+    )
+
+    parent_vpsid = (
+        args.parent_vpsid.strip()
+    )
+
+    game_vpsid = (
+        args.game_vpsid.strip()
+    )
+
+    parent_version = (
+        args.parent_version.strip()
+    )
+
+    target_version = (
+        args.target_version.strip()
     )
 
     ipdbid = (
@@ -3144,6 +3607,8 @@ def main():
                         table_dir,
                         incoming_title,
                         vpsid,
+                        parent_vpsid=parent_vpsid,
+                        game_vpsid=game_vpsid,
                     )
                 )
 
@@ -3151,11 +3616,22 @@ def main():
                     table_dir.name
                 )
 
-                log(
-                    "MODE UPDATE            : "
-                    "nom normalisé identique "
-                    f"+ VPSId {vpsid}"
-                )
+                if existing_identity.get("relation") in {
+                    "vpu_parent",
+                    "vpu_game",
+                }:
+                    source_identity = existing_identity.get("vpsid", "")
+                    log(
+                        "MODE VPU UPDATE        : "
+                        f"source VPSId {source_identity} "
+                        f"-> patch VPSId {vpsid}"
+                    )
+                else:
+                    log(
+                        "MODE UPDATE            : "
+                        "nom normalisé identique "
+                        f"+ VPSId {vpsid}"
+                    )
 
             else:
                 existing_identity = {
@@ -3200,10 +3676,45 @@ def main():
                     extract_root,
                 )
 
-                main_vpx = (
-                    choose_main_vpx(
-                        extract_root
+                patch_info = pincabos_apply_vpu_patch(
+                    extract_root,
+                    existing_table_dir=(
+                        table_dir
+                        if existed_before
+                        else None
+                    ),
+                    existing_vpsid=(
+                        existing_identity.get("vpsid", "")
+                        if existed_before
+                        else ""
+                    ),
+                    incoming_vpsid=vpsid,
+                    expected_parent_version=parent_version,
+                )
+
+                if (
+                    existed_before
+                    and existing_identity.get("relation") in {
+                        "vpu_parent",
+                        "vpu_game",
+                    }
+                    and not patch_info
+                ):
+                    raise RuntimeError(
+                        "NOGO: transition VPSId parent -> mod refusée "
+                        "car aucun patch VPU Remix .dif n'a été détecté."
                     )
+
+                if patch_info:
+                    patch_info["parent_vpsid"] = parent_vpsid
+                    patch_info["parent_version"] = parent_version
+                    patch_info["target_vpsid"] = vpsid
+                    patch_info["target_version"] = target_version
+
+                main_vpx = (
+                    Path(patch_info["output_path"])
+                    if patch_info
+                    else choose_main_vpx(extract_root)
                 )
 
                 if not main_vpx:
@@ -3331,6 +3842,7 @@ def main():
                         staged_table,
                         rom,
                         pup_pack=pup_pack,
+                        main_vpx=main_vpx,
                     )
                 )
 
@@ -3347,6 +3859,8 @@ def main():
                             table_dir,
                             incoming_title,
                             vpsid,
+                            parent_vpsid=parent_vpsid,
+                            game_vpsid=game_vpsid,
                         )
                     )
 
@@ -3454,6 +3968,7 @@ def main():
                         existing_manifest=(
                             previous_manifest
                         ),
+                        patch_info=patch_info,
                     )
 
                     pincabos_write_transaction_record(

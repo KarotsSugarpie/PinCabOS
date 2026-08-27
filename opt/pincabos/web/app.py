@@ -9380,6 +9380,7 @@ def pincabos_is_zip_rom(path):
 
     markers = [
         ".vpx",
+        ".dif",
         ".directb2s",
         ".pov",
         ".vbs",
@@ -9390,6 +9391,8 @@ def pincabos_is_zip_rom(path):
         "altsound.csv",
         ".ogg",
         ".wav",
+        ".mp3",
+        ".flac",
         ".pac",
         ".pal",
         ".vni",
@@ -9418,6 +9421,8 @@ def pincabos_detect_batch(batch_dir):
     detected = {
         "main_vpx": "",
         "table_name": "",
+        "has_vpu_patch": False,
+        "vpu_patch_file": "",
         "rom": "",
         "has_b2s": False,
         "has_pov": False,
@@ -9443,6 +9448,32 @@ def pincabos_detect_batch(batch_dir):
                 detected["table_name"] = re.sub(r"[_]+", " ", Path(inner).stem).strip()
                 detected["main_vpx"] = str(archive) + "::" + inner
                 break
+
+    dif_files = [f for f in files if f.suffix.lower() == ".dif"]
+
+    if dif_files:
+        detected["has_vpu_patch"] = True
+        detected["vpu_patch_file"] = str(dif_files[0])
+
+        if not detected["table_name"]:
+            detected["table_name"] = re.sub(
+                r"[_]+",
+                " ",
+                dif_files[0].stem,
+            ).strip()
+
+    for archive, inner in archive_virtual_files:
+        if inner.lower().endswith(".dif"):
+            detected["has_vpu_patch"] = True
+            detected["vpu_patch_file"] = str(archive) + "::" + inner
+
+            if not detected["table_name"]:
+                detected["table_name"] = re.sub(
+                    r"[_]+",
+                    " ",
+                    Path(inner).stem,
+                ).strip()
+            break
 
     for f in files:
         if pincabos_is_zip_rom(f):
@@ -9486,6 +9517,8 @@ def pincabos_detect_batch(batch_dir):
                 detected["has_pov"] = True
             if ".vbs" in inner:
                 detected["has_vbs"] = True
+            if ".dif" in inner:
+                detected["has_vpu_patch"] = True
             if ".pac" in inner or ".pal" in inner or ".vni" in inner or ".serum" in inner:
                 detected["has_altcolor"] = True
 
@@ -10885,6 +10918,13 @@ def api_import_vpsdb_search():
             "manufacturer": manufacturer,
             "year": year,
             "id": vpsid,
+            "vpsid": vpsid,
+            "game_vpsid": str(m.get("game_vpsid", "") or ""),
+            "parent_vpsid": str(m.get("parent_vpsid", "") or ""),
+            "parent_version": str(m.get("parent_version", "") or ""),
+            "version": str(m.get("version", "") or ""),
+            "features": list(m.get("features", []) or []),
+            "resource_type": str(m.get("resource_type", "") or ""),
             "score": score,
             "rom": assoc_rom,
             "final_table_name": final_table_name,
@@ -11128,6 +11168,13 @@ def _pcos_smart_analyze_render(batch_dir, saved):
         detected.get("rom", ""),
     )
 
+    # Le nom d'un .dif ne prouve pas quel tableFile VPSDB il représente.
+    # Une association générique au jeu perdrait parentId et pourrait choisir
+    # une mauvaise version source. Pour un patch, l'utilisateur doit donc
+    # sélectionner le VPSId exact du mod dans la recherche dédiée.
+    if detected.get("has_vpu_patch"):
+        matches = []
+
     options = ""
     for m in matches[:10]:
         title = str(m.get("title", ""))
@@ -11148,15 +11195,33 @@ def _pcos_smart_analyze_render(batch_dir, saved):
             "manufacturer": manufacturer,
             "year": year,
             "vpsid": vpsid,
+            "game_vpsid": str(m.get("game_vpsid", "") or ""),
+            "parent_vpsid": str(m.get("parent_vpsid", "") or ""),
+            "parent_version": str(m.get("parent_version", "") or ""),
+            "version": str(m.get("version", "") or ""),
+            "features": list(m.get("features", []) or []),
+            "resource_type": str(m.get("resource_type", "") or ""),
             "rom": assoc_rom,
             "final_table_name": final_table_name,
         }, ensure_ascii=False))
 
-        label = html.escape(f"{title} — {manufacturer} — {year} — VPSId {vpsid} — score {score}")
+        version_label = str(m.get("version", "") or "").strip()
+        parent_label = str(m.get("parent_vpsid", "") or "").strip()
+        label = html.escape(
+            f"{title} — {manufacturer} — {year} — VPSId {vpsid}"
+            + (f" — version {version_label}" if version_label else "")
+            + (f" — parent {parent_label}" if parent_label else "")
+            + f" — score {score}"
+        )
         options += f'<option value="{value}">{label}</option>\\n'
 
     if not options.strip():
-        options = '<option value="">Aucune association auto-détectée VPSdb</option>'
+        if detected.get("has_vpu_patch"):
+            options = (
+                '<option value="">Patch .dif : recherchez le VPSId exact du mod</option>'
+            )
+        else:
+            options = '<option value="">Aucune association auto-détectée VPSdb</option>'
 
     # PINCABOS_IMPORT_TECH_GO_COLORS_V1
     technical_items = [
@@ -11169,6 +11234,11 @@ def _pcos_smart_analyze_render(batch_dir, saved):
             "Fichier VPX principal",
             bool(detected.get("main_vpx")),
             detected.get("main_vpx", ""),
+        ),
+        (
+            "Patch VPU Remix (.dif)",
+            bool(detected.get("has_vpu_patch")),
+            detected.get("vpu_patch_file", ""),
         ),
         (
             "ROM détectée",
@@ -11470,6 +11540,12 @@ def _pcos_smart_analyze_render(batch_dir, saved):
                 manufacturer: m.manufacturer || "",
                 year: m.year || "",
                 vpsid: m.id || "",
+                game_vpsid: m.game_vpsid || "",
+                parent_vpsid: m.parent_vpsid || "",
+                parent_version: m.parent_version || "",
+                version: m.version || "",
+                features: m.features || [],
+                resource_type: m.resource_type || "",
                 rom: m.rom || "",
                 final_table_name: m.final_table_name || ""
               }});
@@ -11478,7 +11554,10 @@ def _pcos_smart_analyze_render(batch_dir, saved):
                 (m.title || "") + " — " +
                 (m.manufacturer || "") + " — " +
                 (m.year || "") + " — VPSId " +
-                (m.id || "") + " — score " +
+                (m.id || "") +
+                (m.version ? " — version " + m.version : "") +
+                (m.parent_vpsid ? " — parent " + m.parent_vpsid : "") +
+                " — score " +
                 (m.score || "");
 
               searchSelect.appendChild(opt);
@@ -12081,6 +12160,10 @@ def tools_import_table_install():
     year = ""
     rom = ""
     vpsid = ""
+    parent_vpsid = ""
+    game_vpsid = ""
+    parent_version = ""
+    target_version = ""
     assoc = {}
 
     if import_mode == "manual":
@@ -12090,6 +12173,10 @@ def tools_import_table_install():
         year = request.form.get("manual_year", "").strip()
         rom = request.form.get("manual_rom", "").strip()
         vpsid = ""
+        parent_vpsid = ""
+        game_vpsid = ""
+        parent_version = ""
+        target_version = ""
         ipdbid = ""
 
         if not title:
@@ -12128,6 +12215,10 @@ def tools_import_table_install():
         year = str(assoc.get("year", "")).strip()
         rom = str(assoc.get("rom", "")).strip()
         vpsid = str(assoc.get("vpsid", "")).strip()
+        parent_vpsid = str(assoc.get("parent_vpsid", "")).strip()
+        game_vpsid = str(assoc.get("game_vpsid", "")).strip()
+        parent_version = str(assoc.get("parent_version", "")).strip()
+        target_version = str(assoc.get("version", "")).strip()
         ipdbid = str(assoc.get("ipdbid", "")).strip()
 
         title = str(assoc.get("final_table_name", "")).strip()
@@ -12160,6 +12251,10 @@ def tools_import_table_install():
         "--manufacturer", manufacturer,
         "--year", str(year),
         "--vpsid", vpsid,
+        "--parent-vpsid", parent_vpsid,
+        "--game-vpsid", game_vpsid,
+        "--parent-version", parent_version,
+        "--target-version", target_version,
         "--rom", rom,
         "--ipdbid", ipdbid,
     ]
