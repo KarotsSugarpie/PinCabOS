@@ -56,6 +56,29 @@ else
   VPX_ARGS=(-play "$TABLE" "${ORIGINAL_ARGS[@]:1}")
 fi
 
+# PINCABOS_VPX_PREFPATH_V1
+# VPX versionne son dossier de préférences (~/.local/share/VPinballX/<maj.min>).
+# Au passage 10.9/11.0 le moteur repartirait sur un dossier neuf pendant que
+# PinCabOS/VPinFE continueraient de lire 10.8/ (désynchronisation silencieuse).
+# Parade : chemin canonique stable + option officielle -PrefPath du standalone.
+# Un symlink de compatibilité conserve l ancien chemin pour tous les lecteurs.
+VPX_PREF_DIR="/home/pinball/.pincabos/vpx"
+VPX_LEGACY_PREF="/home/pinball/.local/share/VPinballX/10.8"
+if [[ ! -e "${VPX_PREF_DIR}" ]]; then
+  mkdir -p /home/pinball/.pincabos
+  if [[ -d "${VPX_LEGACY_PREF}" && ! -L "${VPX_LEGACY_PREF}" ]]; then
+    mv "${VPX_LEGACY_PREF}" "${VPX_PREF_DIR}"
+  else
+    mkdir -p "${VPX_PREF_DIR}"
+  fi
+fi
+if [[ ! -e "${VPX_LEGACY_PREF}" ]]; then
+  mkdir -p "$(dirname "${VPX_LEGACY_PREF}")"
+  ln -sn "${VPX_PREF_DIR}" "${VPX_LEGACY_PREF}"
+fi
+chown -h pinball:pinball "${VPX_LEGACY_PREF}" 2>/dev/null || true
+chown pinball:pinball /home/pinball/.pincabos "${VPX_PREF_DIR}" 2>/dev/null || true
+
 [[ -x "$VPX" ]] || die "VPX absent: $VPX"
 [[ -f "$TABLE" ]] || die "Table absente: $TABLE"
 [[ -f "$DOF_LOCAL" ]] || die "libdof permanent absent."
@@ -80,9 +103,9 @@ ENV_ARGS=(
 )
 
 if [[ "$(id -u)" -eq 0 ]]; then
-  exec runuser -u "$PINBALL_USER" -- env "${ENV_ARGS[@]}" "$VPX" "${VPX_ARGS[@]}"
+  exec runuser -u "$PINBALL_USER" -- env "${ENV_ARGS[@]}" "$VPX" -PrefPath "${VPX_PREF_DIR}" "${VPX_ARGS[@]}"
 fi
 
 [[ "$(id -un)" == "$PINBALL_USER" ]] ||   die "Lance ce script comme root ou pinball."
 
-exec env "${ENV_ARGS[@]}" "$VPX" "${VPX_ARGS[@]}"
+exec env "${ENV_ARGS[@]}" "$VPX" -PrefPath "${VPX_PREF_DIR}" "${VPX_ARGS[@]}"
