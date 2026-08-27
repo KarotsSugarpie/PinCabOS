@@ -95,7 +95,7 @@ REFRESH_VPSDB = os.environ.get("PINCABOS_VPSDB_REFRESH", "1").strip() not in {
 }
 RUNTIME_USER = os.environ.get("PINCABOS_VPX_USER", "pinball").strip() or "pinball"
 VPX_CANDIDATES = (
-    Path("/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX"),
+    Path("/home/pinball/vpx/VPinballX_BGFX"),
     Path("/opt/pincabos/apps/vpinball/VPinballX_BGFX"),
     Path("/opt/pincabos/apps/vpinball/VPinballX"),
     Path("/opt/pincabos/bin/VPinballX_BGFX"),

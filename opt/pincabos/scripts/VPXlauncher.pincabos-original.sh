@@ -8,9 +8,21 @@ set -Eeuo pipefail
 PINBALL_USER="pinball"
 PINBALL_HOME="/home/pinball"
 
-VPX_MAIN="/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX"
-VPX_ALT="/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/VPinballX_BGFX.pincabos-original-paced2"
-DOF_DIR="/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/dof"
+# PINCABOS_VPX_STABLE_SYMLINK_V1
+# /home/pinball/vpx pointe vers le dossier moteur versionné. Auto-répare :
+# si le lien manque ou est cassé, cible le dossier VPinballX_BGFX-* le plus récent.
+VPX_HOME_LINK="/home/pinball/vpx"
+if [[ ! -e "${VPX_HOME_LINK}/VPinballX_BGFX" ]]; then
+  _newest="$(ls -dt /home/pinball/VPinballX_BGFX-*-linux-x64 2>/dev/null | head -1 || true)"
+  if [[ -n "${_newest}" ]]; then
+    ln -sfn "${_newest}" "${VPX_HOME_LINK}"
+    chown -h pinball:pinball "${VPX_HOME_LINK}" 2>/dev/null || true
+  fi
+fi
+
+VPX_MAIN="/home/pinball/vpx/VPinballX_BGFX"
+VPX_ALT="/home/pinball/vpx/VPinballX_BGFX.pincabos-original-paced2"
+DOF_DIR="/home/pinball/vpx/plugins/dof"
 OVERLAY="/opt/pincabos/overlays/libdof-ledwiz-hidraw-stable"
 DOF_LOCAL="/opt/pincabos/overlays/libdof-ledwiz-hidraw-stable/libdof.so.0.4.7"
 HIDUSB="/usr/lib/x86_64-linux-gnu/libhidapi-libusb.so.0.15.0"

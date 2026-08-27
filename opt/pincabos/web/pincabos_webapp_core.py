@@ -83,7 +83,7 @@ class PinCabOSPaths:
     # VPX / VPinball officiel
     @property
     def vpx_dir(self) -> Path:
-        return Path('/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64')
+        return Path('/home/pinball/vpx')
 
     @property
     def vpx_compat_dir(self) -> Path:
