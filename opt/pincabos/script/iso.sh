@@ -999,6 +999,24 @@ echo "GO [OK] target pinball uid=1000 gid=1000"
 echo "GO [OK] sudo NOPASSWD: ALL installed"
 echo "GO [OK] unrestricted local Polkit rule installed"
 
+# PINCABOS_SSH_HARDENING_V1
+# root est deja verrouille (root:!*), ce qui interdit le login par mot de
+# passe. Mais le defaut OpenSSH d'Ubuntu (prohibit-password) laisse le login
+# root PAR CLE ouvert. On le ferme pour tous les cabs, la ou l'administration
+# passe de toute facon par le sudo NOPASSWD du compte pinball installe plus
+# haut. Un build beta qui a besoin d'un acces root SSH pose son propre drop-in
+# et deverrouille root ; l'ISO propre, elle, naît fermee.
+install -d -m 0755 "$TARGET/etc/ssh/sshd_config.d"
+cat > "$TARGET/etc/ssh/sshd_config.d/00-pincabos-security.conf" <<'SSHHARDEOF'
+# PinCabOS - durcissement SSH par defaut.
+# Interdit toute connexion SSH du compte root (mot de passe ET cle).
+# L'administration locale passe par le compte pinball (sudo NOPASSWD).
+PermitRootLogin no
+SSHHARDEOF
+chmod 0644 "$TARGET/etc/ssh/sshd_config.d/00-pincabos-security.conf"
+test -s "$TARGET/etc/ssh/sshd_config.d/00-pincabos-security.conf"
+echo "GO [OK] SSH root login disabled by default"
+
 
 echo
 echo "=== 3) Extract Plymouth overlay ==="
