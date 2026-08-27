@@ -1128,6 +1128,12 @@ def register_tools_routes(app, page):
 
     _tools_register_ini_readonly_routes(app)
     _tools_register_vpinfe_update_routes(app)
+    # PINCABOS_VPXTOOL_UPDATE_UI_V1
+    try:
+        from pincabos_vpxtool_updates import register as _pco_vpxtool_reg
+        _pco_vpxtool_reg(app, page)
+    except Exception as _pco_vpxtool_err:
+        print('vpxtool update UI non enregistree:', _pco_vpxtool_err)
     _tools_register_vpinfe_8001_embed_routes(app)
     _tools_register_sample_tables_routes(app)
     # PINCABOS_MEDIA_HUNTER_REGISTER_V1
