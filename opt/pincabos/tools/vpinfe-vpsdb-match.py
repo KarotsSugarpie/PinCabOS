@@ -19,6 +19,25 @@ from typing import Any
 VPSDB_PATH = Path("/home/pinball/.config/vpinfe/vpsdb.json")
 DEFAULT_LIMIT = 8
 
+# Collections de ressources réellement indexées par VPSDB. La clé est le
+# nom du tableau dans vpsdb.json; la valeur est le type stable conservé dans
+# le manifeste PinCabOS.
+RESOURCE_COLLECTIONS = {
+    "tableFiles": "tableFile",
+    "b2sFiles": "b2sFile",
+    "romFiles": "romFile",
+    "pupPackFiles": "pupPackFile",
+    "altSoundFiles": "altSoundFile",
+    "altColorFiles": "altColorFile",
+    "soundFiles": "soundFile",
+    "povFiles": "povFile",
+    "mediaPackFiles": "mediaPackFile",
+    "wheelArtFiles": "wheelArtFile",
+    "topperFiles": "topperFile",
+    "ruleFiles": "ruleFile",
+    "tutorialFiles": "tutorialFile",
+}
+
 
 def norm(value: Any) -> str:
     text = unicodedata.normalize("NFKD", str(value or ""))
@@ -26,6 +45,11 @@ def norm(value: Any) -> str:
     text = text.casefold()
     text = re.sub(r"[^a-z0-9]+", " ", text)
     return " ".join(text.split())
+
+
+def id_key(value: Any) -> str:
+    """Comparaison exacte d'identifiant sans détruire '_' ou '-'."""
+    return str(value or "").strip().casefold()
 
 
 def flatten(value: Any) -> list[str]:
@@ -121,6 +145,9 @@ def compact_entry(entry: dict[str, Any], points: int) -> dict[str, Any]:
         "score": str(points),
         "pincabosMatchScore": points,
         "broken": bool(entry.get("broken", False)),
+        "game_vpsid": ident,
+        "resource_type": "game",
+        "resource_key": "game",
         "game": {
             "id": ident,
             "name": title,
@@ -128,40 +155,45 @@ def compact_entry(entry: dict[str, Any], points: int) -> dict[str, Any]:
     }
 
 
-def compact_table_file(
+def compact_resource(
     entry: dict[str, Any],
-    table_file: dict[str, Any],
+    collection: str,
+    resource: dict[str, Any],
     points: int,
 ) -> dict[str, Any]:
     result = compact_entry(entry, points)
-    table_vpsid = str(table_file.get("id") or "").strip()
-    parent_vpsid = str(table_file.get("parentId") or "").strip()
+    resource_vpsid = str(resource.get("id") or "").strip()
+    parent_vpsid = str(resource.get("parentId") or "").strip()
     parent_version = ""
 
-    if parent_vpsid:
+    if parent_vpsid and collection == "tableFiles":
         for candidate in entry.get("tableFiles", []):
             if (
                 isinstance(candidate, dict)
-                and str(candidate.get("id") or "").strip() == parent_vpsid
+                and id_key(candidate.get("id")) == id_key(parent_vpsid)
             ):
                 parent_version = str(candidate.get("version") or "").strip()
                 break
 
     result.update({
-        "id": table_vpsid,
-        "vpsid": table_vpsid,
-        "vpsId": table_vpsid,
+        "id": resource_vpsid,
+        "vpsid": resource_vpsid,
+        "vpsId": resource_vpsid,
         "game_vpsid": str(entry.get("id") or "").strip(),
         "parent_vpsid": parent_vpsid,
         "parent_version": parent_version,
-        "version": str(table_file.get("version") or "").strip(),
+        "version": str(resource.get("version") or "").strip(),
         "features": [
             str(value)
-            for value in table_file.get("features", [])
+            for value in resource.get("features", [])
             if str(value).strip()
         ],
-        "comment": str(table_file.get("comment") or "").strip(),
-        "resource_type": "tableFile",
+        "comment": str(resource.get("comment") or "").strip(),
+        "resource_type": RESOURCE_COLLECTIONS[collection],
+        "resource_key": collection,
+        "folder": str(resource.get("folder") or "").strip(),
+        "file_name": str(resource.get("fileName") or "").strip(),
+        "table_format": str(resource.get("tableFormat") or "").strip(),
         "game": {
             "id": str(entry.get("id") or "").strip(),
             "name": str(entry.get("name") or "").strip(),
@@ -171,6 +203,19 @@ def compact_table_file(
     return result
 
 
+def compact_table_file(
+    entry: dict[str, Any],
+    table_file: dict[str, Any],
+    points: int,
+) -> dict[str, Any]:
+    return compact_resource(
+        entry,
+        "tableFiles",
+        table_file,
+        points,
+    )
+
+
 def matches(entries: list[dict[str, Any]], query: str, rom: str, limit: int) -> list[dict[str, Any]]:
     query_n = norm(query)
 
@@ -178,29 +223,31 @@ def matches(entries: list[dict[str, Any]], query: str, rom: str, limit: int) -> 
     # conserver son propre VPSId et sa relation parentId. L'ancien matcher
     # ramenait seulement l'identifiant générique du jeu, ce qui empêchait de
     # prouver qu'un patch ciblait bien la table installée.
-    exact_table_files: list[dict[str, Any]] = []
+    exact_resources: list[dict[str, Any]] = []
 
     if query_n:
         for entry in entries:
-            for table_file in entry.get("tableFiles", []):
-                if not isinstance(table_file, dict):
-                    continue
+            for collection in RESOURCE_COLLECTIONS:
+                for resource in entry.get(collection, []):
+                    if not isinstance(resource, dict):
+                        continue
 
-                if norm(table_file.get("id")) == query_n:
-                    exact_table_files.append(
-                        compact_table_file(
-                            entry,
-                            table_file,
-                            1_500_000,
+                    if id_key(resource.get("id")) == id_key(query):
+                        exact_resources.append(
+                            compact_resource(
+                                entry,
+                                collection,
+                                resource,
+                                1_500_000,
+                            )
                         )
-                    )
 
-    if exact_table_files:
-        return exact_table_files[:max(1, min(limit, 20))]
+    if exact_resources:
+        return exact_resources[:max(1, min(limit, 20))]
 
     exact_id = [
         entry for entry in entries
-        if query_n and norm(entry.get("id")) == query_n
+        if query_n and id_key(entry.get("id")) == id_key(query)
     ]
 
     pool = exact_id if exact_id else entries
