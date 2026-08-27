@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "generated": 1787788450,
+  "generated": 1787788819,
   "link": {
     "connected": true,
     "state": "CONNECTE",
@@ -16,9 +16,9 @@
     "ok": true,
     "repository": "KarotsSugarpie/PinCabOS",
     "channel": "beta",
-    "tag": "alpha2.48-beta.20260826.1",
-    "display": "Alpha 2.48",
-    "published_at": "2026-08-26T02:53:56Z",
-    "different": false
+    "tag": "alpha2.52-beta.20260826.1",
+    "display": "Alpha 2.52",
+    "published_at": "2026-08-26T23:55:33Z",
+    "different": true
   }
 }
