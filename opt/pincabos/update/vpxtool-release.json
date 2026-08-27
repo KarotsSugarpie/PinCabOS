@@ -1,0 +1,10 @@
+{
+  "component": "vpxtool",
+  "version": "0.33.8",
+  "release_base_template": "https://github.com/francisdb/vpxtool/releases/download/v{version}",
+  "archive_template": "vpxtool-linux-{arch}-v{version}.tar.gz",
+  "sha256": {
+    "x86_64": "06b8f77b22b86a1f64dc4f623d8a35fb7e976d9f25c48d51c8966c8ad85cf6f0",
+    "aarch64": "9a3411bd2a735ff320d9624112835b2a3a388aaca28d715ca1e2d4df26c7270a"
+  }
+}

@@ -1,0 +1,21 @@
+[Unit]
+Description=PinCabOS - installe vpxtool si absent (premier boot)
+Documentation=https://pincabos.cc/
+After=network-online.target
+Wants=network-online.target
+# Si l'ISO deterministe embarque deja vpxtool, cette unite est sautee.
+# Elle reste un filet de securite pour une image construite autrement.
+ConditionPathExists=!/opt/pincabos/bin/vpxtool
+
+[Service]
+Type=oneshot
+ExecStart=/opt/pincabos/tools/pincabos-vpxtool-update --install
+User=root
+Group=root
+Nice=10
+IOSchedulingClass=best-effort
+TimeoutStartSec=600
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

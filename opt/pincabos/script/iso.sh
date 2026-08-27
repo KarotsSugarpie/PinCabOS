@@ -332,6 +332,93 @@ if [ "$?" -ne 0 ]; then
   die "Unable to prepare sanitized VPX audio configuration"
 fi
 
+# PINCABOS_VPXTOOL_ISO_EMBED_V1
+#
+# Every freshly built ISO must contain the exact vpxtool pinned by the same
+# manifest used by the runtime updater.  Never depend on a manually installed
+# copy on the source cabinet.  Download into /tmp, verify SHA-256, validate the
+# binary, and overlay it into the payload TAR without modifying the cabinet.
+VPXTOOL_MANIFEST="/opt/pincabos/update/vpxtool-release.json"
+VPXTOOL_STAGE="/tmp/pincabos-vpxtool-iso-$$"
+VPXTOOL_PAYLOAD_ROOT="$VPXTOOL_STAGE/__PINCABOS_VPXTOOL_EMBEDDED__"
+VPXTOOL_DOWNLOAD_DIR="$VPXTOOL_STAGE/download"
+VPXTOOL_EXTRACT_DIR="$VPXTOOL_STAGE/extract"
+
+test -s "$VPXTOOL_MANIFEST" \
+  || die "vpxtool release manifest missing: $VPXTOOL_MANIFEST"
+
+case "$(uname -m)" in
+  x86_64|amd64) VPXTOOL_ARCH="x86_64" ;;
+  aarch64|arm64) VPXTOOL_ARCH="aarch64" ;;
+  *) die "Unsupported vpxtool build architecture: $(uname -m)" ;;
+esac
+
+rm -rf "$VPXTOOL_STAGE"
+mkdir -p "$VPXTOOL_DOWNLOAD_DIR" "$VPXTOOL_EXTRACT_DIR" "$VPXTOOL_PAYLOAD_ROOT"
+
+mapfile -t VPXTOOL_META < <(
+  python3 - "$VPXTOOL_MANIFEST" "$VPXTOOL_ARCH" <<'PINCABOS_VPXTOOL_META_PY'
+import json
+import re
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+arch = sys.argv[2]
+data = json.loads(manifest_path.read_text(encoding="utf-8"))
+version = str(data.get("version") or "").strip().lstrip("v")
+if not re.fullmatch(r"\d+(?:\.\d+){2,3}", version):
+    raise SystemExit(f"invalid vpxtool version in manifest: {version!r}")
+sha = str(data["sha256"][arch]).strip().lower()
+if not re.fullmatch(r"[0-9a-f]{64}", sha):
+    raise SystemExit(f"invalid vpxtool sha256 for {arch}")
+base = str(data["release_base_template"]).format(version=version).rstrip("/")
+name = str(data["archive_template"]).format(arch=arch, version=version)
+print(version)
+print(f"{base}/{name}")
+print(sha)
+PINCABOS_VPXTOOL_META_PY
+)
+
+[ "${#VPXTOOL_META[@]}" -eq 3 ] \
+  || die "Unable to resolve vpxtool release metadata"
+
+VPXTOOL_VERSION="${VPXTOOL_META[0]}"
+VPXTOOL_URL="${VPXTOOL_META[1]}"
+VPXTOOL_SHA256="${VPXTOOL_META[2]}"
+VPXTOOL_ARCHIVE="$VPXTOOL_DOWNLOAD_DIR/vpxtool.tar.gz"
+
+echo "Embedding vpxtool v$VPXTOOL_VERSION ($VPXTOOL_ARCH) into ISO payload"
+wget -q --show-progress -O "$VPXTOOL_ARCHIVE" "$VPXTOOL_URL" \
+  || die "Unable to download pinned vpxtool archive"
+
+echo "$VPXTOOL_SHA256  $VPXTOOL_ARCHIVE" | sha256sum -c - \
+  || die "vpxtool archive SHA-256 mismatch"
+
+tar --no-same-owner --no-same-permissions -xzf "$VPXTOOL_ARCHIVE" \
+  -C "$VPXTOOL_EXTRACT_DIR" \
+  || die "Unable to extract pinned vpxtool archive"
+
+VPXTOOL_SOURCE_BIN="$(find "$VPXTOOL_EXTRACT_DIR" -type f -name vpxtool -print -quit)"
+[ -n "$VPXTOOL_SOURCE_BIN" ] && [ -f "$VPXTOOL_SOURCE_BIN" ] \
+  || die "vpxtool binary missing from pinned archive"
+
+VPXTOOL_VERSION_DIR="$VPXTOOL_PAYLOAD_ROOT/opt/pincabos/apps/vpxtool/$VPXTOOL_VERSION"
+VPXTOOL_STAGED_BIN="$VPXTOOL_VERSION_DIR/vpxtool"
+install -D -m 0755 "$VPXTOOL_SOURCE_BIN" "$VPXTOOL_STAGED_BIN"
+ln -s "$VPXTOOL_VERSION" "$VPXTOOL_PAYLOAD_ROOT/opt/pincabos/apps/vpxtool/current"
+mkdir -p "$VPXTOOL_PAYLOAD_ROOT/opt/pincabos/bin"
+ln -s "/opt/pincabos/apps/vpxtool/current/vpxtool" \
+  "$VPXTOOL_PAYLOAD_ROOT/opt/pincabos/bin/vpxtool"
+
+VPXTOOL_VERSION_TEXT="$("$VPXTOOL_STAGED_BIN" --version 2>&1)"
+printf '%s\n' "$VPXTOOL_VERSION_TEXT" | grep -Fq "v$VPXTOOL_VERSION" \
+  || die "Staged vpxtool does not report v$VPXTOOL_VERSION"
+"$VPXTOOL_STAGED_BIN" patch --help >/dev/null 2>&1 \
+  || die "Staged vpxtool does not provide the patch command"
+
+echo "GO [OK] vpxtool v$VPXTOOL_VERSION pinned and staged for ISO"
+
 # PINCABOS_ROOT_GENERATED_PAYLOAD_EXCLUSIONS_V1
 echo "Creating live cabinet payload with controlled TAR status."
 
@@ -466,6 +553,9 @@ tar \
   --exclude='./root/pincabos-v8.1g-iso-ready/*' \
   --exclude='./opt/pincabos/build' \
   --exclude='./opt/pincabos/build/*' \
+  --exclude='./opt/pincabos/apps/vpxtool' \
+  --exclude='./opt/pincabos/apps/vpxtool/*' \
+  --exclude='./opt/pincabos/bin/vpxtool' \
   --exclude='./opt/pincabos/.git-rootfs' \
   --exclude='./opt/pincabos/.git-rootfs/*' \
   --exclude='./opt/pincabos/backups' \
@@ -488,13 +578,19 @@ tar \
   -cpf "$ARCHIVE" \
   --transform='s#^\./__PINCABOS_AUDIO_SANITIZED__$#.#' \
   --transform='s#^\./__PINCABOS_AUDIO_SANITIZED__/#./#' \
+  --transform='s#^\./__PINCABOS_VPXTOOL_EMBEDDED__$#.#' \
+  --transform='s#^\./__PINCABOS_VPXTOOL_EMBEDDED__/#./#' \
   -C / . \
-  -C "$AUDIO_SANITIZE_STAGE" -T "$AUDIO_SANITIZE_LIST"
+  -C "$AUDIO_SANITIZE_STAGE" -T "$AUDIO_SANITIZE_LIST" \
+  -C "$VPXTOOL_STAGE" \
+    ./__PINCABOS_VPXTOOL_EMBEDDED__/opt/pincabos/apps/vpxtool \
+    ./__PINCABOS_VPXTOOL_EMBEDDED__/opt/pincabos/bin/vpxtool
 
 TAR_CREATE_RC="$?"
 
 rm -rf "$AUDIO_SANITIZE_STAGE"
 rm -f "$AUDIO_SANITIZE_LIST"
+rm -rf "$VPXTOOL_STAGE"
 set -e
 
 echo
@@ -633,6 +729,18 @@ ARCHIVE_LIST_PYWEB="$WORK/payload-file-list-python-webapp.txt"
 echo "Creating payload file list:"
 echo "$ARCHIVE_LIST_PYWEB"
 tar -I zstd -tf "$ARCHIVE" > "$ARCHIVE_LIST_PYWEB"
+
+echo "--- vpxtool deterministic ISO validation ---"
+for VPXTOOL_MEMBER in \
+  "./opt/pincabos/apps/vpxtool/$VPXTOOL_VERSION/vpxtool" \
+  "./opt/pincabos/apps/vpxtool/current" \
+  "./opt/pincabos/bin/vpxtool"
+do
+  VPXTOOL_MEMBER_COUNT="$(grep -Fxc "$VPXTOOL_MEMBER" "$ARCHIVE_LIST_PYWEB" || true)"
+  [ "$VPXTOOL_MEMBER_COUNT" -eq 1 ] \
+    || die "vpxtool payload member count invalid ($VPXTOOL_MEMBER_COUNT): $VPXTOOL_MEMBER"
+done
+echo "GO [OK] vpxtool v$VPXTOOL_VERSION is present exactly once in payload"
 
 echo "--- Python entries detected in payload ---"
 grep -E '^\./usr/bin/python3($|[.0-9-])|^\./usr/lib/python3' "$ARCHIVE_LIST_PYWEB" | sed -n '1,80p' || true

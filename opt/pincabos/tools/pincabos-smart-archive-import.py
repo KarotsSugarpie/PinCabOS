@@ -84,7 +84,9 @@ ROOT_EXTS = {
     ".res",
 }
 
-PINCABOS_VPXTOOL_VERSION = "0.33.8"
+PINCABOS_VPXTOOL_RELEASE_MANIFEST = (
+    BASE / "update" / "vpxtool-release.json"
+)
 PINCABOS_VPXTOOL_CANDIDATES = (
     Path("/opt/pincabos/bin/vpxtool"),
     Path("/usr/local/bin/vpxtool"),
@@ -2127,7 +2129,31 @@ def choose_main_vpx(root):
     return vpxs[0]
 
 
+def pincabos_vpxtool_required_version():
+    try:
+        data = json.loads(
+            PINCABOS_VPXTOOL_RELEASE_MANIFEST.read_text(
+                encoding="utf-8"
+            )
+        )
+        version = str(data.get("version") or "").strip().lstrip("v")
+    except Exception as exc:
+        raise RuntimeError(
+            "NOGO: manifeste vpxtool absent ou illisible: "
+            f"{PINCABOS_VPXTOOL_RELEASE_MANIFEST}"
+        ) from exc
+
+    if not re.fullmatch(r"\d+(?:\.\d+){2,3}", version):
+        raise RuntimeError(
+            "NOGO: version vpxtool invalide dans le manifeste: "
+            f"{version!r}"
+        )
+
+    return version
+
+
 def pincabos_find_vpxtool():
+    required_version = pincabos_vpxtool_required_version()
     candidates = list(PINCABOS_VPXTOOL_CANDIDATES)
     discovered = shutil.which("vpxtool")
 
@@ -2164,14 +2190,16 @@ def pincabos_find_vpxtool():
 
         if (
             version_result.returncode == 0
-            and f"v{PINCABOS_VPXTOOL_VERSION}" in version_text
+            and f"v{required_version}" in version_text
         ):
             return resolved, version_text
 
     raise RuntimeError(
         "NOGO: moteur VPU Remix absent ou version invalide. "
         "PinCabOS requiert /opt/pincabos/bin/vpxtool "
-        f"v{PINCABOS_VPXTOOL_VERSION}. Relancer RUN_02."
+        f"v{required_version}. "
+        "Relancer : sudo -n /opt/pincabos/tools/pincabos-vpxtool-update "
+        "--install"
     )
 
 
