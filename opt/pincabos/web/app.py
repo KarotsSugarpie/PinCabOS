@@ -108,6 +108,7 @@ import time
 import os
 import html
 import re
+import hashlib
 
 def pincabos_force_standard_table_name(name):
     """
@@ -9558,6 +9559,102 @@ def pincabos_vpsdb_matches(table_name, rom):
         return []
 
 
+PINCABOS_SMART_IMPORT_RESOURCE_MANIFEST = (
+    ".pincabos-smart-import-resources.json"
+)
+
+
+def pincabos_smart_import_resource_manifest_path(batch_dir):
+    return (
+        Path(batch_dir)
+        / PINCABOS_SMART_IMPORT_RESOURCE_MANIFEST
+    )
+
+
+def pincabos_smart_import_file_sha256(path):
+    digest = hashlib.sha256()
+
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+
+    return digest.hexdigest()
+
+
+def pincabos_smart_import_exact_resource(vpsid):
+    wanted = str(vpsid or "").strip()
+
+    if not wanted:
+        raise RuntimeError("VPS-ID vide.")
+
+    matches = pincabos_vpsdb_matches(wanted, "")
+    exact = [
+        match
+        for match in matches
+        if str(match.get("id", "") or "").strip().casefold()
+        == wanted.casefold()
+    ]
+
+    if not exact:
+        raise RuntimeError(
+            f"VPS-ID inconnu dans la base locale VPSDB: {wanted}"
+        )
+
+    if len(exact) != 1:
+        raise RuntimeError(
+            f"VPS-ID ambigu dans VPSDB: {wanted} ({len(exact)} résultats)"
+        )
+
+    resource = dict(exact[0])
+    resource_type = str(resource.get("resource_type", "") or "").strip()
+
+    if not resource_type or resource_type == "game":
+        raise RuntimeError(
+            f"{wanted} est l'ID général du jeu. Entre l'ID exact du fichier VPSDB."
+        )
+
+    if (
+        resource_type == "tableFile"
+        and str(resource.get("table_format", "") or "").strip()
+        and str(resource.get("table_format", "") or "").strip().casefold()
+        != "vpx"
+    ):
+        raise RuntimeError(
+            f"VPS-ID {wanted}: format de table non VPX refusé "
+            f"({resource.get('table_format')})."
+        )
+
+    return resource
+
+
+def pincabos_smart_import_load_resource_manifest(batch_dir, required=False):
+    path = pincabos_smart_import_resource_manifest_path(batch_dir)
+
+    if not path.is_file():
+        if required:
+            raise RuntimeError(
+                "Inventaire VPS-ID par fichier absent du batch Smart Import."
+            )
+        return {}
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(
+            f"Inventaire VPS-ID illisible: {exc}"
+        ) from exc
+
+    if (
+        not isinstance(payload, dict)
+        or payload.get("format")
+        != "PinCabOS Smart Import resources"
+        or not isinstance(payload.get("resources"), list)
+    ):
+        raise RuntimeError("Inventaire VPS-ID Smart Import invalide.")
+
+    return payload
+
+
 def pincabos_get_vpinfe_paths_for_tools():
     """
     Chemins utilisés par VPinFE / PinCabOS.
@@ -10976,6 +11073,76 @@ def tools_import_table_analyze():
 </div>
 """)
 
+    try:
+        submitted_vpsids = json.loads(
+            request.form.get("file_vpsids_json", "[]")
+            or "[]"
+        )
+
+        if not isinstance(submitted_vpsids, list):
+            submitted_vpsids = []
+
+    except Exception:
+        submitted_vpsids = []
+
+    submitted_vpsids = [
+        str(value or "").strip()
+        for value in submitted_vpsids
+    ]
+
+    if len(submitted_vpsids) != len(uploads):
+        return page("Outils", """
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">La liste des VPS-ID ne correspond pas aux fichiers reçus.</p>
+  <p>Aucun fichier n’a été installé.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+    if any(not value for value in submitted_vpsids):
+        return page("Outils", """
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">Chaque fichier doit avoir son VPS-ID exact.</p>
+  <p>Aucun fichier n’a été installé.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+    try:
+        resolved_resources = [
+            pincabos_smart_import_exact_resource(vpsid)
+            for vpsid in submitted_vpsids
+        ]
+    except Exception as exc:
+        return page("Outils", f"""
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">{html.escape(str(exc))}</p>
+  <p>La base VPSDB n’a pas validé tous les fichiers. Aucun fichier n’a été installé.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+    game_vpsids = {
+        str(resource.get("game_vpsid", "") or "").strip()
+        for resource in resolved_resources
+        if str(resource.get("game_vpsid", "") or "").strip()
+    }
+
+    if len(game_vpsids) != 1:
+        detail = ", ".join(sorted(game_vpsids)) or "aucun"
+        return page("Outils", f"""
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">Les VPS-ID ne pointent pas tous vers la même table.</p>
+  <p>Jeux VPSDB détectés : <code>{html.escape(detail)}</code></p>
+  <p>Aucun fichier n’a été installé.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
     if not uploads:
         return page("Outils", """
 <div class="card">
@@ -11016,6 +11183,8 @@ def tools_import_table_analyze():
         client_mtimes = [0] * len(uploads)
 
     saved = []
+    resource_rows = []
+    stored_names = set()
 
     for upload_index, upload in enumerate(uploads):
         filename = secure_filename(
@@ -11023,7 +11192,30 @@ def tools_import_table_analyze():
         )
 
         if not filename:
-            continue
+            shutil.rmtree(batch_dir, ignore_errors=True)
+            return page("Outils", """
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">Un nom de fichier est invalide après sécurisation.</p>
+  <p>Aucun fichier n’a été installé.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+        filename_key = filename.casefold()
+
+        if filename_key in stored_names:
+            shutil.rmtree(batch_dir, ignore_errors=True)
+            return page("Outils", f"""
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">Deux fichiers portent le même nom sécurisé : {html.escape(filename)}</p>
+  <p>Renomme un des fichiers pour éviter tout écrasement temporaire.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+        stored_names.add(filename_key)
 
         dest = batch_dir / filename
         upload.save(dest)
@@ -11066,6 +11258,148 @@ def tools_import_table_analyze():
 
         saved.append(str(dest))
 
+        resource = dict(resolved_resources[upload_index])
+        archive_members = (
+            pincabos_list_archive_files(dest)
+            if dest.suffix.lower() in {".zip", ".rar", ".7z", ".pincabos"}
+            else []
+        )
+        contains_vpu_patch = (
+            dest.suffix.lower() == ".dif"
+            or any(
+                str(member).lower().endswith(".dif")
+                for member in archive_members
+            )
+        )
+
+        if (
+            contains_vpu_patch
+            and resource.get("resource_type") != "tableFile"
+        ):
+            shutil.rmtree(batch_dir, ignore_errors=True)
+            return page("Outils", f"""
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">Le fichier {html.escape(filename)} contient un patch .dif, mais son VPS-ID n’est pas un tableFile.</p>
+  <p>Aucun fichier n’a été installé.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+        resource.update({
+            "original_name": str(upload.filename or ""),
+            "stored_name": filename,
+            "sha256": pincabos_smart_import_file_sha256(dest),
+            "size": dest.stat().st_size,
+            "client_mtime_ms": client_mtimes[upload_index],
+            "contains_vpu_patch": contains_vpu_patch,
+        })
+        resource_rows.append(resource)
+
+    patch_resources = [
+        resource
+        for resource in resource_rows
+        if resource.get("contains_vpu_patch")
+    ]
+
+    if len(patch_resources) > 1:
+        shutil.rmtree(batch_dir, ignore_errors=True)
+        return page("Outils", """
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">Un seul patch VPU Remix .dif est permis par import.</p>
+  <p>Aucun fichier n’a été installé.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+    table_resources = [
+        resource
+        for resource in resource_rows
+        if resource.get("resource_type") == "tableFile"
+    ]
+
+    primary_table = patch_resources[0] if patch_resources else None
+
+    if primary_table is None and len(table_resources) == 1:
+        primary_table = table_resources[0]
+
+    if primary_table is None and len(table_resources) > 1:
+        table_ids = {
+            str(resource.get("vpsid", "") or "").strip().casefold()
+            for resource in table_resources
+        }
+        children = [
+            resource
+            for resource in table_resources
+            if str(resource.get("parent_vpsid", "") or "").strip().casefold()
+            in table_ids
+        ]
+
+        if len(children) == 1:
+            primary_table = children[0]
+        else:
+            shutil.rmtree(batch_dir, ignore_errors=True)
+            return page("Outils", """
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">Plusieurs tableFile VPSDB sont présents et la table principale est ambiguë.</p>
+  <p>Aucun fichier n’a été installé.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+    first_resource = resource_rows[0]
+    detected_rom = next((
+        str(resource.get("version", "") or "").strip()
+        for resource in resource_rows
+        if resource.get("resource_type") == "romFile"
+        and str(resource.get("version", "") or "").strip()
+    ), "")
+
+    resource_manifest = {
+        "format": "PinCabOS Smart Import resources",
+        "format_version": 1,
+        "game_vpsid": next(iter(game_vpsids)),
+        "title": str(first_resource.get("title", "") or "").strip(),
+        "manufacturer": str(first_resource.get("manufacturer", "") or "").strip(),
+        "year": str(first_resource.get("year", "") or "").strip(),
+        "final_table_name": str(first_resource.get("final_table_name", "") or "").strip(),
+        "rom": detected_rom,
+        "primary_table_vpsid": (
+            str(primary_table.get("vpsid", "") or "").strip()
+            if primary_table
+            else ""
+        ),
+        "parent_vpsid": (
+            str(primary_table.get("parent_vpsid", "") or "").strip()
+            if primary_table
+            else ""
+        ),
+        "parent_version": (
+            str(primary_table.get("parent_version", "") or "").strip()
+            if primary_table
+            else ""
+        ),
+        "target_version": (
+            str(primary_table.get("version", "") or "").strip()
+            if primary_table
+            else ""
+        ),
+        "resources": resource_rows,
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+    }
+
+    resource_manifest_path = (
+        pincabos_smart_import_resource_manifest_path(batch_dir)
+    )
+    resource_manifest_tmp = resource_manifest_path.with_suffix(".tmp")
+    resource_manifest_tmp.write_text(
+        json.dumps(resource_manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(resource_manifest_tmp, resource_manifest_path)
+
     if request.headers.get("X-PCOS-Async") == "1":
         return jsonify({
             "ok": True,
@@ -11083,7 +11417,12 @@ def tools_import_table_analyze_run():
     batch_dir = Path("/home/pinball/Downloads") / name
     if not batch_dir.is_dir():
         return page("Outils", '<div class="card"><h2>Smart Import</h2><p class="bad">Batch introuvable ou expir\u00e9.</p><p><a class="button" href="/tools/import-table">Retour</a></p></div>')
-    saved = sorted(str(p) for p in batch_dir.iterdir() if p.is_file())
+    saved = sorted(
+        str(p)
+        for p in batch_dir.iterdir()
+        if p.is_file()
+        and p.name != PINCABOS_SMART_IMPORT_RESOURCE_MANIFEST
+    )
     return _pcos_smart_analyze_render(batch_dir, saved)
 
 
@@ -11092,7 +11431,30 @@ def _pcos_smart_analyze_render(batch_dir, saved):
     if manifest_response is not None:
         return manifest_response
 
+    try:
+        resource_manifest = (
+            pincabos_smart_import_load_resource_manifest(batch_dir)
+        )
+    except Exception as exc:
+        return page("Outils", f"""
+<div class="card">
+  <h2>Analyse Smart Import annulée</h2>
+  <p class="bad">{html.escape(str(exc))}</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
     detected = pincabos_detect_batch(batch_dir)
+
+    if resource_manifest:
+        detected["table_name"] = str(
+            resource_manifest.get("final_table_name", "")
+            or resource_manifest.get("title", "")
+            or detected.get("table_name", "")
+        ).strip()
+
+        if resource_manifest.get("rom"):
+            detected["rom"] = str(resource_manifest.get("rom") or "").strip()
 
     # Validation directe des fichiers réellement reçus.
     received_paths = [
@@ -11167,6 +11529,9 @@ def _pcos_smart_analyze_render(batch_dir, saved):
         detected.get("table_name", ""),
         detected.get("rom", ""),
     )
+
+    if resource_manifest:
+        matches = []
 
     # Le nom d'un .dif ne prouve pas quel tableFile VPSDB il représente.
     # Une association générique au jeu perdrait parentId et pourrait choisir
@@ -11290,12 +11655,38 @@ def _pcos_smart_analyze_render(batch_dir, saved):
 
     file_rows = []
 
+    resources_by_name = {
+        str(resource.get("stored_name", "") or ""): resource
+        for resource in resource_manifest.get("resources", [])
+        if isinstance(resource, dict)
+    }
+
     for file_path in saved:
+        file_name = Path(file_path).name
+        resource = resources_by_name.get(file_name, {})
+        resource_detail = ""
+
+        if resource:
+            detail_parts = [
+                f"VPS-ID {resource.get('vpsid', '')}",
+                str(resource.get("resource_type", "") or ""),
+            ]
+            version = str(resource.get("version", "") or "").strip()
+            if version:
+                detail_parts.append(f"version {version}")
+
+            resource_detail = (
+                '<small class="pco-import-file-resource">'
+                + html.escape(" · ".join(filter(None, detail_parts)))
+                + "</small>"
+            )
+
         file_rows.append(
             '<div class="pco-import-file-row">'
             '<span class="pco-import-file-go">[✓] GO</span>'
             f'<span class="pco-import-file-path">'
-            f'{html.escape(Path(file_path).name)}</span>'
+            f'<strong>{html.escape(file_name)}</strong>'
+            f'{resource_detail}</span>'
             '</div>'
         )
 
@@ -11310,6 +11701,48 @@ def _pcos_smart_analyze_render(batch_dir, saved):
 
     default_title = html.escape(detected.get("table_name", ""))
     default_rom = html.escape(detected.get("rom", ""))
+    legacy_association_style = (
+        "display:none;"
+        if resource_manifest
+        else ""
+    )
+    resource_install_html = ""
+
+    if resource_manifest:
+        resource_count = len(resource_manifest.get("resources", []))
+        game_vpsid = html.escape(
+            str(resource_manifest.get("game_vpsid", "") or "")
+        )
+        target_name = html.escape(
+            str(
+                resource_manifest.get("final_table_name", "")
+                or resource_manifest.get("title", "")
+                or ""
+            )
+        )
+        resource_install_html = f"""
+<div class="card" style="margin-top:20px; border-color:rgba(69,229,139,.55);">
+  <h2>Association VPSDB validée par fichier</h2>
+  <p class="ok">
+    {resource_count} fichier(s) validé(s) pour
+    <strong>{target_name}</strong> — jeu VPSDB <code>{game_vpsid}</code>.
+  </p>
+  <p>
+    PinCabOS utilisera le type VPSDB de chaque ID pour viser la table et
+    conservera ces ressources dans le manifeste de la table.
+  </p>
+  <form action="/tools/import-table/install" method="post"
+        onsubmit="document.getElementById('installSpinnerResources').style.display='block';">
+    <input type="hidden" name="batch_dir" value="{html.escape(str(batch_dir))}">
+    <input type="hidden" name="import_mode" value="resources">
+    <button class="button" type="submit">Installer les fichiers validés</button>
+    <div id="installSpinnerResources" class="card" style="display:none; margin-top:14px;">
+      <h3>Installation en cours...</h3>
+      <p>Routage par VPS-ID, transaction, manifeste et validation.</p>
+    </div>
+  </form>
+</div>
+"""
 
     body = f"""
 <style>
@@ -11380,6 +11813,17 @@ def _pcos_smart_analyze_render(batch_dir, saved):
     color:#686d79;
   }}
 
+  .pco-import-file-path strong,
+  .pco-import-file-resource {{
+    display:block;
+  }}
+
+  .pco-import-file-resource {{
+    margin-top:4px;
+    color:#ffb04a;
+    font-size:12px;
+  }}
+
   @media (max-width:900px) {{
     .pco-import-tech-row {{
       grid-template-columns:1fr;
@@ -11409,7 +11853,9 @@ def _pcos_smart_analyze_render(batch_dir, saved):
   <div class="pco-import-details">{detected_html}</div>
 </div>
 
-<div class="card" style="margin-top:20px;">
+{resource_install_html}
+
+<div class="card" style="margin-top:20px;{legacy_association_style}">
   <h2>Association VPinFE / VPSdb</h2>
 
   <form action="/tools/import-table/install" method="post" onsubmit="document.getElementById('installSpinner').style.display='block';">
@@ -12150,7 +12596,7 @@ def tools_import_table_install():
 """)
 
     import_mode = request.form.get("import_mode", "auto").strip().lower()
-    if import_mode not in ["auto", "search", "manual"]:
+    if import_mode not in ["auto", "search", "manual", "resources"]:
         import_mode = "auto"
 
     ipdbid = ""
@@ -12165,8 +12611,51 @@ def tools_import_table_install():
     parent_version = ""
     target_version = ""
     assoc = {}
+    resource_manifest = {}
 
-    if import_mode == "manual":
+    if import_mode == "resources":
+        try:
+            resource_manifest = (
+                pincabos_smart_import_load_resource_manifest(
+                    batch_dir,
+                    required=True,
+                )
+            )
+        except Exception as exc:
+            return page("Outils", f"""
+<div class="card">
+  <h2>Installation impossible</h2>
+  <p class="bad">{html.escape(str(exc))}</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+        title = str(
+            resource_manifest.get("final_table_name", "")
+            or resource_manifest.get("title", "")
+            or ""
+        ).strip()
+        table_title = str(resource_manifest.get("title", "") or "").strip()
+        manufacturer = str(resource_manifest.get("manufacturer", "") or "").strip()
+        year = str(resource_manifest.get("year", "") or "").strip()
+        rom = str(resource_manifest.get("rom", "") or "").strip()
+        vpsid = str(resource_manifest.get("primary_table_vpsid", "") or "").strip()
+        game_vpsid = str(resource_manifest.get("game_vpsid", "") or "").strip()
+        parent_vpsid = str(resource_manifest.get("parent_vpsid", "") or "").strip()
+        parent_version = str(resource_manifest.get("parent_version", "") or "").strip()
+        target_version = str(resource_manifest.get("target_version", "") or "").strip()
+        ipdbid = ""
+
+        if not title or not game_vpsid:
+            return page("Outils", """
+<div class="card">
+  <h2>Installation impossible</h2>
+  <p class="bad">L’inventaire VPS-ID ne contient pas de table cible fiable.</p>
+  <p><a class="button" href="/tools/import-table">Retour Smart Import</a></p>
+</div>
+""")
+
+    elif import_mode == "manual":
         title = request.form.get("manual_title", "").strip()
         table_title = title
         manufacturer = request.form.get("manual_manufacturer", "").strip()
@@ -12258,6 +12747,12 @@ def tools_import_table_install():
         "--rom", rom,
         "--ipdbid", ipdbid,
     ]
+
+    if resource_manifest:
+        cmd.extend([
+            "--resources-json",
+            str(pincabos_smart_import_resource_manifest_path(batch_dir)),
+        ])
 
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
