@@ -1,0 +1,23 @@
+[Unit]
+Description=PinCabOS - installe vpxtool si absent (premier boot)
+Documentation=https://pincabos.cc/
+After=network-online.target
+Wants=network-online.target
+# Ne s'execute que si vpxtool manque : si l'ISO l'embarque deja (bascule de
+# lien presente), la condition est fausse et le service est saute. Sinon, il
+# le pose au premier boot en ligne. C'est la garantie contenue dans le depot,
+# independante du builder qui a fabrique l'image.
+ConditionPathExists=!/opt/pincabos/bin/vpxtool
+
+[Service]
+Type=oneshot
+ExecStart=/opt/pincabos/tools/pincabos-vpxtool-update --install
+User=root
+Group=root
+Nice=10
+IOSchedulingClass=best-effort
+TimeoutStartSec=600
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

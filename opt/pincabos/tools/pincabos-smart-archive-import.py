@@ -84,7 +84,23 @@ ROOT_EXTS = {
     ".res",
 }
 
-PINCABOS_VPXTOOL_VERSION = "0.33.8"
+def _pincabos_vpxtool_version_cible():
+    # Source de verite unique : le manifeste, lu aussi par l'updater et
+    # par l'etape de build. Repli sur une constante si absent.
+    import json
+    try:
+        data = json.loads(Path(
+            "/opt/pincabos/update/vpxtool-release.json"
+        ).read_text(encoding="utf-8"))
+        version = str(data.get("version") or "").strip()
+        if version:
+            return version
+    except Exception:
+        pass
+    return "0.33.8"
+
+
+PINCABOS_VPXTOOL_VERSION = _pincabos_vpxtool_version_cible()
 PINCABOS_VPXTOOL_CANDIDATES = (
     Path("/opt/pincabos/bin/vpxtool"),
     Path("/usr/local/bin/vpxtool"),
