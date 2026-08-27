@@ -2171,7 +2171,9 @@ def pincabos_find_vpxtool():
     raise RuntimeError(
         "NOGO: moteur VPU Remix absent ou version invalide. "
         "PinCabOS requiert /opt/pincabos/bin/vpxtool "
-        f"v{PINCABOS_VPXTOOL_VERSION}. Relancer RUN_02."
+        f"v{PINCABOS_VPXTOOL_VERSION}. "
+        "Relancer : sudo -n /opt/pincabos/tools/pincabos-vpxtool-update "
+        "--install"
     )
 
 

@@ -1,0 +1,4 @@
+# PinCabOS - mise a jour vpxtool declenchable par le compte cabinet, comme VPinFE.
+# Chemins exacts uniquement, aucun shell.
+Cmnd_Alias PINCABOS_VPXTOOL_UPDATES = /opt/pincabos/tools/pincabos-vpxtool-update --status, /opt/pincabos/tools/pincabos-vpxtool-update --check, /opt/pincabos/tools/pincabos-vpxtool-update --install, /opt/pincabos/tools/pincabos-vpxtool-update --rollback
+pinball ALL=(root) NOPASSWD: PINCABOS_VPXTOOL_UPDATES
