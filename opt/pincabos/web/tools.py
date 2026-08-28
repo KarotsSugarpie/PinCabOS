@@ -770,6 +770,19 @@ def tools_hub_html():
           </div>
         </a>
 
+        <!-- PINCABOS_B2S_CONFIG_CARD_V1 -->
+        <a class="tool-card" href="/tools/vpinballx/b2s">
+          <div class="pco-tool-art">
+            <img src="/static/pincabos-assets/PCOSConfigINIVPinballX.png?v=b2sconfig1"
+                 alt="Configuration B2S VPinballX" loading="lazy">
+          </div>
+          <div class="pco-tool-body">
+            <strong>Configuration B2S</strong>
+            <span class="pco-tool-description">Configurer le moteur B2S Linux, le grill, le DMD et les réglages globaux ou par table sans modifier les fichiers .directb2s.</span>
+            <div class="pco-tool-footer"><span>Ouvrir B2S Config</span><span class="pco-tool-open">→</span></div>
+          </div>
+        </a>
+
         <a class="tool-card" href="/gpu">
           <div class="pco-tool-art">
             <img src="/static/pincabos-assets/PCOSEcransGPUVPX.png?v=toolsart1"

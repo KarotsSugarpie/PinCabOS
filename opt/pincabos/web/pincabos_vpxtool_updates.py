@@ -113,6 +113,18 @@ charger();
 
 
 def register(app, page):
+    # B2S Configurator is a native VPinballX tool and shares this canonical
+    # VPX tool registration point. A registration failure must never prevent
+    # the existing vpxtool updater from loading.
+    try:
+        from B2SConfig import register as _register_b2s_config
+        _register_b2s_config(app, page)
+    except Exception as exc:
+        try:
+            app.logger.exception("B2S Configurator registration failed: %s", exc)
+        except Exception:
+            pass
+
     @app.get("/tools/vpxtool/update")
     def pincabos_vpxtool_updates_page():
         return page("Update vpxtool", _BODY)
