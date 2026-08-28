@@ -1,1 +1,1 @@
-NOT_CONFIGURED
+https://pincabos-tester-upload.pincabos.workers.dev/v1/tester-report
