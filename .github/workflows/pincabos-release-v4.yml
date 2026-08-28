@@ -61,33 +61,40 @@ jobs:
         run: |
           set -Eeuo pipefail
 
-          latest="$(
+          # Alpha 2.x uses the PR number as its monotonically increasing
+          # release number. A lower-numbered PR may be merged after a newer
+          # PR, so merge time must never decide the version.
+          highest="$(
             gh pr list \
               --repo "$GITHUB_REPOSITORY" \
               --state merged \
-              --limit 100 \
-              --json number,mergedAt \
-              --jq \
-              'sort_by([.mergedAt, .number]) | last | .number'
+              --limit 200 \
+              --json number \
+              --jq 'map(.number) | max'
           )"
 
-          if [[ -z "$latest" || "$latest" == "null" ]]; then
+          if [[ -z "$highest" || "$highest" == "null" ]]; then
             echo "Aucune PR mergee." >&2
             exit 1
           fi
 
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            pr="${INPUT_PR:-$latest}"
+            pr="${INPUT_PR:-$highest}"
             channel="${INPUT_CHANNEL:-beta}"
           else
             pr="$EVENT_PR"
             channel="beta"
           fi
 
-          if [[ "$pr" != "$latest" ]]; then
-            echo "PR #$pr n'est plus la derniere mergee."
+          if (( 10#$pr < 10#$highest )); then
+            echo "PR #$pr est plus ancienne que la PR mergee #$highest : aucune release retrograde."
             echo "publish=false" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+
+          if (( 10#$pr > 10#$highest )); then
+            echo "PR #$pr n'est pas une PR mergee reconnue (max mergee: #$highest)." >&2
+            exit 1
           fi
 
           display="Alpha 2.${pr}"
