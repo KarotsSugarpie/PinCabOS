@@ -8,7 +8,9 @@ TOKEN_FILE="/etc/pincabos/tester-report-issues.token"
 REPO="KarotsSugarpie/PinCabOS"
 
 say() { printf '%s\n' "$*"; }
+trap 'rc=$?; printf "\nNOGO [AUDIT] rc=%s line=%s cmd=%s\n" "$rc" "${BASH_LINENO[0]:-?}" "$BASH_COMMAND" >&2' ERR
 section() {
+  printf '  [SECTION] %s\n' "$1"
   printf '\n================================================================\n %s\n================================================================\n' "$1" >>"$REPORT"
 }
 run() {
@@ -285,7 +287,10 @@ fi
 section "19. LOGICIELS / PAQUETS"
 {
   for p in bash python3 git curl wget 7z unzip ffmpeg gcc cmake; do
-    if command -v "$p" >/dev/null 2>&1; then printf '%-12s : ' "$p"; "$p" --version 2>/dev/null | head -n 1; fi
+    if command -v "$p" >/dev/null 2>&1; then
+      printf '%-12s : ' "$p"
+      { "$p" --version 2>/dev/null || "$p" 2>/dev/null || true; } | head -n 1 || true
+    fi
   done
   if command -v dpkg-query >/dev/null 2>&1; then
     echo
