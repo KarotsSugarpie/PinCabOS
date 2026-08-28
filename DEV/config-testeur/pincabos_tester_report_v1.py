@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PinCabOS tester report endpoint V1."""
+"""PinCabOS tester report endpoint V2."""
 
 import base64
 import hashlib
@@ -67,9 +67,20 @@ def _github_token():
     return "" if "\n" in token or "\r" in token else token
 
 
-def _slug(value):
-    value = re.sub(r"[^a-z0-9._-]+", "-", str(value or "").lower())
-    return re.sub(r"-{2,}", "-", value).strip("._-")[:64] or "cabinet"
+def _slug(value, fallback):
+    value = str(value or "").strip().lower()
+    value = re.sub(r"[^a-z0-9._-]+", "-", value)
+    value = re.sub(r"-{2,}", "-", value).strip("._-")
+    return (value or fallback)[:64]
+
+
+def _clean_identity(value, max_len=100):
+    if not isinstance(value, str):
+        return ""
+    value = value.replace("\x00", "").strip()
+    value = re.sub(r"[\r\n\t]+", " ", value)
+    value = re.sub(r"\s{2,}", " ", value)
+    return value[:max_len]
 
 
 def _sanitize(text):
@@ -106,7 +117,7 @@ def _github_put(token, path, content, message):
             "Accept": "application/vnd.github+json",
             "Authorization": "Bearer " + token,
             "Content-Type": "application/json",
-            "User-Agent": "PinCabOS-Tester-Report/1",
+            "User-Agent": "PinCabOS-Tester-Report/2",
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
@@ -124,6 +135,7 @@ def _github_put(token, path, content, message):
 
 
 def register_tester_report_v1(app, db):
+    """Register V2 endpoint while keeping the existing register function name."""
     if getattr(app, "_pincabos_tester_report_v1", False):
         return
     app._pincabos_tester_report_v1 = True
@@ -174,6 +186,13 @@ def register_tester_report_v1(app, db):
 
         payload = request.get_json(silent=True) or {}
         report = payload.get("report")
+        tester_name = _clean_identity(payload.get("tester_name"))
+        host_name = _clean_identity(payload.get("host_name"))
+
+        if not tester_name:
+            return _json({"ok": False, "error": "tester_name_required"}, 400)
+        if not host_name:
+            return _json({"ok": False, "error": "host_name_required"}, 400)
         if not isinstance(report, str):
             return _json({"ok": False, "error": "report_required"}, 400)
 
@@ -189,13 +208,20 @@ def register_tester_report_v1(app, db):
             return _json({"ok": False, "error": "github_bridge_not_configured"}, 503)
 
         stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-        cabinet_slug = _slug(cabinet["cabinet_name"])
-        filename = f"{cabinet_slug}-{stamp}-{secrets.token_hex(3)}-system-audit.txt"
+        tester_slug = _slug(tester_name, "testeur")
+        host_slug = _slug(host_name, "pincabos")
+        cabinet_slug = _slug(cabinet["cabinet_name"], "cabinet")
+        filename = (
+            f"{tester_slug}-{host_slug}-{stamp}-"
+            f"{secrets.token_hex(3)}-system-audit.txt"
+        )
         path = f"{DEST}/{filename}"
         report_sha = hashlib.sha256(raw).hexdigest()
         content = (
             "PINCABOS TESTER REPORT - SERVER VERIFIED\n"
-            f"Cabinet: {cabinet_slug}\n"
+            f"Tester: {tester_name}\n"
+            f"Hostname: {host_name}\n"
+            f"Linked cabinet: {cabinet_slug}\n"
             f"Received UTC: {datetime.now(timezone.utc).isoformat()}\n"
             f"SHA256: {report_sha}\n"
             "Privacy filter: enabled\n"
@@ -207,7 +233,7 @@ def register_tester_report_v1(app, db):
                 github_token,
                 path,
                 content,
-                f"tester report: {cabinet_slug} {stamp}",
+                f"tester report: {tester_slug} {host_slug} {stamp}",
             )
         except RuntimeError as exc:
             return _json({"ok": False, "error": str(exc)}, 502)
@@ -216,6 +242,13 @@ def register_tester_report_v1(app, db):
             LAST_UPLOAD[cabinet_id] = time.monotonic()
 
         return _json(
-            {"ok": True, "path": path, "commit_sha": commit_sha, "report_sha256": report_sha},
+            {
+                "ok": True,
+                "path": path,
+                "commit_sha": commit_sha,
+                "report_sha256": report_sha,
+                "tester_name": tester_name,
+                "host_name": host_name,
+            },
             201,
         )
