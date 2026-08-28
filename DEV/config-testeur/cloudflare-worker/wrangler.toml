@@ -1,0 +1,12 @@
+name = "pincabos-tester-upload"
+main = "src/index.js"
+compatibility_date = "2026-08-28"
+workers_dev = true
+
+[[ratelimits]]
+name = "UPLOAD_RATE_LIMITER"
+namespace_id = "28492811"
+
+[ratelimits.simple]
+limit = 5
+period = 60
