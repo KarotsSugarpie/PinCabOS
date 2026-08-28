@@ -12,7 +12,7 @@ Exemple :
 
 Le nom du testeur est demandé au démarrage du script et est aussi écrit dans le rapport.
 
-## Flux V3.1 — GitHub uniquement
+## Flux V3.2 — GitHub uniquement
 
 Aucun composant `pincabos.cc` n'intervient dans ce flux.
 
@@ -26,25 +26,29 @@ Aucun composant `pincabos.cc` n'intervient dans ce flux.
 8. Le workflow valide l'auteur, le schéma, le nombre de chunks, la taille et le SHA-256.
 9. Le workflow reconstruit le `.txt` et écrit uniquement sous `DEV/config-testeur/` avec son `GITHUB_TOKEN` temporaire.
 10. L'Issue transport est ensuite fermé automatiquement.
-11. Le lanceur supprime le credential local du cabinet lorsque le job d'audit se termine.
+11. Le credential local reste installé sur le cabinet pour les prochains audits.
 
 Le credential distribué aux testeurs n'a pas besoin de `Contents: write` et ne doit jamais être un token principal donnant accès au code du dépôt.
 
-## Credential temporaire
+## Credential persistant
 
-Le credential d'upload doit être installé temporairement dans :
+Le credential d'upload est installé une seule fois dans :
 
 `/etc/pincabos/tester-report-issues.token`
 
 avec propriétaire `root:root` et mode `0600`.
 
-## Commande officielle d'audit
+Le lanceur V3.2 vérifie ces permissions mais ne supprime plus le token à la fin du job.
 
-À exécuter dans la console comme utilisateur `pinball`, après installation temporaire du credential :
+## Commande officielle du testeur
+
+À exécuter dans la console comme utilisateur `pinball` :
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/KarotsSugarpie/PinCabOS/main/DEV/config-testeur/pincabos-system-audit-launcher.sh)
 ```
+
+Le testeur ne fournit que son nom. Aucun token, login GitHub ou mot de passe ne lui est demandé.
 
 Le journal de suivi est conservé sous :
 
@@ -52,7 +56,7 @@ Le journal de suivi est conservé sous :
 
 ## Fichiers canoniques
 
-- `pincabos-system-audit-launcher.sh` : lanceur V3.1 résilient aux coupures SSH.
+- `pincabos-system-audit-launcher.sh` : lanceur V3.2 résilient aux coupures SSH, credential persistant.
 - `pincabos-system-audit.sh` : client d'audit GitHub-only V3.
 - `pincabos-tester-report-ingest-v3.py` : validateur/reconstructeur exécuté par GitHub Actions.
 - `.github/workflows/pincabos-tester-report-ingest.yml` : ingestion et commit automatique du rapport.
