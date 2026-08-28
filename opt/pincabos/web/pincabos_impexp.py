@@ -294,7 +294,7 @@ def register_pincabos_impexp_routes(app, app_globals):
       host.textContent = 'Envoi de ' + names + ' (' + totalMb.toFixed(1) + ' Mo)…';
       const xhr = new XMLHttpRequest();
       xhr.open('POST', anForm.action, true);
-      xhr.responseType = 'json';
+      xhr.responseType = 'text';
       xhr.setRequestHeader('X-PCOS-Async', '1');
       xhr.upload.onprogress = (e) => {
         if (!e.lengthComputable) return;
@@ -309,15 +309,30 @@ def register_pincabos_impexp_routes(app, app_globals):
         if (btn) btn.disabled = false;
       };
       xhr.onload = () => {
-        const data = xhr.response || {};
+        const raw = xhr.responseText || '';
+        const contentType = (
+          xhr.getResponseHeader('Content-Type') || ''
+        ).toLowerCase();
+        let data = null;
+        try {
+          data = raw ? JSON.parse(raw) : null;
+        } catch (_error) {
+          data = null;
+        }
         if (xhr.status >= 200 && xhr.status < 300 && data && data.next) {
           if (fill) fill.style.width = '100%';
           host.textContent = 'Envoi terminé — analyse en cours…';
           window.location.href = data.next;
-        } else {
-          host.textContent = 'Analyse impossible : ' + ((data && data.error) || ('HTTP ' + xhr.status));
-          if (btn) btn.disabled = false;
+          return;
         }
+        if (raw.trim() && contentType.includes('text/html')) {
+          document.open('text/html', 'replace');
+          document.write(raw);
+          document.close();
+          return;
+        }
+        host.textContent = 'Analyse impossible : ' + ((data && data.error) || ('HTTP ' + xhr.status));
+        if (btn) btn.disabled = false;
       };
       xhr.send(new FormData(anForm));
     });
