@@ -1,0 +1,82 @@
+name: PinCabOS Tester Audit V3.2 Maintenance
+
+on:
+  push:
+    paths:
+      - '.github/workflows/pincabos-tester-audit-v32-maintenance.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout canonical main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch canonical audit source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('DEV/config-testeur/pincabos-system-audit.sh')
+          text = p.read_text(encoding='utf-8')
+
+          old_section = '''section() {
+            printf '\\n================================================================\\n %s\\n================================================================\\n' "$1" >>"$REPORT"
+          }
+          '''
+          new_section = '''section() {
+            printf '  [SECTION] %s\\n' "$1"
+            printf '\\n================================================================\\n %s\\n================================================================\\n' "$1" >>"$REPORT"
+          }
+          '''
+          if old_section not in text:
+              raise SystemExit('NOGO: section() pattern not found')
+          text = text.replace(old_section, new_section, 1)
+
+          anchor = '''say() { printf '%s\\n' "$*"; }
+          '''
+          replacement = '''say() { printf '%s\\n' "$*"; }
+          trap 'rc=$?; printf "\\nNOGO [AUDIT] rc=%s line=%s cmd=%s\\n" "$rc" "${BASH_LINENO[0]:-?}" "$BASH_COMMAND" >&2' ERR
+          '''
+          if anchor not in text:
+              raise SystemExit('NOGO: say() anchor not found')
+          text = text.replace(anchor, replacement, 1)
+
+          old_versions = '''  for p in bash python3 git curl wget 7z unzip ffmpeg gcc cmake; do
+            if command -v "$p" >/dev/null 2>&1; then printf '%-12s : ' "$p"; "$p" --version 2>/dev/null | head -n 1; fi
+          done
+          '''
+          new_versions = '''  for p in bash python3 git curl wget 7z unzip ffmpeg gcc cmake; do
+            if command -v "$p" >/dev/null 2>&1; then
+              printf '%-12s : ' "$p"
+              { "$p" --version 2>/dev/null || "$p" 2>/dev/null || true; } | head -n 1 || true
+            fi
+          done
+          '''
+          if old_versions not in text:
+              raise SystemExit('NOGO: software version loop pattern not found')
+          text = text.replace(old_versions, new_versions, 1)
+
+          p.write_text(text, encoding='utf-8')
+          PY
+
+          bash -n DEV/config-testeur/pincabos-system-audit.sh
+
+      - name: Commit canonical fix
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add DEV/config-testeur/pincabos-system-audit.sh
+          git diff --cached --quiet && { echo 'NOGO: no audit change'; exit 1; }
+          git commit -m "fix(tester): harden audit against informational command failures"
+          git push origin HEAD:main
