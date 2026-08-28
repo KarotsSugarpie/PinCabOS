@@ -1,4 +1,5 @@
 /* PINCABOS_SMART_IMPORT_REAL_QUEUE_V1 */
+/* PINCABOS_SMART_IMPORT_OPTIONAL_VPSID_V1 */
 (function () {
   "use strict";
 
@@ -269,24 +270,23 @@
       vpsField.className = "pco-smart-import-file-vps";
 
       var vpsLabel = document.createElement("span");
-      vpsLabel.textContent = "VPS-ID";
+      vpsLabel.textContent = "VPS-ID (optionnel)";
 
       var vpsInput = document.createElement("input");
       vpsInput.type = "text";
       vpsInput.className = "pco-smart-import-file-vps-input";
-      vpsInput.placeholder = "Ex. K0A0V15Ui_";
+      vpsInput.placeholder = "Préférable — ex. K0A0V15Ui_";
       vpsInput.value = vpsIdsByKey[fileKey(file)] || "";
       vpsInput.autocomplete = "off";
       vpsInput.spellcheck = false;
       vpsInput.setAttribute(
         "aria-label",
-        "VPS-ID de " + file.name
+        "VPS-ID optionnel de " + file.name
       );
 
       vpsInput.addEventListener("input", function () {
         vpsIdsByKey[fileKey(file)] = vpsInput.value;
         synchronizeFinalInput();
-        vpsInput.classList.remove("is-missing");
       });
 
       vpsField.appendChild(vpsLabel);
@@ -452,8 +452,8 @@
     clearButton.addEventListener(
       "click",
       function () {
-          queue = [];
-          vpsIdsByKey = Object.create(null);
+        queue = [];
+        vpsIdsByKey = Object.create(null);
 
         synchronizeFinalInput();
         render();
@@ -494,37 +494,27 @@
             return;
           }
 
-          var missingVpsIds = queue.filter(function (file) {
-            return !String(
+          var vpsCount = queue.filter(function (file) {
+            return Boolean(String(
               vpsIdsByKey[fileKey(file)] || ""
-            ).trim();
-          });
+            ).trim());
+          }).length;
 
-          if (missingVpsIds.length > 0) {
-            event.preventDefault();
-
-            list.querySelectorAll(
-              ".pco-smart-import-file-vps-input"
-            ).forEach(function (input) {
-              input.classList.toggle(
-                "is-missing",
-                !input.value.trim()
-              );
-            });
-
-            showMessage(
-              "Entre le VPS-ID de chaque fichier avant l’analyse.",
-              "error"
-            );
-
-            return;
+          var detail = "";
+          if (vpsCount === queue.length) {
+            detail = " Tous les VPS-ID seront validés.";
+          } else if (vpsCount > 0) {
+            detail = " Les VPS-ID fournis seront utilisés; les champs vides restent permis.";
+          } else {
+            detail = " Aucun VPS-ID fourni; Smart Import déterminera la destination ou la demandera si nécessaire.";
           }
 
           showMessage(
             queue.length +
             (queue.length === 1
               ? " fichier est envoyé à Smart Import."
-              : " fichiers sont envoyés à Smart Import."),
+              : " fichiers sont envoyés à Smart Import.") +
+            detail,
             "success"
           );
         },

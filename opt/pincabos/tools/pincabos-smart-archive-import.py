@@ -550,7 +550,19 @@ def pincabos_load_resource_manifest(path, batch_dir):
     ):
         raise RuntimeError("NOGO: inventaire VPS-ID invalide.")
 
+    manifest_game_vpsid = str(
+        payload.get("game_vpsid", "") or ""
+    ).strip()
+    association_mode = str(
+        payload.get("association_mode", "complete_vpsid")
+        or "complete_vpsid"
+    ).strip()
+
+    if association_mode not in {"complete_vpsid", "partial_vpsid"}:
+        raise RuntimeError("NOGO: mode d'association VPS-ID invalide.")
+
     seen_names = set()
+    has_resolved_vpsid = False
 
     for resource in payload["resources"]:
         if not isinstance(resource, dict):
@@ -559,6 +571,8 @@ def pincabos_load_resource_manifest(path, batch_dir):
         stored_name = str(resource.get("stored_name", "") or "").strip()
         vpsid = str(resource.get("vpsid", "") or "").strip()
         game_vpsid = str(resource.get("game_vpsid", "") or "").strip()
+        resource_type = str(resource.get("resource_type", "") or "").strip()
+        association = str(resource.get("association", "") or "").strip()
         expected_sha256 = str(resource.get("sha256", "") or "").strip().lower()
         candidate = batch_dir / stored_name
 
@@ -573,10 +587,31 @@ def pincabos_load_resource_manifest(path, batch_dir):
 
         seen_names.add(stored_name.casefold())
 
-        if not vpsid or game_vpsid != str(payload["game_vpsid"]).strip():
+        if game_vpsid.casefold() != manifest_game_vpsid.casefold():
             raise RuntimeError(
-                f"NOGO: identité VPSDB incohérente pour {stored_name}."
+                f"NOGO: jeu VPSDB incohérent pour {stored_name}."
             )
+
+        if vpsid:
+            has_resolved_vpsid = True
+            if resource_type == "unresolved":
+                raise RuntimeError(
+                    f"NOGO: type unresolved interdit avec VPS-ID pour {stored_name}."
+                )
+        else:
+            if association_mode != "partial_vpsid":
+                raise RuntimeError(
+                    f"NOGO: VPS-ID manquant dans un inventaire complet: {stored_name}."
+                )
+            if resource_type != "unresolved" or association != "inferred_game":
+                raise RuntimeError(
+                    f"NOGO: ressource sans VPS-ID non marquée comme inférée: {stored_name}."
+                )
+            if bool(resource.get("contains_vpu_patch")):
+                raise RuntimeError(
+                    "NOGO: un patch VPU Remix .dif exige son VPS-ID exact: "
+                    f"{stored_name}."
+                )
 
         if not candidate.is_file() or candidate.is_symlink():
             raise RuntimeError(
@@ -590,6 +625,11 @@ def pincabos_load_resource_manifest(path, batch_dir):
             raise RuntimeError(
                 f"NOGO: SHA-256 du fichier modifié depuis l'analyse: {stored_name}"
             )
+
+    if association_mode == "partial_vpsid" and not has_resolved_vpsid:
+        raise RuntimeError(
+            "NOGO: inventaire partiel sans aucun VPS-ID d'ancrage validé."
+        )
 
     actual_names = {
         item.name.casefold()
@@ -622,6 +662,9 @@ def pincabos_load_resource_manifest(path, batch_dir):
 
     for resource in payload["resources"]:
         vpsid = str(resource.get("vpsid", "") or "").strip()
+        if not vpsid:
+            continue
+
         expected = resource_index.get(vpsid.casefold(), [])
 
         if len(expected) != 1:
@@ -962,6 +1005,7 @@ def pincabos_validate_existing_identity(
     incoming_vpsid,
     parent_vpsid="",
     game_vpsid="",
+    allow_missing_vpsid=False,
 ):
     identity = (
         pincabos_read_existing_table_identity(
@@ -1004,6 +1048,12 @@ def pincabos_validate_existing_identity(
         game_vpsid
         or ""
     ).strip()
+
+    if allow_missing_vpsid and (
+        not existing_vpsid or not incoming_vpsid
+    ):
+        identity["relation"] = "selected_target"
+        return identity
 
     if not existing_vpsid:
         raise RuntimeError(
@@ -2038,7 +2088,7 @@ def extract_all_inputs(batch_dir, extract_root, resource_manifest=None):
 
             if resolved is None:
                 raise RuntimeError(
-                    "NOGO: fichier sans VPS-ID dans le batch analysé: "
+                    "NOGO: fichier absent de l’inventaire Smart Import analysé: "
                     f"{item.name}"
                 )
 
@@ -4299,6 +4349,10 @@ def main():
         default="",
     )
     ap.add_argument(
+        "--target-existing",
+        action="store_true",
+    )
+    ap.add_argument(
         "--rom",
         default="",
     )
@@ -4357,6 +4411,7 @@ def main():
     )
 
     resource_manifest = {}
+    target_existing = bool(args.target_existing)
 
     if args.resources_json.strip():
         resource_manifest = pincabos_load_resource_manifest(
@@ -4418,22 +4473,32 @@ def main():
         )
 
         try:
-            table_dir = (
-                pincabos_find_existing_table_dir_by_game(
-                    game_vpsid,
-                    incoming_title,
-                )
-                if resource_manifest
-                else pincabos_find_existing_table_dir(
+            if target_existing:
+                table_dir = pincabos_find_existing_table_dir(
                     incoming_title
                 )
-            )
+            else:
+                table_dir = (
+                    pincabos_find_existing_table_dir_by_game(
+                        game_vpsid,
+                        incoming_title,
+                    )
+                    if resource_manifest
+                    else pincabos_find_existing_table_dir(
+                        incoming_title
+                    )
+                )
 
             existed_before = (
                 table_dir.is_dir()
             )
 
-            if existed_before and resource_manifest:
+            if target_existing and not existed_before:
+                raise RuntimeError(
+                    "NOGO: table de destination explicitement choisie absente."
+                )
+
+            if existed_before and (resource_manifest or target_existing):
                 incoming_title = table_dir.name
 
                 if not vpsid:
@@ -4447,7 +4512,7 @@ def main():
                         or ""
                     ).strip()
 
-                    if not vpsid:
+                    if not vpsid and not target_existing:
                         raise RuntimeError(
                             "NOGO: ressource auxiliaire destinée à une "
                             "table existante sans VPSId principal fiable."
@@ -4457,6 +4522,7 @@ def main():
                 not existed_before
                 and resource_manifest
                 and not vpsid
+                and resource_manifest.get("association_mode") != "partial_vpsid"
             ):
                 raise RuntimeError(
                     "NOGO: les ressources VPSDB ne contiennent pas de "
@@ -4471,6 +4537,7 @@ def main():
                         vpsid,
                         parent_vpsid=parent_vpsid,
                         game_vpsid=game_vpsid,
+                        allow_missing_vpsid=target_existing,
                     )
                 )
 
@@ -4484,9 +4551,10 @@ def main():
                 }:
                     source_identity = existing_identity.get("vpsid", "")
                     log(
-                        "MODE VPU UPDATE        : "
+                        "MODE UPDATE VPSDB      : "
                         f"source VPSId {source_identity} "
-                        f"-> patch VPSId {vpsid}"
+                        f"-> cible VPSId {vpsid}; "
+                        "type de contenu déterminé après extraction"
                     )
                 else:
                     log(
@@ -4541,6 +4609,23 @@ def main():
                     ),
                 )
 
+                bundled_vpxs = sorted(
+                    item
+                    for item in list_files(extract_root)
+                    if item.suffix.lower() == ".vpx"
+                    and not should_skip_file(item)
+                )
+                has_vpu_patch = bool(pincabos_vpu_patch_files(extract_root))
+
+                if len(bundled_vpxs) > 1 and not has_vpu_patch:
+                    raise RuntimeError(
+                        "NOGO: plusieurs VPX complets ont été détectés dans le "
+                        "lot; Smart Import refuse de choisir le plus gros fichier "
+                        "comme table principale."
+                    )
+
+                bundled_main_vpx = choose_main_vpx(extract_root)
+
                 patch_info = pincabos_apply_vpu_patch(
                     extract_root,
                     existing_table_dir=(
@@ -4564,10 +4649,26 @@ def main():
                         "vpu_game",
                     }
                     and not patch_info
+                    and not bundled_main_vpx
                 ):
                     raise RuntimeError(
                         "NOGO: transition VPSId parent -> mod refusée "
-                        "car aucun patch VPU Remix .dif n'a été détecté."
+                        "car aucun patch VPU Remix .dif et aucun VPX complet "
+                        "n'ont été détectés."
+                    )
+
+                if (
+                    existed_before
+                    and existing_identity.get("relation") in {
+                        "vpu_parent",
+                        "vpu_game",
+                    }
+                    and not patch_info
+                    and bundled_main_vpx
+                ):
+                    log(
+                        "MODE VPX COMPLET       : relation parent/mod VPSDB, "
+                        "VPX complet fourni; aucun .dif requis"
                     )
 
                 if patch_info:
@@ -4579,12 +4680,16 @@ def main():
                 main_vpx = (
                     Path(patch_info["output_path"])
                     if patch_info
-                    else choose_main_vpx(extract_root)
+                    else bundled_main_vpx
                 )
 
                 identity_vpx = main_vpx
 
-                if not identity_vpx and existed_before and resource_manifest:
+                if (
+                    not identity_vpx
+                    and existed_before
+                    and (resource_manifest or target_existing)
+                ):
                     installed_vpxs = sorted(
                         item
                         for item in table_dir.glob("*.vpx")
@@ -4799,6 +4904,7 @@ def main():
                             vpsid,
                             parent_vpsid=parent_vpsid,
                             game_vpsid=game_vpsid,
+                            allow_missing_vpsid=target_existing,
                         )
                     )
 
