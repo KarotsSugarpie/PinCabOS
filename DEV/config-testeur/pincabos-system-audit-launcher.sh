@@ -4,7 +4,6 @@ umask 077
 clear 2>/dev/null || true
 
 EXPECTED_USER="pinball"
-TOKEN_FILE="/etc/pincabos/tester-report-issues.token"
 RAW_AUDIT="https://raw.githubusercontent.com/KarotsSugarpie/PinCabOS/main/DEV/config-testeur/pincabos-system-audit.sh"
 WORK_DIR="$HOME/.cache/pincabos-tester-report"
 AUDIT_SCRIPT="$WORK_DIR/pincabos-system-audit.sh"
@@ -21,25 +20,12 @@ if [[ "$(id -un)" != "$EXPECTED_USER" ]]; then
 fi
 command -v curl >/dev/null 2>&1 || { say "NOGO [PROTECTION] curl absent."; exit 1; }
 command -v bash >/dev/null 2>&1 || { say "NOGO [PROTECTION] bash absent."; exit 1; }
-command -v sudo >/dev/null 2>&1 || { say "NOGO [PROTECTION] sudo absent."; exit 1; }
 command -v nohup >/dev/null 2>&1 || { say "NOGO [PROTECTION] nohup absent."; exit 1; }
-if ! sudo -n true >/dev/null 2>&1; then
-  say "NOGO [PROTECTION] sudo NOPASSWD PinCabOS indisponible."
-  exit 1
-fi
-
-TOKEN_META="$(sudo -n stat -c '%u:%g:%a' "$TOKEN_FILE" 2>/dev/null || true)"
-if [[ "$TOKEN_META" != "0:0:600" ]]; then
-  say "NOGO [PROTECTION] Credential GitHub absent ou permissions incorrectes."
-  say "Attendu : $TOKEN_FILE en root:root 0600"
-  say "Le token doit etre installe une seule fois sur ce PinCabOS."
-  exit 1
-fi
 
 say "================================================================"
-say " PINFORGE-SAFE - PINCABOS TESTER SYSTEM AUDIT V3.2"
-say " MODE RESILIENT SSH - GITHUB ONLY"
-say " CREDENTIAL PERSISTANT"
+say " PINFORGE-SAFE - PINCABOS TESTER SYSTEM AUDIT V4"
+say " MODE RESILIENT SSH - CLOUDFLARE -> GITHUB"
+say " AUCUN TOKEN SUR LE CABINET"
 say "================================================================"
 say
 while :; do
@@ -80,7 +66,7 @@ say
 say "GO [OK] Audit lance en tache detachee."
 say "PID     : $PID"
 say "Journal : $LOG_FILE"
-say "Credential GitHub : conserve dans $TOKEN_FILE"
+say "Credential local : AUCUN"
 say "SSH peut maintenant se couper sans interrompre l'audit."
 say
 say "Suivi en direct :"
