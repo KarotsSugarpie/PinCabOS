@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
-"""PinCabOS tester report endpoint V2."""
+"""PinCabOS tester report endpoint V3: authenticated spool, no GitHub secret in web process."""
 
-import base64
 import hashlib
-import json
-import os
 import re
 import secrets
 import threading
 import time
-import urllib.error
-import urllib.parse
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -20,10 +14,8 @@ from flask import jsonify, request
 AUTH = "PinCabOS-Device"
 MAX_BYTES = 512 * 1024
 RATE_SECONDS = 60
-REPO = "KarotsSugarpie/PinCabOS"
-BRANCH = "main"
 DEST = "DEV/config-testeur"
-TOKEN_FILE = Path("/etc/pincabos-release-center/tester-report-github.token")
+SPOOL = Path("/var/lib/pincabos-release/tester-reports/incoming")
 RATE_LOCK = threading.Lock()
 LAST_UPLOAD = {}
 
@@ -56,17 +48,6 @@ def _token():
     return token if 32 <= len(token) <= 256 else ""
 
 
-def _github_token():
-    token = str(os.environ.get("PINCABOS_TESTER_REPORT_GITHUB_TOKEN") or "").strip()
-    if token:
-        return token
-    try:
-        token = TOKEN_FILE.read_text(encoding="utf-8").strip()
-    except OSError:
-        return ""
-    return "" if "\n" in token or "\r" in token else token
-
-
 def _slug(value, fallback):
     value = str(value or "").strip().lower()
     value = re.sub(r"[^a-z0-9._-]+", "-", value)
@@ -96,46 +77,8 @@ def _sanitize(text):
     )
 
 
-def _github_put(token, path, content, message):
-    url = (
-        f"https://api.github.com/repos/{REPO}/contents/"
-        + urllib.parse.quote(path, safe="/")
-    )
-    body = json.dumps(
-        {
-            "message": message,
-            "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
-            "branch": BRANCH,
-        },
-        separators=(",", ":"),
-    ).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=body,
-        method="PUT",
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": "Bearer " + token,
-            "Content-Type": "application/json",
-            "User-Agent": "PinCabOS-Tester-Report/2",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as response:
-            data = json.loads(response.read().decode("utf-8", errors="replace"))
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"github_http_{exc.code}") from None
-    except urllib.error.URLError:
-        raise RuntimeError("github_unreachable") from None
-    sha = str(((data.get("commit") or {}).get("sha") or ""))
-    if not sha:
-        raise RuntimeError("github_invalid_response")
-    return sha
-
-
 def register_tester_report_v1(app, db):
-    """Register V2 endpoint while keeping the existing register function name."""
+    """Register V3 endpoint while keeping the original module registration name."""
     if getattr(app, "_pincabos_tester_report_v1", False):
         return
     app._pincabos_tester_report_v1 = True
@@ -203,10 +146,6 @@ def register_tester_report_v1(app, db):
         if "PINFORGE-SAFE - PINCABOS TESTER SYSTEM AUDIT" not in report:
             return _json({"ok": False, "error": "invalid_report_marker"}, 400)
 
-        github_token = _github_token()
-        if not github_token:
-            return _json({"ok": False, "error": "github_bridge_not_configured"}, 503)
-
         stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         tester_slug = _slug(tester_name, "testeur")
         host_slug = _slug(host_name, "pincabos")
@@ -228,15 +167,16 @@ def register_tester_report_v1(app, db):
             "============================================================\n\n"
             + report
         )
+
         try:
-            commit_sha = _github_put(
-                github_token,
-                path,
-                content,
-                f"tester report: {tester_slug} {host_slug} {stamp}",
-            )
-        except RuntimeError as exc:
-            return _json({"ok": False, "error": str(exc)}, 502)
+            SPOOL.mkdir(parents=True, exist_ok=True)
+            temporary = SPOOL / ("." + filename + ".tmp")
+            final = SPOOL / filename
+            temporary.write_text(content, encoding="utf-8")
+            temporary.chmod(0o640)
+            temporary.replace(final)
+        except OSError:
+            return _json({"ok": False, "error": "report_spool_unavailable"}, 503)
 
         with RATE_LOCK:
             LAST_UPLOAD[cabinet_id] = time.monotonic()
@@ -244,11 +184,11 @@ def register_tester_report_v1(app, db):
         return _json(
             {
                 "ok": True,
+                "queued": True,
                 "path": path,
-                "commit_sha": commit_sha,
                 "report_sha256": report_sha,
                 "tester_name": tester_name,
                 "host_name": host_name,
             },
-            201,
+            202,
         )
