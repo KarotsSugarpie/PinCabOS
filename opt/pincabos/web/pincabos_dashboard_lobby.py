@@ -41,13 +41,13 @@ def _pco_engine_maj_html(kv):
              if c.get("update_available")]
     if not dispo:
         return kv("Mises \u00e0 jour", "Tout \u00e0 jour")
-    noms = ", ".join(c.get("name", "") for c in dispo)
+    n = len(dispo)
+    libelle = ("\u25cf %d mises \u00e0 jour \u2014 voir" % n) if n > 1 \
+        else "\u25cf 1 mise \u00e0 jour \u2014 voir"
     return (
-        '<a class="pco-kv" href="/tools/updates-all" '
-        'style="text-decoration:none;color:inherit;cursor:pointer;">'
-        '<span>Mises \u00e0 jour</span>'
-        f'<b style="color:#e0a94b">\u25cf {len(dispo)} \u2192 '
-        f'{html.escape(noms)}</b></a>')
+        '<a href="/tools/updates-all" style="display:block;width:100%;box-sizing:border-box;text-align:center;'
+        'margin:2px 0 12px;padding:10px 14px;border-radius:8px;background:#2d6cdf;'
+        'color:#fff;text-decoration:none;font-weight:600;">' + libelle + '</a>')
 
 
 def run(command: str, fallback: str = "—", timeout: int = 3) -> str:
