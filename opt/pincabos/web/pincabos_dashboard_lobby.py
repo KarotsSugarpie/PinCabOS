@@ -27,6 +27,22 @@ _STATUS_CACHE = {"at": 0.0, "value": {}}
 _CPU_SAMPLE = {"total": None, "idle": None}
 
 
+def _pco_engine_pincabos_kv(kv):
+    """Ligne PinCabOS (version installee + statut) depuis l'etat agrege."""
+    try:
+        data = json.loads(Path(
+            "/opt/pincabos/state/updates-available.json"
+        ).read_text(encoding="utf-8"))
+        c = next(x for x in (data.get("components") or [])
+                 if x.get("key") == "pincabos")
+    except Exception:
+        return ""
+    inst = c.get("installed") or "—"
+    if c.get("update_available"):
+        return kv("PinCabOS", f"{inst} → {c.get('available')}")
+    return kv("PinCabOS", f"{inst} (à jour)")
+
+
 def _pco_engine_maj_html(kv):
     """Resume des MAJ logiciels pour la tuile Moteur Pinball, depuis l'etat
     agrege ecrit par pincabos-updates-check. Un bouton mene a la page des
@@ -3454,6 +3470,7 @@ def widget_content(widget_id, meta, data, csrf):
 
         return (
             _pco_engine_maj_html(kv)
+            + _pco_engine_pincabos_kv(kv)
             + kv("Disponibilité", "VPX " + value(item["vpx"])
                  + " · Runtime " + value(item["runtime"])
                  + " · VPinFE " + value(item["vpinfe"]))
