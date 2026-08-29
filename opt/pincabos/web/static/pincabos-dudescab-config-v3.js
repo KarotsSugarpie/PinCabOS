@@ -903,12 +903,24 @@
   function pinFromLabel(t){ const m=/(\d+)/.exec(String(t ?? "")); return (/aucun/i.test(String(t ?? "")) || !m)?0:Number(m[1]); }
   function hexToRgb(hex){ const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex ?? "")); if(!m) return null; return {r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16),hex:("#"+m[1]+m[2]+m[3]).toLowerCase()}; }
 
-  const LABEL_TO_BINDING = (() => {
-    const m = {"None": {type:0, function:0}};
-    for (let f=0; f<36; f++){ const lbl=inputFunctionLabel({type:2, function:f}); if(!(lbl in m)) m[lbl]={type:2, function:f}; }
-    for (let f=0; f<KEY_NAMES.length; f++){ const lbl=inputFunctionLabel({type:1, function:f}); if(!(lbl in m)) m[lbl]={type:1, function:f}; }
-    return m;
+  const FUNCTION_CHOICES = (() => {
+    const list=[]; const seen=new Set();
+    const add=(t,f)=>{ const lbl=inputFunctionLabel({type:t, function:f}); if(lbl && !seen.has(lbl)){ seen.add(lbl); list.push({label:lbl, type:t, function:f}); } };
+    add(0,0);                                   // None
+    for(let f=0; f<32; f++) add(2,f);            // Button 1-32
+    for(let f=32; f<36; f++) add(2,f);           // DPAD Up/Right/Down/Left
+    for(let f=4; f<KEY_NAMES.length; f++){ const nm=KEY_NAMES[f]; if(nm && !/Invalid|ErrorRollOver|POSTFail|ErrorUndefined/.test(nm)) add(1,f); } // clavier + medias
+    return list;
   })();
+  const LABEL_TO_BINDING = Object.fromEntries(FUNCTION_CHOICES.map((c)=>[c.label, {type:c.type, function:c.function}]));
+  function populateInputFunctionSelects(){
+    const esc=(x)=>String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    const html=FUNCTION_CHOICES.map((c)=>`<option value="${esc(c.label)}">${esc(c.label)}</option>`).join("");
+    document.querySelectorAll('select[data-config-key$=".primary"],select[data-config-key$=".shifted"]').forEach((sel)=>{
+      if(!/^input\./.test(sel.dataset.configKey||"")) return;
+      const cur=sel.value; sel.innerHTML=html; if(cur && LABEL_TO_BINDING[cur]) sel.value=cur;
+    });
+  }
   function bindingFromLabel(label, original){
     original = original || {type:0, function:0};
     const orig = {type:Number(original.type)||0, function:Number(original.function)||0};
@@ -918,6 +930,9 @@
   }
   function writeBackSelectedOutputs(){
     const c=state.cardConfig; const ext=c && c.extensions && c.extensions[state.extensionIndex||0]; if(!ext) return;
+    if(ctrlEl("extension.1.name")) ext.name=String(ctrlVal("extension.1.name") ?? "");
+    if(ctrlEl("extension.1.id")) ext.address=num0(ctrlVal("extension.1.id"));
+    if(ctrlEl("extension.1.pwm") && ext.pwm_frequency!=null) ext.pwm_frequency=num0(ctrlVal("extension.1.pwm"));
     (ext.outputs||[]).forEach((o,off)=>{ const n=off+1;
       if(ctrlEl(`output.${n}.enabled`)) o.enabled=!!ctrlVal(`output.${n}.enabled`);
       if(ctrlEl(`output.${n}.name`)) o.name=String(ctrlVal(`output.${n}.name`) ?? "");
@@ -1044,7 +1059,7 @@
 
   function install() {
     ensureMaintenanceBanner();
-    installTabs(); installConfigEvents(); installOutputUi(); installMxUi(); installMonitor(); pauseFirmware();
+    installTabs(); installConfigEvents(); populateInputFunctionSelects(); installOutputUi(); installMxUi(); installMonitor(); pauseFirmware();
     setMaintenanceControls(false);
     $("dc-connect-btn").addEventListener("click", toggleConnection);
     $$('[data-card-action]').forEach((button) => button.addEventListener("click", () => protectedAction(button.dataset.cardAction).catch(()=>{})));
