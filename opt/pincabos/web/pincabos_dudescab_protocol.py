@@ -1497,6 +1497,86 @@ def register(app) -> None:
             app.logger.exception("DudesCab config write failed")
             return _error_response(exc)
 
+    @app.post("/api/dudescabconfig/protocol/plunger/calibrate")
+    def pincabos_dudescab_protocol_plunger_calibrate_v3():
+        try:
+            _require_maintenance()
+            with _state_lock:
+                admin = _admin_enabled
+            if not admin:
+                raise DudesCabProtocolError("Mode admin inactif : /protocol/connect d'abord.")
+            hid_command(REPORT_ADMIN, 110, expect_response=False)
+            return jsonify({"ok": True, "command": 110, "detail": "Calibration du plunger declenchee"})
+        except Exception as exc:
+            app.logger.exception("DudesCab plunger calibrate failed")
+            return _error_response(exc)
+
+    @app.post("/api/dudescabconfig/protocol/inputs/force")
+    def pincabos_dudescab_protocol_inputs_force_v3():
+        try:
+            _require_maintenance()
+            with _state_lock:
+                admin = _admin_enabled
+            if not admin:
+                raise DudesCabProtocolError("Mode admin inactif : /protocol/connect d'abord.")
+            payload = bytes.fromhex(str((_json_body() or {}).get("payload_hex", "")))
+            hid_command(REPORT_ADMIN, 107, payload, expect_response=False)
+            return jsonify({"ok": True, "command": 107, "sent_bytes": len(payload)})
+        except Exception as exc:
+            app.logger.exception("DudesCab force inputs failed")
+            return _error_response(exc)
+
+    @app.post("/api/dudescabconfig/protocol/flash/read")
+    def pincabos_dudescab_protocol_flash_read_v3():
+        try:
+            _require_maintenance()
+            with _state_lock:
+                admin = _admin_enabled
+            if not admin:
+                raise DudesCabProtocolError("Mode admin inactif : /protocol/connect d'abord.")
+            payload = bytes.fromhex(str((_json_body() or {}).get("payload_hex", "")))
+            resp = hid_command(REPORT_ADMIN, 105, payload, expect_response=True, timeout_ms=8000)
+            return jsonify({"ok": True, "command": 105, "response_hex": resp.hex(), "size": len(resp)})
+        except Exception as exc:
+            app.logger.exception("DudesCab flash read failed")
+            return _error_response(exc)
+
+    @app.post("/api/dudescabconfig/protocol/flash/write")
+    def pincabos_dudescab_protocol_flash_write_v3():
+        try:
+            _require_maintenance()
+            with _state_lock:
+                admin = _admin_enabled
+            if not admin:
+                raise DudesCabProtocolError("Mode admin inactif : /protocol/connect d'abord.")
+            body = _json_body() or {}
+            if not body.get("confirmed"):
+                raise ValueError("Confirmation requise (confirmed:true) : ecriture flash brute.")
+            data = bytes.fromhex(str(body.get("data_hex", "")))
+            if not data:
+                raise ValueError("data_hex requis.")
+            hid_command(REPORT_ADMIN, 106, data, expect_response=False)
+            return jsonify({"ok": True, "command": 106, "written": len(data)})
+        except Exception as exc:
+            app.logger.exception("DudesCab flash write failed")
+            return _error_response(exc)
+
+    @app.post("/api/dudescabconfig/protocol/flash/reset")
+    def pincabos_dudescab_protocol_flash_reset_v3():
+        try:
+            _require_maintenance()
+            with _state_lock:
+                admin = _admin_enabled
+            if not admin:
+                raise DudesCabProtocolError("Mode admin inactif : /protocol/connect d'abord.")
+            if not (_json_body() or {}).get("confirmed"):
+                raise ValueError("Confirmation requise (confirmed:true) : reset de la memoire flash.")
+            hid_command(REPORT_ADMIN, 104, expect_response=False)
+            return jsonify({"ok": True, "command": 104})
+        except Exception as exc:
+            app.logger.exception("DudesCab flash reset failed")
+            return _error_response(exc)
+
     @app.get("/api/dudescabconfig/protocol/live")
     def pincabos_dudescab_protocol_live_v3():
         """SAFE V3.1.4: never touch HID from background browser polling.
