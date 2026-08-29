@@ -125,7 +125,8 @@ def check_vpx():
     if not dernier:
         return comp("vpx", "VPX-BGFX", inst, None, False, ok=False)
     c = comp("vpx", "VPX-BGFX", inst, dernier, bool(inst) and inst != dernier)
-    c["manage_url"] = url  # pas d'updater interne : lien vers la release
+    c["release_url"] = url
+    c["manage_url"] = "/tools/vpx/update"  # page de MAJ interne
     return c
 
 
