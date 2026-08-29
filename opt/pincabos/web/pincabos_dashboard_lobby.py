@@ -45,9 +45,12 @@ def _pco_engine_maj_html(kv):
     libelle = ("\u25cf %d mises \u00e0 jour \u2014 voir" % n) if n > 1 \
         else "\u25cf 1 mise \u00e0 jour \u2014 voir"
     return (
-        '<a href="/tools/updates-all" style="display:block;width:100%;box-sizing:border-box;text-align:center;'
-        'margin:2px 0 12px;padding:10px 14px;border-radius:8px;background:#2d6cdf;'
-        'color:#fff;text-decoration:none;font-weight:600;">' + libelle + '</a>')
+        '<a href="/tools/updates-all" '
+        'style="display:inline-block;align-self:center;'
+        'margin:2px 0 8px;padding:6px 12px;border-radius:8px;'
+        'border:1px solid var(--accent);background:var(--panel2);'
+        'color:var(--accent);text-decoration:none;font-weight:700;font-size:11px;">'
+        + libelle + '</a>')
 
 
 def run(command: str, fallback: str = "—", timeout: int = 3) -> str:
