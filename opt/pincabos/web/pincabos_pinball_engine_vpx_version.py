@@ -16,7 +16,7 @@ from flask import jsonify, request
 
 
 MARKER = "PINCABOS_PINBALL_ENGINE_VPX_VERSION_V1"
-GITHUB_RELEASE_URL = "https://api.github.com/repos/vpinball/vpinball/releases/latest"
+GITHUB_RELEASE_URL = "https://api.github.com/repos/vpinball/vpinball/releases?per_page=20"
 CACHE_TTL_SECONDS = 300
 
 _cache_lock = threading.RLock()
@@ -222,6 +222,13 @@ def _remote_vpx() -> dict[str, Any]:
 
         with urllib.request.urlopen(request_obj, timeout=8) as response:
             payload = json.loads(response.read().decode("utf-8", "replace"))
+        if isinstance(payload, list):
+            payload = next(
+                (rel for rel in payload if isinstance(rel, dict)
+                 and "DO NOT USE" not in
+                 ((rel.get("name") or "") + " "
+                  + (rel.get("tag_name") or "")).upper()),
+                {})
 
         tag = str(payload.get("tag_name") or "").strip()
         assets = payload.get("assets") if isinstance(payload.get("assets"), list) else []
@@ -248,7 +255,7 @@ def _remote_vpx() -> dict[str, Any]:
         source_text = asset_name or tag
         version, revision, commit = _version_parts(source_text or tag)
 
-        display_bits = ["GitHub stable"]
+        display_bits = ["GitHub"]
         if version:
             display_bits.append(version)
         if revision:
@@ -310,7 +317,7 @@ def _comparison(local: dict[str, Any], remote: dict[str, Any]) -> dict[str, str]
         if local_version > remote_version:
             return {
                 "state": "ok",
-                "label": "Build local plus récent que la dernière release stable GitHub",
+                "label": "Build local plus récent que la dernière build GitHub",
             }
 
         if local_version < remote_version:
@@ -321,6 +328,15 @@ def _comparison(local: dict[str, Any], remote: dict[str, Any]) -> dict[str, str]
 
     local_rev = str(local.get("revision") or "")
     remote_rev = str(remote.get("revision") or "")
+
+    if local_rev.isdigit() and remote_rev.isdigit():
+        lr, rr = int(local_rev), int(remote_rev)
+        if lr < rr:
+            return {"state": "update", "label": "Mise à jour VPX-BGFX disponible"}
+        if lr > rr:
+            return {"state": "ok",
+                    "label": "Build local plus récent que la dernière build GitHub"}
+        return {"state": "ok", "label": f"À jour (build {local_rev})"}
 
     if local_rev and remote_rev and local_rev == remote_rev:
         return {
