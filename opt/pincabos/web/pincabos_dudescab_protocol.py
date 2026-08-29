@@ -502,12 +502,11 @@ class _ConfigReader:
 
     def pin(self, label: str = "bouton") -> int:
         raw = self.u8(label)
-        # Exact BufferUtils.ReadButton behavior from DudesCabConfig.dll:
-        # raw 33 = None, otherwise the Web/display pin is raw + 1.
-        if raw == 33:
-            return 0
+        # BufferUtils.ReadButton : 33 = aucun bouton. Certaines cartes renvoient
+        # 0xFF (255) ou un autre octet > 31 pour un bouton non initialise :
+        # on traite tout octet > 31 comme "aucun bouton" (0).
         if raw > 31:
-            raise DudesCabProtocolError(f"{label} invalide: valeur brute {raw}")
+            return 0
         return raw + 1
 
     def color(self, label: str) -> dict[str, Any]:
