@@ -1,0 +1,14 @@
+[Unit]
+Description=PinCabOS - verifie les mises a jour disponibles (OS, VPinFE, vpxtool)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/pincabos/tools/pincabos-updates-check
+
+[Service]
+Type=oneshot
+User=pinball
+Group=pinball
+Nice=15
+IOSchedulingClass=idle
+ExecStart=/opt/pincabos/tools/pincabos-updates-check
+TimeoutStartSec=120

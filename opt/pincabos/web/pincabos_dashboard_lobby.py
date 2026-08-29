@@ -27,6 +27,23 @@ _STATUS_CACHE = {"at": 0.0, "value": {}}
 _CPU_SAMPLE = {"total": None, "idle": None}
 
 
+def _pco_updates_hub_meta():
+    """(sous-titre, badge) de la tuile Mises a jour, depuis l'etat agrege."""
+    try:
+        data = json.loads(Path(
+            "/opt/pincabos/state/updates-available.json"
+        ).read_text(encoding="utf-8"))
+    except Exception:
+        return ("PinCabOS, VPinFE, vpxtool", False)
+    n = sum(1 for c in (data.get("components") or [])
+            if c.get("update_available"))
+    if n > 1:
+        return (f"\u25cf {n} mises \u00e0 jour disponibles", True)
+    if n == 1:
+        return ("\u25cf 1 mise \u00e0 jour disponible", True)
+    return ("PinCabOS, VPinFE, vpxtool \u2014 \u00e0 jour", False)
+
+
 def run(command: str, fallback: str = "—", timeout: int = 3) -> str:
     try:
         result = subprocess.run(
@@ -657,6 +674,19 @@ def registry_for_request():
         "href": "/tools/vpxtool/update",
         "image": "PCOSUpdateVPX.png",
         "image_url": "/static/pincabos-assets/PCOSUpdateVPX.png",
+    }
+
+    _pco_uh_sub, _pco_uh_badge = _pco_updates_hub_meta()
+    result["tool_updates_hub"] = {
+        "title": "Mises à jour",
+        "subtitle": _pco_uh_sub,
+        "category": "Système",
+        "kind": "tool",
+        "w": 2,
+        "h": 3,
+        "href": "/tools/updates-all",
+        "image": "PCOSUpdatePinCabOS.png",
+        "image_url": "/static/pincabos-assets/PCOSUpdatePinCabOS.png",
     }
     # === PINCABOS_DASHBOARD_SHORTCUTS_FAMILIES_LOGOS_V1 END ===
 

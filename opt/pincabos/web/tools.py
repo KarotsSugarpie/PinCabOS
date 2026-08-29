@@ -1150,6 +1150,15 @@ def register_tools_routes(app, page):
             app.logger.exception("vpxtool update UI registration failed: %s", _pco_vpxtool_err)
         except Exception:
             pass
+    # PINCABOS_UPDATES_HUB_V1
+    try:
+        from pincabos_updates_hub import register as _pco_updates_hub_reg
+        _pco_updates_hub_reg(app, page)
+    except Exception as _pco_updates_hub_err:
+        try:
+            app.logger.exception('updates hub UI registration failed: %s', _pco_updates_hub_err)
+        except Exception:
+            pass
     _tools_register_vpinfe_8001_embed_routes(app)
     _tools_register_sample_tables_routes(app)
     # PINCABOS_MEDIA_HUNTER_REGISTER_V1
