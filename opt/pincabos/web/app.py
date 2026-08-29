@@ -13828,6 +13828,171 @@ def tools_commander():
     except Exception:
         entries = []
 
+    # PINCABOS_EXPLORER_TABLE_PAGINATION_V1
+    # Pagination native côté Flask : seules les tables de la racine Tables
+    # sont découpées. Les dossiers internes et les autres racines Explorer
+    # conservent leur comportement historique.
+    pco_pagination_html = ""
+
+    if pco_native_root:
+        pco_per_page_choices = (25, 50, 100, 200)
+
+        try:
+            pco_per_page = int(request.args.get("per_page", "50"))
+        except (TypeError, ValueError):
+            pco_per_page = 50
+
+        if pco_per_page not in pco_per_page_choices:
+            pco_per_page = 50
+
+        try:
+            pco_page_number = int(request.args.get("page", "1"))
+        except (TypeError, ValueError):
+            pco_page_number = 1
+
+        pco_page_number = max(1, pco_page_number)
+        pco_total_entries = len(entries)
+        pco_total_pages = max(
+            1,
+            (pco_total_entries + pco_per_page - 1) // pco_per_page,
+        )
+        pco_page_number = min(pco_page_number, pco_total_pages)
+        pco_slice_start = (pco_page_number - 1) * pco_per_page
+        pco_slice_end = min(
+            pco_slice_start + pco_per_page,
+            pco_total_entries,
+        )
+
+        def pco_pagination_url(page_number):
+            return (
+                "/tools/commander?"
+                + urllib.parse.urlencode({
+                    "root": root_name,
+                    "path": rel,
+                    "page": max(1, min(int(page_number), pco_total_pages)),
+                    "per_page": pco_per_page,
+                })
+            )
+
+        def pco_pagination_link(label, page_number, disabled=False, current_page=False):
+            classes = ["pcx-page-link"]
+            if disabled:
+                classes.append("is-disabled")
+            if current_page:
+                classes.append("is-current")
+
+            class_attr = " ".join(classes)
+
+            if disabled or current_page:
+                return (
+                    '<span class="' + class_attr + '">'
+                    + label
+                    + "</span>"
+                )
+
+            return (
+                '<a class="' + class_attr + '" href="'
+                + pco_pagination_url(page_number)
+                + '">'
+                + label
+                + "</a>"
+            )
+
+        pco_page_links = []
+        pco_page_links.append(
+            pco_pagination_link(
+                "« Première",
+                1,
+                disabled=pco_page_number <= 1,
+            )
+        )
+        pco_page_links.append(
+            pco_pagination_link(
+                "‹ Préc.",
+                pco_page_number - 1,
+                disabled=pco_page_number <= 1,
+            )
+        )
+
+        pco_window_start = max(1, pco_page_number - 2)
+        pco_window_end = min(pco_total_pages, pco_page_number + 2)
+
+        for pco_visible_page in range(pco_window_start, pco_window_end + 1):
+            pco_page_links.append(
+                pco_pagination_link(
+                    str(pco_visible_page),
+                    pco_visible_page,
+                    current_page=(pco_visible_page == pco_page_number),
+                )
+            )
+
+        pco_page_links.append(
+            pco_pagination_link(
+                "Suiv. ›",
+                pco_page_number + 1,
+                disabled=pco_page_number >= pco_total_pages,
+            )
+        )
+        pco_page_links.append(
+            pco_pagination_link(
+                "Dernière »",
+                pco_total_pages,
+                disabled=pco_page_number >= pco_total_pages,
+            )
+        )
+
+        pco_per_page_options = "".join(
+            '<option value="'
+            + str(pco_choice)
+            + ('" selected>' if pco_choice == pco_per_page else '">')
+            + str(pco_choice)
+            + "</option>"
+            for pco_choice in pco_per_page_choices
+        )
+
+        if pco_total_entries:
+            pco_range_text = (
+                str(pco_slice_start + 1)
+                + "–"
+                + str(pco_slice_end)
+                + " sur "
+                + str(pco_total_entries)
+                + " tables"
+            )
+        else:
+            pco_range_text = "0 table"
+
+        pco_pagination_html = (
+            '<nav class="pcx-pagination" aria-label="Navigation des tables">'
+            '<div class="pcx-pagination-summary">'
+            + pco_range_text
+            + " · Page "
+            + str(pco_page_number)
+            + "/"
+            + str(pco_total_pages)
+            + "</div>"
+            '<div class="pcx-pagination-links">'
+            + "".join(pco_page_links)
+            + "</div>"
+            '<form class="pcx-pagination-size" method="get" action="/tools/commander">'
+            '<input type="hidden" name="root" value="'
+            + esc(root_name)
+            + '">'
+            '<input type="hidden" name="path" value="'
+            + esc(rel)
+            + '">'
+            '<input type="hidden" name="page" value="1">'
+            '<label>Tables par page '
+            '<select name="per_page">'
+            + pco_per_page_options
+            + "</select></label>"
+            '<button type="submit" class="pcx-small">Appliquer</button>'
+            "</form>"
+            "</nav>"
+        )
+
+        entries = entries[pco_slice_start:pco_slice_end]
+
     for item in entries:
         try:
             item_rel = str(item.relative_to(root))
@@ -14056,6 +14221,83 @@ def tools_commander():
   color:inherit;
   min-width:260px;
 }
+/* PINCABOS_EXPLORER_TABLE_PAGINATION_V1_CSS */
+.pcx-pagination {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:10px 0 14px;
+  padding:10px 12px;
+  border:1px solid #2e3540;
+  border-radius:10px;
+  background:#0b0d10;
+}
+.pcx-pagination-summary {
+  color:#d7dbe2;
+  font-weight:700;
+  white-space:nowrap;
+}
+.pcx-pagination-links {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.pcx-page-link {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  min-height:32px;
+  padding:5px 9px;
+  border:1px solid #343b46;
+  border-radius:8px;
+  background:#181c22;
+  color:#fff;
+  text-decoration:none;
+  font-weight:800;
+}
+.pcx-page-link:hover {
+  border-color:#ff8c00;
+  background:rgba(255,140,0,.20);
+}
+.pcx-page-link.is-current {
+  border-color:#ffb000;
+  background:#ff8c00;
+  color:#111;
+}
+.pcx-page-link.is-disabled {
+  opacity:.38;
+  cursor:default;
+}
+.pcx-pagination-size {
+  display:flex;
+  align-items:center;
+  gap:7px;
+  white-space:nowrap;
+}
+.pcx-pagination-size select {
+  padding:6px 8px;
+  border:1px solid #5f2a91;
+  border-radius:8px;
+  background:#0b0d10;
+  color:#fff;
+}
+@media(max-width:900px) {
+  .pcx-pagination {
+    align-items:stretch;
+  }
+  .pcx-pagination-summary,
+  .pcx-pagination-links,
+  .pcx-pagination-size {
+    width:100%;
+    justify-content:center;
+  }
+}
+
 .pcx-table {
   width:100%;
   border-collapse:collapse;
@@ -14341,6 +14583,8 @@ document.addEventListener("DOMContentLoaded", function () {
         <input id="pcxSearch" class="pcx-search" placeholder="Rechercher..." oninput="pcxFilter()">
       </div>
 
+      __PAGINATION_TOP__
+
       <div id="pcxList">
         <table class="pcx-table">
           <thead>
@@ -14361,6 +14605,8 @@ document.addEventListener("DOMContentLoaded", function () {
       <div id="pcxGrid" class="pcx-grid">
         __CARDS__
       </div>
+
+      __PAGINATION_BOTTOM__
     </div>
   </div>
 </div>
@@ -14700,6 +14946,8 @@ pcxView(localStorage.getItem('pincabosPcxView') || 'list');
     body = body.replace("__CURRENT_REL__", esc(current_rel_display))
     body = body.replace("__CURRENT_ABS_PATH__", esc(str(current)))
     body = body.replace("__SIDEBAR__", sidebar)
+    body = body.replace("__PAGINATION_TOP__", pco_pagination_html)
+    body = body.replace("__PAGINATION_BOTTOM__", pco_pagination_html)
     body = body.replace("__PARENT_ROW__", parent_row)
     body = body.replace("__ROWS__", rows)
     body = body.replace("__CARDS__", cards)
