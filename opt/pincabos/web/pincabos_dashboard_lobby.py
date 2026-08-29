@@ -27,21 +27,27 @@ _STATUS_CACHE = {"at": 0.0, "value": {}}
 _CPU_SAMPLE = {"total": None, "idle": None}
 
 
-def _pco_updates_hub_meta():
-    """(sous-titre, badge) de la tuile Mises a jour, depuis l'etat agrege."""
+def _pco_engine_maj_html(kv):
+    """Resume des MAJ logiciels pour la tuile Moteur Pinball, depuis l'etat
+    agrege ecrit par pincabos-updates-check. Un bouton mene a la page des
+    mises a jour quand au moins un composant en a une."""
     try:
         data = json.loads(Path(
             "/opt/pincabos/state/updates-available.json"
         ).read_text(encoding="utf-8"))
     except Exception:
-        return ("PinCabOS, VPinFE, vpxtool", False)
-    n = sum(1 for c in (data.get("components") or [])
-            if c.get("update_available"))
-    if n > 1:
-        return (f"\u25cf {n} mises \u00e0 jour disponibles", True)
-    if n == 1:
-        return ("\u25cf 1 mise \u00e0 jour disponible", True)
-    return ("PinCabOS, VPinFE, vpxtool \u2014 \u00e0 jour", False)
+        return ""
+    dispo = [c for c in (data.get("components") or [])
+             if c.get("update_available")]
+    if not dispo:
+        return kv("Mises \u00e0 jour", "Tout \u00e0 jour")
+    noms = ", ".join(c.get("name", "") for c in dispo)
+    texte = f"\u25cf {len(dispo)} : {noms}"
+    bouton = ('<div style="margin-top:8px"><a href="/tools/updates-all" '
+              'style="display:inline-block;padding:6px 12px;border-radius:8px;'
+              'background:#2d6cdf;color:#fff;text-decoration:none;'
+              'font-weight:600;">Voir les mises \u00e0 jour</a></div>')
+    return kv("Mises \u00e0 jour", texte) + bouton
 
 
 def run(command: str, fallback: str = "—", timeout: int = 3) -> str:
@@ -676,18 +682,6 @@ def registry_for_request():
         "image_url": "/static/pincabos-assets/PCOSUpdateVPX.png",
     }
 
-    _pco_uh_sub, _pco_uh_badge = _pco_updates_hub_meta()
-    result["tool_updates_hub"] = {
-        "title": "Mises à jour",
-        "subtitle": _pco_uh_sub,
-        "category": "Système",
-        "kind": "tool",
-        "w": 2,
-        "h": 3,
-        "href": "/tools/updates-all",
-        "image": "PCOSUpdatePinCabOS.png",
-        "image_url": "/static/pincabos-assets/PCOSUpdatePinCabOS.png",
-    }
     # === PINCABOS_DASHBOARD_SHORTCUTS_FAMILIES_LOGOS_V1 END ===
 
     # PINCABOS_AUDIO_VOLUME_DASHBOARD_WIDGET_V2_REGISTRY
@@ -3465,6 +3459,7 @@ def widget_content(widget_id, meta, data, csrf):
             + kv("VPX local", local_text)
             + kv("VPX GitHub", github_text)
             + kv("Statut VPX", status_text)
+            + _pco_engine_maj_html(kv)
         )
 
     if kind == "audio":
