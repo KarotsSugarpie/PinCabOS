@@ -1,0 +1,1152 @@
+================================================================
+ PINFORGE-SAFE - PINCABOS TESTER SYSTEM AUDIT V4
+ MATERIEL + SYSTEME + CONFIGURATION
+ LECTURE SEULE - USER PINBALL
+ TRANSPORT CLOUDFLARE WORKER -> GITHUB
+================================================================
+
+Testeur       : YaNFoX
+Hostname      : PinCabOs
+Date locale   : 2026-08-29 23:19:43 CEST
+Utilisateur   : pinball
+UID           : 1000
+Nom local     : yanfox-pincabos-20260829-231943-system-audit.txt
+
+Confidentialite :
+ - aucune cle SSH
+ - aucun mot de passe
+ - aucun token GitHub sur le cabinet
+ - aucune adresse IP
+ - aucune adresse MAC
+ - aucun UUID/serial machine
+ - aucun git remote
+
+================================================================
+ 1. SYSTEME
+================================================================
+
+--- Distribution ---
+PRETTY_NAME="Ubuntu 26.04 LTS"
+NAME="Ubuntu"
+VERSION_ID="26.04"
+VERSION="26.04 LTS (Resolute Raccoon)"
+VERSION_CODENAME=resolute
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=resolute
+LOGO=ubuntu-logo
+
+--- Kernel ---
+Linux 7.0.0-29-generic #29-Ubuntu SMP PREEMPT_DYNAMIC Fri Jul 17 20:52:35 UTC 2026 x86_64 GNU/Linux
+
+--- Architecture ---
+x86_64
+
+--- Uptime ---
+ 23:19:44 up  5:22,  1 user,  load average: 0,10, 0,26, 0,33
+
+--- Dernier boot ---
+
+--- Virtualisation ---
+none
+
+--- Secure Boot ---
+SecureBoot disabled
+Platform is in Setup Mode
+
+================================================================
+ 2. MACHINE / CARTE MERE / BIOS
+================================================================
+sys_vendor           : ASUS
+product_name         : System Product Name
+product_version      : System Version
+board_vendor         : ASUSTeK COMPUTER INC.
+board_name           : ROG STRIX Z390-F GAMING
+board_version        : Rev 1.xx
+bios_vendor          : American Megatrends Inc.
+bios_version         : 2102
+bios_date            : 05/03/2024
+
+================================================================
+ 3. CPU
+================================================================
+
+--- CPU complet ---
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Address sizes:                           39 bits physical, 48 bits virtual
+Byte Order:                              Little Endian
+CPU(s):                                  8
+On-line CPU(s) list:                     0-7
+Vendor ID:                               GenuineIntel
+Model name:                              Intel(R) Core(TM) i7-9700KF CPU @ 3.60GHz
+CPU family:                              6
+Model:                                   158
+Thread(s) per core:                      1
+Core(s) per socket:                      8
+Socket(s):                               1
+Stepping:                                12
+CPU(s) scaling MHz:                      96%
+CPU max MHz:                             4900,0000
+CPU min MHz:                             800,0000
+BogoMIPS:                                7200,00
+Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb ssbd ibrs ibpb stibp fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp md_clear flush_l1d arch_capabilities
+L1d cache:                               256 KiB (8 instances)
+L1i cache:                               256 KiB (8 instances)
+L2 cache:                                2 MiB (8 instances)
+L3 cache:                                12 MiB (1 instance)
+NUMA node(s):                            1
+NUMA node0 CPU(s):                       0-7
+Vulnerability Gather data sampling:      Vulnerable
+Vulnerability Ghostwrite:                Not affected
+Vulnerability Indirect target selection: Not affected
+Vulnerability Itlb multihit:             KVM: Mitigation: VMX unsupported
+Vulnerability L1tf:                      Not affected
+Vulnerability Mds:                       Mitigation; Clear CPU buffers; SMT disabled
+Vulnerability Meltdown:                  Not affected
+Vulnerability Mmio stale data:           Mitigation; Clear CPU buffers; SMT disabled
+Vulnerability Old microcode:             Not affected
+Vulnerability Reg file data sampling:    Not affected
+Vulnerability Retbleed:                  Mitigation; IBRS
+Vulnerability Spec rstack overflow:      Not affected
+Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:                Mitigation; IBRS; IBPB conditional; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected
+Vulnerability Srbds:                     Mitigation; Microcode
+Vulnerability Tsa:                       Not affected
+Vulnerability Tsx async abort:           Mitigation; TSX disabled
+Vulnerability Vmscape:                   Mitigation; IBPB before exit to userspace
+
+--- CPU governor ---
+scaling_driver : intel_pstate
+scaling_governor : performance
+
+================================================================
+ 4. MEMOIRE
+================================================================
+
+--- RAM ---
+               total        used        free      shared  buff/cache   available
+Mem:            30Gi       1,1Gi        27Gi       4,3Mi       1,4Gi        29Gi
+Swap:             0B          0B          0B
+
+MemTotal:       31716804 kB
+MemFree:        29330960 kB
+MemAvailable:   30519980 kB
+Buffers:          137784 kB
+Cached:          1255648 kB
+SwapCached:            0 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+AnonHugePages:         0 kB
+ShmemHugePages:        0 kB
+FileHugePages:      8192 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+
+================================================================
+ 5. STOCKAGE
+================================================================
+
+--- Disques / partitions ---
+NAME        TYPE   SIZE FSTYPE FSVER LABEL       MOUNTPOINTS MODEL                        ROTA TRAN
+sda         disk 465,8G                                      TOSHIBA MQ01ABD050              1 usb
+└─sda1      part 465,8G vfat   FAT32 PINCABOS_LI                                             1 
+nvme0n1     disk 931,5G                                      WDS100T3X0C-00SJG0              0 nvme
+├─nvme0n1p1 part   550M vfat   FAT32 PCOS_EFI    /boot/efi                                   0 nvme
+└─nvme0n1p2 part   931G ext4   1.0   rootfs      /                                           0 nvme
+nvme1n1     disk   1,8T                                      Samsung SSD 990 EVO Plus 2TB    0 nvme
+├─nvme1n1p1 part    16M                                                                      0 nvme
+└─nvme1n1p2 part   1,8T ntfs         data                                                    0 nvme
+
+--- Utilisation filesystem ---
+Filesystem     Type      Size  Used Avail Use% Mounted on
+tmpfs          tmpfs     6,1G  1,9M  6,1G   1% /run
+/dev/nvme0n1p2 ext4      916G  7,2G  862G   1% /
+tmpfs          tmpfs      16G     0   16G   0% /dev/shm
+efivarfs       efivarfs  192K   52K  136K  28% /sys/firmware/efi/efivars
+none           tmpfs     1,0M     0  1,0M   0% /run/credentials/systemd-journald.service
+tmpfs          tmpfs      16G  228K   16G   1% /tmp
+none           tmpfs     1,0M     0  1,0M   0% /run/credentials/systemd-resolved.service
+/dev/nvme0n1p1 vfat      549M  8,6M  541M   2% /boot/efi
+none           tmpfs     1,0M     0  1,0M   0% /run/credentials/systemd-networkd.service
+tmpfs          tmpfs     3,1G   16K  3,1G   1% /run/user/1000
+
+--- Swap ---
+
+--- Montages ---
+/run tmpfs tmpfs rw,nosuid,nodev,size=6343364k,nr_inodes=819200,mode=755,inode64
+/ /dev/nvme0n1p2 ext4 rw,noatime
+/dev devtmpfs devtmpfs rw,nosuid,size=15730784k,nr_inodes=3932696,mode=755,inode64
+/dev/shm tmpfs tmpfs rw,nosuid,nodev,inode64,usrquota
+/dev/pts devpts devpts rw,nosuid,noexec,relatime,gid=5,mode=600,ptmxmode=000
+/sys sysfs sysfs rw,nosuid,nodev,noexec,relatime
+/sys/kernel/security securityfs securityfs rw,nosuid,nodev,noexec,relatime
+/sys/fs/cgroup cgroup2 cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot,memory_hugetlb_accounting
+/sys/fs/pstore none pstore rw,nosuid,nodev,noexec,relatime
+/sys/firmware/efi/efivars efivarfs efivarfs rw,nosuid,nodev,noexec,relatime
+/sys/fs/bpf bpf bpf rw,nosuid,nodev,noexec,relatime,mode=700
+/sys/kernel/config configfs configfs rw,nosuid,nodev,noexec,relatime
+/proc proc proc rw,nosuid,nodev,noexec,relatime
+/proc/sys/fs/binfmt_misc systemd-1 autofs rw,relatime,fd=29,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=3784
+/run/credentials/systemd-journald.service none tmpfs ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mode=700,inode64,noswap
+/sys/kernel/tracing tracefs tracefs rw,nosuid,nodev,noexec,relatime
+/sys/kernel/debug debugfs debugfs rw,nosuid,nodev,noexec,relatime
+/tmp tmpfs tmpfs rw,nosuid,nodev,size=15858404k,nr_inodes=1048576,inode64,usrquota
+/dev/mqueue mqueue mqueue rw,nosuid,nodev,noexec,relatime
+/dev/hugepages hugetlbfs hugetlbfs rw,nosuid,nodev,relatime,pagesize=2M
+/sys/fs/fuse/connections fusectl fusectl rw,nosuid,nodev,noexec,relatime
+/run/credentials/systemd-resolved.service none tmpfs ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mode=700,inode64,noswap
+/boot/efi /dev/nvme0n1p1 vfat rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro
+/proc/sys/fs/binfmt_misc binfmt_misc binfmt_misc rw,nosuid,nodev,noexec,relatime
+/run/credentials/systemd-networkd.service none tmpfs ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mode=700,inode64,noswap
+/run/user/1000 tmpfs tmpfs rw,nosuid,nodev,relatime,size=3171680k,nr_inodes=792920,mode=700,uid=1000,gid=1000,inode64
+
+================================================================
+ 6. GPU / VIDEO
+================================================================
+01:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3070 Ti] [10de:2482] (rev a1)
+	Subsystem: Micro-Star International Co., Ltd. [MSI] Device [1462:5053]
+	Kernel driver in use: nvidia
+	Kernel modules: nvidiafb, nouveau, nvidia_drm, nvidia
+01:00.1 Audio device [0403]: NVIDIA Corporation GA104 High Definition Audio Controller [10de:228b] (rev a1)
+
+--- NVIDIA GPU ---
+0, NVIDIA GeForce RTX 3070 Ti, 595.84, 8192 MiB, 55, P8
+
+nvidia_uvm           2088960  0
+nvidia_drm            147456  3
+nvidia_modeset       1789952  3 nvidia_drm
+nvidia              15110144  35 nvidia_uvm,nvidia_modeset
+
+--- Vulkan summary ---
+'DISPLAY' environment variable not set... skipping surface info
+error: XDG_RUNTIME_DIR is invalid or not set in the environment.
+WARNING: [Loader Message] Code 0 : ICD for selected physical device does not export vkGetPhysicalDeviceDisplayPlanePropertiesKHR!
+WARNING: [Loader Message] Code 0 : ICD for selected physical device does not export vkGetPhysicalDeviceDisplayPropertiesKHR!
+==========
+VULKANINFO
+==========
+
+Vulkan Instance Version: 1.4.341
+
+
+Instance Extensions: count = 27
+-------------------------------
+VK_EXT_acquire_drm_display             : extension revision 1
+VK_EXT_acquire_xlib_display            : extension revision 1
+VK_EXT_debug_report                    : extension revision 10
+VK_EXT_debug_utils                     : extension revision 2
+VK_EXT_direct_mode_display             : extension revision 1
+VK_EXT_display_surface_counter         : extension revision 1
+VK_EXT_headless_surface                : extension revision 1
+VK_EXT_layer_settings                  : extension revision 2
+VK_EXT_surface_maintenance1            : extension revision 1
+VK_EXT_swapchain_colorspace            : extension revision 5
+VK_KHR_device_group_creation           : extension revision 1
+VK_KHR_display                         : extension revision 23
+VK_KHR_external_fence_capabilities     : extension revision 1
+VK_KHR_external_memory_capabilities    : extension revision 1
+VK_KHR_external_semaphore_capabilities : extension revision 1
+VK_KHR_get_display_properties2         : extension revision 1
+VK_KHR_get_physical_device_properties2 : extension revision 2
+VK_KHR_get_surface_capabilities2       : extension revision 1
+VK_KHR_portability_enumeration         : extension revision 1
+VK_KHR_surface                         : extension revision 25
+VK_KHR_surface_maintenance1            : extension revision 1
+VK_KHR_surface_protected_capabilities  : extension revision 1
+VK_KHR_wayland_surface                 : extension revision 6
+VK_KHR_xcb_surface                     : extension revision 6
+VK_KHR_xlib_surface                    : extension revision 6
+VK_LUNARG_direct_driver_loading        : extension revision 1
+VK_NV_display_stereo                   : extension revision 1
+
+Instance Layers: count = 7
+--------------------------
+VK_LAYER_INTEL_nullhw       INTEL NULL HW                                                1.1.73   version 1
+VK_LAYER_MESA_anti_lag      Open-source implementation of the VK_AMD_anti_lag extension. 1.4.303  version 1
+VK_LAYER_MESA_device_select Linux device selection layer                                 1.4.303  version 1
+VK_LAYER_MESA_overlay       Mesa Overlay layer                                           1.4.303  version 1
+VK_LAYER_MESA_screenshot    Mesa Screenshot layer                                        1.4.303  version 1
+VK_LAYER_NV_optimus         NVIDIA Optimus layer                                         1.4.329  version 1
+VK_LAYER_NV_present         NVIDIA Presentation Layer                                    1.4.329  version 1
+
+Devices:
+========
+GPU0:
+	apiVersion         = 1.4.329
+	driverVersion      = 595.84.0.0
+	vendorID           = 0x10de
+	deviceID           = 0x2482
+	deviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+	deviceName         = NVIDIA GeForce RTX 3070 Ti
+	driverID           = DRIVER_ID_NVIDIA_PROPRIETARY
+	driverName         = NVIDIA
+	driverInfo         = 595.84
+	conformanceVersion = [IP-REDACTED]
+	deviceUUID         = da95d146-20de-600e-7b8a-4c47fed8bb7c
+	driverUUID         = 027cbdd1-c478-513e-af69-ebc9eaa7de87
+GPU1:
+	apiVersion         = 1.4.335
+	driverVersion      = 26.0.3
+	vendorID           = 0x10005
+	deviceID           = 0x0000
+	deviceType         = PHYSICAL_DEVICE_TYPE_CPU
+	deviceName         = llvmpipe (LLVM 21.1.8, 256 bits)
+	driverID           = DRIVER_ID_MESA_LLVMPIPE
+	driverName         = llvmpipe
+	driverInfo         = Mesa 26.0.3-1ubuntu1 (LLVM 21.1.8)
+	conformanceVersion = [IP-REDACTED]
+	deviceUUID         = 6d657361-3236-2e30-2e33-2d3175627500
+	driverUUID         = 6c6c766d-7069-7065-5555-494400000000
+
+================================================================
+ 7. ECRANS / CONNECTEURS
+================================================================
+
+card1-DP-1 : connected
+Modes:
+  1920x1080
+  1920x1080
+  1920x1080
+  1920x1080
+  1600x1200
+  1280x1024
+  1280x1024
+  1152x864
+  1280x720
+  1280x720
+  1280x720
+  1024x768
+  1024x768
+  800x600
+  800x600
+  720x576
+  720x480
+  640x480
+  640x480
+  640x480
+Enabled: disabled
+
+card1-DP-2 : connected
+Modes:
+  1920x1080
+  1920x1080
+  1920x1080
+  1680x1050
+  1600x900
+  1280x1024
+  1280x1024
+  1440x900
+  1280x800
+  1152x864
+  1280x720
+  1280x720
+  1280x720
+  1024x768
+  1024x768
+  1024x768
+  800x600
+  800x600
+  800x600
+  800x600
+  720x576
+  720x480
+  640x480
+  640x480
+  640x480
+Enabled: disabled
+
+card1-DP-3 : disconnected
+
+card1-HDMI-A-1 : connected
+Modes:
+  3840x2160
+  4096x2160
+  4096x2160
+  4096x2160
+  4096x2160
+  4096x2160
+  4096x2160
+  4096x2160
+  4096x2160
+  3840x2160
+  3840x2160
+  3840x2160
+  3840x2160
+  3840x2160
+  3840x2160
+  3840x2160
+  3840x2160
+  2560x1440
+  2560x1440
+  1920x1080
+  1920x1080
+  1920x1080
+  1920x1080
+  1920x1080
+  1920x1080
+  1920x1080
+  1920x1080
+  1920x1080
+  1280x1024
+  1152x864
+  1280x720
+  1280x720
+  1024x768
+  800x600
+  720x576
+  720x480
+  640x480
+  640x480
+Enabled: disabled
+
+DISPLAY=
+WAYLAND_DISPLAY=
+XDG_SESSION_TYPE=
+XDG_CURRENT_DESKTOP=
+
+================================================================
+ 8. AUDIO
+================================================================
+00:1f.3 Audio device [0403]: Intel Corporation Cannon Lake PCH cAVS [8086:a348] (rev 10)
+	DeviceName: Onboard - Sound
+	Subsystem: ASUSTeK Computer Inc. Device [1043:8723]
+	Kernel driver in use: snd_hda_intel
+	Kernel modules: snd_soc_avs, snd_sof_pci_intel_cnl, snd_hda_intel
+--
+01:00.1 Audio device [0403]: NVIDIA Corporation GA104 High Definition Audio Controller [10de:228b] (rev a1)
+	Subsystem: Micro-Star International Co., Ltd. [MSI] Device [1462:5053]
+	Kernel driver in use: snd_hda_intel
+	Kernel modules: snd_hda_intel
+03:00.0 Non-Volatile memory controller [0108]: Samsung Electronics Co Ltd NVMe SSD Controller PM9C1a (DRAM-less) [144d:a80d]
+
+--- ALSA sorties ---
+**** List of PLAYBACK Hardware Devices ****
+card 0: PCH [HDA Intel PCH], device 0: ALC1220 Analog [ALC1220 Analog]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: PCH [HDA Intel PCH], device 1: ALC1220 Digital [ALC1220 Digital]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 1: NVidia [HDA NVidia], device 3: HDMI 0 [RTK FHD]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 1: NVidia [HDA NVidia], device 7: HDMI 1 [LG TV SSCR2]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 1: NVidia [HDA NVidia], device 8: HDMI 2 [HDMI 2]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 1: NVidia [HDA NVidia], device 9: HDMI 3 [HDMI 3]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+--- ALSA entrees ---
+**** List of CAPTURE Hardware Devices ****
+card 0: PCH [HDA Intel PCH], device 0: ALC1220 Analog [ALC1220 Analog]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: PCH [HDA Intel PCH], device 2: ALC1220 Alt Analog [ALC1220 Alt Analog]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+--- Pulse/PipeWire info ---
+Connection failure: Connection refused
+pa_context_connect() failed: Connection refused
+
+--- Audio sinks ---
+Connection failure: Connection refused
+pa_context_connect() failed: Connection refused
+
+--- Audio sources ---
+Connection failure: Connection refused
+pa_context_connect() failed: Connection refused
+
+--- WirePlumber ---
+E 23:19:46.925509             mod.rt ../src/modules/module-rt.c:293:pw_rtkit_bus_get: Failed to connect to session bus: Unable to autolaunch a dbus-daemon without a $DISPLAY for X11
+Could not connect to PipeWire
+
+================================================================
+ 9. USB
+================================================================
+
+--- USB devices ---
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 001 Device 002: ID 05e3:0610 Genesys Logic, Inc. Hub
+Bus 001 Device 003: ID 05e3:0610 Genesys Logic, Inc. Hub
+Bus 001 Device 004: ID 0b05:18a3 ASUSTek Computer, Inc. AURA MOTHERBOARD
+Bus 001 Device 005: ID 1e71:170e NZXT Kraken X
+Bus 001 Device 006: ID 046d:c52b Logitech, Inc. Unifying Receiver
+Bus 001 Device 012: ID 2e8a:106f L'atelier d'Arnoz DudesCab
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 002 Device 002: ID 05e3:0626 Genesys Logic, Inc. Hub
+Bus 002 Device 003: ID 0480:a00a Toshiba America Inc External USB 3.0
+
+--- USB tree ---
+/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/16p, 480M
+    |__ Port 006: Dev 002, If 0, Class=Hub, Driver=hub/4p, 480M
+        |__ Port 004: Dev 004, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 010: Dev 003, If 0, Class=Hub, Driver=hub/4p, 480M
+        |__ Port 002: Dev 006, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+        |__ Port 002: Dev 006, If 1, Class=Human Interface Device, Driver=usbhid, 12M
+        |__ Port 002: Dev 006, If 2, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 011: Dev 005, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 014: Dev 012, If 0, Class=Communications, Driver=cdc_acm, 12M
+    |__ Port 014: Dev 012, If 1, Class=CDC Data, Driver=cdc_acm, 12M
+    |__ Port 014: Dev 012, If 2, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 014: Dev 012, If 3, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 014: Dev 012, If 4, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 014: Dev 012, If 5, Class=Human Interface Device, Driver=usbhid, 12M
+    |__ Port 014: Dev 012, If 6, Class=Human Interface Device, Driver=usbhid, 12M
+/:  Bus 002.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/10p, 10000M
+    |__ Port 010: Dev 002, If 0, Class=Hub, Driver=hub/4p, 5000M
+        |__ Port 004: Dev 003, If 0, Class=Mass Storage, Driver=usb-storage, 5000M
+
+================================================================
+ 10. ENTREES / BOUTONS
+================================================================
+I: Bus=0019 Vendor=0000 Product=0003 Version=0000
+N: Name="Sleep Button"
+H: Handlers=kbd event0 
+
+I: Bus=0019 Vendor=0000 Product=0001 Version=0000
+N: Name="Power Button"
+H: Handlers=kbd event1 
+
+I: Bus=0003 Vendor=046d Product=404d Version=0111
+N: Name="Logitech K400 Plus"
+H: Handlers=sysrq kbd mouse0 event2 leds 
+
+I: Bus=0019 Vendor=0000 Product=0000 Version=0000
+N: Name="Eee PC WMI hotkeys"
+H: Handlers=rfkill kbd event3 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA NVidia HDMI/DP,pcm=3"
+H: Handlers=event4 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA NVidia HDMI/DP,pcm=7"
+H: Handlers=event5 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA NVidia HDMI/DP,pcm=8"
+H: Handlers=event6 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA NVidia HDMI/DP,pcm=9"
+H: Handlers=event7 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA Intel PCH Rear Mic"
+H: Handlers=event8 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA Intel PCH Front Mic"
+H: Handlers=event9 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA Intel PCH Line"
+H: Handlers=event10 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA Intel PCH Line Out Front"
+H: Handlers=event11 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA Intel PCH Line Out Surround"
+H: Handlers=event12 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA Intel PCH Line Out CLFE"
+H: Handlers=event13 
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HDA Intel PCH Front Headphone"
+H: Handlers=event14 
+
+I: Bus=0003 Vendor=2e8a Product=106f Version=0111
+N: Name="L'atelier d'Arnoz DudesCab"
+H: Handlers=sysrq kbd event15 leds 
+
+I: Bus=0003 Vendor=2e8a Product=106f Version=0111
+N: Name="L'atelier d'Arnoz DudesCab"
+H: Handlers=event16 js0 
+
+
+--- Device nodes input ---
+event0
+event1
+event10
+event11
+event12
+event13
+event14
+event15
+event16
+event2
+event3
+event4
+event5
+event6
+event7
+event8
+event9
+js0
+mice
+mouse0
+
+================================================================
+ 11. PCI COMPLET
+================================================================
+
+--- PCI devices ---
+00:00.0 Host bridge [0600]: Intel Corporation 8th/9th Gen Core 8-core Desktop Processor Host Bridge/DRAM Registers [Coffee Lake S] [8086:3e30] (rev 0a)
+00:01.0 PCI bridge [0604]: Intel Corporation 6th-10th Gen Core Processor PCIe Controller (x16) [8086:1901] (rev 0a)
+00:14.0 USB controller [0c03]: Intel Corporation Cannon Lake PCH USB 3.1 xHCI Host Controller [8086:a36d] (rev 10)
+00:14.2 RAM memory [0500]: Intel Corporation Cannon Lake PCH Shared SRAM [8086:a36f] (rev 10)
+00:16.0 Communication controller [0780]: Intel Corporation Cannon Lake PCH HECI Controller [8086:a360] (rev 10)
+00:17.0 SATA controller [0106]: Intel Corporation Cannon Lake PCH SATA AHCI Controller [8086:a352] (rev 10)
+00:1b.0 PCI bridge [0604]: Intel Corporation Cannon Lake PCH PCI Express Root Port #17 [8086:a340] (rev f0)
+00:1b.4 PCI bridge [0604]: Intel Corporation Cannon Lake PCH PCI Express Root Port #21 [8086:a32c] (rev f0)
+00:1c.0 PCI bridge [0604]: Intel Corporation Cannon Lake PCH PCI Express Root Port #1 [8086:a338] (rev f0)
+00:1d.0 PCI bridge [0604]: Intel Corporation Cannon Lake PCH PCI Express Root Port #9 [8086:a330] (rev f0)
+00:1f.0 ISA bridge [0601]: Intel Corporation Z390 Chipset LPC/eSPI Controller [8086:a305] (rev 10)
+00:1f.3 Audio device [0403]: Intel Corporation Cannon Lake PCH cAVS [8086:a348] (rev 10)
+00:1f.4 SMBus [0c05]: Intel Corporation Cannon Lake PCH SMBus Controller [8086:a323] (rev 10)
+00:1f.5 Serial bus controller [0c80]: Intel Corporation Cannon Lake PCH SPI Controller [8086:a324] (rev 10)
+00:1f.6 Ethernet controller [0200]: Intel Corporation Ethernet Connection (7) I219-V [8086:15bc] (rev 10)
+01:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3070 Ti] [10de:2482] (rev a1)
+01:00.1 Audio device [0403]: NVIDIA Corporation GA104 High Definition Audio Controller [10de:228b] (rev a1)
+03:00.0 Non-Volatile memory controller [0108]: Samsung Electronics Co Ltd NVMe SSD Controller PM9C1a (DRAM-less) [144d:a80d]
+05:00.0 Non-Volatile memory controller [0108]: Sandisk Corp SanDisk Extreme Pro / WD Black SN750 / PC SN730 / Red SN700 NVMe SSD [15b7:5006]
+
+================================================================
+ 12. RESEAU - MATERIEL SEULEMENT
+================================================================
+
+Interface : eno1
+  Etat    : up
+  Vitesse : 1000 Mb/s
+  Duplex  : full
+  Driver  : e1000e
+
+================================================================
+ 13. SERVICES PINCABOS
+================================================================
+  pincabos-altmedia-guard.service                       loaded    inactive dead    PinCabOS guard against contaminated altmedia imports
+  pincabos-audio-surround.service                       loaded    active   exited  PinCabOS analog multichannel output (5.1 / 7.1)
+  pincabos-b2s-layer-guard.service                      loaded    active   running PinCabOS B2S window layer guard
+  pincabos-backglass-bridge.service                     loaded    active   running PinCabOS Portable Backglass Bridge
+  pincabos-backups-logs-perms.service                   loaded    inactive dead    PinCabOS backups/logs permissions guard
+  pincabos-batch-import-worker.service                  loaded    active   running PinCabOS Batch Import persistent sequential worker
+  pincabos-chat-backglass-agent.service                 loaded    inactive dead    PinCabOS Chat BackGlass Agent
+  pincabos-console.service                              loaded    active   running PinCabOS Console ttyd
+  pincabos-cpu-performance.service                      loaded    active   exited  PinCabOS CPU governor performance (jeu temps reel, pas de powersave)
+  pincabos-dashboard-live.service                       loaded    active   running PinCabOS Dashboard camera-like live screen previews
+  pincabos-dmd-persistence.service                      loaded    active   running PinCabOS DMD per-table runtime persistence
+  pincabos-dudescab-hotplug-recovery.service            loaded    inactive dead    PinCabOS DudesCab hotplug recovery for VPinFE DOF Helper
+  pincabos-dudescab-watchdog.service                    loaded    active   running PinCabOS DudesCab safety watchdog during VPX
+  pincabos-final-graphical-guard.service                loaded    active   exited  PinCabOS Final LightDM Hard Graphical Guard
+  pincabos-finalize-firstboot.service                   loaded    inactive dead    PinCabOS first boot finalizer and system doctor
+  pincabos-firstboot-hardware-autoconfig.service        loaded    inactive dead    PinCabOS automatic GPU configuration
+  pincabos-firstboot-identity.service                   loaded    inactive dead    PinCabOS first boot unique identity (SSH host keys, machine-id)
+  pincabos-firstboot-network-webapp-fix.service         loaded    inactive dead    PinCabOS first boot network and WebApp self-heal
+  pincabos-firstboot-online-go.service                  loaded    inactive dead    PinCabOS Firstboot Online GO Bootstrap
+  pincabos-hybrid-pup-recovery.service                  loaded    inactive dead    PinCabOS restore temporarily hidden PuP folders
+  pincabos-hybrid-recover.service                       loaded    inactive dead    PinCabOS restore temporarily hidden PuP-Pack folders
+  pincabos-link-heartbeat.service                       loaded    inactive dead    PinCabOS secure online presence heartbeat
+  pincabos-media-recorder-worker.service                loaded    active   running PinCabOS Media Recorder Worker
+  pincabos-place-backbox.service                        loaded    active   running PinCabOS - placement des surfaces de fronton (backglass + FullDMD)
+  pincabos-sample-tables.service                        loaded    inactive dead    PinCabOS - tables de demonstration (presence conditionnelle)
+  pincabos-scoreview-router.service                     loaded    active   running PinCabOS ScoreView FullDMD alias router
+  pincabos-screen-topology-boot.service                 loaded    active   exited  PinCabOS automatic X11 topology before VPinFE
+  pincabos-splash-sync.service                          loaded    inactive dead    PinCabOS - regenerate the boot splash from the screen configuration
+  pincabos-switch-graphical-vt.service                  loaded    active   exited  PinCabOS Switch to Graphical VT
+  pincabos-table-tree.service                           loaded    inactive dead    PinCabOS normalize per-table PinMAME structure
+  pincabos-updates-check.service                        loaded    inactive dead    PinCabOS - verifie les mises a jour disponibles (OS, VPinFE, vpxtool)
+  pincabos-usb-secure-lock.service                      loaded    active   exited  PinCabOS USB Secure Lock for DudesCab / LED-Wiz toys
+  pincabos-vpinfe-card-status.service                   loaded    inactive dead    PinCabOS VPinFE in-card status
+  pincabos-vpinfe-focus.service                         loaded    inactive dead    PinCabOS keyboard focus on the playfield window
+  pincabos-vpinfe.service                               loaded    inactive dead    PinCabOS VPinFE Frontend
+  pincabos-vpxtool-firstboot.service                    loaded    inactive dead    PinCabOS - installe vpxtool si absent (premier boot)
+  pincabos-webapp.service                               loaded    active   running PinCabOS WebApp
+
+--- Unit files ---
+pincabos-display-role-app-sync.path                    masked          enabled
+pincabos-display-role-finalizer.path                   masked          enabled
+pincabos-display-role-normalizer.path                  masked          enabled
+pincabos-display-roles.path                            masked          enabled
+pincabos-media-recorder-worker.path                    enabled         enabled
+pincabos-sample-tables.path                            enabled         enabled
+pincabos-screen-topology.path                          masked          enabled
+pincabos-splash-sync.path                              enabled         enabled
+pincabos-table-tree.path                               enabled         enabled
+pincabos-altmedia-guard.service                        static          -
+pincabos-audio-restore.service                         static          -
+pincabos-audio-surround.service                        enabled         enabled
+pincabos-b2s-layer-guard.service                       enabled         enabled
+pincabos-backglass-bridge.service                      enabled         enabled
+pincabos-backups-logs-perms.service                    static          -
+pincabos-batch-import-worker.service                   enabled         enabled
+pincabos-chat-backglass-agent.service                  enabled         enabled
+pincabos-console.service                               enabled         enabled
+pincabos-cpu-performance.service                       enabled         enabled
+pincabos-dashboard-live-capture.service                disabled        enabled
+pincabos-dashboard-live.service                        enabled         enabled
+pincabos-display-role-app-sync.service                 masked          enabled
+pincabos-display-role-finalizer.service                masked          enabled
+pincabos-display-role-normalizer.service               masked          enabled
+pincabos-display-roles.service                         masked          enabled
+pincabos-dmd-persistence.service                       enabled         enabled
+pincabos-dudescab-hotplug-recovery.service             disabled        enabled
+pincabos-dudescab-maintenance-expire.service           static          -
+pincabos-dudescab-watchdog.service                     enabled         enabled
+pincabos-final-graphical-guard.service                 enabled         enabled
+pincabos-finalize-firstboot.service                    disabled        enabled
+pincabos-firstboot-hardware-autoconfig.service         enabled         enabled
+pincabos-firstboot-identity.service                    enabled         enabled
+pincabos-firstboot-initramfs-refresh.service           disabled        enabled
+pincabos-firstboot-network-webapp-fix.service          disabled        enabled
+pincabos-firstboot-online-go.service                   enabled         enabled
+pincabos-firstboot-vpinfe-packaged-runtime-fix.service disabled        enabled
+pincabos-gui-install-prepare.service                   static          -
+pincabos-gui-kiosk.service                             static          -
+pincabos-gui-wizard.service                            static          -
+pincabos-hybrid-pup-recovery.service                   enabled         enabled
+pincabos-hybrid-recover.service                        enabled         enabled
+pincabos-link-heartbeat.service                        static          -
+pincabos-media-recorder-worker.service                 enabled         enabled
+pincabos-place-backbox.service                         enabled         enabled
+pincabos-safe-batch-full.service                       disabled        enabled
+pincabos-sample-tables.service                         enabled         enabled
+pincabos-scoreview-router.service                      enabled         enabled
+pincabos-scoreview-x11-hq-preview.service              disabled        enabled
+pincabos-screen-topology-boot.service                  enabled         enabled
+pincabos-screen-topology.service                       masked          enabled
+pincabos-splash-sync.service                           disabled        enabled
+pincabos-switch-graphical-vt.service                   enabled         enabled
+pincabos-table-test.service                            disabled        enabled
+pincabos-table-tree.service                            static          -
+pincabos-tui-fallback.service                          static          -
+pincabos-update@.service                               static          -
+pincabos-updates-check.service                         static          -
+pincabos-usb-automount@.service                        static          -
+pincabos-usb-nettoyage.service                         static          -
+pincabos-usb-secure-lock.service                       enabled         enabled
+pincabos-vpinfe-card-status.service                    static          -
+pincabos-vpinfe-focus.service                          enabled         enabled
+pincabos-vpinfe.service                                enabled         enabled
+pincabos-vpxtool-firstboot.service                     enabled         enabled
+pincabos-web.service                                   masked          enabled
+pincabos-webapp-fallback.service                       disabled        enabled
+pincabos-webapp.service                                enabled         enabled
+pincabos-gui-install.target                            static          -
+pincabos-altmedia-guard.timer                          enabled         enabled
+pincabos-backups-logs-perms.timer                      enabled         enabled
+pincabos-display-role-app-sync.timer                   masked          enabled
+pincabos-display-role-finalizer.timer                  masked          enabled
+pincabos-display-role-normalizer.timer                 masked          enabled
+pincabos-display-roles.timer                           masked          enabled
+pincabos-dudescab-maintenance-expire.timer             disabled        enabled
+pincabos-finalize-firstboot.timer                      enabled         enabled
+pincabos-link-heartbeat.timer                          enabled         enabled
+pincabos-screen-topology.timer                         masked          enabled
+pincabos-table-tree.timer                              enabled         enabled
+pincabos-updates-check.timer                           enabled         enabled
+pincabos-vpinfe-card-status.timer                      enabled         enabled
+
+================================================================
+ 14. PROCESSUS PINCABOS
+================================================================
+1114107 root     kworker/7:0-inode_switch_wbs
+   1467 root     python
+   1422 root     python3
+   3090 root     python3
+
+================================================================
+ 15. PINCABOS / GIT LOCAL
+================================================================
+drwxr-xr-x root:root 4096 2026-08-29 11:38:50.088330196 +0200 /opt/pincabos
+ABSENT : /opt/pincabos/.git-rootfs
+drwxr-xr-x pinball:pinball 4096 2026-08-14 16:48:41.000000000 +0200 /home/pinball/vpinfe
+ABSENT : /home/pinball/vpinball
+drwxr-xr-x pinball:pinball 4096 2026-08-25 23:02:47.243601663 +0200 /home/pinball/Tables
+
+================================================================
+ 16. VERSIONS PINCABOS
+================================================================
+--- /opt/pincabos/version.json ---
+{
+  "product": "PinCabOS",
+  "version": "Alpha 2.70",
+  "build": "dev",
+  "channel": "install",
+  "source": "ins.pincabos.cc",
+  "created_by": "Karots Sugarpie",
+  "generated_at": "2026-08-29T09:38:50Z",
+  "run03_plymouth_tar_prefix_fix": true,
+  "run03_plymouth_tar_prefix_fix_note": "03-install-check.sh normalizes tar entries by removing leading ./ before checking usr/share/plymouth/themes/pincabos.",
+  "run03_plymouth_check_fixed_simple": true,
+  "run03_plymouth_check_uses_local_pkg_variable": true,
+  "run03_plymouth_check_accepts_optional_dot_slash": true,
+  "go_pincabos_refreshes_03_before_run03": true,
+  "reason": "Existing VM may have stale local 03-install-check.sh; go-pincabos refreshes 03 before RUN_03.",
+  "run01_pause_contract_fixed": true,
+  "grub_hidden_quiet_splash_fixed": true,
+  "run02_sequence": "Before pause: clear network identity, set RUN_02 flags, install autoresume, apply hidden GRUB. After keypress: reboot only. After reboot: DHCP4/SSID, refresh ins install tree, RUN_02.",
+  "final_owner": "go-pincabos.sh",
+  "check_owner": "03-install-check.sh cleans run/autoresume state and returns GO",
+  "final_summary_includes_ip": true,
+  "final_reboot_countdown_seconds": 10,
+  "check_resets_root_password_default": false,
+  "check_default_root_password": "",
+  "check_links_all_sh_to_path": true,
+  "path_link_directory": "/usr/local/bin",
+  "plymouth_validation_pipefail_safe": true,
+  "plymouth_referenced_png_checked": true,
+  "plymouth_webpkg_theme_path": "usr/share/plymouth/themes/pincabos",
+  "pkg_pincabos_web_sha256": "af83d86e1b560a88e8fbb95846a644d564595ac4f8f1032b267cac9015959a3d",
+  "pkg_pincabos_web_size_bytes": 39004896,
+  "plymouth_final_script_no_pcosinstallwp": true,
+  "plymouth_final_script_image": "PCOLoading.png",
+  "plymouth_progress_bar_png_present": true,
+  "plymouth_progress_box_png_present": true,
+  "dhcp4_owner": "go-pincabos.sh direct call",
+  "run_scripts_must_not_call_or_manage_dhcp4": true,
+  "legacy_run_01f_removed": true,
+  "nginx_webpkg_enabled_sites_forbidden": true,
+  "nginx_webpkg_default_server_forbidden": false,
+  "nginx_legacy_pincabos_web_removed": true,
+  "run02_nginx_writer_single_canonical": true,
+  "run02_nginx_order": "nginx disabled/masked; PinCabOS runtime uses direct ports WebApp=80, ttyd=8090, VPinFE=8000/8001",
+  "run02_nginx_restart_fails_hard": false,
+  "pkg_pincabos_web_must_not_ship_sites_enabled": true,
+  "official_direct_ports": true,
+  "pincabos_webapp_port": 80,
+  "pincabos_console_ttyd_port": 8090,
+  "pincabos_vpinfe_port": 8000,
+  "pincabos_vpinfe_api_port": 8001,
+  "nginx_runtime_disabled": true,
+  "nginx_proxy_disabled": true,
+  "cleanup_99_removed": true,
+  "audio_module_optional_removed_from_bootstrap": true,
+  "audio_module_removed": true,
+  "nginx_tools_neutralized": true,
+  "pkg_pincabos_web_must_not_ship_nginx": true,
+  "double_checkup_v8": true,
+  "double_checkup_v8c": true,
+  "run01_nginx_command_not_required": true,
+  "run01_ttyd_required_for_console_8090": true,
+  "vpinfe_default_visible_not_headless": true,
+  "vpinfe_waits_for_lightdm_x_session": true,
+  "vpinfe_frontend_default_mode": "visible",
+  "check_finalizes_root_ssh_password_access": true,
+  "check_sshd_permit_root_login_yes": true,
+  "check_sshd_password_authentication_yes": true,
+  "check_ssh_service_enabled_active": true,
+  "plymouth_final_single_owner": true,
+  "plymouth_final_owner": "03-install-check.sh",
+  "run02_applies_final_plymouth": false,
+  "run03_applies_final_plymouth_once_near_end": true,
+  "final_graphical_guard": true,
+  "final_graphical_guard_service": "pincabos-final-graphical-guard.service",
+  "final_graphical_guard_starts_lightdm_if_console_login": true,
+  "final_graphical_guard_restarts_vpinfe_after_x": true,
+  "final_login_lightdm_hardguard_v15": true,
+  "final_guard_getty_tty1_fallback": true,
+  "final_guard_display_manager_symlink_lightdm": true,
+  "final_guard_before_getty_tty1": true,
+  "final_guard_chvt7": true,
+  "final_guard_restarts_vpinfe_after_x": true,
+  "run02_network_ready_gate_after_dhcp4": true,
+  "run02_network_ready_gate_owner": "go-pincabos.sh",
+  "run02_network_ready_gate_note": "After RUN_01 reboot, go-pincabos runs DHCP4/SSID then validates IPv4, default route and ins.pincabos.cc/install reachability before 01G/RUN_02.",
+  "run02_network_ready_gate_error": "ERR-GO-RUN02-NETWORK-NOT-READY-001",
+  "recognize_end_run_01_after_iso_reboot": true,
+  "recognize_end_run_01_owner": "go-pincabos.sh",
+  "recognize_end_run_01_reason": "Fresh ISO install can reboot with end-run-01 but without reboot-after-01/end-run-01E; this must still trigger DHCP/network gate before public bootstrap.",
+  "curl6_dhcp4_safety": true,
+  "curl6_dhcp4_safety_owner": "go-pincabos.sh download_file()",
+  "curl6_dhcp4_safety_reason": "If curl/wget DNS resolution fails after ISO reboot, force DHCP4/network recovery once and retry before failing.",
+  "deviso_single_reboot": true,
+  "deviso_flag": "/opt/pincabos/state/deviso-base-installed",
+  "skip_run01_when_deviso_flag_present": true,
+  "ubuntu_server_no_flag_runs_01_02_03_without_intermediate_reboot": true,
+  "run03_plymouth_final_owner": "03-install-check.sh",
+  "run03_final_completion_patch": true,
+  "run03_console_8090_warning_not_nogo": true,
+  "run03_legacy_pincabos_web_warning_not_nogo": true,
+
+================================================================
+ 17. BINAIRES VPX / VPINFE
+================================================================
+/home/pinball/VPinballX_BGFX-10.8.1-5436-af26b2d93-linux-x64/plugins/dof/libdof.so.0.4.7
+/home/pinball/VPinballX_BGFX-10.8.1-5436-af26b2d93-linux-x64/plugins/dof/plugin-dof.so
+/home/pinball/VPinballX_BGFX-10.8.1-5436-af26b2d93-linux-x64/VPinballX_BGFX
+/home/pinball/vpinfe/vpinfe
+/opt/pincabos/overlays/dudescab-ledwiz-local-libusb-pacing2-permanent-v3/libdof.so
+/opt/pincabos/overlays/dudescab-ledwiz-local-libusb-pacing2-permanent-v3/libdof.so.0.4.7
+/opt/pincabos/overlays/libdof-ledwiz-hidraw-stable/libdof.so.0.4.7
+/opt/pincabos/overlays/vpinfe-dof-ledwiz-hidraw-stable/libdof_python.so
+/opt/pincabos/overlays/vpinfe-dof-ledwiz-hidraw-stable/libdof.so.0.4.7
+
+-rwxr-xr-x pinball:pinball 15796736 2026-08-14 16:48:41.000000000 +0200 /home/pinball/vpinfe/vpinfe
+19127bbfb955b207d4efb8fb665caa40400df6c881e83b82856a6ca7d6820630  /home/pinball/vpinfe/vpinfe
+
+================================================================
+ 18. TABLES
+================================================================
+Dossiers: 3
+VPX: 3
+VBS: 4
+Taille: 534M
+
+Dossiers niveau 1:
+Attack from Mars (Bally 1995)
+Pirates of the Caribbean (Stern 2006)
+Star Wars (Original 2025)
+
+================================================================
+ 19. LOGICIELS / PAQUETS
+================================================================
+bash         : GNU bash, version 5.3.9(1)-release (x86_64-pc-linux-gnu)
+python3      : Python 3.14.4
+git          : git version 2.53.0
+curl         : curl 8.18.0 (x86_64-pc-linux-gnu) libcurl/8.18.0 OpenSSL/3.5.5 zlib/1.3.1 brotli/1.2.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.2 libssh2/1.11.1 nghttp2/1.68.0 librtmp/2.3 mit-krb5/1.22.1 OpenLDAP/2.6.10
+wget         : GNU Wget 1.25.0 built on linux-gnu.
+7z           : 
+unzip        : UnZip 6.00 of 20 April 2009, by Debian. Original by Info-ZIP.
+ffmpeg       : gcc          : gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+cmake        : cmake version 4.2.3
+
+--- Paquets graphiques/audio ---
+alsa-topology-conf	[IP-REDACTED]-3build1
+alsa-ucm-conf	[IP-REDACTED]-1ubuntu1.5
+alsa-utils	[IP-REDACTED]-1ubuntu1
+libegl-mesa0:amd64	26.0.3-1ubuntu1
+libgl1-mesa-dev:amd64	26.0.3-1ubuntu1
+libgl1-mesa-dri:amd64	26.0.3-1ubuntu1
+libglu1-mesa:amd64	9.0.2-1.1build2
+libglu1-mesa-dev:amd64	9.0.2-1.1build2
+libglx-mesa0:amd64	26.0.3-1ubuntu1
+libnvidia-cfg1-595:amd64	595.84-0ubuntu[IP-REDACTED]
+libnvidia-common-595	595.84-0ubuntu[IP-REDACTED]
+libnvidia-compute-595:amd64	595.84-0ubuntu[IP-REDACTED]
+libnvidia-decode-595:amd64	595.84-0ubuntu[IP-REDACTED]
+libnvidia-egl-wayland1:amd64	1:1.1.21-1
+libnvidia-encode-595:amd64	595.84-0ubuntu[IP-REDACTED]
+libnvidia-extra-595:amd64	595.84-0ubuntu[IP-REDACTED]
+libnvidia-fbc1-595:amd64	595.84-0ubuntu[IP-REDACTED]
+libnvidia-gl-595:amd64	595.84-0ubuntu[IP-REDACTED]
+libosmesa6:amd64	25.1.7-1ubuntu3
+libpipewire-0.3-0t64:amd64	1.6.2-1ubuntu1.1
+libpipewire-0.3-common	1.6.2-1ubuntu1.1
+libpipewire-0.3-dev:amd64	1.6.2-1ubuntu1.1
+libpipewire-0.3-modules:amd64	1.6.2-1ubuntu1.1
+libqt6waylandclient6:amd64	6.10.2+dfsg-7
+libqt6waylandcompositor6:amd64	6.10.2-4
+libva-wayland2:amd64	2.23.0-1ubuntu1
+libvulkan1:amd64	1.4.341.0-1
+libvulkan-dev:amd64	1.4.341.0-1
+libwayland-bin	1.24.0-2
+libwayland-client0:amd64	1.24.0-2
+libwayland-cursor0:amd64	1.24.0-2
+libwayland-dev:amd64	1.24.0-2
+libwayland-egl1:amd64	1.24.0-2
+libwayland-egl-backend-dev:amd64	1.24.0-2
+libwayland-server0:amd64	1.24.0-2
+libwireplumber-0.5-0:amd64	0.5.13-1ubuntu1
+linux-firmware-nvidia-graphics	20260319.git217ca6e4-0ubuntu1.1
+linux-headers-7.0.0-28	7.0.0-28.28
+linux-headers-7.0.0-28-generic	7.0.0-28.28
+linux-headers-7.0.0-29	7.0.0-29.29
+linux-headers-7.0.0-29-generic	7.0.0-29.29
+linux-headers-generic	7.0.0-29.29
+linux-image-7.0.0-22-generic	7.0.0-22.22
+linux-image-7.0.0-27-generic	7.0.0-27.27
+linux-image-7.0.0-28-generic	7.0.0-28.28
+linux-image-7.0.0-29-generic	7.0.0-29.29
+linux-image-generic	7.0.0-29.29
+mesa-libgallium:amd64	26.0.3-1ubuntu1
+mesa-utils	9.0.0-2build1
+mesa-utils-bin:amd64	9.0.0-2build1
+mesa-vulkan-drivers:amd64	26.0.3-1ubuntu1
+nvidia-compute-utils-595	595.84-0ubuntu[IP-REDACTED]
+nvidia-dkms-595-open	595.84-0ubuntu[IP-REDACTED]
+nvidia-driver-595-open	595.84-0ubuntu[IP-REDACTED]
+nvidia-firmware-595-595.84	595.84-0ubuntu[IP-REDACTED]
+nvidia-kernel-common-595	595.84-0ubuntu[IP-REDACTED]
+nvidia-kernel-source-595-open	595.84-0ubuntu[IP-REDACTED]
+nvidia-prime	[IP-REDACTED]build1
+nvidia-settings	510.47.03-0ubuntu7
+nvidia-utils-595	595.84-0ubuntu[IP-REDACTED]
+pipewire-alsa:amd64	1.6.2-1ubuntu1.1
+pipewire:amd64	1.6.2-1ubuntu1.1
+pipewire-audio	1.6.2-1ubuntu1.1
+pipewire-bin	1.6.2-1ubuntu1.1
+pipewire-pulse	1.6.2-1ubuntu1.1
+pulseaudio-utils	1:17.0+dfsg1-2ubuntu4
+qt6-wayland:amd64	6.10.2-4
+vulkan-tools	1.4.341.0+dfsg1-1
+wayland-protocols	1.47-1
+wireplumber	0.5.13-1ubuntu1
+x11-xserver-utils	7.7+11build1
+xorg	1:7.7+26ubuntu1
+xorg-docs-core	1:1.7.3-1
+xorg-sgml-doctools	1:1.11-1.1build1
+xserver-common	2:21.1.22-1ubuntu1
+xserver-xorg	1:7.7+26ubuntu1
+xserver-xorg-core	2:21.1.22-1ubuntu1
+xserver-xorg-input-all	1:7.7+26ubuntu1
+xserver-xorg-input-libinput	1.5.0-1build1
+xserver-xorg-input-wacom	1:1.2.3-1ubuntu2
+xserver-xorg-legacy	2:21.1.22-1ubuntu1
+xserver-xorg-video-all	1:7.7+26ubuntu1
+xserver-xorg-video-amdgpu	25.0.0-1
+xserver-xorg-video-ati	1:22.0.0-1build2
+xserver-xorg-video-fbdev	1:0.5.0-2build3
+xserver-xorg-video-intel	2:2.99.917+git20210115-1build2
+xserver-xorg-video-nouveau	1:1.0.18-1build1
+xserver-xorg-video-nvidia-595	595.84-0ubuntu[IP-REDACTED]
+xserver-xorg-video-qxl	0.1.6-1.1build1
+xserver-xorg-video-radeon	1:22.0.0-1build2
+xserver-xorg-video-vesa	1:2.6.0-2build1
+
+================================================================
+ 20. MODULES KERNEL
+================================================================
+snd_seq_dummy          12288  0
+snd_hrtimer            12288  1
+snd_seq               126976  7 snd_seq_dummy
+snd_seq_device         16384  1 snd_seq
+snd_sof_pci_intel_cnl    20480  0
+snd_sof_intel_hda_generic    40960  1 snd_sof_pci_intel_cnl
+soundwire_intel        86016  1 snd_sof_intel_hda_generic
+snd_sof_intel_hda_sdw_bpt    20480  1 soundwire_intel
+snd_sof_intel_hda_common   200704  3 snd_sof_intel_hda_sdw_bpt,snd_sof_intel_hda_generic,snd_sof_pci_intel_cnl
+snd_soc_hdac_hda       20480  1 snd_sof_intel_hda_common
+snd_sof_intel_hda_mlink    45056  4 snd_sof_intel_hda_sdw_bpt,soundwire_intel,snd_sof_intel_hda_common,snd_sof_intel_hda_generic
+snd_sof_intel_hda      24576  2 snd_sof_intel_hda_common,snd_sof_intel_hda_generic
+snd_sof_pci            24576  2 snd_sof_intel_hda_generic,snd_sof_pci_intel_cnl
+snd_sof_xtensa_dsp     12288  1 snd_sof_intel_hda_generic
+snd_sof               438272  6 snd_sof_intel_hda_sdw_bpt,snd_sof_pci,snd_sof_intel_hda_common,snd_sof_intel_hda_generic,snd_sof_intel_hda,snd_sof_pci_intel_cnl
+snd_sof_utils          16384  1 snd_sof
+snd_soc_acpi_intel_match   147456  2 snd_sof_intel_hda_generic,snd_sof_pci_intel_cnl
+snd_soc_acpi_intel_sdca_quirks    12288  1 snd_soc_acpi_intel_match
+snd_soc_sdw_utils     126976  1 snd_sof_intel_hda_generic
+snd_soc_acpi           16384  2 snd_soc_acpi_intel_match,snd_sof_intel_hda_generic
+soundwire_bus        1183744  4 soundwire_intel,snd_soc_sdw_utils,soundwire_generic_allocation,soundwire_cadence
+snd_soc_sdca          126976  2 snd_soc_acpi_intel_sdca_quirks,soundwire_bus
+snd_hda_codec_alc882    20480  1
+snd_hda_codec_realtek_lib    65536  1 snd_hda_codec_alc882
+snd_hda_codec_nvhdmi    16384  1
+snd_hda_codec_generic   126976  2 snd_hda_codec_realtek_lib,snd_hda_codec_alc882
+snd_hda_codec_hdmi     65536  1 snd_hda_codec_nvhdmi
+snd_soc_avs           233472  0
+snd_soc_hda_codec      24576  1 snd_soc_avs
+snd_hda_ext_core       32768  7 snd_sof_intel_hda_sdw_bpt,snd_soc_avs,snd_soc_hda_codec,snd_sof_intel_hda_common,snd_soc_hdac_hda,snd_sof_intel_hda_mlink,snd_sof_intel_hda
+snd_hda_intel          65536  2
+snd_soc_core          446464  8 snd_soc_avs,snd_soc_hda_codec,soundwire_intel,snd_sof,snd_soc_sdca,snd_sof_intel_hda_common,snd_soc_sdw_utils,snd_soc_hdac_hda
+snd_hda_codec         212992  10 snd_hda_codec_generic,snd_soc_avs,snd_hda_codec_hdmi,snd_soc_hda_codec,snd_hda_intel,snd_hda_codec_nvhdmi,snd_hda_codec_realtek_lib,snd_soc_hdac_hda,snd_hda_codec_alc882,snd_sof_intel_hda
+snd_hda_core          151552  11 snd_hda_codec_generic,snd_soc_avs,snd_hda_codec_hdmi,snd_soc_hda_codec,snd_hda_intel,snd_hda_ext_core,snd_hda_codec,snd_sof_intel_hda_common,snd_hda_codec_realtek_lib,snd_soc_hdac_hda,snd_sof_intel_hda
+snd_compress           40960  2 snd_soc_avs,snd_soc_core
+snd_intel_dspcfg       45056  5 snd_soc_avs,snd_hda_intel,snd_sof,snd_sof_intel_hda_common,snd_sof_intel_hda_generic
+ac97_bus               12288  1 snd_soc_core
+snd_pcm_dmaengine      20480  1 snd_soc_core
+snd_intel_sdw_acpi     16384  2 snd_intel_dspcfg,snd_sof_intel_hda_generic
+snd_hwdep              24576  1 snd_hda_codec
+snd_pcm               208896  14 snd_soc_avs,snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec,soundwire_intel,snd_sof,snd_soc_sdca,snd_sof_intel_hda_common,snd_compress,snd_sof_intel_hda_generic,snd_soc_core,snd_sof_utils,snd_hda_core,snd_pcm_dmaengine
+snd_timer              53248  3 snd_seq,snd_hrtimer,snd_pcm
+snd                   147456  21 snd_hda_codec_generic,snd_seq,snd_seq_device,snd_hda_codec_hdmi,snd_hwdep,snd_hda_intel,snd_hda_codec,snd_sof,snd_soc_sdca,snd_timer,snd_hda_codec_realtek_lib,snd_compress,snd_soc_sdw_utils,snd_soc_core,snd_pcm
+soundcore              16384  1 snd
+nvidia_uvm           2088960  0
+mac_hid                12288  0
+hid_logitech_hidpp     73728  0
+hid_logitech_dj        40960  0
+usbkbd                 12288  0
+usbmouse               12288  0
+nvidia_drm            147456  3
+nvidia_modeset       1789952  3 nvidia_drm
+hid_generic            12288  0
+usbhid                 86016  2 hid_logitech_dj,hid_logitech_hidpp
+hid                   282624  6 usbhid,snd_soc_sdca,hid_generic,nzxt_kraken2,hid_logitech_dj,hid_logitech_hidpp
+nvidia              15110144  35 nvidia_uvm,nvidia_modeset
+usb_storage            86016  1 uas
+drm_ttm_helper         20480  1 nvidia_drm
+video                  77824  2 asus_wmi,nvidia_modeset
+
+================================================================
+ 21. PORTS SERIE
+================================================================
+ttyACM0
+
+================================================================
+ 22. TEMPERATURES
+================================================================
+
+--- Sensors ---
+asusec-isa-000a
+Adapter: ISA adapter
+CPU_Opt:        0 RPM
+Chipset:      +44.0°C  
+T_Sensor:     -40.0°C  
+VRM:          +41.0°C  
+
+nvme-pci-0500
+Adapter: PCI adapter
+Composite:    +24.9°C  (low  =  -5.2°C, high = +83.8°C)
+                       (crit = +87.8°C)
+
+acpitz-acpi-0
+Adapter: ACPI interface
+temp1:        +27.8°C  
+
+coretemp-isa-0000
+Adapter: ISA adapter
+Package id 0:  +39.0°C  (high = +86.0°C, crit = +100.0°C)
+Core 0:        +37.0°C  (high = +86.0°C, crit = +100.0°C)
+Core 1:        +39.0°C  (high = +86.0°C, crit = +100.0°C)
+Core 2:        +38.0°C  (high = +86.0°C, crit = +100.0°C)
+Core 3:        +37.0°C  (high = +86.0°C, crit = +100.0°C)
+Core 4:        +39.0°C  (high = +86.0°C, crit = +100.0°C)
+Core 5:        +36.0°C  (high = +86.0°C, crit = +100.0°C)
+Core 6:        +37.0°C  (high = +86.0°C, crit = +100.0°C)
+Core 7:        +36.0°C  (high = +86.0°C, crit = +100.0°C)
+
+kraken2-hid-3-2
+Adapter: HID adapter
+Fan:          991 RPM
+Pump:        2010 RPM
+Coolant:      +31.5°C  
+
+nvme-pci-0300
+Adapter: PCI adapter
+Composite:    +29.9°C  (low  = -273.1°C, high = +80.8°C)
+                       (crit = +84.8°C)
+Sensor 1:     +32.9°C  (low  = -273.1°C, high = +65261.8°C)
+Sensor 2:     +34.9°C  (low  = -273.1°C, high = +65261.8°C)
+
+acpitz                    : 27.8 C
+x86_pkg_temp              : 40.0 C
+
+================================================================
+ 23. RESUME
+================================================================
+Testeur      : YaNFoX
+Hostname     : PinCabOs
+Kernel       : 7.0.0-29-generic
+Architecture : x86_64
+CPU          : Intel(R) Core(TM) i7-9700KF CPU @ 3.60GHz
+RAM          : 30Gi
+GPU          : NVIDIA GeForce RTX 3070 Ti
+NVIDIA       : 595.84
+
+Audit local termine.
