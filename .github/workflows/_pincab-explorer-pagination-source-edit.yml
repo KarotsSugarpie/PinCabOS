@@ -1,0 +1,82 @@
+name: PinCab Explorer pagination source edit
+
+on:
+  push:
+    branches:
+      - feat/pincab-explorer-table-pagination
+
+permissions:
+  contents: write
+
+jobs:
+  edit-canonical-source:
+    if: ${{ !contains(github.event.head_commit.message, 'feat(explorer): paginate table library') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/pincab-explorer-table-pagination
+          fetch-depth: 0
+
+      - name: Edit canonical PinCab Explorer route
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('opt/pincabos/web/app.py')
+          text = path.read_text(encoding='utf-8')
+
+          anchor_entries = '''    try:\n        entries = sorted(current.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))\n    except Exception:\n        entries = []\n\n    for item in entries:\n'''
+
+          replacement_entries = '''    try:\n        entries = sorted(current.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))\n    except Exception:\n        entries = []\n\n    # PINCABOS_EXPLORER_TABLE_PAGINATION_V1\n    # Pagination native côté Flask : seules les tables de la racine Tables\n    # sont découpées. Les dossiers internes et les autres racines Explorer\n    # conservent leur comportement historique.\n    pco_pagination_html = ""\n\n    if pco_native_root:\n        pco_per_page_choices = (25, 50, 100, 200)\n\n        try:\n            pco_per_page = int(request.args.get("per_page", "50"))\n        except (TypeError, ValueError):\n            pco_per_page = 50\n\n        if pco_per_page not in pco_per_page_choices:\n            pco_per_page = 50\n\n        try:\n            pco_page_number = int(request.args.get("page", "1"))\n        except (TypeError, ValueError):\n            pco_page_number = 1\n\n        pco_page_number = max(1, pco_page_number)\n        pco_total_entries = len(entries)\n        pco_total_pages = max(\n            1,\n            (pco_total_entries + pco_per_page - 1) // pco_per_page,\n        )\n        pco_page_number = min(pco_page_number, pco_total_pages)\n        pco_slice_start = (pco_page_number - 1) * pco_per_page\n        pco_slice_end = min(\n            pco_slice_start + pco_per_page,\n            pco_total_entries,\n        )\n\n        def pco_pagination_url(page_number):\n            return (\n                "/tools/commander?"\n                + urllib.parse.urlencode({\n                    "root": root_name,\n                    "path": rel,\n                    "page": max(1, min(int(page_number), pco_total_pages)),\n                    "per_page": pco_per_page,\n                })\n            )\n\n        def pco_pagination_link(label, page_number, disabled=False, current_page=False):\n            classes = ["pcx-page-link"]\n            if disabled:\n                classes.append("is-disabled")\n            if current_page:\n                classes.append("is-current")\n\n            class_attr = " ".join(classes)\n\n            if disabled or current_page:\n                return (\n                    '<span class="' + class_attr + '">'\n                    + label\n                    + "</span>"\n                )\n\n            return (\n                '<a class="' + class_attr + '" href="'\n                + pco_pagination_url(page_number)\n                + '">'\n                + label\n                + "</a>"\n            )\n\n        pco_page_links = []\n        pco_page_links.append(\n            pco_pagination_link(\n                "« Première",\n                1,\n                disabled=pco_page_number <= 1,\n            )\n        )\n        pco_page_links.append(\n            pco_pagination_link(\n                "‹ Préc.",\n                pco_page_number - 1,\n                disabled=pco_page_number <= 1,\n            )\n        )\n\n        pco_window_start = max(1, pco_page_number - 2)\n        pco_window_end = min(pco_total_pages, pco_page_number + 2)\n\n        for pco_visible_page in range(pco_window_start, pco_window_end + 1):\n            pco_page_links.append(\n                pco_pagination_link(\n                    str(pco_visible_page),\n                    pco_visible_page,\n                    current_page=(pco_visible_page == pco_page_number),\n                )\n            )\n\n        pco_page_links.append(\n            pco_pagination_link(\n                "Suiv. ›",\n                pco_page_number + 1,\n                disabled=pco_page_number >= pco_total_pages,\n            )\n        )\n        pco_page_links.append(\n            pco_pagination_link(\n                "Dernière »",\n                pco_total_pages,\n                disabled=pco_page_number >= pco_total_pages,\n            )\n        )\n\n        pco_per_page_options = "".join(\n            '<option value="'\n            + str(pco_choice)\n            + ('" selected>' if pco_choice == pco_per_page else '">')\n            + str(pco_choice)\n            + "</option>"\n            for pco_choice in pco_per_page_choices\n        )\n\n        if pco_total_entries:\n            pco_range_text = (\n                str(pco_slice_start + 1)\n                + "–"\n                + str(pco_slice_end)\n                + " sur "\n                + str(pco_total_entries)\n                + " tables"\n            )\n        else:\n            pco_range_text = "0 table"\n\n        pco_pagination_html = (\n            '<nav class="pcx-pagination" aria-label="Navigation des tables">'\n            '<div class="pcx-pagination-summary">'\n            + pco_range_text\n            + " · Page "\n            + str(pco_page_number)\n            + "/"\n            + str(pco_total_pages)\n            + "</div>"\n            '<div class="pcx-pagination-links">'\n            + "".join(pco_page_links)\n            + "</div>"\n            '<form class="pcx-pagination-size" method="get" action="/tools/commander">'\n            '<input type="hidden" name="root" value="'\n            + esc(root_name)\n            + '">'\n            '<input type="hidden" name="path" value="'\n            + esc(rel)\n            + '">'\n            '<input type="hidden" name="page" value="1">'\n            '<label>Tables par page '\n            '<select name="per_page">'\n            + pco_per_page_options\n            + "</select></label>"\n            '<button type="submit" class="pcx-small">Appliquer</button>'\n            "</form>"\n            "</nav>"\n        )\n\n        entries = entries[pco_slice_start:pco_slice_end]\n\n    for item in entries:\n'''
+
+          if anchor_entries not in text:
+              raise SystemExit('NOGO: entries anchor not found')
+          text = text.replace(anchor_entries, replacement_entries, 1)
+
+          anchor_css = '''.pcx-table {\n  width:100%;\n  border-collapse:collapse;\n}\n'''
+          replacement_css = '''/* PINCABOS_EXPLORER_TABLE_PAGINATION_V1_CSS */\n.pcx-pagination {\n  display:flex;\n  align-items:center;\n  justify-content:space-between;\n  gap:12px;\n  flex-wrap:wrap;\n  margin:10px 0 14px;\n  padding:10px 12px;\n  border:1px solid #2e3540;\n  border-radius:10px;\n  background:#0b0d10;\n}\n.pcx-pagination-summary {\n  color:#d7dbe2;\n  font-weight:700;\n  white-space:nowrap;\n}\n.pcx-pagination-links {\n  display:flex;\n  align-items:center;\n  justify-content:center;\n  gap:6px;\n  flex-wrap:wrap;\n}\n.pcx-page-link {\n  display:inline-flex;\n  align-items:center;\n  justify-content:center;\n  min-width:34px;\n  min-height:32px;\n  padding:5px 9px;\n  border:1px solid #343b46;\n  border-radius:8px;\n  background:#181c22;\n  color:#fff;\n  text-decoration:none;\n  font-weight:800;\n}\n.pcx-page-link:hover {\n  border-color:#ff8c00;\n  background:rgba(255,140,0,.20);\n}\n.pcx-page-link.is-current {\n  border-color:#ffb000;\n  background:#ff8c00;\n  color:#111;\n}\n.pcx-page-link.is-disabled {\n  opacity:.38;\n  cursor:default;\n}\n.pcx-pagination-size {\n  display:flex;\n  align-items:center;\n  gap:7px;\n  white-space:nowrap;\n}\n.pcx-pagination-size select {\n  padding:6px 8px;\n  border:1px solid #5f2a91;\n  border-radius:8px;\n  background:#0b0d10;\n  color:#fff;\n}\n@media(max-width:900px) {\n  .pcx-pagination {\n    align-items:stretch;\n  }\n  .pcx-pagination-summary,\n  .pcx-pagination-links,\n  .pcx-pagination-size {\n    width:100%;\n    justify-content:center;\n  }\n}\n\n.pcx-table {\n  width:100%;\n  border-collapse:collapse;\n}\n'''
+
+          if anchor_css not in text:
+              raise SystemExit('NOGO: CSS anchor not found')
+          text = text.replace(anchor_css, replacement_css, 1)
+
+          anchor_top = '''      <div id="pcxList">\n'''
+          replacement_top = '''      __PAGINATION_TOP__\n\n      <div id="pcxList">\n'''
+          if anchor_top not in text:
+              raise SystemExit('NOGO: top pagination anchor not found')
+          text = text.replace(anchor_top, replacement_top, 1)
+
+          anchor_bottom = '''      <div id="pcxGrid" class="pcx-grid">\n        __CARDS__\n      </div>\n'''
+          replacement_bottom = '''      <div id="pcxGrid" class="pcx-grid">\n        __CARDS__\n      </div>\n\n      __PAGINATION_BOTTOM__\n'''
+          if anchor_bottom not in text:
+              raise SystemExit('NOGO: bottom pagination anchor not found')
+          text = text.replace(anchor_bottom, replacement_bottom, 1)
+
+          anchor_replace = '''    body = body.replace("__SIDEBAR__", sidebar)\n    body = body.replace("__PARENT_ROW__", parent_row)\n'''
+          replacement_replace = '''    body = body.replace("__SIDEBAR__", sidebar)\n    body = body.replace("__PAGINATION_TOP__", pco_pagination_html)\n    body = body.replace("__PAGINATION_BOTTOM__", pco_pagination_html)\n    body = body.replace("__PARENT_ROW__", parent_row)\n'''
+          if anchor_replace not in text:
+              raise SystemExit('NOGO: replacement anchor not found')
+          text = text.replace(anchor_replace, replacement_replace, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          python3 -m py_compile opt/pincabos/web/app.py
+
+          grep -q 'PINCABOS_EXPLORER_TABLE_PAGINATION_V1' opt/pincabos/web/app.py
+          grep -q '__PAGINATION_TOP__' opt/pincabos/web/app.py
+          grep -q '__PAGINATION_BOTTOM__' opt/pincabos/web/app.py
+
+      - name: Remove temporary edit workflow
+        run: rm -f .github/workflows/_pincab-explorer-pagination-source-edit.yml
+
+      - name: Commit canonical source change
+        shell: bash
+        run: |
+          git config user.name "PinCabOS Integration"
+          git config user.email "pincabos@localhost"
+          git add opt/pincabos/web/app.py .github/workflows/_pincab-explorer-pagination-source-edit.yml
+          git commit -m "feat(explorer): paginate table library"
+          git push origin HEAD:feat/pincab-explorer-table-pagination
