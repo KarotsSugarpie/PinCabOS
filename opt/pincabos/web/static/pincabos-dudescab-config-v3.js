@@ -1057,6 +1057,58 @@
   }
 
 
+  // === PINCABOS_DUDESCAB_GAPS_V1 : Nouvelle Extension / Supprimer / Forcer les entrees ===
+  function defaultOutput(n, address){
+    return {
+      number:n, dof_number:(Math.max(Number(address),1)-1)*16 + n,
+      name:"", preset:0, flags:0,
+      enabled:false, night_mode_affected:false, analog:false, digital:true, gamma_correct:false, inverted:false,
+      max_value:255, intensity:100, falloff_value:0,
+      min_active_time:0, falloff_delay:0, security_delay:0
+    };
+  }
+  function addExtension(){
+    if(!requireMaintenanceUi()) return;
+    const c=state.cardConfig;
+    if(!c){ toast("Lis d'abord la configuration de la carte.",true); return; }
+    c.extensions=c.extensions||[];
+    if(c.extensions.length>=8){ toast("Maximum 8 cartes d'extension.",true); return; }
+    const used=new Set(c.extensions.map((e)=>Number(e.address)));
+    let addr=1; while(addr<=8 && used.has(addr)) addr++;
+    const ext={ index:c.extensions.length, address:addr, name:"Extension "+addr, pwm_frequency:1000,
+      legacy_card_security_delay:null, outputs:Array.from({length:16},(_,i)=>defaultOutput(i+1, addr)) };
+    c.extensions.push(ext);
+    state.extLoaded=false;
+    renderExtensionSelector(c.extensions);
+    const sel=$("dc-extension-select");
+    if(sel){ sel.value=String(c.extensions.length-1); applyExtension(c.extensions.length-1); }
+    markDirty();
+    toast("Extension #"+addr+" ajoutee. Regle le Numero d'ID sur l'adresse physique de la carte, configure les sorties, puis « Envoyer Config ».");
+  }
+  function deleteExtension(){
+    if(!requireMaintenanceUi()) return;
+    const c=state.cardConfig;
+    if(!c || !(c.extensions||[]).length){ toast("Aucune extension a supprimer.",true); return; }
+    const idx=state.extensionIndex||0;
+    const addr=c.extensions[idx] && c.extensions[idx].address;
+    if(!window.confirm("Supprimer l'extension #"+addr+" ? (appliquer avec Envoyer Config)")) return;
+    c.extensions.splice(idx,1);
+    c.extensions.forEach((e,i)=>{ e.index=i; });
+    state.extLoaded=false;
+    renderExtensionSelector(c.extensions);
+    if(c.extensions.length){ const sel=$("dc-extension-select"); if(sel){ sel.value="0"; applyExtension(0); } }
+    markDirty();
+    toast("Extension supprimee. « Envoyer Config » pour appliquer.");
+  }
+  async function forceInputs(){
+    if(!requireMaintenanceUi()) return;
+    if(!state.connectedUi){ toast("Connecte d'abord la Dude's Cab.",true); return; }
+    try{
+      await api("/api/dudescabconfig/protocol/inputs/force",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+      toast("Commande « Forcer les entrees » envoyee (test).");
+    }catch(error){ toast("Forcer les entrees: "+error.message,true); }
+  }
+
   function install() {
     ensureMaintenanceBanner();
     installTabs(); installConfigEvents(); populateInputFunctionSelects(); installOutputUi(); installMxUi(); installMonitor(); pauseFirmware();
@@ -1067,6 +1119,9 @@
     $("dc-refresh-status").addEventListener("click", refreshProtocol);
     $("dc-job-close").addEventListener("click", () => { $("dc-job-card").hidden=true; state.jobId=null; });
     $("dc-plunger-calibrate").addEventListener("click", calibratePlunger);
+    $("dc-add-extension")?.addEventListener("click", addExtension);
+    $("dc-delete-extension")?.addEventListener("click", deleteExtension);
+    $("dc-force-inputs")?.addEventListener("click", forceInputs);
     window.addEventListener('pagehide', () => {
       stopLivePolling();
       stopMonitorPolling();

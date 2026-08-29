@@ -750,10 +750,20 @@ class _ConfigWriter:
         self.buf += raw
 
     def pin(self, value: Any) -> None:
-        # Inverse de _ConfigReader.pin : 0/None -> 33 (aucun) ; 1..32 -> valeur-1
+        # Boutons Shift/NightMode (WriteButton) : 0/None -> 33 ; 1..32 -> valeur-1
         pin = int(value or 0)
         if pin <= 0:
             self.u8(33)
+            return
+        if pin > 32:
+            raise DudesCabProtocolError(f"Bouton invalide: {pin}")
+        self.u8(pin - 1)
+
+    def pin_raw(self, value: Any) -> None:
+        # Pins plunger/accelerometre (octet brut) : 0/None -> 255 (0xFF) ; 1..32 -> valeur-1
+        pin = int(value or 0)
+        if pin <= 0:
+            self.u8(255)
             return
         if pin > 32:
             raise DudesCabProtocolError(f"Bouton invalide: {pin}")
@@ -852,7 +862,7 @@ def _build_admin_config(config: dict[str, Any]) -> bytes:
     w.u16(accel.get("y_sensitivity"))
     w.u8(accel.get("dead_zone"))
     w.u8(accel.get("tilt_range"))
-    w.pin(accel.get("tilt_button_pin"))
+    w.pin_raw(accel.get("tilt_button_pin"))
     if version >= 8:
         w.u8(accel.get("precision"))
     if version >= 9:
@@ -864,15 +874,15 @@ def _build_admin_config(config: dict[str, Any]) -> bytes:
     w.boolean(plunger.get("enabled"))
     w.boolean(plunger.get("inverted"))
     w.u16(plunger.get("report_delay"))
-    w.pin(plunger.get("calibration_button_pin"))
+    w.pin_raw(plunger.get("calibration_button_pin"))
     w.u8(plunger.get("calibration_duration"))
     w.boolean(plunger.get("calibrated"))
     w.u16(plunger.get("calibration_pull_max"))
     w.u16(plunger.get("calibration_still"))
     w.u16(plunger.get("calibration_push_max"))
     w.u16(plunger.get("jitter_window"))
-    w.pin(plunger.get("pull_button_pin"))
-    w.pin(plunger.get("push_button_pin"))
+    w.pin_raw(plunger.get("pull_button_pin"))
+    w.pin_raw(plunger.get("push_button_pin"))
     w.u16(plunger.get("physical_range_min"))
     w.u16(plunger.get("physical_range_max"))
 
