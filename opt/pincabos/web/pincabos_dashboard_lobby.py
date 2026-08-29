@@ -3454,14 +3454,11 @@ def widget_content(widget_id, meta, data, csrf):
 
         return (
             _pco_engine_maj_html(kv)
-            + kv("VPX", value(item["vpx"]))
-            + kv("Runtime", value(item["runtime"]))
-            + kv("VPinFE", value(item["vpinfe"]))
+            + kv("Disponibilité", "VPX " + value(item["vpx"])
+                 + " · Runtime " + value(item["runtime"])
+                 + " · VPinFE " + value(item["vpinfe"]))
             + kv("Version VPinFE", item.get("vpinfe_version", "—"))
-            + kv("GitHub VPinFE", item.get("vpinfe_available", "—"))
-            + kv("Mise à jour VPinFE", item.get("vpinfe_update", "—"))
             + kv("VPX local", local_text)
-            + kv("VPX GitHub", github_text)
             + kv("Statut VPX", status_text)
         )
 
