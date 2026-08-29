@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+"""Mise a jour de VPX-BGFX depuis vpinball/vpinball, via l'interface.
+
+PINCABOS_VPX_UPDATER_V1
+
+VPX-BGFX etait le seul moteur sans mise a jour dans l'interface : l'upgrade se
+faisait a la main (tar + symlink ~/vpx). Cet updater le fait proprement, sur le
+modele de l'updater vpxtool/VPinFE :
+
+  * la version installee se lit sur la cible du symlink ~/vpx
+    (VPinballX_BGFX-<version>-linux-x64) ;
+  * la cible est la DERNIERE release vpinball/vpinball qui n'est PAS marquee
+    'DO NOT USE' ; on prend son asset BGFX linux x64 ;
+  * l'install telecharge l'asset, l'extrait, et bascule ~/vpx par ln atomique.
+    L'ancienne version est conservee pour le rollback.
+
+Tout tourne en compte pinball : ~/vpx et les dossiers VPinballX_BGFX-* sont dans
+son home. Les preferences VPX sont decouplees (PrefPath), donc preservees.
+
+  pincabos-vpx-update --status | --check | --install | --rollback
+"""
+from __future__ import annotations
+
+import argparse
+import fcntl
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.request
+from pathlib import Path
+
+HOME = Path("/home/pinball")
+LIEN = HOME / "vpx"
+LOCK = Path("/run/lock/pincabos-vpx-update.lock")
+API = "https://api.github.com/repos/vpinball/vpinball/releases?per_page=20"
+PREFIXE = "VPinballX_BGFX-"
+SUFFIXE = "-linux-x64-Release.tar.gz"
+
+
+def _req(url):
+    return urllib.request.Request(url, headers={
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "pincabos-vpx-update"})
+
+
+def _version_depuis_nom(nom: str) -> str | None:
+    m = re.search(r"VPinballX_BGFX-(.+?)-linux", nom)
+    return m.group(1) if m else None
+
+
+def installee() -> str | None:
+    if not (LIEN.is_symlink() or LIEN.exists()):
+        return None
+    return _version_depuis_nom(os.path.basename(os.path.realpath(str(LIEN))))
+
+
+def derniere() -> tuple:
+    """(version, url_asset, taille, url_release) de la derniere release valide."""
+    with urllib.request.urlopen(_req(API), timeout=30) as r:
+        rels = json.load(r)
+    for rel in rels:
+        etiquette = ((rel.get("name") or "") + " "
+                     + (rel.get("tag_name") or "")).upper()
+        if "DO NOT USE" in etiquette:
+            continue
+        version = (rel.get("tag_name") or "").lstrip("v")
+        for a in rel.get("assets", []):
+            nom = a.get("name", "")
+            if nom.startswith(PREFIXE) and nom.endswith(SUFFIXE):
+                return (version, a.get("browser_download_url"),
+                        a.get("size"), rel.get("html_url"))
+    return None, None, None, None
+
+
+def etat() -> dict:
+    inst = installee()
+    try:
+        version, _, _, url = derniere()
+    except Exception:
+        return {"installed": inst, "available": None,
+                "up_to_date": None, "ok": False}
+    return {
+        "installed": inst,
+        "available": version,
+        "up_to_date": bool(inst) and inst == version,
+        "release_url": url,
+        "ok": True,
+    }
+
+
+def _dossiers_version() -> list[Path]:
+    return sorted(
+        (p for p in HOME.iterdir()
+         if p.is_dir() and not p.is_symlink()
+         and p.name.startswith(PREFIXE) and (p / "VPinballX_BGFX").is_file()),
+        key=lambda p: p.stat().st_mtime,
+    )
+
+
+def _basculer(dossier: Path) -> None:
+    tmp = HOME / ".vpx.new"
+    if tmp.is_symlink() or tmp.exists():
+        tmp.unlink()
+    tmp.symlink_to(dossier.name)  # lien relatif dans le home
+    os.replace(tmp, LIEN)
+
+
+def _valider() -> None:
+    binaire = LIEN / "VPinballX_BGFX"
+    if not binaire.is_file() or not os.access(binaire, os.X_OK):
+        raise RuntimeError("VPinballX_BGFX absent ou non executable apres pose")
+
+
+def installer() -> int:
+    version, url, taille, _ = derniere()
+    if not version or not url:
+        print("NOGO: aucune release valide (hors DO NOT USE) trouvee")
+        return 1
+    if installee() == version:
+        print(f"VPX-BGFX {version} deja installe")
+        return 0
+
+    cible = HOME / f"VPinballX_BGFX-{version}-linux-x64"
+
+    if not (cible / "VPinballX_BGFX").is_file():
+        print(f"telechargement de VPX-BGFX {version} ({(taille or 0)//(1<<20)} Mo)...")
+        with tempfile.TemporaryDirectory(dir=str(HOME), prefix=".vpx-dl-") as tmp:
+            archive = Path(tmp) / "vpx.tar.gz"
+            with urllib.request.urlopen(_req(url), timeout=600) as r, \
+                    archive.open("wb") as f:
+                shutil.copyfileobj(r, f, length=1 << 20)
+            if taille and archive.stat().st_size != taille:
+                print("NOGO: taille telechargee incoherente")
+                return 1
+            subprocess.run(["gzip", "-t", str(archive)], check=True)  # integrite
+            extrait = Path(tmp) / "x"
+            extrait.mkdir()
+            subprocess.run(["tar", "-xzf", str(archive), "-C", str(extrait)],
+                           check=True)
+            binaire = next(extrait.rglob("VPinballX_BGFX"), None)
+            if binaire is None or not binaire.is_file():
+                print("NOGO: VPinballX_BGFX absent de l'archive")
+                return 1
+            racine = binaire.parent
+            if cible.exists():
+                shutil.rmtree(cible)
+            shutil.move(str(racine), str(cible))
+
+    (cible / "VPinballX_BGFX").chmod(0o755)
+    _basculer(cible)
+    _valider()
+
+    # ne garder que les 2 dernieres versions.
+    for vieux in _dossiers_version()[:-2]:
+        if os.path.realpath(str(LIEN)) != str(vieux):
+            shutil.rmtree(vieux, ignore_errors=True)
+
+    print(f"VPX-BGFX {version} installe ; ~/vpx bascule")
+    return 0
+
+
+def rollback() -> int:
+    courant = os.path.basename(os.path.realpath(str(LIEN))) if LIEN.is_symlink() else None
+    precedents = [d for d in _dossiers_version() if d.name != courant]
+    if not precedents:
+        print("NOGO: pas de version precedente conservee")
+        return 1
+    cible = precedents[-1]
+    _basculer(cible)
+    _valider()
+    print(f"rebascule sur {cible.name}")
+    return 0
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description=__doc__)
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("--status", action="store_true")
+    g.add_argument("--check", action="store_true")
+    g.add_argument("--install", action="store_true")
+    g.add_argument("--rollback", action="store_true")
+    args = p.parse_args()
+
+    if args.status or args.check:
+        e = etat()
+        print(json.dumps(e, indent=2))
+        return 0 if (args.status or e.get("up_to_date")) else 1
+
+    LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with LOCK.open("w") as verrou:
+        try:
+            fcntl.flock(verrou.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("NOGO: une operation VPX est deja en cours")
+            return 75
+        if args.install:
+            return installer()
+        if args.rollback:
+            return rollback()
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
