@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""Agrege l'etat des mises a jour de chaque composant en un seul fichier.
+
+PINCABOS_UPDATES_AGGREGATE_V1
+
+Chaque composant sait deja repondre "version installee / disponible" :
+  - PinCabOS (OS) : getpcos check           (texte)
+  - VPinFE        : vpinfeupdate.py --status --remote   (JSON)
+  - vpxtool       : pincabos-vpxtool-update --status     (JSON)
+
+Ce script les interroge (avec reseau), normalise le tout, et ecrit
+/opt/pincabos/state/updates-available.json. La page unifiee et la tuile du
+dashboard lisent CE fichier : instantane, hors ligne, aucun appel reseau au
+chargement. Un timer systemd le rafraichit periodiquement.
+
+Chaque verification est isolee : si un composant echoue (reseau, binaire
+absent), il est marque "inconnu" et n'entraine pas de faux "mise a jour dispo".
+"""
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+
+ETAT = Path("/opt/pincabos/state/updates-available.json")
+
+
+def run(cmd, timeout=45):
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
+
+def comp(key, name, installed=None, available=None, update=False, ok=True):
+    return {
+        "key": key, "name": name,
+        "installed": installed, "available": available,
+        "update_available": bool(update and ok),
+        "ok": ok,
+    }
+
+
+def check_pincabos():
+    try:
+        getpcos = shutil.which("getpcos") or "/usr/local/sbin/getpcos"
+        r = run([getpcos, "check"])
+        inst = avail = None
+        for ligne in (r.stdout or "").splitlines():
+            if ligne.startswith("Installed version:"):
+                inst = ligne.split(":", 1)[1].strip()
+            elif ligne.startswith("Available version:"):
+                avail = ligne.split(":", 1)[1].strip()
+        if avail in (None, "none compatible", "—"):
+            return comp("pincabos", "PinCabOS", inst, inst, False)
+        return comp("pincabos", "PinCabOS", inst, avail, inst != avail)
+    except Exception:
+        return comp("pincabos", "PinCabOS", ok=False)
+
+
+def check_vpinfe():
+    try:
+        r = run(["/usr/bin/python3", "/opt/pincabos/tools/vpinfeupdate.py",
+                 "--status", "--remote"])
+        d = json.loads((r.stdout or "").strip() or "{}")
+        local = (d.get("local") or {}).get("display")
+        remote = d.get("remote") or {}
+        upd = d.get("update") or {}
+        if not remote.get("ok"):
+            return comp("vpinfe", "VPinFE", local, None, False, ok=False)
+        tag = remote.get("tag")
+        maj = (upd.get("status") not in ("current", None)) or (
+            bool(tag) and bool(local) and tag != local)
+        return comp("vpinfe", "VPinFE", local, tag, maj)
+    except Exception:
+        return comp("vpinfe", "VPinFE", ok=False)
+
+
+def check_vpxtool():
+    try:
+        exe = "/opt/pincabos/tools/pincabos-vpxtool-update"
+        r = run([exe, "--status"])
+        d = json.loads((r.stdout or "").strip() or "{}")
+        inst = d.get("installed")
+        target = d.get("target")
+        return comp("vpxtool", "vpxtool", inst, target,
+                    not d.get("up_to_date", True))
+    except Exception:
+        return comp("vpxtool", "vpxtool", ok=False)
+
+
+def main():
+    composants = [check_pincabos(), check_vpinfe(), check_vpxtool()]
+    donnees = {
+        "generated_at": datetime.now(timezone.utc).isoformat()
+        .replace("+00:00", "Z"),
+        "components": composants,
+        "any_update": any(c["update_available"] for c in composants),
+    }
+    ETAT.parent.mkdir(parents=True, exist_ok=True)
+    tmp = ETAT.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(donnees, indent=2, ensure_ascii=False) + "\n",
+                   encoding="utf-8")
+    tmp.chmod(0o644)
+    tmp.replace(ETAT)
+    print(json.dumps(donnees, indent=2, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

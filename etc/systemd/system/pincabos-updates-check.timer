@@ -1,0 +1,10 @@
+[Unit]
+Description=PinCabOS - rafraichit l'etat des mises a jour periodiquement
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
