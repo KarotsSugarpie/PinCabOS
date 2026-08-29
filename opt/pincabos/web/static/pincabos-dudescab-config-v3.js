@@ -903,6 +903,19 @@
   function pinFromLabel(t){ const m=/(\d+)/.exec(String(t ?? "")); return (/aucun/i.test(String(t ?? "")) || !m)?0:Number(m[1]); }
   function hexToRgb(hex){ const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex ?? "")); if(!m) return null; return {r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16),hex:("#"+m[1]+m[2]+m[3]).toLowerCase()}; }
 
+  const LABEL_TO_BINDING = (() => {
+    const m = {"None": {type:0, function:0}};
+    for (let f=0; f<36; f++){ const lbl=inputFunctionLabel({type:2, function:f}); if(!(lbl in m)) m[lbl]={type:2, function:f}; }
+    for (let f=0; f<KEY_NAMES.length; f++){ const lbl=inputFunctionLabel({type:1, function:f}); if(!(lbl in m)) m[lbl]={type:1, function:f}; }
+    return m;
+  })();
+  function bindingFromLabel(label, original){
+    original = original || {type:0, function:0};
+    const orig = {type:Number(original.type)||0, function:Number(original.function)||0};
+    if (inputFunctionLabel(orig) === String(label)) return orig; // inchange -> exact
+    const b = LABEL_TO_BINDING[String(label)];
+    return b ? {type:b.type, function:b.function} : orig; // change -> map inverse, sinon preserve
+  }
   function writeBackSelectedOutputs(){
     const c=state.cardConfig; const ext=c && c.extensions && c.extensions[state.extensionIndex||0]; if(!ext) return;
     (ext.outputs||[]).forEach((o,off)=>{ const n=off+1;
@@ -938,7 +951,12 @@
     c.inputs=c.inputs||{};
     if(ctrlEl("inputs.shift")) c.inputs.shift_button_pin=pinFromLabel(ctrlVal("inputs.shift"));
     if(ctrlEl("inputs.night")) c.inputs.night_mode_button_pin=pinFromLabel(ctrlVal("inputs.night"));
-    (c.inputs.items||[]).forEach((item,i)=>{ const n=i+1; if(ctrlEl(`input.${n}.debounce`)) item.debounce_delay=num0(ctrlVal(`input.${n}.debounce`)); });
+    (c.inputs.items||[]).forEach((item,i)=>{ const n=i+1;
+      const pl=ctrlVal(`input.${n}.primary`); if(pl!==undefined) item.default=bindingFromLabel(pl, item.default);
+      const sl=ctrlVal(`input.${n}.shifted`); if(sl!==undefined) item.shifted=bindingFromLabel(sl, item.shifted);
+      const lat=ctrlVal(`input.${n}.latency`); if(lat!==undefined) item.latency=(String(lat)==="Optimal")?0:(Number(item.latency)||1);
+      if(ctrlEl(`input.${n}.debounce`)) item.debounce_delay=num0(ctrlVal(`input.${n}.debounce`));
+    });
     const a=c.accelerometer=c.accelerometer||{};
     if(ctrlEl("accelerometer.poll")) a.report_delay=num0(ctrlVal("accelerometer.poll"));
     if(ctrlEl("accelerometer.x")) a.x_sensitivity=num0(ctrlVal("accelerometer.x"));
