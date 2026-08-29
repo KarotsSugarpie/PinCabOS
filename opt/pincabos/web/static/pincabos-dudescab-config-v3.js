@@ -351,19 +351,7 @@
       if(empty) empty.hidden=false;
       if(count) count.textContent="0";
     }
-    (mx.ledstrips || []).forEach((strip) => {
-      const first = strip.splits?.[0]?.data_output_num ?? 0;
-      const lane = first >= 0 && first <= 7 ? first + 1 : Math.max(1, Math.min(8, Number(first) || 1));
-      const holder=document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-strips`);
-      const empty=document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-empty`);
-      if(!holder) return;
-      const row=document.createElement("div");
-      row.className="dc-mx-strip dc-mx-strip-read";
-      const splitText=(strip.splits || []).map((split)=>`Ligne ${Number(split.data_output_num)+1}: ${split.nb_leds} LEDs`).join(" · ");
-      row.innerHTML=`<label>Nom<input type="text" value="${escapeHtml(strip.name)}"></label><label>Largeur<input type="number" value="${Number(strip.width)}"></label><label>Hauteur<input type="number" value="${Number(strip.height)}"></label><label>Numéro sortie DOF<input type="number" value="${Number(strip.dof_output_num)}"></label><label>Arrangement<select><option>${escapeHtml(arrangementLabel(strip.led_arrangement))}</option></select></label><label>Brillance<input type="number" value="${Number(strip.brightness)}"></label><div class="dc-mx-splits" title="${escapeHtml(splitText)}">${escapeHtml(splitText || "Aucun split")}</div>`;
-      holder.appendChild(row);
-      if(empty) empty.hidden=true;
-    });
+    (mx.ledstrips || []).forEach((strip) => mxAppendStrip(strip));
     for (let lane=1; lane<=8; lane++) {
       const count=document.querySelector(`[data-mx-lane="${lane}"] [data-mx-count]`);
       const total=(mx.ledstrips || []).flatMap((strip)=>strip.splits || []).filter((split)=>Number(split.data_output_num)+1===lane).reduce((sum,split)=>sum+Number(split.nb_leds||0),0);
@@ -671,19 +659,10 @@
   function addMxStrip(lane) {
     const holder = document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-strips`);
     const empty = document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-empty`);
-    const index = holder.children.length + 1;
-    const row = document.createElement("div");
-    row.className = "dc-mx-strip";
-    row.innerHTML = `<label>Nom<input type="text" value="Ledstrip ${lane}.${index}"></label><label>Largeur<input type="number" min="1" max="512" value="1"></label><label>Hauteur<input type="number" min="1" max="512" value="1"></label><label>Numéro sortie DOF<input type="number" min="1" max="999" value="${(lane-1)*3+1}"></label><label>Arrangement<select><option>LeftRightTopDown</option><option>LeftRightBottomUp</option><option>TopDownLeftRight</option><option>BottomUpLeftRight</option></select></label><label>Brillance<input type="number" min="0" max="100" value="50"></label><button type="button" class="dc-remove-strip">🗑</button>`;
-    holder.appendChild(row); empty.hidden = true;
-    const update = () => {
-      let total = 0;
-      $$('.dc-mx-strip', holder).forEach((strip) => { const nums = $$('input[type=number]', strip); total += Number(nums[0]?.value || 0) * Number(nums[1]?.value || 0); });
-      document.querySelector(`[data-mx-lane="${lane}"] [data-mx-count]`).textContent = String(total);
-    };
-    row.addEventListener("input", () => { update(); markDirty(); });
-    row.querySelector('.dc-remove-strip').addEventListener("click", () => { row.remove(); empty.hidden = holder.children.length > 0; update(); markDirty(); });
-    update(); markDirty();
+    if(!holder) return;
+    holder.appendChild(mxStripRow({ name:"Ledstrip "+lane, width:1, height:1, dof_output_num:(lane-1)*3+1, led_arrangement:0, fading_curve:0, color_order:0, brightness:50, splits:[{data_output_num:lane-1, nb_leds:0}] }));
+    if(empty) empty.hidden = true;
+    markDirty();
   }
   function installMxUi() {
     $$('[data-add-strip]').forEach((button) => button.addEventListener("click", () => addMxStrip(button.dataset.addStrip)));
@@ -1001,6 +980,8 @@
       const ct=idxOfLabel(TEST_LABELS, ctrlVal("mx.connection_test")); if(ct!==null) m.test_on_connect=ct;
       if(ctrlEl("mx.duration")){ const d=num0(ctrlVal("mx.duration")); m.test_on_connect_duration=d; m.test_on_reset_duration=d; }
       if(ctrlEl("mx.compression") && m.compression_ratio!=null) m.compression_ratio=num0(ctrlVal("mx.compression"));
+      m.ledstrips = collectMxStrips();
+      m.nb_ledstrips = m.ledstrips.length;
     }
     return c;
   }
@@ -1107,6 +1088,75 @@
       await api("/api/dudescabconfig/protocol/inputs/force",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
       toast("Commande « Forcer les entrees » envoyee (test).");
     }catch(error){ toast("Forcer les entrees: "+error.message,true); }
+  }
+
+  // === PINCABOS_DUDESCAB_MX_EDITOR_V1 : edition complete ledstrips/splits MX ===
+  const MX_ARRANGEMENTS = ["LeftRightTopDown","LeftRightBottomUp","RightLeftTopDown","RightLeftBottomUp","TopDownLeftRight","TopDownRightLeft","BottomUpLeftRight","BottomUpRightLeft","LeftRightAlternateTopDown","LeftRightAlternateBottomUp","RightLeftAlternateTopDown","RightLeftAlternateBottomUp","TopDownAlternateLeftRight","TopDownAlternateRightLeft","BottomUpAlternateLeftRight","BottomUpAlternateRightLeft"];
+  const MX_FADING = ["Linear","Linear0To224","Linear0To192","Linear0To160","Linear0To128","Linear0To96","Linear0To64","Linear0To32","Linear0To16","InvertedLinear","SwissLizardsLedCurve"];
+  const MX_COLOR_ORDER = ["RGB","RBG","GRB","GBR","BRG","BGR"];
+  function mxSel(field, options, sel){
+    return `<select data-mx-field="${field}">`+options.map((o,i)=>`<option value="${i}"${i===Number(sel)?" selected":""}>${escapeHtml(o)}</option>`).join("")+`</select>`;
+  }
+  function mxSplitRow(split){
+    split=split||{};
+    const div=document.createElement("div"); div.className="dc-mx-split";
+    div.innerHTML=`<label>Ligne<input type="number" min="1" max="8" data-mx-field="split.line" value="${(Number(split.data_output_num)||0)+1}"></label>`
+      +`<label>LEDs<input type="number" min="0" max="65535" data-mx-field="split.nb_leds" value="${Number(split.nb_leds)||0}"></label>`
+      +`<button type="button" class="dc-remove-split" title="Retirer le split">✕</button>`;
+    div.querySelector(".dc-remove-split").addEventListener("click",()=>{ div.remove(); markDirty(); });
+    return div;
+  }
+  function mxStripRow(strip){
+    strip=strip||{};
+    const row=document.createElement("div"); row.className="dc-mx-strip";
+    row.innerHTML=
+       `<label>Nom<input type="text" data-mx-field="name" value="${escapeHtml(strip.name||"")}"></label>`
+      +`<label>Largeur<input type="number" min="1" max="512" data-mx-field="width" value="${Number(strip.width)||1}"></label>`
+      +`<label>Hauteur<input type="number" min="1" max="512" data-mx-field="height" value="${Number(strip.height)||1}"></label>`
+      +`<label>Sortie DOF<input type="number" min="0" max="999" data-mx-field="dof_output_num" value="${Number(strip.dof_output_num)||0}"></label>`
+      +`<label>Arrangement${mxSel("led_arrangement",MX_ARRANGEMENTS,strip.led_arrangement||0)}</label>`
+      +`<label>Courbe${mxSel("fading_curve",MX_FADING,strip.fading_curve||0)}</label>`
+      +`<label>Ordre couleur${mxSel("color_order",MX_COLOR_ORDER,strip.color_order||0)}</label>`
+      +`<label>Brillance<input type="number" min="0" max="100" data-mx-field="brightness" value="${Number(strip.brightness)||0}"></label>`
+      +`<div class="dc-mx-split-list"></div>`
+      +`<div class="dc-mx-strip-actions"><button type="button" class="dc-add-split dc-small-button">+ Split</button><button type="button" class="dc-remove-strip" title="Retirer la bande">🗑</button></div>`;
+    const list=row.querySelector(".dc-mx-split-list");
+    const splits=(strip.splits&&strip.splits.length)?strip.splits:[{data_output_num:0,nb_leds:0}];
+    splits.forEach((sp)=>list.appendChild(mxSplitRow(sp)));
+    row.querySelector(".dc-add-split").addEventListener("click",()=>{ if(list.children.length>=8){ toast("Maximum 8 splits par bande.",true); return; } list.appendChild(mxSplitRow({data_output_num:0,nb_leds:0})); markDirty(); });
+    row.querySelector(".dc-remove-strip").addEventListener("click",()=>{ const holder=row.parentElement; row.remove(); if(holder){ const empty=holder.parentElement&&holder.parentElement.querySelector(".dc-mx-empty"); if(empty) empty.hidden=holder.children.length>0; } markDirty(); });
+    row.addEventListener("input", markDirty);
+    return row;
+  }
+  function mxAppendStrip(strip){
+    const first=(strip.splits&&strip.splits[0]&&Number(strip.splits[0].data_output_num))||0;
+    const lane=Math.max(1,Math.min(8,first+1));
+    const holder=document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-strips`);
+    const empty=document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-empty`);
+    if(!holder) return;
+    holder.appendChild(mxStripRow(strip));
+    if(empty) empty.hidden=true;
+  }
+  function collectMxStrips(){
+    const strips=[];
+    document.querySelectorAll('[data-mx-lane] .dc-mx-strips .dc-mx-strip').forEach((row)=>{
+      const f=(name)=>{ const el=row.querySelector(`[data-mx-field="${name}"]`); return el?el.value:undefined; };
+      const splits=[];
+      row.querySelectorAll(".dc-mx-split").forEach((sp)=>{
+        const line=sp.querySelector('[data-mx-field="split.line"]');
+        const leds=sp.querySelector('[data-mx-field="split.nb_leds"]');
+        splits.push({ data_output_num: Math.max(0,(num0(line&&line.value)||1)-1), nb_leds: num0(leds&&leds.value) });
+      });
+      strips.push({
+        name: f("name")||"",
+        width: num0(f("width")), height: num0(f("height")),
+        dof_output_num: num0(f("dof_output_num")),
+        fading_curve: num0(f("fading_curve")), led_arrangement: num0(f("led_arrangement")),
+        color_order: num0(f("color_order")), brightness: num0(f("brightness")),
+        splits: splits
+      });
+    });
+    return strips;
   }
 
   function install() {
