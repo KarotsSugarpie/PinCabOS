@@ -42,12 +42,12 @@ def _pco_engine_maj_html(kv):
     if not dispo:
         return kv("Mises \u00e0 jour", "Tout \u00e0 jour")
     noms = ", ".join(c.get("name", "") for c in dispo)
-    texte = f"\u25cf {len(dispo)} : {noms}"
-    bouton = ('<div style="margin-top:8px"><a href="/tools/updates-all" '
-              'style="display:inline-block;padding:6px 12px;border-radius:8px;'
-              'background:#2d6cdf;color:#fff;text-decoration:none;'
-              'font-weight:600;">Voir les mises \u00e0 jour</a></div>')
-    return kv("Mises \u00e0 jour", texte) + bouton
+    return (
+        '<a class="pco-kv" href="/tools/updates-all" '
+        'style="text-decoration:none;color:inherit;cursor:pointer;">'
+        '<span>Mises \u00e0 jour</span>'
+        f'<b style="color:#e0a94b">\u25cf {len(dispo)} \u2192 '
+        f'{html.escape(noms)}</b></a>')
 
 
 def run(command: str, fallback: str = "—", timeout: int = 3) -> str:
@@ -293,7 +293,7 @@ BASE_REGISTRY = {
     "network": {"title": "Réseau", "subtitle": "IP, passerelle, IP Internet et lien", "category": "Système", "kind": "network", "w": 4, "h": 6},
     "journal": {"title": "Journal WebApp", "subtitle": "Derniers événements du tableau de bord", "category": "Système", "kind": "journal", "w": 4, "h": 4},
     "tables": {"title": "Bibliothèque Tables", "subtitle": "Tables VPX installées", "category": "Pinball", "kind": "tables", "w": 3, "h": 3},
-    "engine": {"title": "Moteur Pinball", "subtitle": "VPX, VPinFE et disponibilité", "category": "Pinball", "kind": "engine", "w": 3, "h": 3},
+    "engine": {"title": "Moteur Pinball", "subtitle": "VPX, VPinFE et disponibilité", "category": "Pinball", "kind": "engine", "w": 3, "h": 5},
     "audio": {"title": "Audio", "subtitle": "Cartes et routage attendu", "category": "Pinball", "kind": "audio", "w": 3, "h": 3},
     "dof_usb": {"title": "DOF / USB", "subtitle": "Périphériques détectés — lecture seule", "category": "Pinball", "kind": "dof_usb", "w": 3, "h": 3},
 }
@@ -3450,7 +3450,8 @@ def widget_content(widget_id, meta, data, csrf):
             status_text = "Comparaison indisponible"
 
         return (
-            kv("VPX", value(item["vpx"]))
+            _pco_engine_maj_html(kv)
+            + kv("VPX", value(item["vpx"]))
             + kv("Runtime", value(item["runtime"]))
             + kv("VPinFE", value(item["vpinfe"]))
             + kv("Version VPinFE", item.get("vpinfe_version", "—"))
@@ -3459,7 +3460,6 @@ def widget_content(widget_id, meta, data, csrf):
             + kv("VPX local", local_text)
             + kv("VPX GitHub", github_text)
             + kv("Statut VPX", status_text)
-            + _pco_engine_maj_html(kv)
         )
 
     if kind == "audio":
