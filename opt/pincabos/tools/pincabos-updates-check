@@ -19,6 +19,9 @@ absent), il est marque "inconnu" et n'entraine pas de faux "mise a jour dispo".
 from __future__ import annotations
 
 import json
+import os
+import re
+import urllib.request
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -88,8 +91,47 @@ def check_vpxtool():
         return comp("vpxtool", "vpxtool", ok=False)
 
 
+def _vpx_installe():
+    p = Path("/home/pinball/vpx")
+    if not (p.is_symlink() or p.exists()):
+        return None
+    nom = os.path.basename(os.path.realpath(str(p)))
+    m = re.search(r"VPinballX_BGFX-(.+?)-linux", nom)
+    return m.group(1) if m else None
+
+
+def _vpx_dernier():
+    req = urllib.request.Request(
+        "https://api.github.com/repos/vpinball/vpinball/releases?per_page=15",
+        headers={"Accept": "application/vnd.github+json",
+                 "User-Agent": "pincabos-updates-check"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        rels = json.load(r)
+    for rel in rels:
+        etiquette = ((rel.get("name") or "") + " "
+                     + (rel.get("tag_name") or "")).upper()
+        if "DO NOT USE" in etiquette:
+            continue
+        return (rel.get("tag_name") or "").lstrip("v"), rel.get("html_url")
+    return None, None
+
+
+def check_vpx():
+    inst = _vpx_installe()
+    try:
+        dernier, url = _vpx_dernier()
+    except Exception:
+        return comp("vpx", "VPX-BGFX", inst, None, False, ok=False)
+    if not dernier:
+        return comp("vpx", "VPX-BGFX", inst, None, False, ok=False)
+    c = comp("vpx", "VPX-BGFX", inst, dernier, bool(inst) and inst != dernier)
+    c["manage_url"] = url  # pas d'updater interne : lien vers la release
+    return c
+
+
 def main():
-    composants = [check_pincabos(), check_vpinfe(), check_vpxtool()]
+    composants = [check_pincabos(), check_vpinfe(), check_vpxtool(),
+                  check_vpx()]
     donnees = {
         "generated_at": datetime.now(timezone.utc).isoformat()
         .replace("+00:00", "Z"),

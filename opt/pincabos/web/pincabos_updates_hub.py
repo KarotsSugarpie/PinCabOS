@@ -83,14 +83,19 @@ function rendre(data){
   const comps = (data && data.components) || [];
   if(!comps.length){ tbody.innerHTML = '<tr><td colspan="5" style="padding:14px 12px;opacity:.7;">État indisponible — cliquez « Vérifier maintenant ».</td></tr>'; return; }
   tbody.innerHTML = comps.map(c=>{
-    const href = PAGES[c.key] || "#";
+    const href = c.manage_url || PAGES[c.key] || "";
+    const externe = /^https?:/.test(href);
+    const cible = externe ? ' target="_blank" rel="noopener"' : '';
     let etat;
     if(!c.ok) etat = '<span style="color:#e0a94b">vérification impossible</span>';
     else if(c.update_available) etat = '<span style="color:#e0a94b;font-weight:600">● Mise à jour disponible</span>';
     else etat = '<span style="color:#5fbf5f">À jour</span>';
-    const bouton = c.update_available
-      ? '<a href="'+href+'" style="padding:6px 12px;border-radius:8px;background:#2d6cdf;color:#fff;text-decoration:none;font-weight:600;">Mettre à jour</a>'
-      : '<a href="'+href+'" style="padding:6px 12px;border-radius:8px;border:1px solid #555;color:#ccc;text-decoration:none;">Gérer</a>';
+    let bouton = "";
+    if(href){
+      const label = c.update_available ? (externe ? "Voir la build" : "Mettre à jour") : (externe ? "Voir la release" : "Gérer");
+      const style = c.update_available ? 'background:#2d6cdf;color:#fff;font-weight:600;' : 'border:1px solid #555;color:#ccc;';
+      bouton = '<a href="'+href+'"'+cible+' style="padding:6px 12px;border-radius:8px;text-decoration:none;'+style+'">'+label+'</a>';
+    }
     return '<tr style="border-top:1px solid #333;">'
       + '<td style="padding:10px 12px;font-weight:600;">'+esc(c.name)+'</td>'
       + '<td style="padding:10px 12px;">'+esc(c.installed||"—")+'</td>'
