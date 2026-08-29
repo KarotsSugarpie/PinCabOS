@@ -2506,6 +2506,26 @@ def service_line(name, key, status):
     return f'<div class="pco-service"><i class="{html.escape(item["level"])}"></i><span>{html.escape(name)}</span><b data-pco-service="{html.escape(key)}">{html.escape(item["label"])}</b></div>'
 
 
+_FIT_SCROLL_STYLE = (
+    "<style>"
+    ".pco-fit-scroll{overflow-y:auto;overflow-x:hidden;min-height:0;flex:1 1 auto;"
+    "scrollbar-width:thin;scrollbar-color:var(--accent) rgba(255,174,0,.14)}"
+    ".pco-fit-scroll::-webkit-scrollbar{width:8px}"
+    ".pco-fit-scroll::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px;"
+    "border:2px solid rgba(25,5,40,.6)}"
+    ".pco-fit-scroll::-webkit-scrollbar-track{background:rgba(255,174,0,.10);border-radius:8px}"
+    "</style>"
+)
+
+
+def _fit_scroll(inner):
+    """Enveloppe un contenu dans un conteneur qui defile SEULEMENT s'il deborde,
+    avec une barre fine sur charte (comme le widget Services). Evite de couper le
+    bas des tuiles a contenu variable (disques, versions) sans toucher au layout."""
+    return (_FIT_SCROLL_STYLE
+            + '<div class="pco-fit-scroll">' + inner + '</div>')
+
+
 def widget_content(widget_id, meta, data, csrf):
     kind = meta["kind"]
     if kind == "system":
@@ -2518,7 +2538,7 @@ def widget_content(widget_id, meta, data, csrf):
         return f'<div class="pco-value" data-pco-bind="memory.percent" data-pco-format="percent">{item["percent"]:.0f}%</div><p class="pco-caption">RAM utilisée</p>' + meter("RAM", item["percent"], f'{item["used"]} / {item["total"]}')
     if kind == "storage":
         item = data["storage"]
-        return storage_widget_html(item)
+        return _fit_scroll(storage_widget_html(item))
     if kind == "gpu":
         item = data["gpu"]
         percent = number(item["vram_used"]) / number(item["vram_total"]) * 100 if number(item["vram_total"]) else 0
@@ -3470,13 +3490,15 @@ def widget_content(widget_id, meta, data, csrf):
 
         return (
             _pco_engine_maj_html(kv)
-            + _pco_engine_pincabos_kv(kv)
+            + _fit_scroll(
+                _pco_engine_pincabos_kv(kv)
             + kv("Disponibilité", "VPX " + value(item["vpx"])
                  + " · Runtime " + value(item["runtime"])
                  + " · VPinFE " + value(item["vpinfe"]))
             + kv("Version VPinFE", item.get("vpinfe_version", "—"))
             + kv("VPX local", local_text)
             + kv("Statut VPX", status_text)
+            )
         )
 
     if kind == "audio":
