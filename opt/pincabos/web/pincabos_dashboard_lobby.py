@@ -27,21 +27,46 @@ _STATUS_CACHE = {"at": 0.0, "value": {}}
 _CPU_SAMPLE = {"total": None, "idle": None}
 
 
-def _pco_updates_hub_meta():
-    """(sous-titre, badge) de la tuile Mises a jour, depuis l'etat agrege."""
+def _pco_engine_pincabos_kv(kv):
+    """Ligne PinCabOS (version installee + statut) depuis l'etat agrege."""
+    try:
+        data = json.loads(Path(
+            "/opt/pincabos/state/updates-available.json"
+        ).read_text(encoding="utf-8"))
+        c = next(x for x in (data.get("components") or [])
+                 if x.get("key") == "pincabos")
+    except Exception:
+        return ""
+    inst = c.get("installed") or "—"
+    if c.get("update_available"):
+        return kv("PinCabOS", f"{inst} → {c.get('available')}")
+    return kv("PinCabOS", f"{inst} (à jour)")
+
+
+def _pco_engine_maj_html(kv):
+    """Resume des MAJ logiciels pour la tuile Moteur Pinball, depuis l'etat
+    agrege ecrit par pincabos-updates-check. Un bouton mene a la page des
+    mises a jour quand au moins un composant en a une."""
     try:
         data = json.loads(Path(
             "/opt/pincabos/state/updates-available.json"
         ).read_text(encoding="utf-8"))
     except Exception:
-        return ("PinCabOS, VPinFE, vpxtool", False)
-    n = sum(1 for c in (data.get("components") or [])
-            if c.get("update_available"))
-    if n > 1:
-        return (f"\u25cf {n} mises \u00e0 jour disponibles", True)
-    if n == 1:
-        return ("\u25cf 1 mise \u00e0 jour disponible", True)
-    return ("PinCabOS, VPinFE, vpxtool \u2014 \u00e0 jour", False)
+        return ""
+    dispo = [c for c in (data.get("components") or [])
+             if c.get("update_available")]
+    if not dispo:
+        return kv("Mises \u00e0 jour", "Tout \u00e0 jour")
+    n = len(dispo)
+    libelle = ("\u25cf %d mises \u00e0 jour \u2014 voir" % n) if n > 1 \
+        else "\u25cf 1 mise \u00e0 jour \u2014 voir"
+    return (
+        '<a href="/tools/updates-all" '
+        'style="display:inline-block;align-self:center;'
+        'margin:2px 0 8px;padding:6px 12px;border-radius:8px;'
+        'border:1px solid var(--accent);background:var(--panel2);'
+        'color:var(--accent);text-decoration:none;font-weight:700;font-size:11px;">'
+        + libelle + '</a>')
 
 
 def run(command: str, fallback: str = "—", timeout: int = 3) -> str:
@@ -287,7 +312,7 @@ BASE_REGISTRY = {
     "network": {"title": "Réseau", "subtitle": "IP, passerelle, IP Internet et lien", "category": "Système", "kind": "network", "w": 4, "h": 6},
     "journal": {"title": "Journal WebApp", "subtitle": "Derniers événements du tableau de bord", "category": "Système", "kind": "journal", "w": 4, "h": 4},
     "tables": {"title": "Bibliothèque Tables", "subtitle": "Tables VPX installées", "category": "Pinball", "kind": "tables", "w": 3, "h": 3},
-    "engine": {"title": "Moteur Pinball", "subtitle": "VPX, VPinFE et disponibilité", "category": "Pinball", "kind": "engine", "w": 3, "h": 3},
+    "engine": {"title": "Moteur Pinball", "subtitle": "VPX, VPinFE et disponibilité", "category": "Pinball", "kind": "engine", "w": 3, "h": 5},
     "audio": {"title": "Audio", "subtitle": "Cartes et routage attendu", "category": "Pinball", "kind": "audio", "w": 3, "h": 3},
     "dof_usb": {"title": "DOF / USB", "subtitle": "Périphériques détectés — lecture seule", "category": "Pinball", "kind": "dof_usb", "w": 3, "h": 3},
 }
@@ -676,18 +701,6 @@ def registry_for_request():
         "image_url": "/static/pincabos-assets/PCOSUpdateVPX.png",
     }
 
-    _pco_uh_sub, _pco_uh_badge = _pco_updates_hub_meta()
-    result["tool_updates_hub"] = {
-        "title": "Mises à jour",
-        "subtitle": _pco_uh_sub,
-        "category": "Système",
-        "kind": "tool",
-        "w": 2,
-        "h": 3,
-        "href": "/tools/updates-all",
-        "image": "PCOSUpdatePinCabOS.png",
-        "image_url": "/static/pincabos-assets/PCOSUpdatePinCabOS.png",
-    }
     # === PINCABOS_DASHBOARD_SHORTCUTS_FAMILIES_LOGOS_V1 END ===
 
     # PINCABOS_AUDIO_VOLUME_DASHBOARD_WIDGET_V2_REGISTRY
@@ -2493,6 +2506,26 @@ def service_line(name, key, status):
     return f'<div class="pco-service"><i class="{html.escape(item["level"])}"></i><span>{html.escape(name)}</span><b data-pco-service="{html.escape(key)}">{html.escape(item["label"])}</b></div>'
 
 
+_FIT_SCROLL_STYLE = (
+    "<style>"
+    ".pco-fit-scroll{overflow-y:auto;overflow-x:hidden;min-height:0;flex:1 1 auto;"
+    "scrollbar-width:thin;scrollbar-color:var(--accent) rgba(255,174,0,.14)}"
+    ".pco-fit-scroll::-webkit-scrollbar{width:8px}"
+    ".pco-fit-scroll::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px;"
+    "border:2px solid rgba(25,5,40,.6)}"
+    ".pco-fit-scroll::-webkit-scrollbar-track{background:rgba(255,174,0,.10);border-radius:8px}"
+    "</style>"
+)
+
+
+def _fit_scroll(inner):
+    """Enveloppe un contenu dans un conteneur qui defile SEULEMENT s'il deborde,
+    avec une barre fine sur charte (comme le widget Services). Evite de couper le
+    bas des tuiles a contenu variable (disques, versions) sans toucher au layout."""
+    return (_FIT_SCROLL_STYLE
+            + '<div class="pco-fit-scroll">' + inner + '</div>')
+
+
 def widget_content(widget_id, meta, data, csrf):
     kind = meta["kind"]
     if kind == "system":
@@ -2505,7 +2538,7 @@ def widget_content(widget_id, meta, data, csrf):
         return f'<div class="pco-value" data-pco-bind="memory.percent" data-pco-format="percent">{item["percent"]:.0f}%</div><p class="pco-caption">RAM utilisée</p>' + meter("RAM", item["percent"], f'{item["used"]} / {item["total"]}')
     if kind == "storage":
         item = data["storage"]
-        return storage_widget_html(item)
+        return _fit_scroll(storage_widget_html(item))
     if kind == "gpu":
         item = data["gpu"]
         percent = number(item["vram_used"]) / number(item["vram_total"]) * 100 if number(item["vram_total"]) else 0
@@ -3456,15 +3489,16 @@ def widget_content(widget_id, meta, data, csrf):
             status_text = "Comparaison indisponible"
 
         return (
-            kv("VPX", value(item["vpx"]))
-            + kv("Runtime", value(item["runtime"]))
-            + kv("VPinFE", value(item["vpinfe"]))
+            _pco_engine_maj_html(kv)
+            + _fit_scroll(
+                _pco_engine_pincabos_kv(kv)
+            + kv("Disponibilité", "VPX " + value(item["vpx"])
+                 + " · Runtime " + value(item["runtime"])
+                 + " · VPinFE " + value(item["vpinfe"]))
             + kv("Version VPinFE", item.get("vpinfe_version", "—"))
-            + kv("GitHub VPinFE", item.get("vpinfe_available", "—"))
-            + kv("Mise à jour VPinFE", item.get("vpinfe_update", "—"))
             + kv("VPX local", local_text)
-            + kv("VPX GitHub", github_text)
             + kv("Statut VPX", status_text)
+            )
         )
 
     if kind == "audio":
