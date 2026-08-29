@@ -709,6 +709,7 @@ def _parse_admin_config(data: bytes) -> dict[str, Any]:
     trailing = reader.take(reader.remaining, "octets supplémentaires") if reader.remaining else b""
     return {
         "magic": magic,
+        "raw_hex": data.hex(),
         "version": version,
         "general": general,
         "inputs": input_settings,
@@ -722,6 +723,232 @@ def _parse_admin_config(data: bytes) -> dict[str, Any]:
         "remaining_hex": trailing.hex(),
         "raw_sha256": __import__("hashlib").sha256(data).hexdigest(),
     }
+
+
+class _ConfigWriter:
+    """Serialiseur miroir de _ConfigReader : reconstruit le buffer Admin
+    SetConfig (code 101) octet-pour-octet, avec les memes encodages que le
+    configurateur .NET d'Arnoz (WriteShort=u16 LE, WriteColor=RGB, WriteButton,
+    WriteString=1 octet longueur + donnees)."""
+
+    def __init__(self) -> None:
+        self.buf = bytearray()
+
+    def u8(self, value: Any) -> None:
+        self.buf.append(int(value or 0) & 0xFF)
+
+    def u16(self, value: Any) -> None:
+        self.buf += (int(value or 0) & 0xFFFF).to_bytes(2, "little")
+
+    def boolean(self, value: Any) -> None:
+        self.u8(1 if value else 0)
+
+    def string(self, value: Any) -> None:
+        raw = (value or "").encode("latin-1", errors="replace")
+        if len(raw) > 255:
+            raise DudesCabProtocolError(f"Chaine trop longue ({len(raw)} > 255)")
+        self.u8(len(raw))
+        self.buf += raw
+
+    def pin(self, value: Any) -> None:
+        # Inverse de _ConfigReader.pin : 0/None -> 33 (aucun) ; 1..32 -> valeur-1
+        pin = int(value or 0)
+        if pin <= 0:
+            self.u8(33)
+            return
+        if pin > 32:
+            raise DudesCabProtocolError(f"Bouton invalide: {pin}")
+        self.u8(pin - 1)
+
+    def color(self, value: dict[str, Any]) -> None:
+        value = value or {}
+        self.u8(value.get("r", 0))
+        self.u8(value.get("g", 0))
+        self.u8(value.get("b", 0))
+
+
+def _build_admin_config(config: dict[str, Any]) -> bytes:
+    """Inverse exact de _parse_admin_config : structure -> buffer Admin SetConfig.
+
+    Attend une structure au meme format que celle renvoyee par _parse_admin_config
+    (lire -> modifier -> reecrire). Respecte le gating par version de config.
+    """
+    version = int(config.get("version") or 0)
+    if not 1 <= version <= 11:
+        raise DudesCabProtocolError(
+            f"Version de configuration {version} non supportee (1..11)"
+        )
+
+    w = _ConfigWriter()
+    w.u8(111)  # Magic Zizidur
+    w.u8(version)
+
+    general = config.get("general") or {}
+    w.string(general.get("name"))
+    w.u8(general.get("usb_orientation"))
+    w.u8(general.get("keyboard_layout"))
+    w.u8(general.get("log_level"))
+    w.boolean(general.get("default_night_mode"))
+    w.u8(general.get("card_id"))
+    if version >= 3:
+        w.u16(general.get("cpu_frequency"))
+    if version >= 8:
+        colors = general.get("colors") or {}
+        for key in ("default", "admin", "night", "calibration"):
+            w.color(colors.get(key) or {})
+    if version >= 11:
+        w.u8(general.get("watchdog_delay"))
+
+    inputs = config.get("inputs") or {}
+    items = inputs.get("items") or []
+    if len(items) != 32:
+        raise DudesCabProtocolError(
+            f"32 entrees attendues, {len(items)} recues"
+        )
+    for item in items:
+        default = item.get("default") or {}
+        shifted = item.get("shifted") or {}
+        w.u8(default.get("type"))
+        w.u8(default.get("function"))
+        w.u8(shifted.get("type"))
+        w.u8(shifted.get("function"))
+        w.u8(item.get("latency"))
+        if version >= 2:
+            w.u8(item.get("debounce_delay"))
+    w.pin(inputs.get("shift_button_pin"))
+    w.pin(inputs.get("night_mode_button_pin"))
+
+    extensions = config.get("extensions") or []
+    if len(extensions) > 8:
+        raise DudesCabProtocolError("Trop d'extensions Walter (max 8)")
+    w.u8(len(extensions))
+    for ext in extensions:
+        w.u8(ext.get("address"))
+        w.string(ext.get("name"))
+        if version >= 4:
+            w.u16(ext.get("pwm_frequency"))
+        if version == 5:
+            w.u16(ext.get("legacy_card_security_delay"))
+        outputs = ext.get("outputs") or []
+        if len(outputs) != 16:
+            raise DudesCabProtocolError(
+                f"16 sorties attendues par extension, {len(outputs)} recues"
+            )
+        for out in outputs:
+            w.string(out.get("name"))
+            w.u8(out.get("preset"))
+            w.u8(out.get("flags"))
+            w.u8(out.get("max_value"))
+            w.u8(out.get("intensity"))
+            w.u8(out.get("falloff_value"))
+            w.u16(out.get("min_active_time"))
+            w.u16(out.get("falloff_delay"))
+            if version >= 6:
+                w.u16(out.get("security_delay"))
+
+    accel = config.get("accelerometer") or {}
+    w.u16(accel.get("report_delay"))
+    w.u16(accel.get("reset_delay"))
+    w.u16(accel.get("x_sensitivity"))
+    w.u16(accel.get("y_sensitivity"))
+    w.u8(accel.get("dead_zone"))
+    w.u8(accel.get("tilt_range"))
+    w.pin(accel.get("tilt_button_pin"))
+    if version >= 8:
+        w.u8(accel.get("precision"))
+    if version >= 9:
+        w.u8(accel.get("history_buffer"))
+    if version >= 10:
+        w.u8(accel.get("filter_strength"))
+
+    plunger = config.get("plunger") or {}
+    w.boolean(plunger.get("enabled"))
+    w.boolean(plunger.get("inverted"))
+    w.u16(plunger.get("report_delay"))
+    w.pin(plunger.get("calibration_button_pin"))
+    w.u8(plunger.get("calibration_duration"))
+    w.boolean(plunger.get("calibrated"))
+    w.u16(plunger.get("calibration_pull_max"))
+    w.u16(plunger.get("calibration_still"))
+    w.u16(plunger.get("calibration_push_max"))
+    w.u16(plunger.get("jitter_window"))
+    w.pin(plunger.get("pull_button_pin"))
+    w.pin(plunger.get("push_button_pin"))
+    w.u16(plunger.get("physical_range_min"))
+    w.u16(plunger.get("physical_range_max"))
+
+    if version >= 2:
+        mx = config.get("mx") or {}
+        w.boolean(mx.get("enabled"))
+        w.u8(mx.get("led_chipset"))
+        w.u8(mx.get("ledwiz_equivalent"))
+        w.u8(mx.get("test_on_reset"))
+        w.u8(mx.get("test_on_reset_duration"))
+        w.u8(mx.get("test_on_connect"))
+        w.u8(mx.get("test_on_connect_duration"))
+        w.u8(mx.get("test_brightness"))
+        if version >= 7:
+            w.u8(mx.get("compression_ratio"))
+        strips = mx.get("ledstrips") or []
+        if len(strips) > 128:
+            raise DudesCabProtocolError("Trop de LED strips MX (max 128)")
+        w.u8(len(strips))
+        for strip in strips:
+            w.string(strip.get("name"))
+            w.u16(strip.get("width"))
+            w.u16(strip.get("height"))
+            w.u8(strip.get("dof_output_num"))
+            w.u8(strip.get("fading_curve"))
+            w.u8(strip.get("led_arrangement"))
+            w.u8(strip.get("color_order"))
+            w.u8(strip.get("brightness"))
+            splits = strip.get("splits") or []
+            if len(splits) > 8:
+                raise DudesCabProtocolError("Trop de splits MX (max 8)")
+            w.u8(len(splits))
+            for split in splits:
+                w.u8(split.get("data_output_num"))
+                w.u16(split.get("nb_leds"))
+
+    return bytes(w.buf)
+
+
+def _verify_config_roundtrip() -> dict[str, Any]:
+    """Auto-test SANS ECRITURE : lit la config (GetConfig 100), la re-serialise
+    et compare octet-pour-octet au buffer brut de la carte. Prouve l'exactitude
+    du serialiseur avant toute ecriture reelle."""
+    config = _read_admin_config()
+    raw = bytes.fromhex(config["raw_hex"]) if config.get("raw_hex") else b""
+    rebuilt = _build_admin_config(config)
+    # Le buffer carte peut avoir des octets de padding en fin ; on compare le prefixe utile.
+    match = raw[: len(rebuilt)] == rebuilt
+    return {
+        "match": bool(match),
+        "raw_size": len(raw),
+        "rebuilt_size": len(rebuilt),
+        "first_diff": next((i for i in range(min(len(raw), len(rebuilt))) if raw[i] != rebuilt[i]), None),
+        "rebuilt_sha256": __import__("hashlib").sha256(rebuilt).hexdigest(),
+    }
+
+
+def _write_admin_config(config: dict[str, Any], save: bool = True) -> dict[str, Any]:
+    """Ecrit la config sur la carte : SetConfig (101) puis SaveToFlash (114).
+    Requiert le mode admin actif. Ne DOIT etre appele que derriere le mode
+    maintenance (via l'endpoint)."""
+    with _state_lock:
+        admin = _admin_enabled
+    if not admin:
+        raise DudesCabProtocolError(
+            "Mode admin inactif : appelle /protocol/connect avant d'ecrire."
+        )
+    buffer = _build_admin_config(config)
+    hid_command(REPORT_ADMIN, 101, buffer, expect_response=False)
+    result: dict[str, Any] = {"sent_bytes": len(buffer), "saved": False}
+    if save:
+        hid_command(REPORT_ADMIN, 114, expect_response=False)
+        result["saved"] = True
+    return result
+
 
 
 def _read_admin_config() -> dict[str, Any]:
@@ -775,7 +1002,7 @@ def _probe_inner() -> dict[str, Any]:
         "hid_nodes": hid_nodes(),
         "capabilities": {
             "admin_config_read": True,
-            "admin_config_write": False,
+            "admin_config_write": True,
             "flash_memory_commands": False,
             "firmware": False,
             "common": True,
@@ -1145,7 +1372,7 @@ def register(app) -> None:
                     "mx_test": True,
                     "serial_logs": True,
                     "admin_config_read": True,
-                    "admin_config_write": False,
+                    "admin_config_write": True,
                     "flash_memory": False,
                     "firmware": False,
                     "background_hid_polling": False,
@@ -1243,6 +1470,32 @@ def register(app) -> None:
             return jsonify({"ok": True, "config": config})
         except Exception as exc:
             app.logger.exception("DudesCab Admin GetConfig failed")
+            return _error_response(exc)
+
+    @app.get("/api/dudescabconfig/protocol/config/verify")
+    def pincabos_dudescab_protocol_config_verify_v3():
+        try:
+            _require_maintenance()
+            return jsonify({"ok": True, "verify": _verify_config_roundtrip()})
+        except Exception as exc:
+            app.logger.exception("DudesCab config verify failed")
+            return _error_response(exc)
+
+    @app.post("/api/dudescabconfig/protocol/config/write")
+    def pincabos_dudescab_protocol_config_write_v3():
+        try:
+            _require_maintenance()
+            body = _json_body()
+            config = body.get("config")
+            if not isinstance(config, dict):
+                raise ValueError("Champ 'config' (objet) requis.")
+            if body.get("dry_run"):
+                buf = _build_admin_config(config)
+                return jsonify({"ok": True, "dry_run": True, "bytes": len(buf), "hex": buf.hex()})
+            result = _write_admin_config(config, save=bool(body.get("save", True)))
+            return jsonify({"ok": True, **result})
+        except Exception as exc:
+            app.logger.exception("DudesCab config write failed")
             return _error_response(exc)
 
     @app.get("/api/dudescabconfig/protocol/live")
