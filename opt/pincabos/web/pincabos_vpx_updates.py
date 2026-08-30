@@ -30,6 +30,7 @@ from pincabos_updates import _updates_body_html
 
 
 UPDATER = "/opt/pincabos/tools/pincabos-vpx-update"
+AGGREGATOR = "/opt/pincabos/tools/pincabos-updates-check"
 HOME = Path("/home/pinball")
 VPX_LINK = HOME / "vpx"
 
@@ -258,6 +259,50 @@ def _status_payload():
     }
 
 
+def _refresh_updates_aggregate():
+    """Synchronise immédiatement le Dashboard après une opération VPX."""
+    try:
+        result = subprocess.run(
+            [AGGREGATOR],
+            text=True,
+            capture_output=True,
+            timeout=180,
+            check=False,
+        )
+
+        with LOGFILE.open("a", encoding="utf-8") as output:
+            output.write(
+                "\n==================================================\n"
+                " Refresh Dashboard Updates state\n"
+                "==================================================\n"
+            )
+
+            if result.stdout:
+                output.write(result.stdout)
+
+            if result.stderr:
+                output.write(result.stderr)
+
+            output.write(
+                f"Aggregate exit code: {result.returncode}\n"
+            )
+
+        return result.returncode == 0
+
+    except Exception as exc:
+        try:
+            with LOGFILE.open("a", encoding="utf-8") as output:
+                output.write(
+                    "\nWARN Dashboard aggregate refresh: "
+                    + str(exc)
+                    + "\n"
+                )
+        except Exception:
+            pass
+
+        return False
+
+
 def _operation_message(action, rc, engine):
     if rc != 0:
         if action == "rollback":
@@ -320,6 +365,12 @@ def _worker(action):
         # erreur visible et non un faux succès.
         if action == "check" and not engine.get("ok"):
             rc = 1
+
+        # Une opération réussie doit synchroniser immédiatement
+        # /opt/pincabos/state/updates-available.json afin que la tuile
+        # Dashboard et le hub Updates affichent le même état que cette page.
+        if rc == 0:
+            _refresh_updates_aggregate()
 
         state.update({
             "running": False,
