@@ -3569,159 +3569,6 @@ def dof_commander_load_inventory():
     return configs, sorted(all_controllers), all_outputs, errors
 
 
-def dof_commander_devices_summary():
-    # PINCABOS_DOF_EXACT_USB_FAMILY_DETECTION_V2
-    #
-    # La Dude's Cab utilise 2e8a:106f.
-    # Le VID 2e8a seul ne signifie pas « Pinscape Pico » :
-    # il est partagé par plusieurs appareils RP2040.
-    raw_usb = dof_simple_cmd("lsusb || true")
-    raw_hid = dof_simple_cmd("ls -l /dev/hidraw* 2>/dev/null || true")
-    raw_serial = dof_simple_cmd(
-        "ls -l /dev/ttyACM* /dev/ttyUSB* 2>/dev/null || true"
-    )
-
-    usb_entries = []
-
-    for raw_line in raw_usb.splitlines():
-        line = raw_line.strip()
-        lower = line.lower()
-        parts = lower.split()
-
-        if "id" not in parts:
-            continue
-
-        index = parts.index("id")
-        if index + 1 >= len(parts):
-            continue
-
-        usb_id = parts[index + 1].strip()
-
-        if (
-            len(usb_id) != 9
-            or usb_id[4] != ":"
-            or any(
-                char not in "0123456789abcdef:"
-                for char in usb_id
-            )
-        ):
-            continue
-
-        vid, pid = usb_id.split(":", 1)
-
-        usb_entries.append({
-            "id": usb_id,
-            "vid": vid,
-            "pid": pid,
-            "line": lower,
-        })
-
-    def has_vendor(*vendors):
-        wanted = {str(value).lower() for value in vendors}
-        return any(
-            entry["vid"] in wanted
-            for entry in usb_entries
-        )
-
-    def has_exact(*usb_ids):
-        wanted = {str(value).lower() for value in usb_ids}
-        return any(
-            entry["id"] in wanted
-            for entry in usb_entries
-        )
-
-    def has_dudescab():
-        # Dude's Cab RP2040 actuelle.
-        if has_exact("2e8a:106f"):
-            return True
-
-        # Anciennes variantes ESP/Wemos compatibles.
-        return has_vendor("303a", "1a86", "10c4")
-
-    def has_pinscape_pico():
-        for entry in usb_entries:
-            # Exclusion absolue de la Dude's Cab.
-            if entry["id"] == "2e8a:106f":
-                continue
-
-            if (
-                "dudescab" in entry["line"]
-                or "atelier d'arnoz" in entry["line"]
-            ):
-                continue
-
-            # VID communautaire explicitement associé à Pinscape.
-            if entry["vid"] == "1209":
-                return True
-
-            # RP2040 reconnu comme Pinscape seulement par son descriptif USB.
-            if entry["vid"] == "2e8a" and any(
-                token in entry["line"]
-                for token in (
-                    "pinscape",
-                    "pinscape pico",
-                    "kl25z",
-                )
-            ):
-                return True
-
-        return False
-
-    families = [
-        {
-            "name": "Teensy / PJRC (strips adressables)",
-            "found": has_vendor("16c0"),
-            "vendors": "16c0",
-        },
-        {
-            "name": "LedWiz32",
-            "found": has_vendor("fafa"),
-            "vendors": "fafa",
-        },
-        {
-            "name": "PacLed / Ultimarc",
-            "found": has_vendor("d209"),
-            "vendors": "d209",
-        },
-        {
-            "name": "Pinscape / KL25Z / NXP",
-            "found": has_vendor("15a2", "1fc9"),
-            "vendors": "15a2, 1fc9",
-        },
-        {
-            "name": "Pinscape Pico / RP2040",
-            "found": has_pinscape_pico(),
-            "vendors": "1209 ou RP2040 nommé Pinscape",
-        },
-        {
-            "name": "Dude's Cab / Wemos / ESP",
-            "found": has_dudescab(),
-            "vendors": "2e8a:106f, 303a, 1a86, 10c4",
-        },
-        {
-            "name": "FTDI",
-            "found": has_vendor("0403"),
-            "vendors": "0403",
-        },
-        {
-            "name": "Arduino / Leonardo / Micro",
-            "found": has_vendor("2341", "2a03", "1b4f"),
-            "vendors": "2341, 2a03, 1b4f",
-        },
-    ]
-
-    devices = [
-        {
-            "name": family["name"],
-            "found": bool(family["found"]),
-            "vendors": family["vendors"],
-        }
-        for family in families
-    ]
-
-    return devices, raw_usb, raw_hid, raw_serial
-
-
 PINCABOS_DOF_CABINET_DIR = Path("/opt/pincabos/config/dof/cabinets")
 PINCABOS_DOF_ACTIVE_CABINET = Path("/opt/pincabos/config/dof/active-cabinet.txt")
 
@@ -4391,8 +4238,9 @@ def dof_import_cabinet_json():
 
 @app.route("/dof/commander")
 def dof_commander_page():
+    # PINCABOS_DOF_COMMANDER_SIMPLE_V1 : le matériel branché est listé sur
+    # /dof et géré dans /dof/hardware ; cette page se concentre sur les outputs.
     configs, controllers, outputs, errors, inventory_source, cabinet_name = dof_commander_load_inventory_active_pcb()
-    devices, raw_usb, raw_hid, raw_serial = dof_commander_devices_summary()
 
     config_rows = []
     for f in configs:
@@ -4407,17 +4255,6 @@ def dof_commander_page():
     if not config_rows:
         config_rows.append("""
         <tr><td colspan="3"><span class="warn">Aucun fichier DOF XML/INI trouvé.</span></td></tr>
-        """)
-
-    device_rows = []
-    for d in devices:
-        badge = '<span style="color:#2fff7f;font-weight:bold;">● détecté</span>' if d["found"] else '<span style="color:#ff3333;font-weight:bold;">● non détecté</span>'
-        device_rows.append(f"""
-        <tr>
-          <td>{esc(d["name"])}</td>
-          <td>{badge}</td>
-          <td><code>{esc(d["vendors"])}</code></td>
-        </tr>
         """)
 
     controller_rows = []
@@ -4512,42 +4349,31 @@ def dof_commander_page():
     <p class="warn">
       Les tests sont limités en durée pour éviter de laisser un toy activé trop longtemps.
     </p>
-  </div>
-
-  
-
-    </div>
-
-    <p>
-      Dossier cible : <code>/home/pinball/.local/share/VPinballX/10.8/directoutputconfig</code>
-    </p>
+    <p><small>
+      Le matériel branché est listé sur <a href="/dof">la page DOF</a> et géré dans
+      <a href="/dof/hardware">Matériel &amp; cabinet.xml</a> ; cette page sert à
+      tester les <strong>outputs</strong>.
+    </small></p>
   </div>
 </div>
 
-<div class="grid" style="margin-top:20px;">
-  <div class="card">
-    <h2>Périphériques branchés</h2>
-    <table>
-      <tr><th style="text-align:left;">Famille</th><th style="text-align:left;">État</th><th style="text-align:left;">Vendor IDs</th></tr>
-      {''.join(device_rows)}
-    </table>
-  </div>
-
-  <div class="card">
+<details style="margin-top:20px;">
+  <summary>Avancé : contrôleurs et fichiers des configs DOF</summary>
+  <div class="card" style="margin-top:10px;">
     <h2>Contrôleurs dans les configs</h2>
     <table>
       {''.join(controller_rows)}
     </table>
   </div>
-</div>
-
-<div class="card" style="margin-top:20px;">
-  <h2>Fichiers DOF trouvés</h2>
-  <table>
-    <tr><th style="text-align:left;">Fichier</th><th style="text-align:left;">Type</th><th style="text-align:left;">Taille</th></tr>
-    {''.join(config_rows)}
-  </table>
-</div>
+  <div class="card" style="margin-top:10px;">
+    <h2>Fichiers DOF trouvés</h2>
+    <p>Dossier cible : <code>/home/pinball/.local/share/VPinballX/10.8/directoutputconfig</code></p>
+    <table>
+      <tr><th style="text-align:left;">Fichier</th><th style="text-align:left;">Type</th><th style="text-align:left;">Taille</th></tr>
+      {''.join(config_rows)}
+    </table>
+  </div>
+</details>
 
 <div class="card" style="margin-top:20px;">
   <div class="dof-section-title">
@@ -4667,22 +4493,6 @@ def dof_commander_page():
     <tr><td>Durée</td><td><code id="dof-cmd-duration">-</code></td></tr>
   </table>
   <pre id="dof-commander-log" style="max-height:360px; overflow:auto; background:#050007; border:1px solid #5f2a91; border-radius:12px; padding:12px;">Aucun test lancé.</pre>
-</div>
-
-<div class="card" style="margin-top:20px;">
-  <h2>Détails techniques</h2>
-  <details>
-    <summary>USB brut</summary>
-    <pre>{esc(raw_usb)}</pre>
-  </details>
-  <details>
-    <summary>HID raw</summary>
-    <pre>{esc(raw_hid)}</pre>
-  </details>
-  <details>
-    <summary>Serial</summary>
-    <pre>{esc(raw_serial)}</pre>
-  </details>
 </div>
 
 {error_html}
