@@ -1,0 +1,406 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_webapp_core",
+    "scope": "webapp",
+    "kind": "executable",
+    "source_file": "opt/pincabos/web/pincabos_webapp_core.py",
+    "manifest_file": "opt/pincabos/web/pincabos_webapp_core.json",
+    "language": "python",
+    "git_blob_sha": "346186514cbdd0a6e0f6540f4ab2b4cbec66bbde",
+    "size_bytes": 13055,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/tools/pincabos-alpha-migration-audit.sh",
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "web",
+        "line": 32,
+        "top_level": false
+      },
+      {
+        "name": "tools",
+        "line": 36,
+        "top_level": false
+      },
+      {
+        "name": "bin",
+        "line": 40,
+        "top_level": false
+      },
+      {
+        "name": "config",
+        "line": 44,
+        "top_level": false
+      },
+      {
+        "name": "logs",
+        "line": 48,
+        "top_level": false
+      },
+      {
+        "name": "state",
+        "line": 52,
+        "top_level": false
+      },
+      {
+        "name": "download",
+        "line": 56,
+        "top_level": false
+      },
+      {
+        "name": "stage",
+        "line": 60,
+        "top_level": false
+      },
+      {
+        "name": "apps",
+        "line": 64,
+        "top_level": false
+      },
+      {
+        "name": "essentials",
+        "line": 68,
+        "top_level": false
+      },
+      {
+        "name": "backups",
+        "line": 72,
+        "top_level": false
+      },
+      {
+        "name": "media",
+        "line": 76,
+        "top_level": false
+      },
+      {
+        "name": "dof_dir",
+        "line": 80,
+        "top_level": false
+      },
+      {
+        "name": "vpx_dir",
+        "line": 85,
+        "top_level": false
+      },
+      {
+        "name": "vpx_compat_dir",
+        "line": 89,
+        "top_level": false
+      },
+      {
+        "name": "vpx_wrapper",
+        "line": 93,
+        "top_level": false
+      },
+      {
+        "name": "vpx_runner",
+        "line": 97,
+        "top_level": false
+      },
+      {
+        "name": "vpx_ini",
+        "line": 101,
+        "top_level": false
+      },
+      {
+        "name": "tables",
+        "line": 105,
+        "top_level": false
+      },
+      {
+        "name": "tables_compat_link",
+        "line": 109,
+        "top_level": false
+      },
+      {
+        "name": "roms",
+        "line": 113,
+        "top_level": false
+      },
+      {
+        "name": "vpinfe_root",
+        "line": 118,
+        "top_level": false
+      },
+      {
+        "name": "vpinfe_current",
+        "line": 122,
+        "top_level": false
+      },
+      {
+        "name": "vpinfe_bin",
+        "line": 126,
+        "top_level": false
+      },
+      {
+        "name": "vpinfe_runner",
+        "line": 130,
+        "top_level": false
+      },
+      {
+        "name": "vpinfe_template_ini",
+        "line": 134,
+        "top_level": false
+      },
+      {
+        "name": "vpinfe_runtime_ini",
+        "line": 138,
+        "top_level": false
+      },
+      {
+        "name": "vpinfe_config_ini",
+        "line": 142,
+        "top_level": false
+      },
+      {
+        "name": "version_json",
+        "line": 149,
+        "top_level": false
+      },
+      {
+        "name": "firstrun_json",
+        "line": 153,
+        "top_level": false
+      },
+      {
+        "name": "screens_json",
+        "line": 157,
+        "top_level": false
+      },
+      {
+        "name": "webapp_screen_autostart_conf",
+        "line": 161,
+        "top_level": false
+      },
+      {
+        "name": "pco_path",
+        "line": 206,
+        "top_level": true
+      },
+      {
+        "name": "pco_service",
+        "line": 234,
+        "top_level": true
+      },
+      {
+        "name": "pco_vpinfe_service_name",
+        "line": 238,
+        "top_level": true
+      },
+      {
+        "name": "pco_frontend_compat_service_name",
+        "line": 242,
+        "top_level": true
+      },
+      {
+        "name": "pco_script",
+        "line": 307,
+        "top_level": true
+      },
+      {
+        "name": "pco_shell_join",
+        "line": 314,
+        "top_level": true
+      },
+      {
+        "name": "pco_sudo_script_cmd",
+        "line": 318,
+        "top_level": true
+      },
+      {
+        "name": "pco_systemctl_cmd",
+        "line": 322,
+        "top_level": true
+      },
+      {
+        "name": "pco_run",
+        "line": 329,
+        "top_level": true
+      },
+      {
+        "name": "pco_cmd_text",
+        "line": 333,
+        "top_level": true
+      },
+      {
+        "name": "pco_service_status",
+        "line": 341,
+        "top_level": true
+      },
+      {
+        "name": "pco_env_web_host",
+        "line": 349,
+        "top_level": true
+      },
+      {
+        "name": "pco_env_web_port",
+        "line": 353,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpx_executable_path",
+        "line": 370,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpx_tables_dir",
+        "line": 374,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpx_ini_path",
+        "line": 378,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpinfe_ini_path",
+        "line": 382,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpinfe_config_ini_path",
+        "line": 386,
+        "top_level": true
+      },
+      {
+        "name": "pco_path_text",
+        "line": 390,
+        "top_level": true
+      },
+      {
+        "name": "pco_script_text",
+        "line": 394,
+        "top_level": true
+      },
+      {
+        "name": "pco_vpx_kill_pattern",
+        "line": 398,
+        "top_level": true
+      },
+      {
+        "name": "pco_vpx_version_command",
+        "line": 407,
+        "top_level": true
+      },
+      {
+        "name": "pco_vpinfe_version_command",
+        "line": 412,
+        "top_level": true
+      },
+      {
+        "name": "pco_launch_webapp_screen_command",
+        "line": 417,
+        "top_level": true
+      },
+      {
+        "name": "pco_smb_mount_helper_command",
+        "line": 422,
+        "top_level": true
+      }
+    ],
+    "classes": [
+      {
+        "name": "PinCabOSPaths",
+        "line": 27,
+        "top_level": true
+      },
+      {
+        "name": "PinCabOSServices",
+        "line": 214,
+        "top_level": true
+      }
+    ],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "dataclasses",
+      "os",
+      "pathlib",
+      "shlex",
+      "subprocess",
+      "typing"
+    ],
+    "local_modules": [
+      "opt/pincabos/tools/pincabos-import-portable-normalize.py",
+      "opt/pincabos/tools/pincabos-smart-archive-import.py",
+      "opt/pincabos/tools/vpinfe-vpsdb-match.py",
+      "opt/pincabos/tools/vpinfeupdate.py",
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/tools.py"
+    ],
+    "repository_files": [
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "usr/local/bin/pincabos"
+    ],
+    "runtime_paths": [
+      "/dev/null",
+      "/home/pinball",
+      "/home/pinball/vpinfe",
+      "/home/pinball/vpx",
+      "/opt/pincabos",
+      "/usr/bin/env",
+      "/usr/bin/python3",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl",
+      "/usr/local/bin/pincabos-run-vpinfe",
+      "/usr/local/bin/pincabos-run-vpx"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [
+      "pincabos-console.service",
+      "pincabos-vpinfe.service",
+      "pincabos-web.service"
+    ],
+    "commands": [
+      "/opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "/opt/pincabos/tools/vpinfeupdate.py",
+      "/usr/bin/env",
+      "/usr/bin/python3",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl",
+      "/usr/local/bin/pincabos-run-vpinfe",
+      "/usr/local/bin/pincabos-run-vpx"
+    ],
+    "environment_variables": [
+      "PCO_WEB_HOST",
+      "PCO_WEB_PORT",
+      "PINCABOS_WEB_HOST",
+      "PINCABOS_WEB_PORT"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_webapp_core.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

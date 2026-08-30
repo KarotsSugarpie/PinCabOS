@@ -1,0 +1,87 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "validate_refactor",
+    "scope": "webapp",
+    "kind": "executable",
+    "source_file": "opt/pincabos/web/validate_refactor.py",
+    "manifest_file": "opt/pincabos/web/validate_refactor.json",
+    "language": "python",
+    "git_blob_sha": "731ead3134bf0d64fa2e18c0bd22860b344ec214",
+    "size_bytes": 5709,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "decorator_route",
+        "line": 23,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "ast",
+      "collections",
+      "pathlib",
+      "re",
+      "sys"
+    ],
+    "local_modules": [
+      "opt/pincabos/tools/pincabos_import_classifier.py",
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/pincabos_batch_import_queue_v2.py",
+      "opt/pincabos/web/pincabos_batch_live.py",
+      "opt/pincabos/web/pincabos_batch_transfer.py",
+      "opt/pincabos/web/pincabos_impexp.py",
+      "opt/pincabos/web/pincabos_webapp_exports.py",
+      "opt/pincabos/web/pincabos_webapp_firstrun.py",
+      "opt/pincabos/web/pincabos_webapp_security.py",
+      "opt/pincabos/web/tools.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [
+      "/dev/cleanup-nosnap",
+      "/opt/pincabos/tables",
+      "/usr/bin/env",
+      "/var/lib/pincabos/batch-live/export.lock"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/tools/pincabos_import_classifier.py",
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/validate_refactor.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

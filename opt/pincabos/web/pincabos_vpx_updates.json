@@ -1,0 +1,204 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_vpx_updates",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_vpx_updates.py",
+    "manifest_file": "opt/pincabos/web/pincabos_vpx_updates.json",
+    "language": "python",
+    "git_blob_sha": "b860b9319087360409e9a153453834214ba7eaf3",
+    "size_bytes": 16184,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/tools.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_now",
+        "line": 56,
+        "top_level": true
+      },
+      {
+        "name": "_load_json",
+        "line": 60,
+        "top_level": true
+      },
+      {
+        "name": "_save_json",
+        "line": 68,
+        "top_level": true
+      },
+      {
+        "name": "_pid_alive",
+        "line": 79,
+        "top_level": true
+      },
+      {
+        "name": "_read_log",
+        "line": 94,
+        "top_level": true
+      },
+      {
+        "name": "_engine_status",
+        "line": 104,
+        "top_level": true
+      },
+      {
+        "name": "_invalidate_engine_cache",
+        "line": 141,
+        "top_level": true
+      },
+      {
+        "name": "_version_from_name",
+        "line": 147,
+        "top_level": true
+      },
+      {
+        "name": "_installed_from_link",
+        "line": 156,
+        "top_level": true
+      },
+      {
+        "name": "_previous_version",
+        "line": 165,
+        "top_level": true
+      },
+      {
+        "name": "_web_state",
+        "line": 187,
+        "top_level": true
+      },
+      {
+        "name": "_idle_state",
+        "line": 204,
+        "top_level": true
+      },
+      {
+        "name": "_status_payload",
+        "line": 232,
+        "top_level": true
+      },
+      {
+        "name": "_refresh_updates_aggregate",
+        "line": 262,
+        "top_level": true
+      },
+      {
+        "name": "_operation_message",
+        "line": 306,
+        "top_level": true
+      },
+      {
+        "name": "_worker",
+        "line": 330,
+        "top_level": true
+      },
+      {
+        "name": "_start_action",
+        "line": 404,
+        "top_level": true
+      },
+      {
+        "name": "_body",
+        "line": 433,
+        "top_level": true
+      },
+      {
+        "name": "_page_response",
+        "line": 497,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 507,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpx_updates_page",
+        "line": 509,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_vpx_updates_state",
+        "line": 513,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_vpx_updates_run",
+        "line": 517,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_vpx_updates_reboot",
+        "line": 531,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "datetime",
+      "flask",
+      "json",
+      "os",
+      "pathlib",
+      "pincabos_updates",
+      "subprocess",
+      "threading",
+      "time"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/pincabos_updates.py"
+    ],
+    "repository_files": [
+      "opt/pincabos/tools/pincabos-updates-check",
+      "opt/pincabos/tools/pincabos-vpx-update"
+    ],
+    "runtime_paths": [
+      "/home/pinball",
+      "/opt/pincabos/state/updates-available.json"
+    ],
+    "configuration_paths": [
+      "/opt/pincabos/state/updates-available.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/tools/pincabos-updates-check",
+      "/opt/pincabos/tools/pincabos-vpx-update"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_vpx_updates.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,402 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_explorer_table_test",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_explorer_table_test.py",
+    "manifest_file": "opt/pincabos/web/pincabos_explorer_table_test.json",
+    "language": "python",
+    "git_blob_sha": "97fafbb8a61f35e1a25d021842f3cec050ce83ff",
+    "size_bytes": 61168,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_json_read",
+        "line": 50,
+        "top_level": true
+      },
+      {
+        "name": "_json_write",
+        "line": 57,
+        "top_level": true
+      },
+      {
+        "name": "_state",
+        "line": 67,
+        "top_level": true
+      },
+      {
+        "name": "_write_state",
+        "line": 73,
+        "top_level": true
+      },
+      {
+        "name": "_update_state",
+        "line": 78,
+        "top_level": true
+      },
+      {
+        "name": "_resolve_rel",
+        "line": 87,
+        "top_level": true
+      },
+      {
+        "name": "_relative",
+        "line": 99,
+        "top_level": true
+      },
+      {
+        "name": "_is_backup_name",
+        "line": 103,
+        "top_level": true
+      },
+      {
+        "name": "_files",
+        "line": 114,
+        "top_level": true
+      },
+      {
+        "name": "_normal",
+        "line": 135,
+        "top_level": true
+      },
+      {
+        "name": "_choose_main_vpx",
+        "line": 139,
+        "top_level": true
+      },
+      {
+        "name": "_walk_metadata",
+        "line": 156,
+        "top_level": true
+      },
+      {
+        "name": "_metadata",
+        "line": 174,
+        "top_level": true
+      },
+      {
+        "name": "_strip_vbs_comments",
+        "line": 249,
+        "top_level": true
+      },
+      {
+        "name": "_root_vbs_runtime_profile",
+        "line": 290,
+        "top_level": true
+      },
+      {
+        "name": "_rom_exists",
+        "line": 454,
+        "top_level": true
+      },
+      {
+        "name": "matches_in",
+        "line": 467,
+        "top_level": false
+      },
+      {
+        "name": "_deep_detect",
+        "line": 528,
+        "top_level": true
+      },
+      {
+        "name": "_folder_stamp",
+        "line": 538,
+        "top_level": true
+      },
+      {
+        "name": "_runtime_dmd_diagnostics",
+        "line": 549,
+        "top_level": true
+      },
+      {
+        "name": "_fixed_log_truth",
+        "line": 720,
+        "top_level": true
+      },
+      {
+        "name": "_fast_vps_metadata",
+        "line": 813,
+        "top_level": true
+      },
+      {
+        "name": "_named_child",
+        "line": 869,
+        "top_level": true
+      },
+      {
+        "name": "_count_zip_files",
+        "line": 901,
+        "top_level": true
+      },
+      {
+        "name": "_has_extension",
+        "line": 932,
+        "top_level": true
+      },
+      {
+        "name": "_inventory_token",
+        "line": 968,
+        "top_level": true
+      },
+      {
+        "name": "_content_inventory",
+        "line": 989,
+        "top_level": true
+      },
+      {
+        "name": "child_dir",
+        "line": 1007,
+        "top_level": false
+      },
+      {
+        "name": "has_files",
+        "line": 1035,
+        "top_level": false
+      },
+      {
+        "name": "root_vbs_text",
+        "line": 1076,
+        "top_level": false
+      },
+      {
+        "name": "useful_lines",
+        "line": 1109,
+        "top_level": false
+      },
+      {
+        "name": "game_directory",
+        "line": 1181,
+        "top_level": false
+      },
+      {
+        "name": "scan_table",
+        "line": 1398,
+        "top_level": true
+      },
+      {
+        "name": "direct_files",
+        "line": 1419,
+        "top_level": false
+      },
+      {
+        "name": "_pco_pup_node_has_content",
+        "line": 1550,
+        "top_level": true
+      },
+      {
+        "name": "_pco_local_pup_available",
+        "line": 1597,
+        "top_level": true
+      },
+      {
+        "name": "_service_active",
+        "line": 1612,
+        "top_level": true
+      },
+      {
+        "name": "_control",
+        "line": 1620,
+        "top_level": true
+      },
+      {
+        "name": "status_payload",
+        "line": 1633,
+        "top_level": true
+      },
+      {
+        "name": "_catalog_read",
+        "line": 1660,
+        "top_level": true
+      },
+      {
+        "name": "_catalog_write",
+        "line": 1694,
+        "top_level": true
+      },
+      {
+        "name": "_catalog_fingerprint",
+        "line": 1699,
+        "top_level": true
+      },
+      {
+        "name": "_catalog_placeholder",
+        "line": 1774,
+        "top_level": true
+      },
+      {
+        "name": "refresh_catalog_now",
+        "line": 1802,
+        "top_level": true
+      },
+      {
+        "name": "_catalog_worker",
+        "line": 1868,
+        "top_level": true
+      },
+      {
+        "name": "_start_catalog_worker",
+        "line": 1879,
+        "top_level": true
+      },
+      {
+        "name": "native_catalog_context",
+        "line": 1895,
+        "top_level": true
+      },
+      {
+        "name": "_native_status_label",
+        "line": 1913,
+        "top_level": true
+      },
+      {
+        "name": "_native_inventory_html",
+        "line": 1928,
+        "top_level": true
+      },
+      {
+        "name": "native_controls_html",
+        "line": 1962,
+        "top_level": true
+      },
+      {
+        "name": "_inject_assets",
+        "line": 2082,
+        "top_level": true
+      },
+      {
+        "name": "_wrap_commander",
+        "line": 2098,
+        "top_level": true
+      },
+      {
+        "name": "wrapped",
+        "line": 2112,
+        "top_level": false
+      },
+      {
+        "name": "register",
+        "line": 2134,
+        "top_level": true
+      },
+      {
+        "name": "pco_explorer_installed_table_count",
+        "line": 2143,
+        "top_level": false
+      },
+      {
+        "name": "pco_explorer_table_test_list",
+        "line": 2176,
+        "top_level": false
+      },
+      {
+        "name": "pco_explorer_table_test_health",
+        "line": 2235,
+        "top_level": false
+      },
+      {
+        "name": "pco_explorer_table_test_status",
+        "line": 2245,
+        "top_level": false
+      },
+      {
+        "name": "pco_explorer_table_test_play",
+        "line": 2249,
+        "top_level": false
+      },
+      {
+        "name": "pco_explorer_table_test_stop",
+        "line": 2322,
+        "top_level": false
+      },
+      {
+        "name": "pco_table_test_dashboard_asset",
+        "line": 2340,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "functools",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "subprocess",
+      "threading",
+      "time",
+      "typing",
+      "urllib.parse"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/web/static/pincabos-dashboard-table-test-v1.js",
+      "opt/pincabos/web/static/pincabos-explorer-table-test-v1.css",
+      "opt/pincabos/web/static/pincabos-explorer-table-test-v1.js",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-table-test-control"
+    ],
+    "runtime_paths": [
+      "/home/pinball/.local/share/VPinballX/PinMAME/roms",
+      "/home/pinball/.vpinball/pinmame/roms",
+      "/home/pinball/Tables",
+      "/home/pinball/vpx/PinMAME/roms",
+      "/opt/pincabos/apps/vpinball/PinMAME/roms",
+      "/var/lib/pincabos/table-test"
+    ],
+    "configuration_paths": [],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-dashboard-table-test-v1.js",
+      "opt/pincabos/web/static/pincabos-explorer-table-test-v1.css",
+      "opt/pincabos/web/static/pincabos-explorer-table-test-v1.js"
+    ],
+    "systemd_units_mentioned": [
+      "pincabos-table-test.service",
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/usr/local/sbin/pincabos-table-test-control",
+      "systemctl"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_explorer_table_test.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

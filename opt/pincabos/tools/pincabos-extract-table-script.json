@@ -1,0 +1,122 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-extract-table-script",
+    "scope": "tool",
+    "kind": "executable",
+    "source_file": "opt/pincabos/tools/pincabos-extract-table-script.py",
+    "manifest_file": "opt/pincabos/tools/pincabos-extract-table-script.json",
+    "language": "python",
+    "git_blob_sha": "f9bb0aeb00589926902ecaed9e812de8a0024b60",
+    "size_bytes": 6624,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "fail",
+        "line": 20,
+        "top_level": true
+      },
+      {
+        "name": "under_tables",
+        "line": 25,
+        "top_level": true
+      },
+      {
+        "name": "find_vpx_binary",
+        "line": 33,
+        "top_level": true
+      },
+      {
+        "name": "vpx_running",
+        "line": 55,
+        "top_level": true
+      },
+      {
+        "name": "restore_previous",
+        "line": 66,
+        "top_level": true
+      },
+      {
+        "name": "backup_existing_script",
+        "line": 71,
+        "top_level": true
+      },
+      {
+        "name": "resolve_output",
+        "line": 80,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 205,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "grp",
+      "os",
+      "pathlib",
+      "pwd",
+      "re",
+      "shutil",
+      "subprocess",
+      "sys",
+      "time"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/scripts/VPXlauncher.sh"
+    ],
+    "runtime_paths": [
+      "/home/pinball",
+      "/home/pinball/.Xauthority",
+      "/home/pinball/Tables",
+      "/opt/pincabos/backups/table-script-extract",
+      "/run/user/1000",
+      "/run/user/1000/bus",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/scripts/VPXlauncher.sh",
+      "/usr/bin/env",
+      "pgrep"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/tools/pincabos-extract-table-script.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

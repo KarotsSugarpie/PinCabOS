@@ -1,0 +1,190 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "puppack_options",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/puppack_options.py",
+    "manifest_file": "opt/pincabos/web/puppack_options.json",
+    "language": "python",
+    "git_blob_sha": "383ea1ca532fbd016a3fcfde08e1d2cbc3ec27f4",
+    "size_bytes": 20151,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "install_puppack_explorer_button"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "esc",
+        "line": 38,
+        "top_level": true
+      },
+      {
+        "name": "outil",
+        "line": 42,
+        "top_level": true
+      },
+      {
+        "name": "page_wrap",
+        "line": 63,
+        "top_level": true
+      },
+      {
+        "name": "bandeau_surfaces",
+        "line": 96,
+        "top_level": true
+      },
+      {
+        "name": "joli_nom",
+        "line": 139,
+        "top_level": true
+      },
+      {
+        "name": "puppack_page",
+        "line": 149,
+        "top_level": true
+      },
+      {
+        "name": "puppack_mode",
+        "line": 302,
+        "top_level": true
+      },
+      {
+        "name": "puppack_apply",
+        "line": 315,
+        "top_level": true
+      },
+      {
+        "name": "puppack_restore",
+        "line": 326,
+        "top_level": true
+      },
+      {
+        "name": "table_du_dossier",
+        "line": 342,
+        "top_level": true
+      },
+      {
+        "name": "dossier_de_pack",
+        "line": 358,
+        "top_level": true
+      },
+      {
+        "name": "banniere_pour",
+        "line": 374,
+        "top_level": true
+      },
+      {
+        "name": "ouverture_du_corps",
+        "line": 429,
+        "top_level": true
+      },
+      {
+        "name": "install_puppack_explorer_button",
+        "line": 467,
+        "top_level": true
+      },
+      {
+        "name": "enveloppe",
+        "line": 483,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/puppack",
+        "methods": [
+          "GET"
+        ],
+        "function": "puppack_page",
+        "line": 148
+      },
+      {
+        "path": "/tools/puppack/mode",
+        "methods": [
+          "POST"
+        ],
+        "function": "puppack_mode",
+        "line": 301
+      },
+      {
+        "path": "/tools/puppack/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "puppack_apply",
+        "line": 314
+      },
+      {
+        "path": "/tools/puppack/restore",
+        "methods": [
+          "POST"
+        ],
+        "function": "puppack_restore",
+        "line": 325
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "html",
+      "json",
+      "pathlib",
+      "re",
+      "subprocess",
+      "sys"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [
+      "opt/pincabos/bin/pincabos-puppack-option",
+      "opt/pincabos/web/static/pincabos-branding.css",
+      "opt/pincabos/web/static/pincabos-global-compact.css"
+    ],
+    "runtime_paths": [
+      "/home/pinball/Tables"
+    ],
+    "configuration_paths": [],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-branding.css",
+      "opt/pincabos/web/static/pincabos-global-compact.css"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/bin/pincabos-puppack-option"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/puppack_options.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

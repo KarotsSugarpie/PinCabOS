@@ -1,0 +1,501 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_webapp_inputs",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_webapp_inputs.py",
+    "manifest_file": "opt/pincabos/web/pincabos_webapp_inputs.json",
+    "language": "python",
+    "git_blob_sha": "fab1876945cc8393e54e09702acfb3a6d98dc160",
+    "size_bytes": 149178,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "route",
+        "line": 68,
+        "top_level": true
+      },
+      {
+        "name": "decorator",
+        "line": 70,
+        "top_level": false
+      },
+      {
+        "name": "before_request",
+        "line": 75,
+        "top_level": true
+      },
+      {
+        "name": "after_request",
+        "line": 79,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 83,
+        "top_level": true
+      },
+      {
+        "name": "inputs_esc",
+        "line": 192,
+        "top_level": true
+      },
+      {
+        "name": "inputs_cmd",
+        "line": 197,
+        "top_level": true
+      },
+      {
+        "name": "inputs_load_cfg",
+        "line": 206,
+        "top_level": true
+      },
+      {
+        "name": "inputs_save_cfg",
+        "line": 221,
+        "top_level": true
+      },
+      {
+        "name": "inputs_read_ini",
+        "line": 234,
+        "top_level": true
+      },
+      {
+        "name": "inputs_find_section",
+        "line": 251,
+        "top_level": true
+      },
+      {
+        "name": "inputs_rewrite_ini",
+        "line": 264,
+        "top_level": true
+      },
+      {
+        "name": "rewrite_section",
+        "line": 288,
+        "top_level": false
+      },
+      {
+        "name": "inputs_select",
+        "line": 340,
+        "top_level": true
+      },
+      {
+        "name": "inputs_checked",
+        "line": 349,
+        "top_level": true
+      },
+      {
+        "name": "inputs_devices_html",
+        "line": 353,
+        "top_level": true
+      },
+      {
+        "name": "inputs_page",
+        "line": 398,
+        "top_level": true
+      },
+      {
+        "name": "inputs_map_commander_page",
+        "line": 403,
+        "top_level": true
+      },
+      {
+        "name": "inputs_usb_axis_devices",
+        "line": 3319,
+        "top_level": true
+      },
+      {
+        "name": "ev_iocgabs",
+        "line": 3326,
+        "top_level": false
+      },
+      {
+        "name": "inputs_nudge_axis_select",
+        "line": 3370,
+        "top_level": true
+      },
+      {
+        "name": "inputs_plunger_usb_devices",
+        "line": 3427,
+        "top_level": true
+      },
+      {
+        "name": "ev_iocgabs",
+        "line": 3434,
+        "top_level": false
+      },
+      {
+        "name": "inputs_plunger_device_select",
+        "line": 3470,
+        "top_level": true
+      },
+      {
+        "name": "inputs_dudescab_gamepad_path",
+        "line": 3521,
+        "top_level": true
+      },
+      {
+        "name": "inputs_dudescab_live_state",
+        "line": 3537,
+        "top_level": true
+      },
+      {
+        "name": "ev_iocgabs",
+        "line": 3543,
+        "top_level": false
+      },
+      {
+        "name": "inputs_realtime_state",
+        "line": 3591,
+        "top_level": true
+      },
+      {
+        "name": "inputs_rewrite_player_only",
+        "line": 3604,
+        "top_level": true
+      },
+      {
+        "name": "inputs_save_vpx_analog",
+        "line": 3693,
+        "top_level": true
+      },
+      {
+        "name": "inputs_save",
+        "line": 3781,
+        "top_level": true
+      },
+      {
+        "name": "inputs_detect_once",
+        "line": 3850,
+        "top_level": true
+      },
+      {
+        "name": "inputs_defaults",
+        "line": 3891,
+        "top_level": true
+      },
+      {
+        "name": "studio_vpx_ini",
+        "line": 3952,
+        "top_level": true
+      },
+      {
+        "name": "studio_player_values",
+        "line": 3981,
+        "top_level": true
+      },
+      {
+        "name": "studio_event_name",
+        "line": 4008,
+        "top_level": true
+      },
+      {
+        "name": "studio_event_properties",
+        "line": 4019,
+        "top_level": true
+      },
+      {
+        "name": "studio_devices",
+        "line": 4040,
+        "top_level": true
+      },
+      {
+        "name": "studio_capture_nodes",
+        "line": 4075,
+        "top_level": true
+      },
+      {
+        "name": "studio_abs_to_vpx_axis",
+        "line": 4095,
+        "top_level": true
+      },
+      {
+        "name": "studio_capture_axes",
+        "line": 4101,
+        "top_level": true
+      },
+      {
+        "name": "studio_write_player",
+        "line": 4202,
+        "top_level": true
+      },
+      {
+        "name": "studio_axis",
+        "line": 4283,
+        "top_level": true
+      },
+      {
+        "name": "studio_gain",
+        "line": 4297,
+        "top_level": true
+      },
+      {
+        "name": "studio_enabled",
+        "line": 4306,
+        "top_level": true
+      },
+      {
+        "name": "studio_axis_options",
+        "line": 4312,
+        "top_level": true
+      },
+      {
+        "name": "studio_device_options",
+        "line": 4334,
+        "top_level": true
+      },
+      {
+        "name": "inputs_studio_capture_v2",
+        "line": 4360,
+        "top_level": true
+      },
+      {
+        "name": "inputs_studio_apply_v2",
+        "line": 4376,
+        "top_level": true
+      },
+      {
+        "name": "inputs_studio_page_v2",
+        "line": 4446,
+        "top_level": true
+      },
+      {
+        "name": "checked",
+        "line": 4467,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/inputs",
+        "methods": [
+          "GET"
+        ],
+        "function": "inputs_page",
+        "line": 397
+      },
+      {
+        "path": "/inputs/map-commander",
+        "methods": [
+          "GET"
+        ],
+        "function": "inputs_map_commander_page",
+        "line": 402
+      },
+      {
+        "path": "/inputs/realtime-state",
+        "methods": [
+          "GET"
+        ],
+        "function": "inputs_realtime_state",
+        "line": 3590
+      },
+      {
+        "path": "/inputs/save-vpx-analog",
+        "methods": [
+          "POST"
+        ],
+        "function": "inputs_save_vpx_analog",
+        "line": 3692
+      },
+      {
+        "path": "/inputs/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "inputs_save",
+        "line": 3780
+      },
+      {
+        "path": "/inputs/detect-once",
+        "methods": [
+          "POST"
+        ],
+        "function": "inputs_detect_once",
+        "line": 3849
+      },
+      {
+        "path": "/inputs/defaults",
+        "methods": [
+          "POST"
+        ],
+        "function": "inputs_defaults",
+        "line": 3890
+      },
+      {
+        "path": "/inputs/studio/capture",
+        "methods": [
+          "POST"
+        ],
+        "function": "inputs_studio_capture_v2",
+        "line": 4359
+      },
+      {
+        "path": "/inputs/studio/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "inputs_studio_apply_v2",
+        "line": 4375
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "datetime",
+      "fcntl",
+      "flask",
+      "glob",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "select",
+      "shlex",
+      "shutil",
+      "socket",
+      "struct",
+      "subprocess",
+      "tempfile",
+      "time",
+      "zipfile"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "opt/pincabos/config/inputs-commander.json",
+      "opt/pincabos/web/static/pincabos-assets/icons/Activer_3D-Enable3DKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Buy_In_Extra_Ball-BuyInKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Coin_Door-CoinDoorKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Coin_credit-AddCreditKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Coin_credit_2-AddCreditKey2.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Custom_1-JoyCustom1Key.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Custom_2-JoyCustom2Key.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Custom_3-JoyCustom3Key.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Custom_4-JoyCustom4Key.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Debugger-DebuggerKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Exit-ExitGameKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Flipper_droit-RightFlipperKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Flipper_droit_staged_upper-StagedRightFlipperKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Flipper_gauche-LeftFlipperKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Flipper_gauche_staged_upper-StagedLeftFlipperKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Frame_Counter_FPS-FrameCountKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Lockbar_Fire-LockbarKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Magna_Save_droit-RightMagnaSave.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Magna_Save_droit_2-RightMagnaSave2.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Magna_Save_gauche-LeftMagnaSave.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Magna_Save_gauche_2-LeftMagnaSave2.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Nudge_centre_digital-CenterTiltKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Nudge_droite_digital-RightTiltKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Nudge_gauche_digital-LeftTiltKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Pause-PauseKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Plunger_Launch_Ball-PlungerKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Service_Cancel-ServiceCancelKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Service_Down-ServiceDownKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Service_Enter-ServiceEnterKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Service_Up-ServiceUpKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Start-StartGameKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Start_2-StartGameKey2.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Tilt_mecanique-MechanicalTilt.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Volume_moins-VolumeDownKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Volume_plus-VolumeUpKey.png"
+    ],
+    "runtime_paths": [
+      "/dev/input/by-id",
+      "/dev/input/event",
+      "/dev/input/event*",
+      "/dev/input/js*",
+      "/dev/null",
+      "/opt/pincabos/backups/inputs-commander",
+      "/proc/bus/input/devices",
+      "/sys/class/input"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "/opt/pincabos/config/inputs-commander.json"
+    ],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-assets/icons/Activer_3D-Enable3DKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Buy_In_Extra_Ball-BuyInKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Coin_Door-CoinDoorKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Coin_credit-AddCreditKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Coin_credit_2-AddCreditKey2.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Custom_1-JoyCustom1Key.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Custom_2-JoyCustom2Key.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Custom_3-JoyCustom3Key.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Custom_4-JoyCustom4Key.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Debugger-DebuggerKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Exit-ExitGameKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Flipper_droit-RightFlipperKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Flipper_droit_staged_upper-StagedRightFlipperKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Flipper_gauche-LeftFlipperKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Flipper_gauche_staged_upper-StagedLeftFlipperKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Frame_Counter_FPS-FrameCountKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Lockbar_Fire-LockbarKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Magna_Save_droit-RightMagnaSave.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Magna_Save_droit_2-RightMagnaSave2.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Magna_Save_gauche-LeftMagnaSave.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Magna_Save_gauche_2-LeftMagnaSave2.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Nudge_centre_digital-CenterTiltKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Nudge_droite_digital-RightTiltKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Nudge_gauche_digital-LeftTiltKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Pause-PauseKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Plunger_Launch_Ball-PlungerKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Service_Cancel-ServiceCancelKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Service_Down-ServiceDownKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Service_Enter-ServiceEnterKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Service_Up-ServiceUpKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Start-StartGameKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Start_2-StartGameKey2.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Tilt_mecanique-MechanicalTilt.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Volume_moins-VolumeDownKey.png",
+      "opt/pincabos/web/static/pincabos-assets/icons/Volume_plus-VolumeUpKey.png"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "chown",
+      "udevadm"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_webapp_inputs.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "70-vpinfe",
+    "scope": "doctor",
+    "kind": "doctor_module",
+    "source_file": "usr/local/libexec/pincabos/doctor.d/70-vpinfe.sh",
+    "manifest_file": "usr/local/libexec/pincabos/doctor.d/70-vpinfe.json",
+    "language": "shell",
+    "git_blob_sha": "bbd83627d5960ae64850c5e9837f9adf734711f6",
+    "size_bytes": 1578,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "usr/local/sbin/pincabos"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [],
+    "local_modules": [],
+    "repository_files": [
+      "etc/systemd/system/pincabos-vpinfe.service",
+      "opt/pincabos/tools/run-vpinfe-systemd.sh",
+      "usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize"
+    ],
+    "runtime_paths": [
+      "/dev/null",
+      "/etc/systemd/system/pincabos-vpinfe.service.d/55-pincabos-screen-topology.conf",
+      "/home/pinball/vpinfe",
+      "/tmp/pincabos-vpinfe-sanitize.log"
+    ],
+    "configuration_paths": [
+      "/etc/systemd/system/pincabos-vpinfe.service.d/55-pincabos-screen-topology.conf"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/opt/pincabos/tools/run-vpinfe-systemd.sh"
+    ],
+    "environment_variables": []
+  },
+  "doctor": {
+    "checks": [
+      "VPinFE drop-in",
+      "VPinFE launcher",
+      "VPinFE port",
+      "VPinFE runtime",
+      "VPinFE service"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "usr/local/libexec/pincabos/doctor.d/70-vpinfe.sh",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

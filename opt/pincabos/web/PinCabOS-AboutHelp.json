@@ -1,0 +1,150 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "PinCabOS-AboutHelp",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/PinCabOS-AboutHelp.py",
+    "manifest_file": "opt/pincabos/web/PinCabOS-AboutHelp.json",
+    "language": "python",
+    "git_blob_sha": "3baa8c6293834e8bbd6ece76fa4fd0b4f0a9a94f",
+    "size_bytes": 65344,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "page",
+        "line": 16,
+        "top_level": true
+      },
+      {
+        "name": "esc",
+        "line": 19,
+        "top_level": true
+      },
+      {
+        "name": "pco_path_text",
+        "line": 22,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_version",
+        "line": 25,
+        "top_level": true
+      },
+      {
+        "name": "help_page",
+        "line": 29,
+        "top_level": true
+      },
+      {
+        "name": "about_page",
+        "line": 1041,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 1262,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/help",
+        "methods": [
+          "UNKNOWN"
+        ],
+        "function": null,
+        "line": 1284
+      },
+      {
+        "path": "/about",
+        "methods": [
+          "UNKNOWN"
+        ],
+        "function": null,
+        "line": 1287
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "pincabos_about_audit",
+      "pincabos_help_guide"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/pincabos_about_audit.py",
+      "opt/pincabos/web/pincabos_help_guide.py",
+      "opt/pincabos/web/pincabos_media_hunter.py"
+    ],
+    "repository_files": [
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "opt/pincabos/config/media-hunter/sources.json",
+      "opt/pincabos/version.json",
+      "opt/pincabos/web/PinCabOS-AboutHelp.py",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMediaHunter.png",
+      "opt/pincabos/web/static/pincabos-assets/pincabos-pinball-password-v23.png"
+    ],
+    "runtime_paths": [
+      "/home/pinball",
+      "/home/pinball/NetworkDrives",
+      "/home/pinball/Tables",
+      "/opt/pincabos",
+      "/opt/pincabos/media",
+      "/opt/pincabos/web",
+      "/run/media",
+      "/var/lib/pincabos/media-hunter/cache",
+      "/var/lib/pincabos/media-hunter/results.json",
+      "/var/lib/pincabos/media-hunter/state.json"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "/opt/pincabos/config/media-hunter/sources.json",
+      "/opt/pincabos/version.json",
+      "/var/lib/pincabos/media-hunter/results.json",
+      "/var/lib/pincabos/media-hunter/state.json"
+    ],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-assets/PCOSMediaHunter.png",
+      "opt/pincabos/web/static/pincabos-assets/pincabos-pinball-password-v23.png"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/PinCabOS-AboutHelp.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

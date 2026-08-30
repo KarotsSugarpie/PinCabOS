@@ -1,0 +1,275 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "screen",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/screen.py",
+    "manifest_file": "opt/pincabos/web/screen.json",
+    "language": "python",
+    "git_blob_sha": "9d2add1bbd12a289f3d057fc8bf95c91992c82e5",
+    "size_bytes": 20467,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "esc",
+        "line": 22,
+        "top_level": true
+      },
+      {
+        "name": "run_cmd",
+        "line": 26,
+        "top_level": true
+      },
+      {
+        "name": "xrandr_query",
+        "line": 34,
+        "top_level": true
+      },
+      {
+        "name": "parse_xrandr",
+        "line": 41,
+        "top_level": true
+      },
+      {
+        "name": "load_cfg",
+        "line": 78,
+        "top_level": true
+      },
+      {
+        "name": "save_cfg",
+        "line": 92,
+        "top_level": true
+      },
+      {
+        "name": "mode_options",
+        "line": 98,
+        "top_level": true
+      },
+      {
+        "name": "screen_options",
+        "line": 110,
+        "top_level": true
+      },
+      {
+        "name": "find_screen",
+        "line": 123,
+        "top_level": true
+      },
+      {
+        "name": "parse_mode_rate",
+        "line": 130,
+        "top_level": true
+      },
+      {
+        "name": "write_from_form",
+        "line": 138,
+        "top_level": true
+      },
+      {
+        "name": "role_index",
+        "line": 202,
+        "top_level": true
+      },
+      {
+        "name": "apply_vpinfe",
+        "line": 222,
+        "top_level": true
+      },
+      {
+        "name": "apply_vpx",
+        "line": 261,
+        "top_level": true
+      },
+      {
+        "name": "page_wrap",
+        "line": 275,
+        "top_level": true
+      },
+      {
+        "name": "screen_page",
+        "line": 303,
+        "top_level": true
+      },
+      {
+        "name": "role_reel",
+        "line": 309,
+        "top_level": false
+      },
+      {
+        "name": "identification",
+        "line": 325,
+        "top_level": false
+      },
+      {
+        "name": "role_card",
+        "line": 336,
+        "top_level": false
+      },
+      {
+        "name": "identifier_ecran",
+        "line": 462,
+        "top_level": true
+      },
+      {
+        "name": "screen_save",
+        "line": 479,
+        "top_level": true
+      },
+      {
+        "name": "screen_apply_system",
+        "line": 485,
+        "top_level": true
+      },
+      {
+        "name": "screen_apply_vpinfe",
+        "line": 493,
+        "top_level": true
+      },
+      {
+        "name": "screen_apply_vpx",
+        "line": 501,
+        "top_level": true
+      },
+      {
+        "name": "screen_apply_all",
+        "line": 509,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/screen",
+        "methods": [
+          "GET"
+        ],
+        "function": "screen_page",
+        "line": 302
+      },
+      {
+        "path": "/screen/identify",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "identifier_ecran",
+        "line": 461
+      },
+      {
+        "path": "/screen/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "screen_save",
+        "line": 478
+      },
+      {
+        "path": "/screen/apply-system",
+        "methods": [
+          "POST"
+        ],
+        "function": "screen_apply_system",
+        "line": 484
+      },
+      {
+        "path": "/screen/apply-vpinfe",
+        "methods": [
+          "POST"
+        ],
+        "function": "screen_apply_vpinfe",
+        "line": 492
+      },
+      {
+        "path": "/screen/apply-vpx",
+        "methods": [
+          "POST"
+        ],
+        "function": "screen_apply_vpx",
+        "line": 500
+      },
+      {
+        "path": "/screen/apply-all",
+        "methods": [
+          "POST"
+        ],
+        "function": "screen_apply_all",
+        "line": 508
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "configparser",
+      "flask",
+      "html",
+      "json",
+      "pathlib",
+      "re",
+      "subprocess",
+      "sys"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "opt/pincabos/bin/pincabos-identifier-ecran",
+      "opt/pincabos/tools/pincabos-screen-xrandr.sh",
+      "opt/pincabos/web/static/pincabos-branding.css",
+      "opt/pincabos/web/static/pincabos-global-compact.css"
+    ],
+    "runtime_paths": [
+      "/opt/pincabos/config/screens",
+      "/usr/bin/sudo"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+    ],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-branding.css",
+      "opt/pincabos/web/static/pincabos-global-compact.css"
+    ],
+    "systemd_units_mentioned": [
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/opt/pincabos/bin/pincabos-identifier-ecran",
+      "/opt/pincabos/tools/pincabos-screen-xrandr.sh",
+      "/usr/bin/sudo"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/screen.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

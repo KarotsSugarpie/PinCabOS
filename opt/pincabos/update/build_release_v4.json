@@ -1,0 +1,103 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "build_release_v4",
+    "scope": "updater",
+    "kind": "executable",
+    "source_file": "opt/pincabos/update/build_release_v4.py",
+    "manifest_file": "opt/pincabos/update/build_release_v4.json",
+    "language": "python",
+    "git_blob_sha": "7d6186c15df23edc2097de5dffe7f9fa76e443b7",
+    "size_bytes": 8858,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/tools/pincabos-gitpush-release-root.sh"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "load_engine",
+        "line": 15,
+        "top_level": true
+      },
+      {
+        "name": "sha256",
+        "line": 66,
+        "top_level": true
+      },
+      {
+        "name": "validate_script",
+        "line": 86,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 157,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "datetime",
+      "hashlib",
+      "importlib.util",
+      "json",
+      "os",
+      "pathlib",
+      "shutil",
+      "subprocess"
+    ],
+    "local_modules": [
+      "opt/pincabos/update/pincabos_updates.py"
+    ],
+    "repository_files": [
+      "etc/sudoers"
+    ],
+    "runtime_paths": [
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "bash",
+      "git",
+      "tar",
+      "visudo"
+    ],
+    "environment_variables": [
+      "GITHUB_SHA"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/update/build_release_v4.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

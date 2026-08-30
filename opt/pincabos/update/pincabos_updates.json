@@ -1,0 +1,219 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_updates",
+    "scope": "updater",
+    "kind": "executable",
+    "source_file": "opt/pincabos/update/pincabos_updates.py",
+    "manifest_file": "opt/pincabos/update/pincabos_updates.json",
+    "language": "python",
+    "git_blob_sha": "92c4b4198def7c27127fb318c5334595942c39f3",
+    "size_bytes": 23814,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/update/build_release_v4.py",
+      "opt/pincabos/web/pincabos_vpinfe_updates.py",
+      "opt/pincabos/web/pincabos_vpx_updates.py",
+      "opt/pincabos/web/tools.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "load_json",
+        "line": 16,
+        "top_level": true
+      },
+      {
+        "name": "save_json",
+        "line": 20,
+        "top_level": true
+      },
+      {
+        "name": "config",
+        "line": 103,
+        "top_level": true
+      },
+      {
+        "name": "display_version_from_tag",
+        "line": 107,
+        "top_level": true
+      },
+      {
+        "name": "local_tag",
+        "line": 115,
+        "top_level": true
+      },
+      {
+        "name": "local_version",
+        "line": 125,
+        "top_level": true
+      },
+      {
+        "name": "sync_version_files",
+        "line": 137,
+        "top_level": true
+      },
+      {
+        "name": "api_json",
+        "line": 158,
+        "top_level": true
+      },
+      {
+        "name": "download",
+        "line": 163,
+        "top_level": true
+      },
+      {
+        "name": "sha256",
+        "line": 168,
+        "top_level": true
+      },
+      {
+        "name": "allowed",
+        "line": 174,
+        "top_level": true
+      },
+      {
+        "name": "release",
+        "line": 227,
+        "top_level": true
+      },
+      {
+        "name": "status",
+        "line": 248,
+        "top_level": true
+      },
+      {
+        "name": "check",
+        "line": 262,
+        "top_level": true
+      },
+      {
+        "name": "require_root",
+        "line": 274,
+        "top_level": true
+      },
+      {
+        "name": "validate_list",
+        "line": 277,
+        "top_level": true
+      },
+      {
+        "name": "active_services",
+        "line": 286,
+        "top_level": true
+      },
+      {
+        "name": "restart_services",
+        "line": 292,
+        "top_level": true
+      },
+      {
+        "name": "validate_installed",
+        "line": 296,
+        "top_level": true
+      },
+      {
+        "name": "do_update",
+        "line": 311,
+        "top_level": true
+      },
+      {
+        "name": "rollback_last",
+        "line": 846,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 867,
+        "top_level": true
+      }
+    ],
+    "classes": [
+      {
+        "name": "UpdateError",
+        "line": 14,
+        "top_level": true
+      }
+    ],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "pathlib",
+      "stat"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "etc/lightdm/lightdm.conf",
+      "etc/pincabos/updates.json",
+      "etc/sudoers",
+      "home/pinball/.config/openbox/autostart",
+      "opt/pincabos/config/version.json",
+      "opt/pincabos/version.json",
+      "usr/local/bin/getpcos",
+      "usr/local/bin/pincabos",
+      "usr/local/sbin/getpcos",
+      "usr/local/sbin/pincabos"
+    ],
+    "runtime_paths": [
+      "/media/audio-voix",
+      "/opt/pincabos/backups/updates",
+      "/tmp/pincabos-update-pycache",
+      "/usr/bin/env",
+      "/var/cache/pincabos/updates",
+      "/var/lib/pincabos/updates/state.json"
+    ],
+    "configuration_paths": [
+      "/etc/pincabos/updates.json",
+      "/opt/pincabos/config/version.json",
+      "/opt/pincabos/version.json",
+      "/var/lib/pincabos/updates/state.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [
+      "pincabos-dof.service",
+      "pincabos-fulldmd.service",
+      "pincabos-vpinfe.service",
+      "pincabos-webapp.service",
+      "pincabos-x.service"
+    ],
+    "commands": [
+      "/usr/bin/env",
+      "bash",
+      "date",
+      "python3",
+      "systemctl",
+      "tar",
+      "visudo"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/update/pincabos_updates.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

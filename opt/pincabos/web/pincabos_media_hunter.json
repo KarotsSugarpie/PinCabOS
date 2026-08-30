@@ -1,0 +1,515 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_media_hunter",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_media_hunter.py",
+    "manifest_file": "opt/pincabos/web/pincabos_media_hunter.json",
+    "language": "python",
+    "git_blob_sha": "81706130be72a90c05e66de63dfd0e72ee401bfa",
+    "size_bytes": 100001,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/PinCabOS-AboutHelp.py",
+      "opt/pincabos/web/tools.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_now",
+        "line": 92,
+        "top_level": true
+      },
+      {
+        "name": "_ensure_layout",
+        "line": 96,
+        "top_level": true
+      },
+      {
+        "name": "_default_state",
+        "line": 113,
+        "top_level": true
+      },
+      {
+        "name": "_recover_stale_state",
+        "line": 135,
+        "top_level": true
+      },
+      {
+        "name": "_atomic_json_write",
+        "line": 167,
+        "top_level": true
+      },
+      {
+        "name": "_read_json",
+        "line": 183,
+        "top_level": true
+      },
+      {
+        "name": "_load_config",
+        "line": 190,
+        "top_level": true
+      },
+      {
+        "name": "_save_config",
+        "line": 204,
+        "top_level": true
+      },
+      {
+        "name": "_credential_path",
+        "line": 209,
+        "top_level": true
+      },
+      {
+        "name": "_load_ftp_credentials",
+        "line": 216,
+        "top_level": true
+      },
+      {
+        "name": "_save_ftp_credentials",
+        "line": 226,
+        "top_level": true
+      },
+      {
+        "name": "_delete_ftp_credentials",
+        "line": 247,
+        "top_level": true
+      },
+      {
+        "name": "_public_sources",
+        "line": 254,
+        "top_level": true
+      },
+      {
+        "name": "_ftp_clean_path",
+        "line": 270,
+        "top_level": true
+      },
+      {
+        "name": "_ftp_join",
+        "line": 278,
+        "top_level": true
+      },
+      {
+        "name": "_ftp_connect",
+        "line": 282,
+        "top_level": true
+      },
+      {
+        "name": "_ftp_close",
+        "line": 306,
+        "top_level": true
+      },
+      {
+        "name": "_ftp_list_directory",
+        "line": 316,
+        "top_level": true
+      },
+      {
+        "name": "_ftp_add_file_to_index",
+        "line": 364,
+        "top_level": true
+      },
+      {
+        "name": "_ftp_index_tree",
+        "line": 378,
+        "top_level": true
+      },
+      {
+        "name": "_ftp_build_index",
+        "line": 411,
+        "top_level": true
+      },
+      {
+        "name": "_source_extensions",
+        "line": 449,
+        "top_level": true
+      },
+      {
+        "name": "_ftp_find",
+        "line": 471,
+        "top_level": true
+      },
+      {
+        "name": "valid",
+        "line": 503,
+        "top_level": false
+      },
+      {
+        "name": "_ftp_download",
+        "line": 524,
+        "top_level": true
+      },
+      {
+        "name": "write_chunk",
+        "line": 537,
+        "top_level": false
+      },
+      {
+        "name": "_load_state",
+        "line": 558,
+        "top_level": true
+      },
+      {
+        "name": "_set_state",
+        "line": 571,
+        "top_level": true
+      },
+      {
+        "name": "_log",
+        "line": 582,
+        "top_level": true
+      },
+      {
+        "name": "_normalize",
+        "line": 594,
+        "top_level": true
+      },
+      {
+        "name": "_slug",
+        "line": 603,
+        "top_level": true
+      },
+      {
+        "name": "_safe_source_id",
+        "line": 608,
+        "top_level": true
+      },
+      {
+        "name": "_read_vpinfe_settings",
+        "line": 613,
+        "top_level": true
+      },
+      {
+        "name": "_media_specs_for_settings",
+        "line": 641,
+        "top_level": true
+      },
+      {
+        "name": "_find_vpsdb",
+        "line": 649,
+        "top_level": true
+      },
+      {
+        "name": "_load_vps_tables",
+        "line": 671,
+        "top_level": true
+      },
+      {
+        "name": "_build_vps_lookup",
+        "line": 684,
+        "top_level": true
+      },
+      {
+        "name": "_parse_table_folder",
+        "line": 710,
+        "top_level": true
+      },
+      {
+        "name": "_read_info_metadata",
+        "line": 717,
+        "top_level": true
+      },
+      {
+        "name": "_table_identity",
+        "line": 731,
+        "top_level": true
+      },
+      {
+        "name": "_scan_tables",
+        "line": 761,
+        "top_level": true
+      },
+      {
+        "name": "_source_supports",
+        "line": 816,
+        "top_level": true
+      },
+      {
+        "name": "_http_open",
+        "line": 823,
+        "top_level": true
+      },
+      {
+        "name": "_download_url",
+        "line": 828,
+        "top_level": true
+      },
+      {
+        "name": "_copy_local",
+        "line": 855,
+        "top_level": true
+      },
+      {
+        "name": "_run_media_process",
+        "line": 872,
+        "top_level": true
+      },
+      {
+        "name": "_probe_mp4",
+        "line": 902,
+        "top_level": true
+      },
+      {
+        "name": "_ffmpeg_encoder_names",
+        "line": 928,
+        "top_level": true
+      },
+      {
+        "name": "_f4v_transcode_attempts",
+        "line": 950,
+        "top_level": true
+      },
+      {
+        "name": "_convert_f4v_to_mp4",
+        "line": 1048,
+        "top_level": true
+      },
+      {
+        "name": "_validate_and_commit",
+        "line": 1116,
+        "top_level": true
+      },
+      {
+        "name": "_vpinmedia_url",
+        "line": 1156,
+        "top_level": true
+      },
+      {
+        "name": "_download_json_cached",
+        "line": 1200,
+        "top_level": true
+      },
+      {
+        "name": "_folder_candidate_names",
+        "line": 1212,
+        "top_level": true
+      },
+      {
+        "name": "_index_folder",
+        "line": 1238,
+        "top_level": true
+      },
+      {
+        "name": "_folder_find",
+        "line": 1265,
+        "top_level": true
+      },
+      {
+        "name": "_web_candidate_urls",
+        "line": 1286,
+        "top_level": true
+      },
+      {
+        "name": "_test_url_exists",
+        "line": 1317,
+        "top_level": true
+      },
+      {
+        "name": "_hunt_tables",
+        "line": 1339,
+        "top_level": true
+      },
+      {
+        "name": "_run_job",
+        "line": 1502,
+        "top_level": true
+      },
+      {
+        "name": "_start_job",
+        "line": 1529,
+        "top_level": true
+      },
+      {
+        "name": "_source_test",
+        "line": 1539,
+        "top_level": true
+      },
+      {
+        "name": "_path_is_within",
+        "line": 1595,
+        "top_level": true
+      },
+      {
+        "name": "_available_browse_roots",
+        "line": 1603,
+        "top_level": true
+      },
+      {
+        "name": "_resolve_browse_path",
+        "line": 1621,
+        "top_level": true
+      },
+      {
+        "name": "_browse_directory_payload",
+        "line": 1651,
+        "top_level": true
+      },
+      {
+        "name": "_sanitize_source",
+        "line": 1694,
+        "top_level": true
+      },
+      {
+        "name": "_page_html",
+        "line": 1753,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 1901,
+        "top_level": true
+      },
+      {
+        "name": "media_hunter_page",
+        "line": 1909,
+        "top_level": false
+      },
+      {
+        "name": "media_hunter_state",
+        "line": 1913,
+        "top_level": false
+      },
+      {
+        "name": "media_hunter_scan",
+        "line": 1917,
+        "top_level": false
+      },
+      {
+        "name": "media_hunter_hunt",
+        "line": 1922,
+        "top_level": false
+      },
+      {
+        "name": "media_hunter_stop",
+        "line": 1930,
+        "top_level": false
+      },
+      {
+        "name": "media_hunter_browse",
+        "line": 1936,
+        "top_level": false
+      },
+      {
+        "name": "media_hunter_source_save",
+        "line": 1953,
+        "top_level": false
+      },
+      {
+        "name": "media_hunter_source_delete",
+        "line": 1986,
+        "top_level": false
+      },
+      {
+        "name": "media_hunter_source_test",
+        "line": 1997,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/vpinfe/media-hunter",
+        "methods": [
+          "GET"
+        ],
+        "function": "media_hunter_page",
+        "line": 1908
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "PIL",
+      "__future__",
+      "configparser",
+      "flask",
+      "ftplib",
+      "hashlib",
+      "html",
+      "json",
+      "mimetypes",
+      "os",
+      "pathlib",
+      "posixpath",
+      "re",
+      "shutil",
+      "subprocess",
+      "tempfile",
+      "threading",
+      "time",
+      "typing",
+      "unicodedata",
+      "urllib.error",
+      "urllib.parse",
+      "urllib.request"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.config/vpinfe/vpsdb.json",
+      "opt/pincabos/config/media-hunter/sources.json",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMediaHunter.png"
+    ],
+    "runtime_paths": [
+      "/home/pinball",
+      "/home/pinball/.config/vpinfe",
+      "/home/pinball/NetworkDrives",
+      "/home/pinball/Tables",
+      "/home/pinball/vpinfe",
+      "/home/pinball/vpinfe/resources/vpsdb.json",
+      "/mnt/medias/wheels",
+      "/opt/pincabos",
+      "/opt/pincabos/config/vpsdb.json",
+      "/opt/pincabos/media",
+      "/opt/pincabos/web/vpsdb.json",
+      "/run/media",
+      "/var/lib/pincabos/media-hunter"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.config/vpinfe/vpsdb.json",
+      "/home/pinball/vpinfe/resources/vpsdb.json",
+      "/opt/pincabos/config/media-hunter/sources.json",
+      "/opt/pincabos/config/vpsdb.json",
+      "/opt/pincabos/web/vpsdb.json"
+    ],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-assets/PCOSMediaHunter.png"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "ffmpeg",
+      "ffprobe"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_media_hunter.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

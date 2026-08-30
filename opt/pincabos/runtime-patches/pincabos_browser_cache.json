@@ -1,0 +1,70 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_browser_cache",
+    "scope": "runtime_patch",
+    "kind": "python_library",
+    "source_file": "opt/pincabos/runtime-patches/pincabos_browser_cache.py",
+    "manifest_file": "opt/pincabos/runtime-patches/pincabos_browser_cache.json",
+    "language": "python",
+    "git_blob_sha": "9e334e7b67a2c089595826d68201ba2deaf39dae",
+    "size_bytes": 1566,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "install_patch"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "install_patch",
+        "line": 34,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_process_response",
+        "line": 40,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "flask"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/runtime-patches/pincabos_browser_cache.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

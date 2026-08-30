@@ -1,0 +1,128 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-fix-table-pinmame-layout",
+    "scope": "system_helper",
+    "kind": "executable",
+    "source_file": "usr/local/sbin/pincabos-fix-table-pinmame-layout.py",
+    "manifest_file": "usr/local/sbin/pincabos-fix-table-pinmame-layout.json",
+    "language": "python",
+    "git_blob_sha": "e09ca418622e26446e1e6de285000f5d8f20dab0",
+    "size_bytes": 8425,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": [
+      "patch_sync_script"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "log",
+        "line": 29,
+        "top_level": true
+      },
+      {
+        "name": "fail",
+        "line": 36,
+        "top_level": true
+      },
+      {
+        "name": "chown_pinball",
+        "line": 49,
+        "top_level": true
+      },
+      {
+        "name": "ensure_directory",
+        "line": 64,
+        "top_level": true
+      },
+      {
+        "name": "find_case_insensitive",
+        "line": 69,
+        "top_level": true
+      },
+      {
+        "name": "merge_asset_directory",
+        "line": 85,
+        "top_level": true
+      },
+      {
+        "name": "fix_existing_table_layout",
+        "line": 144,
+        "top_level": true
+      },
+      {
+        "name": "patch_sync_script",
+        "line": 203,
+        "top_level": true
+      },
+      {
+        "name": "validate_layout",
+        "line": 255,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 277,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "datetime",
+      "grp",
+      "os",
+      "pathlib",
+      "pwd",
+      "shutil",
+      "sys"
+    ],
+    "local_modules": [
+      "usr/local/sbin/pincabos-table-rom-assets-sync.py"
+    ],
+    "repository_files": [
+      "usr/local/sbin/pincabos"
+    ],
+    "runtime_paths": [
+      "/home/pinball/Tables",
+      "/opt/pincabos/logs",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "/usr/local/sbin/pincabos-table-rom-assets-sync.py"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "usr/local/sbin/pincabos-fix-table-pinmame-layout.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

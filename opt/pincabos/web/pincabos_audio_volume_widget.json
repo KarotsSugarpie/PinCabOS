@@ -1,0 +1,236 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_audio_volume_widget",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_audio_volume_widget.py",
+    "manifest_file": "opt/pincabos/web/pincabos_audio_volume_widget.json",
+    "language": "python",
+    "git_blob_sha": "879195b3d9ff4c3e2c08b1e1117e4d3e679ca05e",
+    "size_bytes": 15420,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_run",
+        "line": 40,
+        "top_level": true
+      },
+      {
+        "name": "_store_alsa_state",
+        "line": 56,
+        "top_level": true
+      },
+      {
+        "name": "_remember_level",
+        "line": 62,
+        "top_level": true
+      },
+      {
+        "name": "_discover_cards",
+        "line": 73,
+        "top_level": true
+      },
+      {
+        "name": "_card_token",
+        "line": 103,
+        "top_level": true
+      },
+      {
+        "name": "_key",
+        "line": 108,
+        "top_level": true
+      },
+      {
+        "name": "_legacy_key",
+        "line": 111,
+        "top_level": true
+      },
+      {
+        "name": "_simple_controls",
+        "line": 114,
+        "top_level": true
+      },
+      {
+        "name": "_selected_controls",
+        "line": 122,
+        "top_level": true
+      },
+      {
+        "name": "_read_control",
+        "line": 133,
+        "top_level": true
+      },
+      {
+        "name": "_read_cards",
+        "line": 161,
+        "top_level": true
+      },
+      {
+        "name": "_available_keys",
+        "line": 177,
+        "top_level": true
+      },
+      {
+        "name": "_read_config",
+        "line": 187,
+        "top_level": true
+      },
+      {
+        "name": "_write_config",
+        "line": 212,
+        "top_level": true
+      },
+      {
+        "name": "_migrate_selection",
+        "line": 229,
+        "top_level": true
+      },
+      {
+        "name": "_find_card",
+        "line": 247,
+        "top_level": true
+      },
+      {
+        "name": "_valid_control",
+        "line": 253,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 256,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_audio_volume_cards_v3",
+        "line": 262,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_audio_volume_config_get_v3",
+        "line": 280,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_audio_volume_config_post_v3",
+        "line": 300,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_audio_volume_set_v3",
+        "line": 329,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_audio_volume_mute_toggle_v3",
+        "line": 364,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/api/pincabos/audio-volume/cards",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_audio_volume_cards_v3",
+        "line": 261
+      },
+      {
+        "path": "/api/pincabos/audio-volume/config",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_audio_volume_config_get_v3",
+        "line": 279
+      },
+      {
+        "path": "/api/pincabos/audio-volume/config",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_audio_volume_config_post_v3",
+        "line": 299
+      },
+      {
+        "path": "/api/pincabos/audio-volume/set",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_audio_volume_set_v3",
+        "line": 328
+      },
+      {
+        "path": "/api/pincabos/audio-volume/mute-toggle",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_audio_volume_mute_toggle_v3",
+        "line": 363
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "flask",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "shutil",
+      "subprocess"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "home/pinball/.config/pincabos/audio-volume-widget.json"
+    ],
+    "runtime_paths": [
+      "/proc/asound/cards",
+      "/usr/bin/sudo",
+      "/usr/sbin/alsactl",
+      "/var/lib/alsa/asound.state"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/pincabos/audio-volume-widget.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/sudo",
+      "/usr/sbin/alsactl"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_audio_volume_widget.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

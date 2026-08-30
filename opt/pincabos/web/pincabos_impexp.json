@@ -1,0 +1,150 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_impexp",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_impexp.py",
+    "manifest_file": "opt/pincabos/web/pincabos_impexp.json",
+    "language": "python",
+    "git_blob_sha": "9728b2ebaf2cbc17025810f864e776d16b7a687d",
+    "size_bytes": 39728,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/tools.py",
+      "opt/pincabos/web/validate_refactor.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "mounts",
+      "register_pincabos_impexp_routes"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "register_pincabos_impexp_routes",
+        "line": 22,
+        "top_level": true
+      },
+      {
+        "name": "esc",
+        "line": 30,
+        "top_level": false
+      },
+      {
+        "name": "tables",
+        "line": 33,
+        "top_level": false
+      },
+      {
+        "name": "mounts",
+        "line": 42,
+        "top_level": false
+      },
+      {
+        "name": "shell_css",
+        "line": 73,
+        "top_level": false
+      },
+      {
+        "name": "import_page",
+        "line": 117,
+        "top_level": false
+      },
+      {
+        "name": "export_page",
+        "line": 344,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_impexp_import_center",
+        "line": 424,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_impexp_export_center",
+        "line": 428,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/import-table",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_impexp_import_center",
+        "line": 423
+      },
+      {
+        "path": "/tools/export-table",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_impexp_export_center",
+        "line": 427
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "html",
+      "os",
+      "pathlib",
+      "subprocess"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/web/static/pincabos-assets/PCOSExport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSImport.png",
+      "opt/pincabos/web/static/pincabos-smart-import-queue-real-v1.css",
+      "opt/pincabos/web/static/pincabos-smart-import-queue-real-v1.js"
+    ],
+    "runtime_paths": [
+      "/home/pinball/Backups/PinCabOS-BatchImport",
+      "/home/pinball/Exports",
+      "/home/pinball/Tables",
+      "/run/media",
+      "/usr/bin/findmnt"
+    ],
+    "configuration_paths": [],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-assets/PCOSExport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSImport.png",
+      "opt/pincabos/web/static/pincabos-smart-import-queue-real-v1.css",
+      "opt/pincabos/web/static/pincabos-smart-import-queue-real-v1.js"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/findmnt"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_impexp.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,191 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_batch_import_worker_v2",
+    "scope": "webapp",
+    "kind": "worker",
+    "source_file": "opt/pincabos/web/pincabos_batch_import_worker_v2.py",
+    "manifest_file": "opt/pincabos/web/pincabos_batch_import_worker_v2.json",
+    "language": "python",
+    "git_blob_sha": "4e537c57284eb76d61a898b4e3d51a8ffa8dd305",
+    "size_bytes": 25834,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [
+      "etc/systemd/system/pincabos-batch-import-worker.service"
+    ],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "log",
+        "line": 28,
+        "top_level": true
+      },
+      {
+        "name": "heartbeat",
+        "line": 32,
+        "top_level": true
+      },
+      {
+        "name": "compact_html",
+        "line": 42,
+        "top_level": true
+      },
+      {
+        "name": "engine_dirs",
+        "line": 49,
+        "top_level": true
+      },
+      {
+        "name": "cleanup_new_engine_dirs",
+        "line": 58,
+        "top_level": true
+      },
+      {
+        "name": "classify_response",
+        "line": 75,
+        "top_level": true
+      },
+      {
+        "name": "call_engine",
+        "line": 138,
+        "top_level": true
+      },
+      {
+        "name": "mark_running",
+        "line": 180,
+        "top_level": true
+      },
+      {
+        "name": "set_item_phase",
+        "line": 198,
+        "top_level": true
+      },
+      {
+        "name": "finish_item",
+        "line": 232,
+        "top_level": true
+      },
+      {
+        "name": "refresh_frontend",
+        "line": 351,
+        "top_level": true
+      },
+      {
+        "name": "finalize_job",
+        "line": 397,
+        "top_level": true
+      },
+      {
+        "name": "fail_job",
+        "line": 455,
+        "top_level": true
+      },
+      {
+        "name": "process_job",
+        "line": 480,
+        "top_level": true
+      },
+      {
+        "name": "waiting",
+        "line": 560,
+        "top_level": false
+      },
+      {
+        "name": "cleanup_stale_engine_dirs",
+        "line": 637,
+        "top_level": true
+      },
+      {
+        "name": "acquire_engine_lock",
+        "line": 664,
+        "top_level": true
+      },
+      {
+        "name": "release_engine_lock",
+        "line": 675,
+        "top_level": true
+      },
+      {
+        "name": "stop_signal",
+        "line": 682,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 688,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "en",
+      "fcntl",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "pincabos_batch_import_queue_v2",
+      "re",
+      "shutil",
+      "signal",
+      "subprocess",
+      "tempfile",
+      "time",
+      "traceback",
+      "typing",
+      "zipfile"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/pincabos_batch_import_queue_v2.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [
+      "/opt/pincabos/uploads/batch-import",
+      "/usr/bin/curl",
+      "/usr/bin/pgrep",
+      "/usr/bin/systemctl"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/usr/bin/curl",
+      "/usr/bin/pgrep",
+      "/usr/bin/systemctl"
+    ],
+    "environment_variables": [
+      "PINCABOS_BATCH_IMPORT_INTERNAL_URL"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_batch_import_worker_v2.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "20-network",
+    "scope": "doctor",
+    "kind": "doctor_module",
+    "source_file": "usr/local/libexec/pincabos/doctor.d/20-network.sh",
+    "manifest_file": "usr/local/libexec/pincabos/doctor.d/20-network.json",
+    "language": "shell",
+    "git_blob_sha": "2d09c211d02a6450d4cc1653aaf106abf38932a0",
+    "size_bytes": 914,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "usr/local/sbin/pincabos"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/dev/null"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "doctor": {
+    "checks": [
+      "Adresse IP",
+      "NetworkManager",
+      "Route réseau",
+      "Résolution locale"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "usr/local/libexec/pincabos/doctor.d/20-network.sh",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,156 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_pinball_engine_vpx_version",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_pinball_engine_vpx_version.py",
+    "manifest_file": "opt/pincabos/web/pincabos_pinball_engine_vpx_version.json",
+    "language": "python",
+    "git_blob_sha": "fb8a7a42c0be0f4c848da0cff6248287a3ea1876",
+    "size_bytes": 12425,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_dashboard_lobby.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_pincabos_pinball_engine_vpx_version"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_read_text",
+        "line": 36,
+        "top_level": true
+      },
+      {
+        "name": "_version_parts",
+        "line": 43,
+        "top_level": true
+      },
+      {
+        "name": "_version_tuple",
+        "line": 54,
+        "top_level": true
+      },
+      {
+        "name": "_extract_candidate_paths",
+        "line": 64,
+        "top_level": true
+      },
+      {
+        "name": "_configured_candidates",
+        "line": 87,
+        "top_level": true
+      },
+      {
+        "name": "_local_vpx",
+        "line": 144,
+        "top_level": true
+      },
+      {
+        "name": "_remote_vpx",
+        "line": 228,
+        "top_level": true
+      },
+      {
+        "name": "_comparison",
+        "line": 321,
+        "top_level": true
+      },
+      {
+        "name": "register_pincabos_pinball_engine_vpx_version",
+        "line": 374,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_pinball_engine_vpx_version",
+        "line": 381,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_pinball_engine_vpx_version_inject",
+        "line": 394,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/api/pinball-engine/vpx-version",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_pinball_engine_vpx_version",
+        "line": 380
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "subprocess",
+      "threading",
+      "time",
+      "typing",
+      "urllib.error",
+      "urllib.request"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "opt/pincabos/scripts/VPXlauncher.sh"
+    ],
+    "runtime_paths": [
+      "/home/pinball/.vpinball/VPinballX.ini",
+      "/home/pinball/VPinballX*/VPinballX*",
+      "/home/pinball/VPinballX*/VPinballX_BGFX",
+      "/home/pinball/vpx/VPinballX_BGFX",
+      "/opt/pincabos/apps/vpinball*/**/VPinballX*",
+      "/opt/pincabos/apps/vpinball*/**/VPinballX_BGFX"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "/home/pinball/.vpinball/VPinballX.ini"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "/opt/pincabos/scripts/VPXlauncher.sh"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_pinball_engine_vpx_version.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

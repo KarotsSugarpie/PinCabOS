@@ -1,0 +1,147 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_media_recorder_worker",
+    "scope": "webapp",
+    "kind": "worker",
+    "source_file": "opt/pincabos/web/pincabos_media_recorder_worker.py",
+    "manifest_file": "opt/pincabos/web/pincabos_media_recorder_worker.json",
+    "language": "python",
+    "git_blob_sha": "60ab32a0b2007bd60cd1cf4018dd402b260019bd",
+    "size_bytes": 8356,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [
+      "etc/systemd/system/pincabos-media-recorder-worker.service"
+    ],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "atomic_json",
+        "line": 24,
+        "top_level": true
+      },
+      {
+        "name": "read_json",
+        "line": 32,
+        "top_level": true
+      },
+      {
+        "name": "stamp",
+        "line": 39,
+        "top_level": true
+      },
+      {
+        "name": "systemctl",
+        "line": 43,
+        "top_level": true
+      },
+      {
+        "name": "service_active",
+        "line": 47,
+        "top_level": true
+      },
+      {
+        "name": "kill_vpx",
+        "line": 51,
+        "top_level": true
+      },
+      {
+        "name": "control_action",
+        "line": 57,
+        "top_level": true
+      },
+      {
+        "name": "clear_control",
+        "line": 61,
+        "top_level": true
+      },
+      {
+        "name": "write_status",
+        "line": 65,
+        "top_level": true
+      },
+      {
+        "name": "append_log",
+        "line": 73,
+        "top_level": true
+      },
+      {
+        "name": "run_recorder",
+        "line": 80,
+        "top_level": true
+      },
+      {
+        "name": "process_job",
+        "line": 108,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 192,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "json",
+      "os",
+      "pathlib",
+      "shutil",
+      "signal",
+      "subprocess",
+      "time",
+      "traceback",
+      "uuid"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/recorder.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [
+      "/usr/bin/env",
+      "/usr/bin/pkill",
+      "/usr/bin/systemctl",
+      "/var/lib/pincabos/media-recorder"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/usr/bin/env",
+      "/usr/bin/pkill",
+      "/usr/bin/systemctl"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_media_recorder_worker.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,314 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_batch_import_live",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_batch_import_live.py",
+    "manifest_file": "opt/pincabos/web/pincabos_batch_import_live.json",
+    "language": "python",
+    "git_blob_sha": "2fc1a0062249a3e6564b776c4456a0d5333cee5c",
+    "size_bytes": 86207,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_batch_transfer.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_batch_import_live"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_safe_name",
+        "line": 26,
+        "top_level": true
+      },
+      {
+        "name": "_compact_html",
+        "line": 32,
+        "top_level": true
+      },
+      {
+        "name": "_job_update",
+        "line": 39,
+        "top_level": true
+      },
+      {
+        "name": "mutate",
+        "line": 40,
+        "top_level": false
+      },
+      {
+        "name": "_install_observers",
+        "line": 49,
+        "top_level": true
+      },
+      {
+        "name": "observed_file_save",
+        "line": 54,
+        "top_level": false
+      },
+      {
+        "name": "observed_copytree",
+        "line": 61,
+        "top_level": false
+      },
+      {
+        "name": "_save_raw_upload",
+        "line": 75,
+        "top_level": true
+      },
+      {
+        "name": "_save_one_upload",
+        "line": 186,
+        "top_level": true
+      },
+      {
+        "name": "_inject_before_body",
+        "line": 1714,
+        "top_level": true
+      },
+      {
+        "name": "register_batch_import_live",
+        "line": 1719,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_batch_import_v2_context",
+        "line": 1727,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_clear",
+        "line": 1740,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_create",
+        "line": 1749,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v31_upload_raw",
+        "line": 1764,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_upload",
+        "line": 1807,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_finish",
+        "line": 1820,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_legacy_start",
+        "line": 1847,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_stop",
+        "line": 1873,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_pause",
+        "line": 1899,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_resume",
+        "line": 1906,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v3_skip",
+        "line": 1923,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_active",
+        "line": 1960,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_status",
+        "line": 2018,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_history",
+        "line": 2025,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_worker",
+        "line": 2030,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_v2_inject",
+        "line": 2036,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/api/batch-import/live/create",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_v2_create",
+        "line": 1748
+      },
+      {
+        "path": "/api/batch-import/live/upload-raw/<job_id>/<int:index>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_v31_upload_raw",
+        "line": 1760
+      },
+      {
+        "path": "/api/batch-import/live/upload/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_v2_upload",
+        "line": 1806
+      },
+      {
+        "path": "/api/batch-import/live/finish/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_v2_finish",
+        "line": 1819
+      },
+      {
+        "path": "/api/batch-import/live/start",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_v2_legacy_start",
+        "line": 1846
+      },
+      {
+        "path": "/api/batch-import/live/stop/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_v2_stop",
+        "line": 1872
+      },
+      {
+        "path": "/api/batch-import/live/pause/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_v2_pause",
+        "line": 1898
+      },
+      {
+        "path": "/api/batch-import/live/resume/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_v2_resume",
+        "line": 1905
+      },
+      {
+        "path": "/api/batch-import/live/skip/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_v3_skip",
+        "line": 1922
+      },
+      {
+        "path": "/api/batch-import/live/active",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_batch_import_v2_active",
+        "line": 1959
+      },
+      {
+        "path": "/api/batch-import/live/status/<job_id>",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_batch_import_v2_status",
+        "line": 2017
+      },
+      {
+        "path": "/api/batch-import/live/history",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_batch_import_v2_history",
+        "line": 2024
+      },
+      {
+        "path": "/api/batch-import/live/worker",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_batch_import_v2_worker",
+        "line": 2029
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "contextvars",
+      "flask",
+      "os",
+      "pathlib",
+      "pincabos_batch_import_queue_v2",
+      "re",
+      "shutil",
+      "typing",
+      "uuid",
+      "werkzeug.datastructures"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/pincabos_batch_import_queue_v2.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_batch_import_live.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_webapp_admin",
+    "scope": "webapp",
+    "kind": "executable",
+    "source_file": "opt/pincabos/web/pincabos_webapp_admin.py",
+    "manifest_file": "opt/pincabos/web/pincabos_webapp_admin.json",
+    "language": "python",
+    "git_blob_sha": "d0a396256350755674f98d98638b7f511fd322e7",
+    "size_bytes": 4152,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "pco_admin_cmd_for_script",
+        "line": 22,
+        "top_level": true
+      },
+      {
+        "name": "pco_admin_cmd_for_systemctl",
+        "line": 35,
+        "top_level": true
+      },
+      {
+        "name": "pco_admin_shell_join",
+        "line": 42,
+        "top_level": true
+      },
+      {
+        "name": "pco_admin_run_capture",
+        "line": 49,
+        "top_level": true
+      },
+      {
+        "name": "pco_admin_now_stamp",
+        "line": 76,
+        "top_level": true
+      },
+      {
+        "name": "pco_admin_tail_text",
+        "line": 83,
+        "top_level": true
+      },
+      {
+        "name": "pco_admin_existing_scripts",
+        "line": 93,
+        "top_level": true
+      },
+      {
+        "name": "pco_admin_escape_html",
+        "line": 105,
+        "top_level": true
+      },
+      {
+        "name": "pco_admin_output_html",
+        "line": 113,
+        "top_level": true
+      },
+      {
+        "name": "pco_admin_iframe_body",
+        "line": 139,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "html",
+      "pathlib",
+      "shlex",
+      "subprocess",
+      "time",
+      "typing"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [
+      "/opt/",
+      "/opt/pincabos/tools/pincabos-publish-tree.sh",
+      "/usr/bin/env",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/tools/pincabos-publish-tree.sh",
+      "/usr/bin/env",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_webapp_admin.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

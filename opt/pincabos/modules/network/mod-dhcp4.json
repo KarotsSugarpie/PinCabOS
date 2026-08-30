@@ -1,0 +1,252 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "mod-dhcp4",
+    "scope": "installer_module",
+    "kind": "installer_shell_module",
+    "source_file": "opt/pincabos/modules/network/mod-dhcp4.sh",
+    "manifest_file": "opt/pincabos/modules/network/mod-dhcp4.json",
+    "language": "shell",
+    "git_blob_sha": "bcf1e824fa60aff70d7e6f7810ecfdc57398fbd5",
+    "size_bytes": 13559,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/install/go-pincabos.sh",
+      "opt/pincabos/install/help-pincabos.sh",
+      "opt/pincabos/install/modules/network/mod-dhcp4.sh",
+      "opt/pincabos/install/modules/network/mod-ssid.sh",
+      "opt/pincabos/modules/network/mod-ssid.sh"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "on_error",
+        "line": 62,
+        "top_level": true
+      },
+      {
+        "name": "pco_title",
+        "line": 74,
+        "top_level": true
+      },
+      {
+        "name": "pco_step",
+        "line": 82,
+        "top_level": true
+      },
+      {
+        "name": "pco_go",
+        "line": 88,
+        "top_level": true
+      },
+      {
+        "name": "pco_warn",
+        "line": 89,
+        "top_level": true
+      },
+      {
+        "name": "pco_info",
+        "line": 90,
+        "top_level": true
+      },
+      {
+        "name": "pco_nogo",
+        "line": 92,
+        "top_level": true
+      },
+      {
+        "name": "run_spin",
+        "line": 100,
+        "top_level": true
+      },
+      {
+        "name": "require_root",
+        "line": 136,
+        "top_level": true
+      },
+      {
+        "name": "require_commands",
+        "line": 143,
+        "top_level": true
+      },
+      {
+        "name": "show_interfaces",
+        "line": 169,
+        "top_level": true
+      },
+      {
+        "name": "select_wired_interface",
+        "line": 209,
+        "top_level": true
+      },
+      {
+        "name": "backup_netplan",
+        "line": 253,
+        "top_level": true
+      },
+      {
+        "name": "clean_dhcp_leases",
+        "line": 267,
+        "top_level": true
+      },
+      {
+        "name": "clean_interface_addresses",
+        "line": 275,
+        "top_level": true
+      },
+      {
+        "name": "write_netplan_dhcp4",
+        "line": 291,
+        "top_level": true
+      },
+      {
+        "name": "apply_network_config",
+        "line": 326,
+        "top_level": true
+      },
+      {
+        "name": "collect_network_result",
+        "line": 343,
+        "top_level": true
+      },
+      {
+        "name": "connectivity_tests",
+        "line": 385,
+        "top_level": true
+      },
+      {
+        "name": "show_summary",
+        "line": 405,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 425,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [],
+    "local_modules": [],
+    "repository_files": [
+      "etc/resolv.conf",
+      "opt/pincabos/install/install.json",
+      "opt/pincabos/modules/modules.json",
+      "opt/pincabos/modules/network/mod-dhcp4.sh",
+      "opt/pincabos/state/network-dhcp4.env"
+    ],
+    "runtime_paths": [
+      "/dev/null",
+      "/etc/netplan",
+      "/etc/netplan/*.yaml",
+      "/etc/netplan/*.yaml.pincabos-disabled",
+      "/etc/netplan/00-pincabos-dhcp4.yaml",
+      "/opt/pincabos",
+      "/opt/pincabos/backups/*",
+      "/opt/pincabos/logs/mod-dhcp4-*.log",
+      "/run/systemd/netif/leases",
+      "/run/systemd/netif/leases/*",
+      "/sys/class/net",
+      "/sys/class/net/*",
+      "/usr/bin/awk",
+      "/usr/bin/bash",
+      "/usr/bin/cat",
+      "/usr/bin/env",
+      "/usr/bin/find",
+      "/usr/bin/grep",
+      "/usr/bin/ping",
+      "/usr/bin/python3",
+      "/usr/bin/readlink",
+      "/usr/bin/resolvectl",
+      "/usr/bin/sed",
+      "/usr/bin/systemctl",
+      "/usr/bin/tee",
+      "/usr/sbin/ip",
+      "/usr/sbin/netplan",
+      "/var/lib/NetworkManager/dhclient*.lease",
+      "/var/lib/dhcp",
+      "/var/lib/dhcp/dhclient*.leases"
+    ],
+    "configuration_paths": [
+      "/etc/netplan/*.yaml",
+      "/etc/netplan/*.yaml.pincabos-disabled",
+      "/etc/netplan/00-pincabos-dhcp4.yaml",
+      "/etc/resolv.conf",
+      "/opt/pincabos/install/install.json",
+      "/opt/pincabos/modules/modules.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/awk",
+      "/usr/bin/bash",
+      "/usr/bin/cat",
+      "/usr/bin/env",
+      "/usr/bin/find",
+      "/usr/bin/grep",
+      "/usr/bin/ping",
+      "/usr/bin/python3",
+      "/usr/bin/readlink",
+      "/usr/bin/resolvectl",
+      "/usr/bin/sed",
+      "/usr/bin/systemctl",
+      "/usr/bin/tee",
+      "/usr/sbin/ip",
+      "/usr/sbin/netplan",
+      "netplan",
+      "networkctl",
+      "resolvectl"
+    ],
+    "environment_variables": [
+      "BACKUP_DIR",
+      "BLUE",
+      "CURRENT_STEP",
+      "CYAN",
+      "DIM",
+      "GREEN",
+      "LOG_DIR",
+      "LOG_FILE",
+      "ORANGE",
+      "PING_8888_RESULT",
+      "PING_GOOGLE_RESULT",
+      "RED",
+      "ROOT",
+      "SELECTED_DNS",
+      "SELECTED_GW",
+      "SELECTED_IFACE",
+      "SELECTED_IP",
+      "SELECTED_MAC",
+      "STATE_DIR",
+      "TMP_DIR",
+      "YELLOW"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/modules/network/mod-dhcp4.sh",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_appearance_global",
+    "scope": "webapp",
+    "kind": "python_library",
+    "source_file": "opt/pincabos/web/pincabos_appearance_global.py",
+    "manifest_file": "opt/pincabos/web/pincabos_appearance_global.json",
+    "language": "python",
+    "git_blob_sha": "30799a70ca6ab30c81afdb3af074b2af3fc8e428",
+    "size_bytes": 3211,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "install_appearance_global"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "install_appearance_global",
+        "line": 20,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_appearance_global_after_request",
+        "line": 27,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "re"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/web/static/pincabos-appearance-dashboard-menu-v2.css",
+      "opt/pincabos/web/static/pincabos-appearance-vars.css"
+    ],
+    "runtime_paths": [],
+    "configuration_paths": [],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-appearance-dashboard-menu-v2.css",
+      "opt/pincabos/web/static/pincabos-appearance-vars.css"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_appearance_global.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

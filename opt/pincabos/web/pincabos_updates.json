@@ -1,0 +1,210 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_updates",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_updates.py",
+    "manifest_file": "opt/pincabos/web/pincabos_updates.json",
+    "language": "python",
+    "git_blob_sha": "9356a7d9b6689e0472de3fe110832328f5fde6d9",
+    "size_bytes": 21436,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_vpinfe_updates.py",
+      "opt/pincabos/web/pincabos_vpx_updates.py",
+      "opt/pincabos/web/tools.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_load_json",
+        "line": 28,
+        "top_level": true
+      },
+      {
+        "name": "_save_json",
+        "line": 35,
+        "top_level": true
+      },
+      {
+        "name": "_now",
+        "line": 42,
+        "top_level": true
+      },
+      {
+        "name": "_config",
+        "line": 46,
+        "top_level": true
+      },
+      {
+        "name": "_display_from_tag",
+        "line": 55,
+        "top_level": true
+      },
+      {
+        "name": "_engine_state",
+        "line": 67,
+        "top_level": true
+      },
+      {
+        "name": "_read_log_tail",
+        "line": 90,
+        "top_level": true
+      },
+      {
+        "name": "_pid_alive",
+        "line": 100,
+        "top_level": true
+      },
+      {
+        "name": "_web_state",
+        "line": 118,
+        "top_level": true
+      },
+      {
+        "name": "_append_log",
+        "line": 127,
+        "top_level": true
+      },
+      {
+        "name": "_launch_reboot_delayed",
+        "line": 134,
+        "top_level": true
+      },
+      {
+        "name": "_run_action",
+        "line": 151,
+        "top_level": true
+      },
+      {
+        "name": "_start_action",
+        "line": 175,
+        "top_level": true
+      },
+      {
+        "name": "_status_payload",
+        "line": 184,
+        "top_level": true
+      },
+      {
+        "name": "_updates_body_html",
+        "line": 205,
+        "top_level": true
+      },
+      {
+        "name": "_page_response",
+        "line": 720,
+        "top_level": true
+      },
+      {
+        "name": "_json_error",
+        "line": 730,
+        "top_level": true
+      },
+      {
+        "name": "_pincabos_updates_register",
+        "line": 734,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_updates_page",
+        "line": 736,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_updates_state",
+        "line": 740,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_updates_run",
+        "line": 744,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_updates_reboot",
+        "line": 759,
+        "top_level": false
+      },
+      {
+        "name": "register",
+        "line": 774,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "datetime",
+      "flask",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "subprocess",
+      "threading",
+      "time"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/tools.py"
+    ],
+    "repository_files": [
+      "etc/pincabos/updates.json",
+      "opt/pincabos/config/version.json",
+      "opt/pincabos/version.json"
+    ],
+    "runtime_paths": [
+      "/opt/pincabos/backups/updates",
+      "/run/pincabos-updates/update-web-state.json",
+      "/run/pincabos-updates/update-web.log",
+      "/usr/bin/env",
+      "/usr/local/sbin",
+      "/var/lib/pincabos/updates/state.json"
+    ],
+    "configuration_paths": [
+      "/etc/pincabos/updates.json",
+      "/opt/pincabos/config/version.json",
+      "/opt/pincabos/version.json",
+      "/run/pincabos-updates/update-web-state.json",
+      "/var/lib/pincabos/updates/state.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "sudo"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_updates.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

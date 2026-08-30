@@ -1,0 +1,104 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_vpxtool_updates",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_vpxtool_updates.py",
+    "manifest_file": "opt/pincabos/web/pincabos_vpxtool_updates.json",
+    "language": "python",
+    "git_blob_sha": "f35e55b1f72dad2ee700cfdfcba2bb42faa82619",
+    "size_bytes": 5558,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/tools.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_status",
+        "line": 21,
+        "top_level": true
+      },
+      {
+        "name": "_run",
+        "line": 37,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 115,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpxtool_updates_page",
+        "line": 129,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_vpxtool_updates_state",
+        "line": 133,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_vpxtool_updates_run",
+        "line": 137,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "B2SConfig",
+      "__future__",
+      "flask",
+      "json",
+      "subprocess"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/B2SConfig.py"
+    ],
+    "repository_files": [
+      "etc/sudoers",
+      "opt/pincabos/tools/pincabos-vpxtool-update"
+    ],
+    "runtime_paths": [],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/tools/pincabos-vpxtool-update",
+      "sudo"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_vpxtool_updates.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

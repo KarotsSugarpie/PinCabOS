@@ -1,0 +1,121 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-dashboard-live-capture",
+    "scope": "tool",
+    "kind": "executable",
+    "source_file": "opt/pincabos/tools/pincabos-dashboard-live-capture.py",
+    "manifest_file": "opt/pincabos/tools/pincabos-dashboard-live-capture.json",
+    "language": "python",
+    "git_blob_sha": "b1664e4619879ede2f0999314b305239850d5a59",
+    "size_bytes": 6130,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [
+      "etc/systemd/system/pincabos-dashboard-live-capture.service"
+    ],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "log_once",
+        "line": 32,
+        "top_level": true
+      },
+      {
+        "name": "xauth_path",
+        "line": 39,
+        "top_level": true
+      },
+      {
+        "name": "requested_slots",
+        "line": 55,
+        "top_level": true
+      },
+      {
+        "name": "configured_outputs",
+        "line": 76,
+        "top_level": true
+      },
+      {
+        "name": "active_outputs",
+        "line": 92,
+        "top_level": true
+      },
+      {
+        "name": "remove_frame",
+        "line": 133,
+        "top_level": true
+      },
+      {
+        "name": "capture",
+        "line": 143,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 200,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "json",
+      "os",
+      "pathlib",
+      "pwd",
+      "re",
+      "subprocess",
+      "time"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/config/screens/screens.json"
+    ],
+    "runtime_paths": [
+      "/run/pincabos-dashboard-live",
+      "/usr/bin/env",
+      "/usr/bin/import",
+      "/usr/bin/xrandr"
+    ],
+    "configuration_paths": [
+      "/opt/pincabos/config/screens/screens.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "/usr/bin/import",
+      "/usr/bin/xrandr",
+      "ps"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/tools/pincabos-dashboard-live-capture.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

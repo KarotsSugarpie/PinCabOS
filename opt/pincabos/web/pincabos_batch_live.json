@@ -1,0 +1,358 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_batch_live",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_batch_live.py",
+    "manifest_file": "opt/pincabos/web/pincabos_batch_live.json",
+    "language": "python",
+    "git_blob_sha": "a7077ebded079b04bcaa0c973426d783308780b1",
+    "size_bytes": 51588,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_batch_transfer.py",
+      "opt/pincabos/web/validate_refactor.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_batch_live"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_stop_requested",
+        "line": 51,
+        "top_level": true
+      },
+      {
+        "name": "_mark_stopped",
+        "line": 57,
+        "top_level": true
+      },
+      {
+        "name": "_mark_paused",
+        "line": 74,
+        "top_level": true
+      },
+      {
+        "name": "_utc_now",
+        "line": 98,
+        "top_level": true
+      },
+      {
+        "name": "_ensure_run_dir",
+        "line": 102,
+        "top_level": true
+      },
+      {
+        "name": "_job_path",
+        "line": 110,
+        "top_level": true
+      },
+      {
+        "name": "_read_json",
+        "line": 114,
+        "top_level": true
+      },
+      {
+        "name": "_write_json",
+        "line": 122,
+        "top_level": true
+      },
+      {
+        "name": "_event",
+        "line": 132,
+        "top_level": true
+      },
+      {
+        "name": "_save_job",
+        "line": 139,
+        "top_level": true
+      },
+      {
+        "name": "_load_job",
+        "line": 144,
+        "top_level": true
+      },
+      {
+        "name": "_set_active",
+        "line": 151,
+        "top_level": true
+      },
+      {
+        "name": "_active_job_id",
+        "line": 155,
+        "top_level": true
+      },
+      {
+        "name": "_compact_html",
+        "line": 161,
+        "top_level": true
+      },
+      {
+        "name": "_selected_tables",
+        "line": 173,
+        "top_level": true
+      },
+      {
+        "name": "_progress",
+        "line": 183,
+        "top_level": true
+      },
+      {
+        "name": "_public_job",
+        "line": 216,
+        "top_level": true
+      },
+      {
+        "name": "_recover_stale_active",
+        "line": 251,
+        "top_level": true
+      },
+      {
+        "name": "_remaining_tables",
+        "line": 293,
+        "top_level": true
+      },
+      {
+        "name": "_stored_fields",
+        "line": 310,
+        "top_level": true
+      },
+      {
+        "name": "_fields_for_table",
+        "line": 327,
+        "top_level": true
+      },
+      {
+        "name": "_safe_table_name",
+        "line": 344,
+        "top_level": true
+      },
+      {
+        "name": "_copy_started",
+        "line": 352,
+        "top_level": true
+      },
+      {
+        "name": "_copy_finished",
+        "line": 381,
+        "top_level": true
+      },
+      {
+        "name": "_copy_failed",
+        "line": 434,
+        "top_level": true
+      },
+      {
+        "name": "_install_copy_observer",
+        "line": 443,
+        "top_level": true
+      },
+      {
+        "name": "observed_copy2",
+        "line": 449,
+        "top_level": false
+      },
+      {
+        "name": "_validate_fields",
+        "line": 476,
+        "top_level": true
+      },
+      {
+        "name": "_run_v1",
+        "line": 494,
+        "top_level": true
+      },
+      {
+        "name": "_acquire_export_lock",
+        "line": 824,
+        "top_level": true
+      },
+      {
+        "name": "_spawn_export_worker",
+        "line": 843,
+        "top_level": true
+      },
+      {
+        "name": "register_batch_live",
+        "line": 856,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_batch_live_v4_copy_context",
+        "line": 865,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_live_v4_clear_copy_context",
+        "line": 878,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_live_v3_start",
+        "line": 887,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_live_v3_stop",
+        "line": 983,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_live_v3_pause",
+        "line": 1038,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_live_v3_resume",
+        "line": 1088,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_live_v3_skip",
+        "line": 1163,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_live_v4_status",
+        "line": 1280,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_live_v4_history",
+        "line": 1287,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_live_v5_inject_ui",
+        "line": 1299,
+        "top_level": false
+      }
+    ],
+    "classes": [
+      {
+        "name": "BatchStopRequested",
+        "line": 47,
+        "top_level": true
+      }
+    ],
+    "routes": [
+      {
+        "path": "/api/batch-export/live/start",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_live_v3_start",
+        "line": 886
+      },
+      {
+        "path": "/api/batch-export/live/stop/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_live_v3_stop",
+        "line": 982
+      },
+      {
+        "path": "/api/batch-export/live/pause/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_live_v3_pause",
+        "line": 1037
+      },
+      {
+        "path": "/api/batch-export/live/resume/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_live_v3_resume",
+        "line": 1087
+      },
+      {
+        "path": "/api/batch-export/live/skip/<job_id>",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_live_v3_skip",
+        "line": 1162
+      },
+      {
+        "path": "/api/batch-export/live/status/<job_id>",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_batch_live_v4_status",
+        "line": 1279
+      },
+      {
+        "path": "/api/batch-export/live/history",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_batch_live_v4_history",
+        "line": 1286
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "contextvars",
+      "datetime",
+      "fcntl",
+      "flask",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "shutil",
+      "threading",
+      "traceback",
+      "typing",
+      "urllib",
+      "uuid"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/var/lib/pincabos/batch-live",
+      "/var/lib/pincabos/batch-live/export.lock"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": [
+      "PINCABOS_BATCH_LIVE_DIR",
+      "PINCABOS_BATCH_LIVE_INTERNAL_URL",
+      "PINCABOS_BATCH_LIVE_SHARED_LOCK"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_batch_live.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

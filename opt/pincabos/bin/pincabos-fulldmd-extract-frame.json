@@ -1,0 +1,107 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-fulldmd-extract-frame",
+    "scope": "runtime_bin",
+    "kind": "executable",
+    "source_file": "opt/pincabos/bin/pincabos-fulldmd-extract-frame.py",
+    "manifest_file": "opt/pincabos/bin/pincabos-fulldmd-extract-frame.json",
+    "language": "python",
+    "git_blob_sha": "66a113a214392f5d53b84d4ea613f5bc3555a8d7",
+    "size_bytes": 8577,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/bin/pincabos-fulldmd-process-table.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "attr",
+        "line": 19,
+        "top_level": true
+      },
+      {
+        "name": "extract_image",
+        "line": 28,
+        "top_level": true
+      },
+      {
+        "name": "decode_png",
+        "line": 54,
+        "top_level": true
+      },
+      {
+        "name": "pixel",
+        "line": 135,
+        "top_level": true
+      },
+      {
+        "name": "detect_frame",
+        "line": 160,
+        "top_level": true
+      },
+      {
+        "name": "write_metadata",
+        "line": 230,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 248,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "base64",
+      "html",
+      "math",
+      "pathlib",
+      "re",
+      "struct",
+      "sys",
+      "zlib"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/bin/pincabos-fulldmd-extract-frame.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

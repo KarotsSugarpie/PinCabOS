@@ -1,0 +1,180 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_vpinfe_updates",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_vpinfe_updates.py",
+    "manifest_file": "opt/pincabos/web/pincabos_vpinfe_updates.json",
+    "language": "python",
+    "git_blob_sha": "67ec89223ed0510a2078956e65b47c56c0585ed8",
+    "size_bytes": 10110,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/tools.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_load_json",
+        "line": 31,
+        "top_level": true
+      },
+      {
+        "name": "_save_json",
+        "line": 39,
+        "top_level": true
+      },
+      {
+        "name": "_pid_alive",
+        "line": 59,
+        "top_level": true
+      },
+      {
+        "name": "_engine_payload",
+        "line": 83,
+        "top_level": true
+      },
+      {
+        "name": "_latest_backup",
+        "line": 106,
+        "top_level": true
+      },
+      {
+        "name": "_read_log",
+        "line": 133,
+        "top_level": true
+      },
+      {
+        "name": "_web_state",
+        "line": 146,
+        "top_level": true
+      },
+      {
+        "name": "_fallback_operation",
+        "line": 167,
+        "top_level": true
+      },
+      {
+        "name": "_status_payload",
+        "line": 213,
+        "top_level": true
+      },
+      {
+        "name": "_run_action",
+        "line": 287,
+        "top_level": true
+      },
+      {
+        "name": "_start_action",
+        "line": 301,
+        "top_level": true
+      },
+      {
+        "name": "_body",
+        "line": 321,
+        "top_level": true
+      },
+      {
+        "name": "_page_response",
+        "line": 380,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 395,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpinfe_updates_page",
+        "line": 397,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_vpinfe_updates_state",
+        "line": 405,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_vpinfe_updates_run",
+        "line": 411,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_vpinfe_updates_reboot",
+        "line": 450,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "json",
+      "os",
+      "pathlib",
+      "pincabos_updates",
+      "subprocess",
+      "threading"
+    ],
+    "local_modules": [
+      "opt/pincabos/tools/vpinfeupdate.py",
+      "opt/pincabos/web/pincabos_updates.py"
+    ],
+    "repository_files": [
+      "opt/pincabos/state/vpinfe-update-state.json",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-vpinfe-update-web-runner"
+    ],
+    "runtime_paths": [
+      "/opt/pincabos/backups/vpinfe-update",
+      "/run/pincabos-vpinfe-updates",
+      "/usr/bin/env",
+      "/usr/bin/python3",
+      "/usr/bin/sudo"
+    ],
+    "configuration_paths": [
+      "/opt/pincabos/state/vpinfe-update-state.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/tools/vpinfeupdate.py",
+      "/usr/bin/env",
+      "/usr/bin/python3",
+      "/usr/bin/sudo",
+      "/usr/local/sbin/pincabos-vpinfe-update-web-runner"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_vpinfe_updates.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

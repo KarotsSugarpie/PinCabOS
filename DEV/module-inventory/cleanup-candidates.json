@@ -1,0 +1,283 @@
+{
+  "schema": "pincabos.cleanup-audit/v1",
+  "repository": "KarotsSugarpie/PinCabOS",
+  "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+  "generated_at": "2026-08-30T20:51:52.166Z",
+  "destructive_changes_performed": false,
+  "summary": {
+    "urgent_repository_hygiene_paths": 21,
+    "inactive_runtime_patch_paths": 9,
+    "timestamped_apt_manifests": 42,
+    "timestamped_apt_unique_contents": 4,
+    "dof_overlay_files": 106,
+    "dof_overlay_bytes": 159522155,
+    "review_only_unreferenced_python": 7
+  },
+  "findings": [
+    {
+      "id": "repository-runtime-debris",
+      "confidence": "high",
+      "status": "candidate_for_removal_from_git",
+      "reason": "Runtime history, browser metrics, D-Bus session files and empty sync reports are machine state, not canonical PinCabOS source.",
+      "paths": [
+        "root/.bash_history-11547.tmp",
+        "root/.bash_history-88743.tmp",
+        "root/.config/google-chrome/BrowserMetrics/BrowserMetrics-6A84B42A-104E78.pma",
+        "root/.config/google-chrome/BrowserMetrics/BrowserMetrics-6A84B4EA-111592.pma",
+        "root/.dbus/session-bus/b241d706f920480999696ada01f56f8a-0"
+      ]
+    },
+    {
+      "id": "tracked-runtime-state-and-cache",
+      "confidence": "high",
+      "status": "candidate_for_removal_from_git_and_gitignore",
+      "reason": "Doctor markers, status JSON and generated caches under var/lib/pincabos are runtime output.",
+      "paths": [
+        "var/lib/pincabos/doctor-firstboot.done",
+        "var/lib/pincabos/doctor-last.json",
+        "var/lib/pincabos/firstboot-initramfs-refresh.done",
+        "var/lib/pincabos/firstboot-network-webapp.done",
+        "var/lib/pincabos/hardware-autoconfig.done",
+        "var/lib/pincabos/media-hunter/cache/test-vpinmediadb.json",
+        "var/lib/pincabos/media-hunter/cache/vpinmediadb-vpinmdb.json",
+        "var/lib/pincabos/media-recorder/status.json",
+        "var/lib/pincabos/table-test/catalog-index.json"
+      ]
+    },
+    {
+      "id": "tracked-configuration-backups",
+      "confidence": "high",
+      "status": "candidate_for_removal_from_git_and_gitignore",
+      "reason": "Timestamped INI and package-manager backup files should live in cabinet backup storage, not the source tree.",
+      "paths": [
+        "etc/ca-certificates.conf.dpkg-old",
+        "home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260705-200103",
+        "home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260705-200258",
+        "home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260816-164621",
+        "home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260817-174108",
+        "home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260817-190053",
+        "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini.backup-screens-20260818-151937"
+      ]
+    },
+    {
+      "id": "completed-installer-snapshot",
+      "confidence": "high",
+      "status": "candidate_for_removal_from_git_and_gitignore",
+      "reason": "The .completed-final directory contains execution state and copied installer files.",
+      "paths": [
+        "opt/pincabos/install/.completed-final-20260620-020509/01-install-system.sh",
+        "opt/pincabos/install/.completed-final-20260620-020509/02-install-engine.sh",
+        "opt/pincabos/install/.completed-final-20260620-020509/end-run-00",
+        "opt/pincabos/install/.completed-final-20260620-020509/end-run-01",
+        "opt/pincabos/install/.completed-final-20260620-020509/end-run-01G",
+        "opt/pincabos/install/.completed-final-20260620-020509/end-run-01H",
+        "opt/pincabos/install/.completed-final-20260620-020509/end-run-02",
+        "opt/pincabos/install/.completed-final-20260620-020509/help-pincabos.sh",
+        "opt/pincabos/install/.completed-final-20260620-020509/install-refresh-after-run01-done",
+        "opt/pincabos/install/.completed-final-20260620-020509/post-reboot-network-refresh-done",
+        "opt/pincabos/install/.completed-final-20260620-020509/run-00",
+        "opt/pincabos/install/.completed-final-20260620-020509/run-01G",
+        "opt/pincabos/install/.completed-final-20260620-020509/run-01H",
+        "opt/pincabos/install/.completed-final-20260620-020509/run-02",
+        "opt/pincabos/install/.completed-final-20260620-020509/run-03",
+        "opt/pincabos/install/.completed-final-20260620-020509/version.json"
+      ]
+    },
+    {
+      "id": "disabled-artifacts",
+      "confidence": "medium",
+      "status": "review_then_remove_or_archive",
+      "reason": "Disabled CSS, Python .pth hooks and old executables are not active, but may have been kept as rollback material.",
+      "paths": [
+        "opt/pincabos/web/static/pincabos-audio-volume-layout-pro-v1.css.disabled-20260710-101708",
+        "usr/local/lib/python3.14/dist-packages/pincabos_browser_cache.pth.disabled-20260717-133320",
+        "usr/local/lib/python3.14/dist-packages/pincabos_explorer_performance.pth.disabled-20260717-133320",
+        "usr/local/lib/python3.14/dist-packages/pincabos_request_limits.pth.disabled-20260717-133320",
+        "usr/local/lib/python3.14/dist-packages/zz_pincabos_table_analysis_cache.pth.disabled-20260717-133320",
+        "usr/local/sbin/pincabos-autoresume-console.sh.disabled-final-20260610-213824"
+      ]
+    },
+    {
+      "id": "inactive-runtime-patch-cluster",
+      "confidence": "high",
+      "status": "inactive_review_for_deletion",
+      "reason": "The four activation .pth files are disabled and no active source loads pincabos_webapp_bootstrap; the runtime patch Python files are therefore dormant.",
+      "paths": [
+        "opt/pincabos/runtime-patches/pincabos_browser_cache.py",
+        "opt/pincabos/runtime-patches/pincabos_explorer_performance.py",
+        "opt/pincabos/runtime-patches/pincabos_request_limits.py",
+        "opt/pincabos/runtime-patches/pincabos_table_analysis_cache.py",
+        "opt/pincabos/runtime-patches/pincabos_webapp_bootstrap.py",
+        "usr/local/lib/python3.14/dist-packages/pincabos_browser_cache.pth.disabled-20260717-133320",
+        "usr/local/lib/python3.14/dist-packages/pincabos_explorer_performance.pth.disabled-20260717-133320",
+        "usr/local/lib/python3.14/dist-packages/pincabos_request_limits.pth.disabled-20260717-133320",
+        "usr/local/lib/python3.14/dist-packages/zz_pincabos_table_analysis_cache.pth.disabled-20260717-133320"
+      ]
+    },
+    {
+      "id": "masked-display-role-stack",
+      "confidence": "medium",
+      "status": "dormant_keep_until_screen_topology_review",
+      "reason": "Display-role services/paths/timers are masked to /dev/null while the Python implementations remain tracked. The ISO script also explicitly disables this stack.",
+      "paths": [
+        "etc/systemd/system/pincabos-display-roles.path",
+        "etc/systemd/system/pincabos-display-roles.service",
+        "etc/systemd/system/pincabos-display-roles.timer",
+        "etc/systemd/system/pincabos-screen-topology.path",
+        "etc/systemd/system/pincabos-screen-topology.service",
+        "etc/systemd/system/pincabos-screen-topology.timer",
+        "opt/pincabos/bin/pincabos-display-roles.py",
+        "opt/pincabos/scripts/pincabos-display-role-app-sync.py",
+        "opt/pincabos/scripts/pincabos-display-role-finalizer.py",
+        "opt/pincabos/scripts/pincabos-display-role-normalizer.py"
+      ]
+    },
+    {
+      "id": "timestamped-apt-manifests",
+      "confidence": "high",
+      "status": "consolidate_to_canonical_snapshots",
+      "reason": "42 timestamped files contain only 4 unique blobs.",
+      "paths": [
+        "opt/pincabos/config/apt-installed-full-20260602-124326.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-124812.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-130856.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-131700.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-132116.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-132411.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-133110.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-133602.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-134411.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-134843.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-135151.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-135413.manifest",
+        "opt/pincabos/config/apt-installed-full-20260602-140458.manifest",
+        "opt/pincabos/config/apt-installed-full-20260603-015626.manifest",
+        "opt/pincabos/config/apt-manual-20260602-124326.manifest",
+        "opt/pincabos/config/apt-manual-20260602-124812.manifest",
+        "opt/pincabos/config/apt-manual-20260602-130856.manifest",
+        "opt/pincabos/config/apt-manual-20260602-131700.manifest",
+        "opt/pincabos/config/apt-manual-20260602-132116.manifest",
+        "opt/pincabos/config/apt-manual-20260602-132411.manifest",
+        "opt/pincabos/config/apt-manual-20260602-133110.manifest",
+        "opt/pincabos/config/apt-manual-20260602-133602.manifest",
+        "opt/pincabos/config/apt-manual-20260602-134411.manifest",
+        "opt/pincabos/config/apt-manual-20260602-134843.manifest",
+        "opt/pincabos/config/apt-manual-20260602-135151.manifest",
+        "opt/pincabos/config/apt-manual-20260602-135413.manifest",
+        "opt/pincabos/config/apt-manual-20260602-140458.manifest",
+        "opt/pincabos/config/apt-manual-20260603-015626.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-124326.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-124812.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-130856.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-131700.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-132116.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-132411.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-133110.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-133602.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-134411.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-134843.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-135151.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-135413.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260602-140458.manifest",
+        "opt/pincabos/config/apt-manual-after-pincabos-20260603-015626.manifest"
+      ]
+    },
+    {
+      "id": "duplicated-install-module-tree",
+      "confidence": "high",
+      "status": "choose_one_canonical_owner_before_deleting",
+      "reason": "Each pair is byte-identical; the active installer path must be confirmed before consolidation.",
+      "identical_pairs": [
+        [
+          "opt/pincabos/install/modules/modules.json",
+          "opt/pincabos/modules/modules.json"
+        ],
+        [
+          "opt/pincabos/install/modules/network/mod-dhcp4.sh",
+          "opt/pincabos/modules/network/mod-dhcp4.sh"
+        ],
+        [
+          "opt/pincabos/install/modules/network/mod-ssid.sh",
+          "opt/pincabos/modules/network/mod-ssid.sh"
+        ],
+        [
+          "opt/pincabos/install/modules/system/mod-splash.sh",
+          "opt/pincabos/modules/system/mod-splash.sh"
+        ]
+      ]
+    },
+    {
+      "id": "dof-overlay-history",
+      "confidence": "high",
+      "status": "archive_superseded_variants_after_active_reference_check",
+      "reason": "Twelve overlay directories contain 106 files (152.1 MiB) but only 27 unique blobs.",
+      "paths": [
+        "opt/pincabos/overlays/dudescab-ledwiz-local-libusb-pacing2-permanent-v3",
+        "opt/pincabos/overlays/libdof-ledwiz-hidraw-stable",
+        "opt/pincabos/overlays/libdof-rid5-hidraw-ledwiz-local-20260628-045446",
+        "opt/pincabos/overlays/libdof-rid5-hidraw-ledwiz-local-20260628-054713",
+        "opt/pincabos/overlays/libdof-rid5-hidraw-ledwiz-rebuild-20260628-055300",
+        "opt/pincabos/overlays/libdof-rid5-libusb-ledwiz-paced-20260628-042245",
+        "opt/pincabos/overlays/libdof-rid5-libusb-ledwiz-paced2-resume-20260628-044449",
+        "opt/pincabos/overlays/libdof-rid5-libusb-ledwiz-trace-20260628-035251",
+        "opt/pincabos/overlays/libdof-umx-rid5-20260628-030913",
+        "opt/pincabos/overlays/libdof-umx-rid5-libusb-20260628-032213",
+        "opt/pincabos/overlays/libdof-umx-rid5-libusb-quarantine-20260628-033429",
+        "opt/pincabos/overlays/vpinfe-dof-ledwiz-hidraw-stable"
+      ]
+    },
+    {
+      "id": "old-root-pr-scripts",
+      "confidence": "medium",
+      "status": "review_then_move_to_dev_archive_or_remove",
+      "reason": "These scripts target already-numbered historical PR workflows and do not belong in the cabinet runtime root.",
+      "paths": [
+        "root/pincab-continue-all-prs.sh",
+        "root/pincab-continue-full-pr22-25.sh",
+        "root/pincab-deploy-pr12-13-15-21-26-live.sh",
+        "root/pincab-full-update-pr22-25.sh",
+        "root/pincab-import-all-open-prs.sh",
+        "root/pincab-import-pr27-28.sh",
+        "root/pincab-push-main-v35d.sh",
+        "root/pincab-resume-live-pr22-25.sh"
+      ]
+    },
+    {
+      "id": "unreferenced-standalone-python",
+      "confidence": "medium",
+      "status": "verify_manual_use_before_deleting",
+      "reason": "No reference was found in the audited PinCabOS Python, canonical shell modules or active readable systemd units. They may still be manually invoked.",
+      "paths": [
+        "opt/pincabos/bin/pincabos-fulldmd-import-hook.py",
+        "opt/pincabos/media-hunter/public_media_downloader.py",
+        "opt/pincabos/tools/pincabos-extract-table-script.py",
+        "opt/pincabos/tools/pincabos-verifier-perimetre-maj.py",
+        "opt/pincabos/tools/pincabos-verifier-preservation.py",
+        "opt/pincabos/tools/pincabos-verifier-reponses-installeur.py",
+        "usr/local/sbin/pincabos-fix-table-pinmame-layout.py"
+      ]
+    }
+  ],
+  "verified_keep": [
+    {
+      "paths": [
+        "opt/pincabos/web/pincabos_batch_import_worker_v2.py",
+        "opt/pincabos/web/pincabos_media_recorder_worker.py"
+      ],
+      "reason": "Both are activated by dedicated systemd services."
+    },
+    {
+      "paths": [
+        "opt/pincabos/bin/pincabos-hybrid-chooser.py",
+        "opt/pincabos/launchers/pincabos-hybrid-chooser.py"
+      ],
+      "reason": "Both same-named variants are referenced by a launcher in their own directory and are not duplicates."
+    },
+    {
+      "paths": [
+        "opt/pincabos/web/validate_refactor.py"
+      ],
+      "reason": "Standalone static validation script; absence of an importer does not make it dead."
+    }
+  ]
+}

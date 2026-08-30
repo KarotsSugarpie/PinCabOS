@@ -1,0 +1,187 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_webapp_dashboard_control",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_webapp_dashboard_control.py",
+    "manifest_file": "opt/pincabos/web/pincabos_webapp_dashboard_control.json",
+    "language": "python",
+    "git_blob_sha": "4535d45c6cd3e711c7e043cf701ea6ee6fc7c20b",
+    "size_bytes": 12881,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "install_global_menu_cleanup",
+      "install_pco_menu_tools_fulldmd_v13_7",
+      "register_dashboard_control_routes"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "notice",
+        "line": 31,
+        "top_level": true
+      },
+      {
+        "name": "csrf_ok",
+        "line": 35,
+        "top_level": true
+      },
+      {
+        "name": "helper",
+        "line": 45,
+        "top_level": true
+      },
+      {
+        "name": "add_route_once",
+        "line": 55,
+        "top_level": true
+      },
+      {
+        "name": "register_dashboard_control_routes",
+        "line": 63,
+        "top_level": true
+      },
+      {
+        "name": "layout_api",
+        "line": 70,
+        "top_level": false
+      },
+      {
+        "name": "default_api",
+        "line": 84,
+        "top_level": false
+      },
+      {
+        "name": "mode_api",
+        "line": 95,
+        "top_level": false
+      },
+      {
+        "name": "status_api",
+        "line": 114,
+        "top_level": false
+      },
+      {
+        "name": "update_live_lease",
+        "line": 117,
+        "top_level": false
+      },
+      {
+        "name": "network_traffic_api",
+        "line": 140,
+        "top_level": false
+      },
+      {
+        "name": "live_heartbeat",
+        "line": 143,
+        "top_level": false
+      },
+      {
+        "name": "live_webrtc_heartbeat",
+        "line": 152,
+        "top_level": false
+      },
+      {
+        "name": "live_screen",
+        "line": 185,
+        "top_level": false
+      },
+      {
+        "name": "service_action",
+        "line": 195,
+        "top_level": false
+      },
+      {
+        "name": "time_action",
+        "line": 210,
+        "top_level": false
+      },
+      {
+        "name": "install_global_menu_cleanup",
+        "line": 242,
+        "top_level": true
+      },
+      {
+        "name": "pco_global_menu_cleanup",
+        "line": 248,
+        "top_level": false
+      },
+      {
+        "name": "install_pco_menu_tools_fulldmd_v13_7",
+        "line": 265,
+        "top_level": true
+      },
+      {
+        "name": "pco_menu_tools_fulldmd_v13_7",
+        "line": 271,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "hmac",
+      "os",
+      "pathlib",
+      "pincabos_dashboard_lobby",
+      "subprocess",
+      "urllib.parse"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/pincabos_dashboard_lobby.py"
+    ],
+    "repository_files": [
+      "opt/pincabos/web/static/pincabos-nav-cleanup-v13.6.js",
+      "opt/pincabos/web/static/pincabos-nav-tools-fulldmd-v13.7.js",
+      "usr/local/lib/pincabos/pincabos-dashboard-live-webrtc",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-dashboard-admin"
+    ],
+    "runtime_paths": [
+      "/run/pincabos-dashboard-live"
+    ],
+    "configuration_paths": [],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-nav-cleanup-v13.6.js",
+      "opt/pincabos/web/static/pincabos-nav-tools-fulldmd-v13.7.js"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/local/sbin/pincabos-dashboard-admin",
+      "sudo"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_webapp_dashboard_control.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

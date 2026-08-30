@@ -1,0 +1,531 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-smart-archive-import",
+    "scope": "tool",
+    "kind": "executable",
+    "source_file": "opt/pincabos/tools/pincabos-smart-archive-import.py",
+    "manifest_file": "opt/pincabos/tools/pincabos-smart-archive-import.json",
+    "language": "python",
+    "git_blob_sha": "a48fc83478814423f667f6961daa2c34a286f018",
+    "size_bytes": 143676,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/install/02-install-engine.sh",
+      "opt/pincabos/web/pincabos_webapp_core.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "pincabos_force_standard_table_name",
+        "line": 20,
+        "top_level": true
+      },
+      {
+        "name": "log",
+        "line": 153,
+        "top_level": true
+      },
+      {
+        "name": "standard_table_folder_name",
+        "line": 157,
+        "top_level": true
+      },
+      {
+        "name": "safe_name",
+        "line": 162,
+        "top_level": true
+      },
+      {
+        "name": "is_temp_name",
+        "line": 169,
+        "top_level": true
+      },
+      {
+        "name": "run",
+        "line": 184,
+        "top_level": true
+      },
+      {
+        "name": "list_files",
+        "line": 188,
+        "top_level": true
+      },
+      {
+        "name": "list_dirs",
+        "line": 191,
+        "top_level": true
+      },
+      {
+        "name": "archive_probe",
+        "line": 194,
+        "top_level": true
+      },
+      {
+        "name": "archive_is_passworded",
+        "line": 201,
+        "top_level": true
+      },
+      {
+        "name": "archive_file_list",
+        "line": 217,
+        "top_level": true
+      },
+      {
+        "name": "archive_kind",
+        "line": 228,
+        "top_level": true
+      },
+      {
+        "name": "extract_archive",
+        "line": 272,
+        "top_level": true
+      },
+      {
+        "name": "is_password_protected_error",
+        "line": 367,
+        "top_level": true
+      },
+      {
+        "name": "copy_file",
+        "line": 370,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_file_sha256",
+        "line": 446,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_table_identity_key",
+        "line": 459,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_find_existing_table_dir",
+        "line": 465,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_load_resource_manifest",
+        "line": 524,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpsdb_resource_index",
+        "line": 706,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpsdb_id_to_game_map",
+        "line": 756,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_manifest_game_vpsids",
+        "line": 799,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_find_existing_table_dir_by_game",
+        "line": 828,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_read_existing_table_identity",
+        "line": 874,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_validate_existing_identity",
+        "line": 1002,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_safe_table_target",
+        "line": 1101,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_compare_staged_file",
+        "line": 1147,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_build_staged_plan",
+        "line": 1248,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_new_transaction",
+        "line": 1303,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_tx_record_parent_dirs",
+        "line": 1345,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_tx_backup_existing",
+        "line": 1400,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_tx_prepare_write",
+        "line": 1459,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_rollback_transaction",
+        "line": 1487,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_apply_staged_plan",
+        "line": 1552,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_remap_installed_to_relative",
+        "line": 1603,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_merge_installed",
+        "line": 1650,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_annotate_resource_inventory",
+        "line": 1745,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_merge_resource_inventory",
+        "line": 1820,
+        "top_level": true
+      },
+      {
+        "name": "append_or_replace",
+        "line": 1827,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_atomic_write_json",
+        "line": 1890,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_write_transaction_record",
+        "line": 1935,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_log_update_summary",
+        "line": 1997,
+        "top_level": true
+      },
+      {
+        "name": "copy_dir_contents",
+        "line": 2026,
+        "top_level": true
+      },
+      {
+        "name": "extract_all_inputs",
+        "line": 2044,
+        "top_level": true
+      },
+      {
+        "name": "choose_main_vpx",
+        "line": 2174,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpxtool_required_version",
+        "line": 2182,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_find_vpxtool",
+        "line": 2205,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpu_patch_files",
+        "line": 2256,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpu_select_base_vpx",
+        "line": 2267,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_apply_vpu_patch",
+        "line": 2338,
+        "top_level": true
+      },
+      {
+        "name": "read_text_script",
+        "line": 2528,
+        "top_level": true
+      },
+      {
+        "name": "extract_vbs_from_vpx",
+        "line": 2540,
+        "top_level": true
+      },
+      {
+        "name": "add_candidate",
+        "line": 2565,
+        "top_level": false
+      },
+      {
+        "name": "detect_rom_from_script_text",
+        "line": 2828,
+        "top_level": true
+      },
+      {
+        "name": "detect_rom_name",
+        "line": 2872,
+        "top_level": true
+      },
+      {
+        "name": "safe_pup_pack_folder_name",
+        "line": 2903,
+        "top_level": true
+      },
+      {
+        "name": "detect_pup_name_from_script_text",
+        "line": 2924,
+        "top_level": true
+      },
+      {
+        "name": "read_table_script_for_identity",
+        "line": 3005,
+        "top_level": true
+      },
+      {
+        "name": "add_candidate",
+        "line": 3016,
+        "top_level": false
+      },
+      {
+        "name": "detect_import_identity",
+        "line": 3072,
+        "top_level": true
+      },
+      {
+        "name": "ensure_table_tree",
+        "line": 3127,
+        "top_level": true
+      },
+      {
+        "name": "normalize_media_name",
+        "line": 3153,
+        "top_level": true
+      },
+      {
+        "name": "find_literal_pupvideos_dirs",
+        "line": 3188,
+        "top_level": true
+      },
+      {
+        "name": "looks_like_pup_dir",
+        "line": 3223,
+        "top_level": true
+      },
+      {
+        "name": "looks_like_music_dir",
+        "line": 3254,
+        "top_level": true
+      },
+      {
+        "name": "looks_like_altsound_dir",
+        "line": 3269,
+        "top_level": true
+      },
+      {
+        "name": "looks_like_ultradmd_dir",
+        "line": 3283,
+        "top_level": true
+      },
+      {
+        "name": "find_roots",
+        "line": 3303,
+        "top_level": true
+      },
+      {
+        "name": "best_plugin_folder_name",
+        "line": 3318,
+        "top_level": true
+      },
+      {
+        "name": "detect_ultradmd_folder_name",
+        "line": 3325,
+        "top_level": true
+      },
+      {
+        "name": "should_skip_file",
+        "line": 3336,
+        "top_level": true
+      },
+      {
+        "name": "classify_and_install",
+        "line": 3341,
+        "top_level": true
+      },
+      {
+        "name": "resource_for_source",
+        "line": 3418,
+        "top_level": false
+      },
+      {
+        "name": "put",
+        "line": 3453,
+        "top_level": false
+      },
+      {
+        "name": "copy_tree",
+        "line": 3479,
+        "top_level": false
+      },
+      {
+        "name": "resource_content_root",
+        "line": 3520,
+        "top_level": false
+      },
+      {
+        "name": "pup_root_score",
+        "line": 3671,
+        "top_level": false
+      },
+      {
+        "name": "write_info_and_manifest",
+        "line": 3950,
+        "top_level": true
+      },
+      {
+        "name": "write_import_tree_log",
+        "line": 4238,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 4311,
+        "top_level": true
+      },
+      {
+        "name": "_pincabos_fulldmd_after_smart_import",
+        "line": 5209,
+        "top_level": true
+      },
+      {
+        "name": "_run",
+        "line": 5216,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "argparse",
+      "atexit",
+      "fcntl",
+      "hashlib",
+      "json",
+      "olefile",
+      "os",
+      "pathlib",
+      "re",
+      "shlex",
+      "shutil",
+      "subprocess",
+      "tempfile",
+      "time"
+    ],
+    "local_modules": [
+      "opt/pincabos/bin/pincabos-fulldmd-process-table.py"
+    ],
+    "repository_files": [
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.config/vpinfe/vpsdb.json",
+      "home/pinball/vpinfe/vpinfe",
+      "opt/pincabos/scripts/VPXlauncher.sh",
+      "opt/pincabos/tools/pincabos-table-tree.sh",
+      "opt/pincabos/tools/pincabos-vpxtool-update",
+      "usr/local/bin/pincabos",
+      "usr/local/bin/pincabos-unrar"
+    ],
+    "runtime_paths": [
+      "/home/pinball",
+      "/home/pinball/.Xauthority",
+      "/home/pinball/.local/share",
+      "/home/pinball/Tables",
+      "/home/pinball/vpinball",
+      "/home/pinball/vpinfe/vpinfe.ini",
+      "/media/config",
+      "/opt/pincabos",
+      "/opt/pincabos/apps/vpinball",
+      "/opt/pincabos/bin/vpxtool",
+      "/opt/pincabos/config/vpinfe/vpinfe.ini",
+      "/opt/pincabos/vpinball",
+      "/run/user/1000",
+      "/run/user/1000/bus",
+      "/tmp/pincabos-smart-import.lock",
+      "/usr/bin/env",
+      "/usr/local/bin/vpxtool"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.config/vpinfe/vpsdb.json",
+      "/home/pinball/vpinfe/vpinfe.ini",
+      "/opt/pincabos/config/vpinfe/vpinfe.ini"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/bin/pincabos-fulldmd-process-table.py",
+      "/opt/pincabos/bin/vpxtool",
+      "/opt/pincabos/scripts/VPXlauncher.sh",
+      "/opt/pincabos/tools/pincabos-vpxtool-update",
+      "/usr/bin/env",
+      "/usr/local/bin/pincabos-unrar",
+      "/usr/local/bin/vpxtool",
+      "chmod",
+      "chown",
+      "find",
+      "runuser",
+      "vpxtool"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/tools/pincabos-smart-archive-import.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

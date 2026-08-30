@@ -1,0 +1,128 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_batch_destination_browser",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_batch_destination_browser.py",
+    "manifest_file": "opt/pincabos/web/pincabos_batch_destination_browser.json",
+    "language": "python",
+    "git_blob_sha": "3443b6d15a92cd5b76aa9f57b59b7b88056c205a",
+    "size_bytes": 16049,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_batch_transfer.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_pincabos_batch_destination_browser"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "register_pincabos_batch_destination_browser",
+        "line": 11,
+        "top_level": true
+      },
+      {
+        "name": "safe_relative",
+        "line": 19,
+        "top_level": false
+      },
+      {
+        "name": "get_root",
+        "line": 39,
+        "top_level": false
+      },
+      {
+        "name": "resolve_folder",
+        "line": 66,
+        "top_level": false
+      },
+      {
+        "name": "relative_text",
+        "line": 84,
+        "top_level": false
+      },
+      {
+        "name": "destination_root",
+        "line": 88,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_export_browse_v3",
+        "line": 98,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_export_mkdir_v3",
+        "line": 145,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_destination_browser_ui_v3",
+        "line": 190,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/api/batch-export/browse",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_batch_export_browse_v3",
+        "line": 97
+      },
+      {
+        "path": "/api/batch-export/mkdir",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_export_mkdir_v3",
+        "line": 144
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "os",
+      "pathlib",
+      "types"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_batch_destination_browser.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

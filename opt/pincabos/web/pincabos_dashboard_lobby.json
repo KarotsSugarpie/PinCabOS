@@ -1,0 +1,533 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_dashboard_lobby",
+    "scope": "webapp",
+    "kind": "python_library",
+    "source_file": "opt/pincabos/web/pincabos_dashboard_lobby.py",
+    "manifest_file": "opt/pincabos/web/pincabos_dashboard_lobby.json",
+    "language": "python",
+    "git_blob_sha": "8993517ae2bddb9eaf29f5afb8b6fe42c0d2c01d",
+    "size_bytes": 112750,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/dashboard_plus.py",
+      "opt/pincabos/web/pincabos_webapp_dashboard_control.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_pco_engine_pincabos_kv",
+        "line": 30,
+        "top_level": true
+      },
+      {
+        "name": "_pco_engine_maj_html",
+        "line": 46,
+        "top_level": true
+      },
+      {
+        "name": "run",
+        "line": 72,
+        "top_level": true
+      },
+      {
+        "name": "x11_run",
+        "line": 85,
+        "top_level": true
+      },
+      {
+        "name": "number",
+        "line": 93,
+        "top_level": true
+      },
+      {
+        "name": "human_size",
+        "line": 100,
+        "top_level": true
+      },
+      {
+        "name": "cpu_percent",
+        "line": 109,
+        "top_level": true
+      },
+      {
+        "name": "memory_info",
+        "line": 124,
+        "top_level": true
+      },
+      {
+        "name": "disk_info",
+        "line": 137,
+        "top_level": true
+      },
+      {
+        "name": "service_state",
+        "line": 145,
+        "top_level": true
+      },
+      {
+        "name": "table_count",
+        "line": 156,
+        "top_level": true
+      },
+      {
+        "name": "asset",
+        "line": 163,
+        "top_level": true
+      },
+      {
+        "name": "screen_specs",
+        "line": 168,
+        "top_level": true
+      },
+      {
+        "name": "configured_roles",
+        "line": 179,
+        "top_level": false
+      },
+      {
+        "name": "x11_screens",
+        "line": 217,
+        "top_level": false
+      },
+      {
+        "name": "available_paths",
+        "line": 551,
+        "top_level": true
+      },
+      {
+        "name": "tool_registry",
+        "line": 559,
+        "top_level": true
+      },
+      {
+        "name": "live_registry",
+        "line": 588,
+        "top_level": true
+      },
+      {
+        "name": "audio_volume_dashboard_template",
+        "line": 608,
+        "top_level": true
+      },
+      {
+        "name": "registry_for_request",
+        "line": 644,
+        "top_level": true
+      },
+      {
+        "name": "default_layout",
+        "line": 718,
+        "top_level": true
+      },
+      {
+        "name": "sanitize_layout",
+        "line": 734,
+        "top_level": true
+      },
+      {
+        "name": "load_layout",
+        "line": 759,
+        "top_level": true
+      },
+      {
+        "name": "save_layout",
+        "line": 767,
+        "top_level": true
+      },
+      {
+        "name": "mode_layout_path",
+        "line": 794,
+        "top_level": true
+      },
+      {
+        "name": "simple_layout",
+        "line": 798,
+        "top_level": true
+      },
+      {
+        "name": "preset_layout",
+        "line": 817,
+        "top_level": true
+      },
+      {
+        "name": "_meme_disposition",
+        "line": 825,
+        "top_level": true
+      },
+      {
+        "name": "load_mode",
+        "line": 833,
+        "top_level": true
+      },
+      {
+        "name": "_ecrire_json_pinball",
+        "line": 852,
+        "top_level": true
+      },
+      {
+        "name": "save_mode",
+        "line": 864,
+        "top_level": true
+      },
+      {
+        "name": "save_mode_layout",
+        "line": 871,
+        "top_level": true
+      },
+      {
+        "name": "layout_for_mode",
+        "line": 877,
+        "top_level": true
+      },
+      {
+        "name": "modes_public",
+        "line": 886,
+        "top_level": true
+      },
+      {
+        "name": "uptime",
+        "line": 891,
+        "top_level": true
+      },
+      {
+        "name": "vpx_process_state",
+        "line": 902,
+        "top_level": true
+      },
+      {
+        "name": "storage_inventory",
+        "line": 929,
+        "top_level": true
+      },
+      {
+        "name": "_run",
+        "line": 950,
+        "top_level": false
+      },
+      {
+        "name": "_json",
+        "line": 970,
+        "top_level": false
+      },
+      {
+        "name": "_human",
+        "line": 985,
+        "top_level": false
+      },
+      {
+        "name": "_du",
+        "line": 1022,
+        "top_level": false
+      },
+      {
+        "name": "_normalize_source",
+        "line": 1046,
+        "top_level": false
+      },
+      {
+        "name": "_source_for",
+        "line": 1060,
+        "top_level": false
+      },
+      {
+        "name": "_mounts",
+        "line": 1079,
+        "top_level": false
+      },
+      {
+        "name": "_connector",
+        "line": 1108,
+        "top_level": false
+      },
+      {
+        "name": "_walk",
+        "line": 1314,
+        "top_level": false
+      },
+      {
+        "name": "storage_models",
+        "line": 1819,
+        "top_level": true
+      },
+      {
+        "name": "storage_widget_html",
+        "line": 1826,
+        "top_level": true
+      },
+      {
+        "name": "esc",
+        "line": 1829,
+        "top_level": false
+      },
+      {
+        "name": "_pco_network_traffic_live",
+        "line": 2064,
+        "top_level": true
+      },
+      {
+        "name": "_pco_public_wan_ip",
+        "line": 2117,
+        "top_level": true
+      },
+      {
+        "name": "_pco_network_truechart_interface",
+        "line": 2207,
+        "top_level": true
+      },
+      {
+        "name": "network_traffic_snapshot",
+        "line": 2213,
+        "top_level": true
+      },
+      {
+        "name": "primary_network_info",
+        "line": 2284,
+        "top_level": true
+      },
+      {
+        "name": "vpx_runtime_available",
+        "line": 2359,
+        "top_level": true
+      },
+      {
+        "name": "vpx_available",
+        "line": 2369,
+        "top_level": true
+      },
+      {
+        "name": "realtime_clock",
+        "line": 2379,
+        "top_level": true
+      },
+      {
+        "name": "vpinfe_update_info",
+        "line": 2401,
+        "top_level": true
+      },
+      {
+        "name": "signature_for",
+        "line": 2404,
+        "top_level": false
+      },
+      {
+        "name": "status_snapshot",
+        "line": 2447,
+        "top_level": true
+      },
+      {
+        "name": "meter",
+        "line": 2488,
+        "top_level": true
+      },
+      {
+        "name": "kv",
+        "line": 2494,
+        "top_level": true
+      },
+      {
+        "name": "action",
+        "line": 2499,
+        "top_level": true
+      },
+      {
+        "name": "service_line",
+        "line": 2504,
+        "top_level": true
+      },
+      {
+        "name": "_fit_scroll",
+        "line": 2521,
+        "top_level": true
+      },
+      {
+        "name": "widget_content",
+        "line": 2529,
+        "top_level": true
+      },
+      {
+        "name": "widget_template",
+        "line": 3539,
+        "top_level": true
+      },
+      {
+        "name": "render_dashboard",
+        "line": 3546,
+        "top_level": true
+      },
+      {
+        "name": "registry_for_request",
+        "line": 3742,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "html",
+      "ipaddress",
+      "json",
+      "os",
+      "pathlib",
+      "pincabos_pinball_engine_vpx_version",
+      "re",
+      "secrets",
+      "shutil",
+      "subprocess",
+      "threading",
+      "time",
+      "urllib.parse",
+      "urllib.request"
+    ],
+    "local_modules": [
+      "opt/pincabos/tools/vpinfeupdate.py",
+      "opt/pincabos/web/pincabos_pinball_engine_vpx_version.py"
+    ],
+    "repository_files": [
+      "etc/resolv.conf",
+      "home/pinball/.config/pincabos/dashboard-layout.json",
+      "home/pinball/.config/pincabos/dashboard-mode.json",
+      "home/pinball/vpinfe/vpinfe",
+      "opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "opt/pincabos/config/screens/screens.json",
+      "opt/pincabos/state/vpinfe-update-state.json",
+      "opt/pincabos/web/static/pincabos-assets/PCOSApparence.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSAudioSSF.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConfigINIVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConfigINIVPinballX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConsole.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSDOFOutpouts.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSDisquesExternes.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSEcransGPUVPX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSExplorer.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSExport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSFullDMDConfigurator.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSImport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSKeyboard.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMapInputs.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMediaHunter.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSNetwork.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSRecorder.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSTablesVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdateVPX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdateVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPXBallCabinet.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFECollections.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFEMediasPage.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFETablePage.png",
+      "opt/pincabos/web/static/pincabos-dashboard-lobby.css",
+      "opt/pincabos/web/static/pincabos-dashboard-lobby.js",
+      "opt/pincabos/web/static/pincabos-live-jpeg-x11-v16.css",
+      "opt/pincabos/web/static/pincabos-live-jpeg-x11-v16.js"
+    ],
+    "runtime_paths": [
+      "/dev/null",
+      "/dev/{disk_name}",
+      "/dev/{part_name}",
+      "/home/pinball",
+      "/home/pinball/.Xauthority",
+      "/home/pinball/Tables",
+      "/opt/pincabos/backups",
+      "/opt/pincabos/logs",
+      "/opt/pincabos/state/updates-available.json",
+      "/opt/pincabos/web",
+      "/proc/loadavg",
+      "/proc/meminfo",
+      "/proc/stat",
+      "/proc/uptime",
+      "/run/user/1000",
+      "/sys/class/net",
+      "/usr/bin/python3",
+      "/var/log"
+    ],
+    "configuration_paths": [
+      "/etc/resolv.conf",
+      "/home/pinball/.config/pincabos/dashboard-layout.json",
+      "/home/pinball/.config/pincabos/dashboard-mode.json",
+      "/opt/pincabos/config/screens/screens.json",
+      "/opt/pincabos/state/updates-available.json",
+      "/opt/pincabos/state/vpinfe-update-state.json"
+    ],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-assets/PCOSApparence.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSAudioSSF.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConfigINIVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConfigINIVPinballX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConsole.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSDOFOutpouts.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSDisquesExternes.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSEcransGPUVPX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSExplorer.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSExport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSFullDMDConfigurator.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSImport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSKeyboard.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMapInputs.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMediaHunter.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSNetwork.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSRecorder.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSTablesVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdateVPX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdateVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPXBallCabinet.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFECollections.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFEMediasPage.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFETablePage.png",
+      "opt/pincabos/web/static/pincabos-dashboard-lobby.css",
+      "opt/pincabos/web/static/pincabos-dashboard-lobby.js",
+      "opt/pincabos/web/static/pincabos-live-jpeg-x11-v16.css",
+      "opt/pincabos/web/static/pincabos-live-jpeg-x11-v16.js"
+    ],
+    "systemd_units_mentioned": [
+      "pincabos-media-recorder-worker.service",
+      "pincabos-screen-topology-boot.service",
+      "pincabos-screen-topology.timer",
+      "pincabos-vpinfe.service",
+      "pincabos-webapp.service"
+    ],
+    "commands": [
+      "/opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "/opt/pincabos/tools/vpinfeupdate.py",
+      "/usr/bin/python3",
+      "bash",
+      "netplan",
+      "ps",
+      "xrandr"
+    ],
+    "environment_variables": [
+      "DEV",
+      "KEY",
+      "VALUE"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_dashboard_lobby.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

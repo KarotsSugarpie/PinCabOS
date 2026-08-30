@@ -1,0 +1,2942 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "app",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/app.py",
+    "manifest_file": "opt/pincabos/web/app.json",
+    "language": "python",
+    "git_blob_sha": "6ab248f5fe50e7b8b6303dc961583823263d3130",
+    "size_bytes": 608386,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/install/02-install-engine.sh",
+      "opt/pincabos/script/iso.sh",
+      "opt/pincabos/tools/pincabos-alpha-migration-audit.sh",
+      "opt/pincabos/tools/pincabos-cleanup.sh",
+      "opt/pincabos/tools/pincabos-freeze-dev-for-iso.sh",
+      "opt/pincabos/tools/pincabos-verifier-perimetre-maj.py",
+      "opt/pincabos/tools/publy.sh",
+      "opt/pincabos/web/PinCabOS-AboutHelp.py",
+      "opt/pincabos/web/PinCabOS-ExplorerInstall.py",
+      "opt/pincabos/web/PinCabOS-NtwkDRV.py",
+      "opt/pincabos/web/dashboard_plus.py",
+      "opt/pincabos/web/pincabos_webapp_admin.py",
+      "opt/pincabos/web/pincabos_webapp_audio.py",
+      "opt/pincabos/web/pincabos_webapp_core.py",
+      "opt/pincabos/web/pincabos_webapp_dev_admin.py",
+      "opt/pincabos/web/pincabos_webapp_exports.py",
+      "opt/pincabos/web/pincabos_webapp_firstrun.py",
+      "opt/pincabos/web/pincabos_webapp_import_metadata.py",
+      "opt/pincabos/web/pincabos_webapp_inputs.py",
+      "opt/pincabos/web/screen.py",
+      "opt/pincabos/web/tools.py",
+      "opt/pincabos/web/validate_refactor.py",
+      "usr/local/libexec/pincabos/doctor.d/60-webapp.sh"
+    ],
+    "systemd_units": [
+      "etc/systemd/system/pincabos-gui-wizard.service",
+      "etc/systemd/system/pincabos-webapp.service"
+    ],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "pincabos_force_standard_table_name",
+        "line": 113,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_webapp_screen_state",
+        "line": 163,
+        "top_level": true
+      },
+      {
+        "name": "webapp_screen_toggle_html",
+        "line": 197,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_modified_comment",
+        "line": 239,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_modified_hash_comment",
+        "line": 244,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_meta",
+        "line": 249,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_backup_config_file",
+        "line": 258,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_write_json_with_meta",
+        "line": 273,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_read_ini_lines",
+        "line": 283,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_write_ini_lines",
+        "line": 290,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_find_ini_section",
+        "line": 296,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_set_ini_key_with_comment",
+        "line": 318,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_set_ini_section_with_comment",
+        "line": 361,
+        "top_level": true
+      },
+      {
+        "name": "shlex_quote",
+        "line": 378,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_webapp_secret_key",
+        "line": 382,
+        "top_level": true
+      },
+      {
+        "name": "esc",
+        "line": 452,
+        "top_level": true
+      },
+      {
+        "name": "get_ip",
+        "line": 455,
+        "top_level": true
+      },
+      {
+        "name": "service_status",
+        "line": 465,
+        "top_level": true
+      },
+      {
+        "name": "latest_job_file",
+        "line": 468,
+        "top_level": true
+      },
+      {
+        "name": "read_job",
+        "line": 472,
+        "top_level": true
+      },
+      {
+        "name": "get_job_status",
+        "line": 480,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_version",
+        "line": 539,
+        "top_level": true
+      },
+      {
+        "name": "run_cmd",
+        "line": 558,
+        "top_level": true
+      },
+      {
+        "name": "safe_file_text",
+        "line": 570,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_support_footer_html",
+        "line": 578,
+        "top_level": true
+      },
+      {
+        "name": "v",
+        "line": 582,
+        "top_level": false
+      },
+      {
+        "name": "page",
+        "line": 644,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_firstrun_is_complete",
+        "line": 1440,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_first_run_auto_redirect",
+        "line": 1454,
+        "top_level": true
+      },
+      {
+        "name": "dashboard",
+        "line": 1521,
+        "top_level": true
+      },
+      {
+        "name": "gpu_info_text",
+        "line": 1525,
+        "top_level": true
+      },
+      {
+        "name": "screens_layout_text",
+        "line": 1529,
+        "top_level": true
+      },
+      {
+        "name": "dof_file_status",
+        "line": 1539,
+        "top_level": true
+      },
+      {
+        "name": "detect_dof_devices",
+        "line": 1581,
+        "top_level": true
+      },
+      {
+        "name": "dof_logs",
+        "line": 1631,
+        "top_level": true
+      },
+      {
+        "name": "pco_wallpaper_role_label",
+        "line": 1659,
+        "top_level": true
+      },
+      {
+        "name": "pco_wallpaper_role_icon",
+        "line": 1666,
+        "top_level": true
+      },
+      {
+        "name": "pco_wallpaper_load_cfg",
+        "line": 1673,
+        "top_level": true
+      },
+      {
+        "name": "pco_wallpaper_save_cfg",
+        "line": 1683,
+        "top_level": true
+      },
+      {
+        "name": "pco_wallpaper_safe_ext",
+        "line": 1689,
+        "top_level": true
+      },
+      {
+        "name": "pco_wallpaper_public_url",
+        "line": 1695,
+        "top_level": true
+      },
+      {
+        "name": "gpu_wallpaper_file",
+        "line": 1706,
+        "top_level": true
+      },
+      {
+        "name": "pco_wallpaper_apply_image",
+        "line": 1711,
+        "top_level": true
+      },
+      {
+        "name": "pco_gpu_wallpaper_section_html",
+        "line": 1762,
+        "top_level": true
+      },
+      {
+        "name": "gpu_wallpaper_select",
+        "line": 1911,
+        "top_level": true
+      },
+      {
+        "name": "gpu_wallpaper_apply",
+        "line": 1954,
+        "top_level": true
+      },
+      {
+        "name": "gpu_page",
+        "line": 1977,
+        "top_level": true
+      },
+      {
+        "name": "pco_gpu_saved_mode",
+        "line": 2014,
+        "top_level": false
+      },
+      {
+        "name": "pco_gpu_screen_name_from_selected",
+        "line": 2025,
+        "top_level": false
+      },
+      {
+        "name": "pco_gpu_modes_from_raw",
+        "line": 2034,
+        "top_level": false
+      },
+      {
+        "name": "pco_gpu_mode_select",
+        "line": 2073,
+        "top_level": false
+      },
+      {
+        "name": "role_select",
+        "line": 2100,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_parse_xrandr_screens",
+        "line": 2431,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_load_screen_roles",
+        "line": 2489,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_write_manual_screen_roles",
+        "line": 2512,
+        "top_level": true
+      },
+      {
+        "name": "set_ini_key",
+        "line": 2605,
+        "top_level": false
+      },
+      {
+        "name": "gpu_screens_page",
+        "line": 2672,
+        "top_level": true
+      },
+      {
+        "name": "pco_gpu_save_resolution_modes_to_screens_json",
+        "line": 2677,
+        "top_level": true
+      },
+      {
+        "name": "pco_gpu_apply_system_resolution_modes",
+        "line": 2715,
+        "top_level": true
+      },
+      {
+        "name": "gpu_screens_apply",
+        "line": 2726,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_gpu_read_screens_config_for_apply",
+        "line": 2787,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_gpu_ini_set_key_local",
+        "line": 2813,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_gpu_apply_config_to_vpinfe",
+        "line": 2857,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_gpu_apply_config_to_vpx",
+        "line": 2932,
+        "top_level": true
+      },
+      {
+        "name": "gpu_apply_vpinfe",
+        "line": 3029,
+        "top_level": true
+      },
+      {
+        "name": "gpu_apply_vpx",
+        "line": 3053,
+        "top_level": true
+      },
+      {
+        "name": "restart_vpinfe",
+        "line": 3077,
+        "top_level": true
+      },
+      {
+        "name": "auto_screens",
+        "line": 3087,
+        "top_level": true
+      },
+      {
+        "name": "dof_check_cmd",
+        "line": 3097,
+        "top_level": true
+      },
+      {
+        "name": "dof_pkg_ok",
+        "line": 3110,
+        "top_level": true
+      },
+      {
+        "name": "dof_module_ok",
+        "line": 3114,
+        "top_level": true
+      },
+      {
+        "name": "dof_udev_ok",
+        "line": 3118,
+        "top_level": true
+      },
+      {
+        "name": "dof_component_definitions",
+        "line": 3122,
+        "top_level": true
+      },
+      {
+        "name": "dof_component_status_html",
+        "line": 3219,
+        "top_level": true
+      },
+      {
+        "name": "dof_utils_card_html",
+        "line": 3244,
+        "top_level": true
+      },
+      {
+        "name": "dof_install_utils",
+        "line": 3300,
+        "top_level": true
+      },
+      {
+        "name": "dof_simple_cmd",
+        "line": 3347,
+        "top_level": true
+      },
+      {
+        "name": "dof_usb_present",
+        "line": 3360,
+        "top_level": true
+      },
+      {
+        "name": "dof_path_exists",
+        "line": 3368,
+        "top_level": true
+      },
+      {
+        "name": "dof_support_ready",
+        "line": 3372,
+        "top_level": true
+      },
+      {
+        "name": "dof_configurator_status",
+        "line": 3392,
+        "top_level": true
+      },
+      {
+        "name": "dof_status_badge",
+        "line": 3401,
+        "top_level": true
+      },
+      {
+        "name": "dof_manager_families",
+        "line": 3407,
+        "top_level": true
+      },
+      {
+        "name": "dof_simple_manager_card_friendly",
+        "line": 3468,
+        "top_level": true
+      },
+      {
+        "name": "dof_detection_summary_card",
+        "line": 3777,
+        "top_level": true
+      },
+      {
+        "name": "dof_simple_manager_card",
+        "line": 3828,
+        "top_level": true
+      },
+      {
+        "name": "dof_manager_action",
+        "line": 3899,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dof_get_saved_api_key",
+        "line": 3905,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dof_save_api_key",
+        "line": 3911,
+        "top_level": true
+      },
+      {
+        "name": "dof_commander_find_configs",
+        "line": 3937,
+        "top_level": true
+      },
+      {
+        "name": "dof_commander_read_text",
+        "line": 3952,
+        "top_level": true
+      },
+      {
+        "name": "dof_commander_parse_xml_outputs",
+        "line": 3959,
+        "top_level": true
+      },
+      {
+        "name": "dof_commander_parse_ini_outputs",
+        "line": 3998,
+        "top_level": true
+      },
+      {
+        "name": "dof_commander_load_inventory",
+        "line": 4028,
+        "top_level": true
+      },
+      {
+        "name": "dof_commander_devices_summary",
+        "line": 4056,
+        "top_level": true
+      },
+      {
+        "name": "has_vendor",
+        "line": 4103,
+        "top_level": false
+      },
+      {
+        "name": "has_exact",
+        "line": 4110,
+        "top_level": false
+      },
+      {
+        "name": "has_dudescab",
+        "line": 4117,
+        "top_level": false
+      },
+      {
+        "name": "has_pinscape_pico",
+        "line": 4125,
+        "top_level": false
+      },
+      {
+        "name": "dof_commander_get_active_cabinet_json_path_pcb",
+        "line": 4208,
+        "top_level": true
+      },
+      {
+        "name": "dof_commander_load_cabinet_json_pcb",
+        "line": 4237,
+        "top_level": true
+      },
+      {
+        "name": "dof_commander_inventory_from_cabinet_json_pcb",
+        "line": 4251,
+        "top_level": true
+      },
+      {
+        "name": "device_type_from_controller_id",
+        "line": 4263,
+        "top_level": false
+      },
+      {
+        "name": "combo_label",
+        "line": 4275,
+        "top_level": false
+      },
+      {
+        "name": "dof_commander_load_inventory_active_pcb",
+        "line": 4362,
+        "top_level": true
+      },
+      {
+        "name": "dof_import_api_pincabos",
+        "line": 4381,
+        "top_level": true
+      },
+      {
+        "name": "dof_import_config",
+        "line": 4456,
+        "top_level": true
+      },
+      {
+        "name": "log",
+        "line": 4475,
+        "top_level": false
+      },
+      {
+        "name": "response_card",
+        "line": 4479,
+        "top_level": false
+      },
+      {
+        "name": "safe_copy",
+        "line": 4557,
+        "top_level": false
+      },
+      {
+        "name": "dof_import_cabinet_json",
+        "line": 4674,
+        "top_level": true
+      },
+      {
+        "name": "log",
+        "line": 4693,
+        "top_level": false
+      },
+      {
+        "name": "page_msg",
+        "line": 4697,
+        "top_level": false
+      },
+      {
+        "name": "dof_commander_page",
+        "line": 4872,
+        "top_level": true
+      },
+      {
+        "name": "api_dof_commander_test",
+        "line": 5175,
+        "top_level": true
+      },
+      {
+        "name": "dof_driver_pack_status_html",
+        "line": 5227,
+        "top_level": true
+      },
+      {
+        "name": "read_json",
+        "line": 5231,
+        "top_level": false
+      },
+      {
+        "name": "usb_detected",
+        "line": 5239,
+        "top_level": false
+      },
+      {
+        "name": "serial_detected",
+        "line": 5261,
+        "top_level": false
+      },
+      {
+        "name": "api_dof_driver_pack_status",
+        "line": 5462,
+        "top_level": true
+      },
+      {
+        "name": "dof_page",
+        "line": 5478,
+        "top_level": true
+      },
+      {
+        "name": "service_control",
+        "line": 5619,
+        "top_level": true
+      },
+      {
+        "name": "service_control_path",
+        "line": 5670,
+        "top_level": true
+      },
+      {
+        "name": "process_control_vpx",
+        "line": 5737,
+        "top_level": true
+      },
+      {
+        "name": "_pincabos_vpinfe_status_payload",
+        "line": 5780,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpinfe_local_version",
+        "line": 5793,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpinfe_available_version",
+        "line": 5799,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpinball_local_version",
+        "line": 5806,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpinball_available_version",
+        "line": 5868,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_gpu_local_version",
+        "line": 5913,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_gpu_available_version",
+        "line": 5978,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_ubuntu_local_version",
+        "line": 6010,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_ubuntu_available_version",
+        "line": 6028,
+        "top_level": true
+      },
+      {
+        "name": "load_fulldmd_calibration",
+        "line": 6068,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_set_ini_key_plain",
+        "line": 6089,
+        "top_level": true
+      },
+      {
+        "name": "save_fulldmd_to_configs",
+        "line": 6143,
+        "top_level": true
+      },
+      {
+        "name": "load_dmd_calibration",
+        "line": 6209,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_ini_section_summary",
+        "line": 6222,
+        "top_level": true
+      },
+      {
+        "name": "fulldmd_page",
+        "line": 6248,
+        "top_level": true
+      },
+      {
+        "name": "api_fulldmd_status",
+        "line": 6556,
+        "top_level": true
+      },
+      {
+        "name": "api_fulldmd_save",
+        "line": 6565,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_fulldmd_calibrator_running",
+        "line": 6606,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_fulldmd_toggle_button",
+        "line": 6647,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dmd_calibrator_running",
+        "line": 6669,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dmd_toggle_button",
+        "line": 6685,
+        "top_level": true
+      },
+      {
+        "name": "close_fulldmd_calibrator",
+        "line": 6705,
+        "top_level": true
+      },
+      {
+        "name": "launch_fulldmd_calibrator",
+        "line": 6742,
+        "top_level": true
+      },
+      {
+        "name": "fulldmd_screen",
+        "line": 6762,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_apply_dmd_calibration",
+        "line": 7126,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dmd_screen",
+        "line": 7134,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_api_dmd_save",
+        "line": 7299,
+        "top_level": true
+      },
+      {
+        "name": "as_int",
+        "line": 7308,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_launch_dmd_calibrator",
+        "line": 7397,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_close_dmd_calibrator",
+        "line": 7410,
+        "top_level": true
+      },
+      {
+        "name": "fulldmd_log_page",
+        "line": 7434,
+        "top_level": true
+      },
+      {
+        "name": "console_page",
+        "line": 7541,
+        "top_level": true
+      },
+      {
+        "name": "root_password",
+        "line": 7890,
+        "top_level": true
+      },
+      {
+        "name": "network_info_text",
+        "line": 7959,
+        "top_level": true
+      },
+      {
+        "name": "network_current_mode",
+        "line": 7963,
+        "top_level": true
+      },
+      {
+        "name": "network_main_iface",
+        "line": 7973,
+        "top_level": true
+      },
+      {
+        "name": "wifi_options_html",
+        "line": 7978,
+        "top_level": true
+      },
+      {
+        "name": "network_page",
+        "line": 8008,
+        "top_level": true
+      },
+      {
+        "name": "network_action_result",
+        "line": 8223,
+        "top_level": true
+      },
+      {
+        "name": "network_apply_mode",
+        "line": 8235,
+        "top_level": true
+      },
+      {
+        "name": "network_wifi_join",
+        "line": 8273,
+        "top_level": true
+      },
+      {
+        "name": "network_wifi_hotspot",
+        "line": 8285,
+        "top_level": true
+      },
+      {
+        "name": "network_wifi_hotspot_stop",
+        "line": 8297,
+        "top_level": true
+      },
+      {
+        "name": "toggle_webapp_screen",
+        "line": 8306,
+        "top_level": true
+      },
+      {
+        "name": "launch_webapp_screen",
+        "line": 8368,
+        "top_level": true
+      },
+      {
+        "name": "close_webapp_screen",
+        "line": 8385,
+        "top_level": true
+      },
+      {
+        "name": "_pco_read_auth_value",
+        "line": 8574,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_page",
+        "line": 8716,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_about_supporters_default",
+        "line": 8722,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_about_supporters_normalize_list",
+        "line": 8735,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_about_supporters_load",
+        "line": 8742,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_about_supporters_save",
+        "line": 8771,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_about_supporters_public_card",
+        "line": 8800,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_about_supporters_admin_card",
+        "line": 8877,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_about_supporters_insert_public",
+        "line": 8930,
+        "top_level": true
+      },
+      {
+        "name": "_pincabos_about_supporters_wrapped_view",
+        "line": 8963,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_admin_page",
+        "line": 8979,
+        "top_level": false
+      },
+      {
+        "name": "_pco_insert_before_footer",
+        "line": 8986,
+        "top_level": false
+      },
+      {
+        "name": "_pco_find_matching_div_end",
+        "line": 8993,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_admin_about_supporters_save",
+        "line": 9051,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_footer_supporters_inline_html",
+        "line": 9082,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_version_json_card_html",
+        "line": 9144,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_admin_page",
+        "line": 9171,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_admin_version_save",
+        "line": 9199,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_import_safe_job_id",
+        "line": 9349,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_list_archive_files",
+        "line": 9354,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_is_zip_rom",
+        "line": 9375,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_detect_batch",
+        "line": 9409,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpsdb_matches",
+        "line": 9532,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_smart_import_resource_manifest_path",
+        "line": 9567,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_smart_import_file_sha256",
+        "line": 9574,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_smart_import_exact_resource",
+        "line": 9584,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_smart_import_load_resource_manifest",
+        "line": 9630,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_get_vpinfe_paths_for_tools",
+        "line": 9658,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_list_installed_tables_for_export",
+        "line": 9701,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_ini_path",
+        "line": 9806,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_read_lines",
+        "line": 9811,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_write_lines",
+        "line": 9818,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_backup",
+        "line": 9847,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_find_section",
+        "line": 9860,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_get_value",
+        "line": 9878,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_set_value",
+        "line": 9893,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_form_name",
+        "line": 9923,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_validate_value",
+        "line": 9927,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_select",
+        "line": 9942,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_preview_url",
+        "line": 9953,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_field",
+        "line": 9959,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_rows",
+        "line": 9999,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_current_preview",
+        "line": 10007,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_asset_roots",
+        "line": 10020,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_safe_image_path",
+        "line": 10039,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_image_rank",
+        "line": 10053,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_list_images",
+        "line": 10062,
+        "top_level": true
+      },
+      {
+        "name": "tools_vpx_ball_cabinet_images_json",
+        "line": 10094,
+        "top_level": true
+      },
+      {
+        "name": "tools_vpx_ball_cabinet_image_preview",
+        "line": 10102,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_render_result",
+        "line": 10112,
+        "top_level": true
+      },
+      {
+        "name": "vpx_ballcab_process",
+        "line": 10126,
+        "top_level": true
+      },
+      {
+        "name": "tools_vpx_ball_cabinet_validate",
+        "line": 10163,
+        "top_level": true
+      },
+      {
+        "name": "tools_vpx_ball_cabinet_apply",
+        "line": 10168,
+        "top_level": true
+      },
+      {
+        "name": "tools_vpx_ball_cabinet",
+        "line": 10173,
+        "top_level": true
+      },
+      {
+        "name": "vpx_simple_ball_read_lines",
+        "line": 10212,
+        "top_level": true
+      },
+      {
+        "name": "vpx_simple_ball_write_lines",
+        "line": 10217,
+        "top_level": true
+      },
+      {
+        "name": "vpx_simple_ball_find_section",
+        "line": 10221,
+        "top_level": true
+      },
+      {
+        "name": "vpx_simple_ball_get",
+        "line": 10242,
+        "top_level": true
+      },
+      {
+        "name": "vpx_simple_ball_set",
+        "line": 10257,
+        "top_level": true
+      },
+      {
+        "name": "vpx_simple_ball_backup",
+        "line": 10296,
+        "top_level": true
+      },
+      {
+        "name": "vpx_simple_ball_image_options",
+        "line": 10305,
+        "top_level": true
+      },
+      {
+        "name": "vpx_simple_ball_card",
+        "line": 10330,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_userballs_static",
+        "line": 10574,
+        "top_level": true
+      },
+      {
+        "name": "tools_vpx_ball_simple_apply",
+        "line": 10592,
+        "top_level": true
+      },
+      {
+        "name": "save_upload",
+        "line": 10607,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_try_manifest_import_from_saved_batch",
+        "line": 10729,
+        "top_level": true
+      },
+      {
+        "name": "tools_import_table_manifest_conflict",
+        "line": 10832,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_match_rom_value",
+        "line": 10934,
+        "top_level": true
+      },
+      {
+        "name": "api_import_vpsdb_search",
+        "line": 10969,
+        "top_level": true
+      },
+      {
+        "name": "tools_import_table_analyze",
+        "line": 11034,
+        "top_level": true
+      },
+      {
+        "name": "tools_import_table_analyze_run",
+        "line": 11490,
+        "top_level": true
+      },
+      {
+        "name": "_pcos_smart_analyze_render",
+        "line": 11506,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_safe_manifest_relpath",
+        "line": 12230,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_manifest_dest_path",
+        "line": 12239,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_find_manifest_root",
+        "line": 12295,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_manifest_table_folder_from_archive",
+        "line": 12310,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_manifest_import_conflict_page",
+        "line": 12352,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_standard_table_folder_name",
+        "line": 12408,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_import_from_manifest_dir",
+        "line": 12415,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_try_manifest_import_from_request",
+        "line": 12617,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_manifest_import_result_page",
+        "line": 12719,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_run_vpinfe_vpx_standardizer",
+        "line": 12758,
+        "top_level": true
+      },
+      {
+        "name": "tools_import_table_install",
+        "line": 12775,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_commander_roots",
+        "line": 13162,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_commander_resolve",
+        "line": 13190,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_size_human",
+        "line": 13205,
+        "top_level": true
+      },
+      {
+        "name": "tools_external_disks",
+        "line": 13218,
+        "top_level": true
+      },
+      {
+        "name": "tools_external_disks_smb_detect",
+        "line": 13383,
+        "top_level": true
+      },
+      {
+        "name": "tools_external_disks_smb_mount",
+        "line": 13503,
+        "top_level": true
+      },
+      {
+        "name": "pcx_roots",
+        "line": 13613,
+        "top_level": true
+      },
+      {
+        "name": "pcx_resolve",
+        "line": 13628,
+        "top_level": true
+      },
+      {
+        "name": "pcx_back",
+        "line": 13645,
+        "top_level": true
+      },
+      {
+        "name": "pcx_size",
+        "line": 13654,
+        "top_level": true
+      },
+      {
+        "name": "pcx_selected",
+        "line": 13666,
+        "top_level": true
+      },
+      {
+        "name": "pcx_clean_name",
+        "line": 13677,
+        "top_level": true
+      },
+      {
+        "name": "pcx_unique",
+        "line": 13685,
+        "top_level": true
+      },
+      {
+        "name": "pcx_copy_any",
+        "line": 13702,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander",
+        "line": 13713,
+        "top_level": true
+      },
+      {
+        "name": "pco_pagination_url",
+        "line": 13866,
+        "top_level": false
+      },
+      {
+        "name": "pco_pagination_link",
+        "line": 13877,
+        "top_level": false
+      },
+      {
+        "name": "tools_commander_download",
+        "line": 15038,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_duplicate",
+        "line": 15054,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_extract_zip",
+        "line": 15092,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_archive_selection",
+        "line": 15141,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_info",
+        "line": 15240,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_create_folder",
+        "line": 15319,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_upload",
+        "line": 15340,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_extract_script",
+        "line": 15374,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_delete",
+        "line": 15592,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_rename",
+        "line": 15617,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_clipboard",
+        "line": 15650,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_paste",
+        "line": 15684,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_find_value_deep",
+        "line": 15729,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_export_safe_filename",
+        "line": 15753,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_table_export_dirs",
+        "line": 15761,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_export_should_exclude_relative",
+        "line": 15777,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_write_full_folder_export_manifest",
+        "line": 15812,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_zip_full_table_folder",
+        "line": 15891,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_detect_vpsid_for_export",
+        "line": 15935,
+        "top_level": true
+      },
+      {
+        "name": "find_deep",
+        "line": 15950,
+        "top_level": false
+      },
+      {
+        "name": "tools_export_table",
+        "line": 15992,
+        "top_level": true
+      },
+      {
+        "name": "download_export",
+        "line": 16110,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_path_inside",
+        "line": 16136,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_import_classifier_unavailable",
+        "line": 16147,
+        "top_level": true
+      },
+      {
+        "name": "api_import_analyze_zip",
+        "line": 16159,
+        "top_level": true
+      },
+      {
+        "name": "api_import_apply_zip_choice",
+        "line": 16198,
+        "top_level": true
+      },
+      {
+        "name": "pcos_update_clean_reboot",
+        "line": 16356,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_alias_wifi",
+        "line": 16414,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_alias_screens",
+        "line": 16418,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_alias_outputs",
+        "line": 16426,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_network_hostname_alias",
+        "line": 16433,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_tools_usb_unmount_alias",
+        "line": 16439,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_tools_smb_unmount_alias",
+        "line": 16444,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_api_dof_manager_slash_alias",
+        "line": 16449,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_legacy_external_disks_alias",
+        "line": 16462,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_legacy_import_alias",
+        "line": 16467,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_legacy_tables_alias",
+        "line": 16472,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_menu_close_tab_api",
+        "line": 16480,
+        "top_level": true
+      },
+      {
+        "name": "_pco_dashboard_plus_final_detect_vpx",
+        "line": 16526,
+        "top_level": true
+      },
+      {
+        "name": "_pco_dashboard_plus_final_audio_message",
+        "line": 16576,
+        "top_level": true
+      },
+      {
+        "name": "_pco_dashboard_plus_final_html_fix",
+        "line": 16599,
+        "top_level": true
+      },
+      {
+        "name": "_pco_dashboard_plus_final_install_wrapper",
+        "line": 16642,
+        "top_level": true
+      },
+      {
+        "name": "_make_wrapper",
+        "line": 16656,
+        "top_level": false
+      },
+      {
+        "name": "_wrapped",
+        "line": 16657,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_external_disks_menu_link",
+        "line": 16713,
+        "top_level": true
+      },
+      {
+        "name": "pco_smb_mount_helper_command",
+        "line": 16789,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_smb_mount_safe_view",
+        "line": 16805,
+        "top_level": false
+      },
+      {
+        "name": "_pincabos_direct_mount_child",
+        "line": 16834,
+        "top_level": true
+      },
+      {
+        "name": "_pincabos_external_disk_result",
+        "line": 16857,
+        "top_level": true
+      },
+      {
+        "name": "_pincabos_replace_unmount_route",
+        "line": 16872,
+        "top_level": true
+      },
+      {
+        "name": "safe_unmount_view",
+        "line": 16883,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_tools_smb_disconnect_button_v1",
+        "line": 16966,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_html",
+        "line": 17094,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_url",
+        "line": 17099,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_resolve",
+        "line": 17113,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_sha256",
+        "line": 17137,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_newline",
+        "line": 17142,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_decode",
+        "line": 17148,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_encode",
+        "line": 17163,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_is_text",
+        "line": 17177,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_kind",
+        "line": 17218,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_backup",
+        "line": 17251,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_atomic_write",
+        "line": 17279,
+        "top_level": true
+      },
+      {
+        "name": "_pcx_lv_render_editor",
+        "line": 17320,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_live",
+        "line": 17440,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_live_file",
+        "line": 17554,
+        "top_level": true
+      },
+      {
+        "name": "tools_commander_live_save",
+        "line": 17582,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_pcx_live_view_column",
+        "line": 17690,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_fulldmd_apply_active",
+        "line": 17870,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_fulldmd_equal_calibration_cards",
+        "line": 17932,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/",
+        "methods": [
+          "GET"
+        ],
+        "function": "dashboard",
+        "line": 1520
+      },
+      {
+        "path": "/gpu/wallpaper/file/<path:filename>",
+        "methods": [
+          "GET"
+        ],
+        "function": "gpu_wallpaper_file",
+        "line": 1705
+      },
+      {
+        "path": "/gpu/wallpaper/select",
+        "methods": [
+          "POST"
+        ],
+        "function": "gpu_wallpaper_select",
+        "line": 1910
+      },
+      {
+        "path": "/gpu/wallpaper/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "gpu_wallpaper_apply",
+        "line": 1953
+      },
+      {
+        "path": "/gpu",
+        "methods": [
+          "GET"
+        ],
+        "function": "gpu_page",
+        "line": 1976
+      },
+      {
+        "path": "/gpu/screens",
+        "methods": [
+          "GET"
+        ],
+        "function": "gpu_screens_page",
+        "line": 2671
+      },
+      {
+        "path": "/gpu/apply-screens",
+        "methods": [
+          "POST"
+        ],
+        "function": "gpu_screens_apply",
+        "line": 2725
+      },
+      {
+        "path": "/gpu/apply-vpinfe",
+        "methods": [
+          "POST"
+        ],
+        "function": "gpu_apply_vpinfe",
+        "line": 3028
+      },
+      {
+        "path": "/gpu/apply-vpx",
+        "methods": [
+          "POST"
+        ],
+        "function": "gpu_apply_vpx",
+        "line": 3052
+      },
+      {
+        "path": "/restart-vpinfe",
+        "methods": [
+          "POST"
+        ],
+        "function": "restart_vpinfe",
+        "line": 3076
+      },
+      {
+        "path": "/auto-screens",
+        "methods": [
+          "POST"
+        ],
+        "function": "auto_screens",
+        "line": 3086
+      },
+      {
+        "path": "/dof/install-utils",
+        "methods": [
+          "POST"
+        ],
+        "function": "dof_install_utils",
+        "line": 3298
+      },
+      {
+        "path": "/dof/install-utils/<component>",
+        "methods": [
+          "POST"
+        ],
+        "function": "dof_install_utils",
+        "line": 3299
+      },
+      {
+        "path": "/dof/manager/<action>/<family>",
+        "methods": [
+          "POST"
+        ],
+        "function": "dof_manager_action",
+        "line": 3898
+      },
+      {
+        "path": "/dof/import-api",
+        "methods": [
+          "POST"
+        ],
+        "function": "dof_import_api_pincabos",
+        "line": 4380
+      },
+      {
+        "path": "/dof/import-config",
+        "methods": [
+          "POST"
+        ],
+        "function": "dof_import_config",
+        "line": 4455
+      },
+      {
+        "path": "/dof/import-cabinet-json",
+        "methods": [
+          "POST"
+        ],
+        "function": "dof_import_cabinet_json",
+        "line": 4673
+      },
+      {
+        "path": "/dof/commander",
+        "methods": [
+          "GET"
+        ],
+        "function": "dof_commander_page",
+        "line": 4871
+      },
+      {
+        "path": "/api/dof/commander/test",
+        "methods": [
+          "POST"
+        ],
+        "function": "api_dof_commander_test",
+        "line": 5174
+      },
+      {
+        "path": "/api/dof/driver-pack-status",
+        "methods": [
+          "GET"
+        ],
+        "function": "api_dof_driver_pack_status",
+        "line": 5461
+      },
+      {
+        "path": "/dof",
+        "methods": [
+          "GET"
+        ],
+        "function": "dof_page",
+        "line": 5477
+      },
+      {
+        "path": "/service-control",
+        "methods": [
+          "POST"
+        ],
+        "function": "service_control",
+        "line": 5618
+      },
+      {
+        "path": "/service-control/<service_key>/<action>",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "service_control_path",
+        "line": 5669
+      },
+      {
+        "path": "/process-control/vpx/<action>",
+        "methods": [
+          "POST"
+        ],
+        "function": "process_control_vpx",
+        "line": 5736
+      },
+      {
+        "path": "/fulldmd",
+        "methods": [
+          "GET"
+        ],
+        "function": "fulldmd_page",
+        "line": 6247
+      },
+      {
+        "path": "/api/fulldmd/status",
+        "methods": [
+          "GET"
+        ],
+        "function": "api_fulldmd_status",
+        "line": 6555
+      },
+      {
+        "path": "/api/fulldmd/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "api_fulldmd_save",
+        "line": 6564
+      },
+      {
+        "path": "/close-fulldmd-calibrator",
+        "methods": [
+          "POST"
+        ],
+        "function": "close_fulldmd_calibrator",
+        "line": 6704
+      },
+      {
+        "path": "/launch-fulldmd-calibrator",
+        "methods": [
+          "POST"
+        ],
+        "function": "launch_fulldmd_calibrator",
+        "line": 6741
+      },
+      {
+        "path": "/fulldmd-screen",
+        "methods": [
+          "GET"
+        ],
+        "function": "fulldmd_screen",
+        "line": 6761
+      },
+      {
+        "path": "/dmd/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_apply_dmd_calibration",
+        "line": 7125
+      },
+      {
+        "path": "/dmd-screen",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_dmd_screen",
+        "line": 7133
+      },
+      {
+        "path": "/api/dmd/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_api_dmd_save",
+        "line": 7298
+      },
+      {
+        "path": "/launch-dmd-calibrator",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_launch_dmd_calibrator",
+        "line": 7396
+      },
+      {
+        "path": "/close-dmd-calibrator",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_close_dmd_calibrator",
+        "line": 7409
+      },
+      {
+        "path": "/fulldmd-log-page-disabled",
+        "methods": [
+          "GET"
+        ],
+        "function": "fulldmd_log_page",
+        "line": 7433
+      },
+      {
+        "path": "/console",
+        "methods": [
+          "GET"
+        ],
+        "function": "console_page",
+        "line": 7539
+      },
+      {
+        "path": "/console/",
+        "methods": [
+          "GET"
+        ],
+        "function": "console_page",
+        "line": 7540
+      },
+      {
+        "path": "/root-password",
+        "methods": [
+          "POST"
+        ],
+        "function": "root_password",
+        "line": 7889
+      },
+      {
+        "path": "/network",
+        "methods": [
+          "GET"
+        ],
+        "function": "network_page",
+        "line": 8007
+      },
+      {
+        "path": "/network/apply-mode",
+        "methods": [
+          "POST"
+        ],
+        "function": "network_apply_mode",
+        "line": 8234
+      },
+      {
+        "path": "/network/wifi-join",
+        "methods": [
+          "POST"
+        ],
+        "function": "network_wifi_join",
+        "line": 8272
+      },
+      {
+        "path": "/network/wifi-hotspot",
+        "methods": [
+          "POST"
+        ],
+        "function": "network_wifi_hotspot",
+        "line": 8284
+      },
+      {
+        "path": "/network/wifi-hotspot-stop",
+        "methods": [
+          "POST"
+        ],
+        "function": "network_wifi_hotspot_stop",
+        "line": 8296
+      },
+      {
+        "path": "/toggle-webapp-screen",
+        "methods": [
+          "POST"
+        ],
+        "function": "toggle_webapp_screen",
+        "line": 8305
+      },
+      {
+        "path": "/launch-webapp-screen",
+        "methods": [
+          "POST"
+        ],
+        "function": "launch_webapp_screen",
+        "line": 8367
+      },
+      {
+        "path": "/close-webapp-screen",
+        "methods": [
+          "POST"
+        ],
+        "function": "close_webapp_screen",
+        "line": 8384
+      },
+      {
+        "path": "/admin/about-supporters/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_admin_about_supporters_save",
+        "line": 9050
+      },
+      {
+        "path": "/admin/version/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_admin_version_save",
+        "line": 9198
+      },
+      {
+        "path": "/tools/vpx-ball-cabinet/images.json",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_vpx_ball_cabinet_images_json",
+        "line": 10093
+      },
+      {
+        "path": "/tools/vpx-ball-cabinet/image-preview",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_vpx_ball_cabinet_image_preview",
+        "line": 10101
+      },
+      {
+        "path": "/tools/vpx-ball-cabinet/validate",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_vpx_ball_cabinet_validate",
+        "line": 10162
+      },
+      {
+        "path": "/tools/vpx-ball-cabinet/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_vpx_ball_cabinet_apply",
+        "line": 10167
+      },
+      {
+        "path": "/tools/vpx-ball-cabinet",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_vpx_ball_cabinet",
+        "line": 10172
+      },
+      {
+        "path": "/userdata/UserBalls/<kind>/<path:filename>",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_userballs_static",
+        "line": 10573
+      },
+      {
+        "path": "/tools/vpx-ball-simple/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_vpx_ball_simple_apply",
+        "line": 10591
+      },
+      {
+        "path": "/tools/import-table/manifest-conflict",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_import_table_manifest_conflict",
+        "line": 10831
+      },
+      {
+        "path": "/api/import/vpsdb-search",
+        "methods": [
+          "GET"
+        ],
+        "function": "api_import_vpsdb_search",
+        "line": 10968
+      },
+      {
+        "path": "/tools/import-table/analyze",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_import_table_analyze",
+        "line": 11033
+      },
+      {
+        "path": "/tools/import-table/analyze-run",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_import_table_analyze_run",
+        "line": 11489
+      },
+      {
+        "path": "/tools/import-table/install",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_import_table_install",
+        "line": 12774
+      },
+      {
+        "path": "/tools/external-disks",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_external_disks",
+        "line": 13217
+      },
+      {
+        "path": "/tools/external-disks/smb/detect",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_external_disks_smb_detect",
+        "line": 13382
+      },
+      {
+        "path": "/tools/external-disks/smb/mount",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_external_disks_smb_mount",
+        "line": 13502
+      },
+      {
+        "path": "/tools/commander",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_commander",
+        "line": 13712
+      },
+      {
+        "path": "/tools/commander/download",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_commander_download",
+        "line": 15037
+      },
+      {
+        "path": "/tools/commander/duplicate",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_duplicate",
+        "line": 15053
+      },
+      {
+        "path": "/tools/commander/extract-zip",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_extract_zip",
+        "line": 15091
+      },
+      {
+        "path": "/tools/commander/archive-selection",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_archive_selection",
+        "line": 15140
+      },
+      {
+        "path": "/tools/commander/info",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_info",
+        "line": 15239
+      },
+      {
+        "path": "/tools/commander/create-folder",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_create_folder",
+        "line": 15318
+      },
+      {
+        "path": "/tools/commander/upload",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_upload",
+        "line": 15339
+      },
+      {
+        "path": "/tools/commander/extract-script",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_extract_script",
+        "line": 15373
+      },
+      {
+        "path": "/tools/commander/delete",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_delete",
+        "line": 15591
+      },
+      {
+        "path": "/tools/commander/rename",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_rename",
+        "line": 15616
+      },
+      {
+        "path": "/tools/commander/clipboard",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_clipboard",
+        "line": 15649
+      },
+      {
+        "path": "/tools/commander/paste",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_paste",
+        "line": 15683
+      },
+      {
+        "path": "/tools/export-table",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_export_table",
+        "line": 15991
+      },
+      {
+        "path": "/download-export",
+        "methods": [
+          "GET"
+        ],
+        "function": "download_export",
+        "line": 16109
+      },
+      {
+        "path": "/api/import/analyze-zip",
+        "methods": [
+          "POST"
+        ],
+        "function": "api_import_analyze_zip",
+        "line": 16158
+      },
+      {
+        "path": "/api/import/apply-zip-choice",
+        "methods": [
+          "POST"
+        ],
+        "function": "api_import_apply_zip_choice",
+        "line": 16197
+      },
+      {
+        "path": "/wifi",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_alias_wifi",
+        "line": 16413
+      },
+      {
+        "path": "/screens",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_alias_screens",
+        "line": 16417
+      },
+      {
+        "path": "/outputs",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_alias_outputs",
+        "line": 16425
+      },
+      {
+        "path": "/network/hostname",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_network_hostname_alias",
+        "line": 16432
+      },
+      {
+        "path": "/tools/external-disks/usb/unmount",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_tools_usb_unmount_alias",
+        "line": 16438
+      },
+      {
+        "path": "/tools/external-disks/smb/unmount",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_tools_smb_unmount_alias",
+        "line": 16443
+      },
+      {
+        "path": "/api/dof/manager/",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_api_dof_manager_slash_alias",
+        "line": 16448
+      },
+      {
+        "path": "/external-disks",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_legacy_external_disks_alias",
+        "line": 16460
+      },
+      {
+        "path": "/external-disks/",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_legacy_external_disks_alias",
+        "line": 16461
+      },
+      {
+        "path": "/import",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_legacy_import_alias",
+        "line": 16465
+      },
+      {
+        "path": "/import/",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_legacy_import_alias",
+        "line": 16466
+      },
+      {
+        "path": "/tables",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_legacy_tables_alias",
+        "line": 16470
+      },
+      {
+        "path": "/tables/",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_legacy_tables_alias",
+        "line": 16471
+      },
+      {
+        "path": "/api/menu/close-tab",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_menu_close_tab_api",
+        "line": 16479
+      },
+      {
+        "path": "/tools/external-disks/smb/disconnect",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_tools_smb_disconnect_button_v1",
+        "line": 16965
+      },
+      {
+        "path": "/tools/commander/live",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_commander_live",
+        "line": 17439
+      },
+      {
+        "path": "/tools/commander/live/file",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_commander_live_file",
+        "line": 17553
+      },
+      {
+        "path": "/tools/commander/live/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_commander_live_save",
+        "line": 17581
+      },
+      {
+        "path": "/fulldmd/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_fulldmd_apply_active",
+        "line": 17869
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "dashboard_plus",
+      "datetime",
+      "flask",
+      "hashlib",
+      "html",
+      "importlib.util",
+      "internal_disk",
+      "json",
+      "mimetypes",
+      "os",
+      "pathlib",
+      "pincabos_appearance_global",
+      "pincabos_audio_volume_widget",
+      "pincabos_batch_transfer",
+      "pincabos_dudescab_config",
+      "pincabos_dudescab_protocol",
+      "pincabos_explorer_table_test",
+      "pincabos_fulldmd_autoarrange",
+      "pincabos_image_studio",
+      "pincabos_impexp",
+      "pincabos_import_classifier",
+      "pincabos_live_table_status",
+      "pincabos_webapp_admin",
+      "pincabos_webapp_audio",
+      "pincabos_webapp_core",
+      "pincabos_webapp_dashboard_control",
+      "pincabos_webapp_dev_admin",
+      "pincabos_webapp_exports",
+      "pincabos_webapp_firstrun",
+      "pincabos_webapp_import_metadata",
+      "pincabos_webapp_inputs",
+      "pincabos_webapp_keyboard",
+      "pincabos_webapp_keyboard_tools_v6",
+      "pincabos_webapp_security",
+      "pincaboslink",
+      "psutil",
+      "puppack_options",
+      "re",
+      "screen",
+      "secrets",
+      "shlex",
+      "shutil",
+      "socket",
+      "sqlite3",
+      "stat",
+      "subprocess",
+      "sys",
+      "tempfile",
+      "time",
+      "tools",
+      "traceback",
+      "urllib.error",
+      "urllib.parse",
+      "urllib.request",
+      "uuid",
+      "werkzeug.utils",
+      "xml.etree.ElementTree",
+      "zipfile"
+    ],
+    "local_modules": [
+      "opt/pincabos/bin/pincabos-wallpaper-per-screen.py",
+      "opt/pincabos/scripts/pincabos-screen-topology.py",
+      "opt/pincabos/tools/pincabos_import_classifier.py",
+      "opt/pincabos/tools/vpinfeupdate.py",
+      "opt/pincabos/web/PinCabOS-AboutHelp.py",
+      "opt/pincabos/web/PinCabOS-ExplorerInstall.py",
+      "opt/pincabos/web/PinCabOS-NtwkDRV.py",
+      "opt/pincabos/web/PinCabOS-PackageIcon.py",
+      "opt/pincabos/web/dashboard_plus.py",
+      "opt/pincabos/web/internal_disk.py",
+      "opt/pincabos/web/pincabos_appearance_global.py",
+      "opt/pincabos/web/pincabos_audio_volume_widget.py",
+      "opt/pincabos/web/pincabos_batch_transfer.py",
+      "opt/pincabos/web/pincabos_dudescab_config.py",
+      "opt/pincabos/web/pincabos_dudescab_protocol.py",
+      "opt/pincabos/web/pincabos_explorer_table_test.py",
+      "opt/pincabos/web/pincabos_fulldmd_autoarrange.py",
+      "opt/pincabos/web/pincabos_image_studio.py",
+      "opt/pincabos/web/pincabos_impexp.py",
+      "opt/pincabos/web/pincabos_live_table_status.py",
+      "opt/pincabos/web/pincabos_webapp_admin.py",
+      "opt/pincabos/web/pincabos_webapp_audio.py",
+      "opt/pincabos/web/pincabos_webapp_core.py",
+      "opt/pincabos/web/pincabos_webapp_dashboard_control.py",
+      "opt/pincabos/web/pincabos_webapp_dev_admin.py",
+      "opt/pincabos/web/pincabos_webapp_exports.py",
+      "opt/pincabos/web/pincabos_webapp_firstrun.py",
+      "opt/pincabos/web/pincabos_webapp_import_metadata.py",
+      "opt/pincabos/web/pincabos_webapp_inputs.py",
+      "opt/pincabos/web/pincabos_webapp_keyboard.py",
+      "opt/pincabos/web/pincabos_webapp_keyboard_tools_v6.py",
+      "opt/pincabos/web/pincabos_webapp_security.py",
+      "opt/pincabos/web/pincaboslink.py",
+      "opt/pincabos/web/puppack_options.py",
+      "opt/pincabos/web/screen.py",
+      "opt/pincabos/web/tools.py"
+    ],
+    "repository_files": [
+      "etc/os-release",
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "opt/pincabos/bin/pincabos-close-active-chrome-tab.sh",
+      "opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "opt/pincabos/config/about-supporters.json",
+      "opt/pincabos/config/admin-login.txt",
+      "opt/pincabos/config/dev-login.txt",
+      "opt/pincabos/config/dmd-calibration.json",
+      "opt/pincabos/config/dof/configtool-api-key.txt",
+      "opt/pincabos/config/fulldmd-calibration.json",
+      "opt/pincabos/config/screens/screens.json",
+      "opt/pincabos/config/screens/wallpapers.json",
+      "opt/pincabos/config/version.json",
+      "opt/pincabos/config/webapp-screen-autostart.conf",
+      "opt/pincabos/scripts/VPXlauncher.sh",
+      "opt/pincabos/tools/pincabos-screen-xrandr.sh",
+      "opt/pincabos/web/static/branding/favicon.png",
+      "opt/pincabos/web/static/branding/firstrun-welcome.png",
+      "opt/pincabos/web/static/dof-commander-onoff.js",
+      "opt/pincabos/web/static/dof-commander-pro.css",
+      "opt/pincabos/web/static/pincabos-appearance-vars.css",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMenuLogo.png",
+      "opt/pincabos/web/static/pincabos-assets/pcbo_pay_qr_bbb5611b723f953dc3fad1e42e7dbd66fe9fa8d53de4293c.png",
+      "opt/pincabos/web/static/pincabos-audio-mute-icons-v1.js",
+      "opt/pincabos/web/static/pincabos-audio-widget-final-v1.css",
+      "opt/pincabos/web/static/pincabos-branding.css",
+      "opt/pincabos/web/static/pincabos-commander-purple-buttons-v1.css",
+      "opt/pincabos/web/static/pincabos-dashboard-compact.css",
+      "opt/pincabos/web/static/pincabos-dashboard-compact.js",
+      "opt/pincabos/web/static/pincabos-dof-pro.css",
+      "opt/pincabos/web/static/pincabos-dof-pro.js",
+      "opt/pincabos/web/static/pincabos-explorer-same-tab-v2.js",
+      "opt/pincabos/web/static/pincabos-footer-layout-v14.css",
+      "opt/pincabos/web/static/pincabos-footer.css",
+      "opt/pincabos/web/static/pincabos-fulldmd-compact.css",
+      "opt/pincabos/web/static/pincabos-fulldmd-compact.js",
+      "opt/pincabos/web/static/pincabos-fulldmd-layout-no-global-dmd-v1.js",
+      "opt/pincabos/web/static/pincabos-global-compact.css",
+      "opt/pincabos/web/static/pincabos-header-final.js",
+      "opt/pincabos/web/static/pincabos-header-fix.css",
+      "opt/pincabos/web/static/pincabos-i18n.js",
+      "opt/pincabos/web/static/pincabos-logo.png",
+      "opt/pincabos/web/static/pincabos-menu-icons.css",
+      "opt/pincabos/web/static/pincabos-menu-pro-v1.css",
+      "opt/pincabos/web/static/pincabos-menu-tools.css",
+      "opt/pincabos/web/static/pincabos-menu-tools.js",
+      "opt/pincabos/web/static/pincabos-progress-reset.js",
+      "opt/pincabos/web/static/pincabos-quick-access-i18n-v1.js",
+      "opt/pincabos/web/static/pincabos-services-taskmanager.css",
+      "opt/pincabos/web/static/pincabos-single-batch-status-v1.css",
+      "opt/pincabos/web/static/pincabos-single-batch-status-v1.js",
+      "opt/pincabos/web/static/pincabos-support-footer.css",
+      "opt/pincabos/web/static/pincabos-system-message-tray-v1.css",
+      "opt/pincabos/web/static/pincabos-system-message-tray-v1.js",
+      "opt/pincabos/web/static/pincabos-theme-global.css",
+      "opt/pincabos/web/static/pincabos-webapp-screen-toggle.css",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-smb-mount",
+      "usr/local/sbin/pincabos-smb-umount",
+      "usr/local/sbin/pincabos-usb-umount"
+    ],
+    "runtime_paths": [
+      "/dev/hidraw*",
+      "/dev/null",
+      "/dev/ttyACM*",
+      "/dev/ttyUSB*",
+      "/etc/pincabos/system-name.conf",
+      "/etc/udev/rules.d/99-pincabos-dof-controllers.rules",
+      "/home/pinball",
+      "/home/pinball/.Xauthority",
+      "/home/pinball/.config",
+      "/home/pinball/.config/pincabos/smb",
+      "/home/pinball/.config/pincabos/smb-disconnected",
+      "/home/pinball/.config/pincabos/smb-sessions",
+      "/home/pinball/.local/share",
+      "/home/pinball/.local/share/VPinballX/10.8/UserBalls",
+      "/home/pinball/.local/share/VPinballX/10.8/directoutputconfig",
+      "/home/pinball/.local/share/VPinballX/10.8/pincabos-backups/vpx-ball-cabinet",
+      "/home/pinball/.local/share/pincabos/editor-backups",
+      "/home/pinball/.vpinball/UserBalls",
+      "/home/pinball/.vpinball/pinmame/altcolor",
+      "/home/pinball/.vpinball/pinmame/altsound",
+      "/home/pinball/.vpinball/pinmame/roms",
+      "/home/pinball/.vpinball/pupvideos",
+      "/home/pinball/.vpinball/ultradmd",
+      "/home/pinball/Downloads",
+      "/home/pinball/Downloads/commander-clipboard.json",
+      "/home/pinball/Downloads/work",
+      "/home/pinball/Exports",
+      "/home/pinball/NetworkDrives",
+      "/home/pinball/Share",
+      "/home/pinball/Tables",
+      "/home/pinball/vpx",
+      "/home/pinball/vpx/VPinballX_BGFX",
+      "/mnt/pincab-usb",
+      "/opt/pincabos",
+      "/opt/pincabos/apps/vpinball",
+      "/opt/pincabos/backups",
+      "/opt/pincabos/backups/about-supporters",
+      "/opt/pincabos/backups/audio-ssf",
+      "/opt/pincabos/backups/config-writes",
+      "/opt/pincabos/backups/dof-import",
+      "/opt/pincabos/backups/pcx-script-extract",
+      "/opt/pincabos/backups/version-json",
+      "/opt/pincabos/backups/vpx-ball-cabinet",
+      "/opt/pincabos/config",
+      "/opt/pincabos/config/admin-password.txt",
+      "/opt/pincabos/config/dev-password.txt",
+      "/opt/pincabos/config/dof",
+      "/opt/pincabos/config/dof/active-cabinet.txt",
+      "/opt/pincabos/config/dof/cabinet.json",
+      "/opt/pincabos/config/dof/cabinets",
+      "/opt/pincabos/config/webapp-secret.key",
+      "/opt/pincabos/essentials/VPinFEfiles/vpinfe.ini",
+      "/opt/pincabos/imported",
+      "/opt/pincabos/logs",
+      "/opt/pincabos/logs/dmd-calibration.log",
+      "/opt/pincabos/logs/dof-manager-action.log",
+      "/opt/pincabos/logs/dof-utils-install-{component}-{job_id}.log",
+      "/opt/pincabos/logs/fulldmd-calibration.log",
+      "/opt/pincabos/logs/fulldmd-live.log",
+      "/opt/pincabos/logs/gpu-last-action.log",
+      "/opt/pincabos/logs/import-manifest-error.log",
+      "/opt/pincabos/media",
+      "/opt/pincabos/media/image",
+      "/opt/pincabos/media/images",
+      "/opt/pincabos/media/wallpapers",
+      "/opt/pincabos/tables",
+      "/opt/pincabos/tmp",
+      "/opt/pincabos/tools",
+      "/opt/pincabos/tools/pincabos_import_classifier.py",
+      "/opt/pincabos/uploads",
+      "/opt/pincabos/uploads/dof",
+      "/proc/asound/cards",
+      "/run/pincabos-dmd-calibrator.active",
+      "/run/pincabos-fulldmd-calibrator.active",
+      "/run/user/1000",
+      "/run/user/1000/Xauthority",
+      "/run/user/1000/bus",
+      "/run/user/1000/gdm/Xauthority",
+      "/usr/bin/apt",
+      "/usr/bin/env",
+      "/usr/bin/lspci",
+      "/usr/bin/lsusb",
+      "/usr/bin/mountpoint",
+      "/usr/bin/nvidia-smi",
+      "/usr/bin/pgrep",
+      "/usr/bin/pkill",
+      "/usr/bin/python3",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl",
+      "/usr/bin/systemd-run",
+      "/usr/bin/ubuntu-drivers",
+      "/usr/local/sbin/pincabos-dof-online-api-import",
+      "/var/log/pincabos",
+      "/var/run/lightdm/root/:0",
+      "/var/tmp"
+    ],
+    "configuration_paths": [
+      "/etc/pincabos/system-name.conf",
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "/home/pinball/Downloads/commander-clipboard.json",
+      "/opt/pincabos/config/about-supporters.json",
+      "/opt/pincabos/config/dmd-calibration.json",
+      "/opt/pincabos/config/dof/cabinet.json",
+      "/opt/pincabos/config/fulldmd-calibration.json",
+      "/opt/pincabos/config/screens/screens.json",
+      "/opt/pincabos/config/screens/wallpapers.json",
+      "/opt/pincabos/config/version.json",
+      "/opt/pincabos/config/webapp-screen-autostart.conf",
+      "/opt/pincabos/essentials/VPinFEfiles/vpinfe.ini"
+    ],
+    "assets": [
+      "opt/pincabos/web/static/branding/favicon.png",
+      "opt/pincabos/web/static/branding/firstrun-welcome.png",
+      "opt/pincabos/web/static/dof-commander-onoff.js",
+      "opt/pincabos/web/static/dof-commander-pro.css",
+      "opt/pincabos/web/static/pincabos-appearance-vars.css",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMenuLogo.png",
+      "opt/pincabos/web/static/pincabos-assets/pcbo_pay_qr_bbb5611b723f953dc3fad1e42e7dbd66fe9fa8d53de4293c.png",
+      "opt/pincabos/web/static/pincabos-audio-mute-icons-v1.js",
+      "opt/pincabos/web/static/pincabos-audio-widget-final-v1.css",
+      "opt/pincabos/web/static/pincabos-branding.css",
+      "opt/pincabos/web/static/pincabos-commander-purple-buttons-v1.css",
+      "opt/pincabos/web/static/pincabos-dashboard-compact.css",
+      "opt/pincabos/web/static/pincabos-dashboard-compact.js",
+      "opt/pincabos/web/static/pincabos-dof-pro.css",
+      "opt/pincabos/web/static/pincabos-dof-pro.js",
+      "opt/pincabos/web/static/pincabos-explorer-same-tab-v2.js",
+      "opt/pincabos/web/static/pincabos-footer-layout-v14.css",
+      "opt/pincabos/web/static/pincabos-footer.css",
+      "opt/pincabos/web/static/pincabos-fulldmd-compact.css",
+      "opt/pincabos/web/static/pincabos-fulldmd-compact.js",
+      "opt/pincabos/web/static/pincabos-fulldmd-layout-no-global-dmd-v1.js",
+      "opt/pincabos/web/static/pincabos-global-compact.css",
+      "opt/pincabos/web/static/pincabos-header-final.js",
+      "opt/pincabos/web/static/pincabos-header-fix.css",
+      "opt/pincabos/web/static/pincabos-i18n.js",
+      "opt/pincabos/web/static/pincabos-logo.png",
+      "opt/pincabos/web/static/pincabos-menu-icons.css",
+      "opt/pincabos/web/static/pincabos-menu-pro-v1.css",
+      "opt/pincabos/web/static/pincabos-menu-tools.css",
+      "opt/pincabos/web/static/pincabos-menu-tools.js",
+      "opt/pincabos/web/static/pincabos-progress-reset.js",
+      "opt/pincabos/web/static/pincabos-quick-access-i18n-v1.js",
+      "opt/pincabos/web/static/pincabos-services-taskmanager.css",
+      "opt/pincabos/web/static/pincabos-single-batch-status-v1.css",
+      "opt/pincabos/web/static/pincabos-single-batch-status-v1.js",
+      "opt/pincabos/web/static/pincabos-support-footer.css",
+      "opt/pincabos/web/static/pincabos-system-message-tray-v1.css",
+      "opt/pincabos/web/static/pincabos-system-message-tray-v1.js",
+      "opt/pincabos/web/static/pincabos-theme-global.css",
+      "opt/pincabos/web/static/pincabos-webapp-screen-toggle.css"
+    ],
+    "systemd_units_mentioned": [
+      "pincabos-console.service",
+      "pincabos-vpinfe.service",
+      "pincabos-webapp.service"
+    ],
+    "commands": [
+      "/bin/bash",
+      "/bin/chmod",
+      "/bin/chown",
+      "/opt/pincabos/bin/pincabos-close-active-chrome-tab.sh",
+      "/opt/pincabos/bin/pincabos-wallpaper-per-screen.py",
+      "/opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "/opt/pincabos/scripts/VPXlauncher.sh",
+      "/opt/pincabos/scripts/pincabos-screen-topology.py",
+      "/opt/pincabos/tools/pincabos-screen-xrandr.sh",
+      "/opt/pincabos/tools/pincabos_import_classifier.py",
+      "/opt/pincabos/tools/vpinfeupdate.py",
+      "/sbin/modinfo",
+      "/usr/bin/apt",
+      "/usr/bin/env",
+      "/usr/bin/lspci",
+      "/usr/bin/lsusb",
+      "/usr/bin/mountpoint",
+      "/usr/bin/nvidia-smi",
+      "/usr/bin/pgrep",
+      "/usr/bin/pkill",
+      "/usr/bin/python3",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl",
+      "/usr/bin/systemd-run",
+      "/usr/bin/ubuntu-drivers",
+      "/usr/local/sbin/pincabos-dof-online-api-import",
+      "/usr/local/sbin/pincabos-smb-mount",
+      "/usr/local/sbin/pincabos-smb-umount",
+      "/usr/local/sbin/pincabos-usb-umount",
+      "7z",
+      "aplay",
+      "bash",
+      "chown",
+      "hostname",
+      "pgrep",
+      "runuser"
+    ],
+    "environment_variables": [
+      "DISPLAY",
+      "PCO_WEB_HOST",
+      "PCO_WEB_PORT",
+      "PINCABOS_SECRET_KEY",
+      "PINCABOS_WEB_HOST",
+      "PINCABOS_WEB_PORT"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/app.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

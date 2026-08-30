@@ -1,0 +1,169 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_table_analysis_cache",
+    "scope": "runtime_patch",
+    "kind": "python_library",
+    "source_file": "opt/pincabos/runtime-patches/pincabos_table_analysis_cache.py",
+    "manifest_file": "opt/pincabos/runtime-patches/pincabos_table_analysis_cache.json",
+    "language": "python",
+    "git_blob_sha": "a68ce826891c14b3e73a8fcc5ba5b58401dfd50f",
+    "size_bytes": 15014,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "install_patch"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "log",
+        "line": 127,
+        "top_level": true
+      },
+      {
+        "name": "target_text",
+        "line": 137,
+        "top_level": true
+      },
+      {
+        "name": "request_body_small",
+        "line": 149,
+        "top_level": true
+      },
+      {
+        "name": "is_mutation_request",
+        "line": 170,
+        "top_level": true
+      },
+      {
+        "name": "request_is_cache_candidate",
+        "line": 189,
+        "top_level": true
+      },
+      {
+        "name": "bypass_requested",
+        "line": 220,
+        "top_level": true
+      },
+      {
+        "name": "identity_digest",
+        "line": 258,
+        "top_level": true
+      },
+      {
+        "name": "request_key",
+        "line": 274,
+        "top_level": true
+      },
+      {
+        "name": "paths_for_key",
+        "line": 310,
+        "top_level": true
+      },
+      {
+        "name": "remove_entry",
+        "line": 317,
+        "top_level": true
+      },
+      {
+        "name": "clear_cache",
+        "line": 329,
+        "top_level": true
+      },
+      {
+        "name": "load_cached_response",
+        "line": 360,
+        "top_level": true
+      },
+      {
+        "name": "response_marker_count",
+        "line": 420,
+        "top_level": true
+      },
+      {
+        "name": "response_is_analysis",
+        "line": 430,
+        "top_level": true
+      },
+      {
+        "name": "response_headers_for_cache",
+        "line": 486,
+        "top_level": true
+      },
+      {
+        "name": "store_response",
+        "line": 505,
+        "top_level": true
+      },
+      {
+        "name": "prune_cache",
+        "line": 562,
+        "top_level": true
+      },
+      {
+        "name": "install_patch",
+        "line": 624,
+        "top_level": true
+      },
+      {
+        "name": "cached_dispatch",
+        "line": 643,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "hashlib",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "sys",
+      "threading",
+      "time",
+      "typing"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/var/cache/pincabos/table-analysis"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": [
+      "PINCABOS_TABLE_CACHE_DIR"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/runtime-patches/pincabos_table_analysis_cache.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}
