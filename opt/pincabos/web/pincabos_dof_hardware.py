@@ -416,14 +416,23 @@ def register(app, page, esc):
         known_serials = {d.get("serial") for d in inv.get("devices", []) if d.get("serial")}
         propose = []
         for x in detected:
-            if x.get("auto_config") is False and x.get("serial") and x["serial"] not in known_serials:
-                propose.append("""
+            if x.get("auto_config") is not False or not x.get("serial") or x["serial"] in known_serials:
+                continue
+            kind = x.get("kind", "")
+            if "Teensy" in kind:
+                dtype, human = "TeensyStripController", "le Teensy"
+            elif "Wemos" in kind or "ESP" in kind:
+                dtype, human = "WemosD1MPStripController", "la Wemos/ESP"
+            else:
+                continue  # FTDI bitbang etc. : pas un controleur de strips
+            propose.append("""
         <form method="post" action="/dof/hardware/device/add" style="display:inline;">
-          <input type="hidden" name="dtype" value="TeensyStripController">
+          <input type="hidden" name="dtype" value="%s">
           <input type="hidden" name="serial" value="%s">
-          <input type="hidden" name="label" value="TeensyStripController %d">
-          <button class="button" type="submit">Ajouter le Teensy détecté (série %s)</button>
-        </form>""" % (esc(x["serial"]), len(inv.get("devices", [])) + 1, esc(x["serial"])))
+          <input type="hidden" name="label" value="%s %d">
+          <button class="button" type="submit">Ajouter %s détecté(e) (série %s)</button>
+        </form>""" % (esc(dtype), esc(x["serial"]), esc(dtype),
+                      len(inv.get("devices", [])) + 1, esc(human), esc(x["serial"])))
         propose_html = ('<p class="warn">Matériel détecté non déclaré : %s</p>' % "".join(propose)) if propose else ""
 
         type_opts = "".join('<option value="%s">%s</option>' % (esc(k), esc(v))

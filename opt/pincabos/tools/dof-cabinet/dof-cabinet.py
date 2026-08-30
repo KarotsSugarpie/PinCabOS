@@ -33,6 +33,11 @@ VID_MAP = {
     "d209": ("Ultimarc PacLed64/PacDrive/PacUIO", True),
     "1209": ("Pinscape (generic)", True),
     "0403": ("FTDI (FT245R bitbang)", False),
+    # puces USB-serie des Wemos D1 / ESP : candidats WemosD1MPStripController.
+    # VID generiques (d'autres adaptateurs serie les utilisent) -> "possible".
+    "10c4": ("Wemos D1 / ESP via CP210x (WemosD1MPStripController possible)", False),
+    "1a86": ("Wemos D1 / ESP via CH340 (WemosD1MPStripController possible)", False),
+    "303a": ("ESP32 Espressif natif (WemosD1MPStripController possible)", False),
 }
 ADDRESSABLE_ARRANGEMENTS = [
     "LeftRightTopDown", "LeftRightBottomUp", "RightLeftTopDown", "RightLeftBottomUp",
