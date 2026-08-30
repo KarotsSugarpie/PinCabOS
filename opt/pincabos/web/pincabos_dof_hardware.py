@@ -48,7 +48,7 @@ GENERATED_CFG = STATE_DIR / "config.json"
 
 DECLARED_TYPES = {
     "TeensyStripController": "Teensy — strips adressables (USB série)",
-    "WemosD1MPStripController": "Wemos D1 — strips adressables (réseau)",
+    "WemosD1MPStripController": "Wemos D1 — strips adressables (USB série, protocole Teensy + compression)",
     "ArtNet": "ArtNet / DMX (réseau)",
     "PinOne": "PinOne (USB série)",
 }
@@ -110,8 +110,8 @@ def _new_device(dtype, label, serial=""):
          "source": "manual", "type": dtype, "label": label, "enabled": True,
          "serial": serial}
     if dtype in ("TeensyStripController", "WemosD1MPStripController"):
-        d.update({"com_port": "auto", "host": "",
-                  "leds_per_strip": [512, 512, 512, 512, 256, 0, 0, 0],
+        d.update({"com_port": "auto",
+                  "leds_per_strip": [512, 512, 512, 512, 256, 0, 0, 0, 0, 0],
                   "toy": _default_toy(), "ledwiz_number": 30, "ledwiz_outputs": 9})
     elif dtype == "ArtNet":
         d.update({"broadcast_address": "", "universe": 0})
@@ -176,14 +176,13 @@ def _seed_from_cabinet():
             dev["source"] = "detected" if serial else "manual"
             if c.tag in ("TeensyStripController", "WemosD1MPStripController"):
                 leds = []
-                for i in range(1, 9):
+                for i in range(1, 11):
                     try:
                         leds.append(int((c.findtext("NumberOfLedsStrip%d" % i) or "0").strip() or 0))
                     except ValueError:
                         leds.append(0)
                 dev["leds_per_strip"] = leds
                 dev["com_port"] = "auto"  # robuste : le port réel change au boot
-                dev["host"] = (c.findtext("HostName") or "").strip()
                 t = toy_for(name)
                 if t is not None:
                     toy_name = (t.findtext("Name") or "Backboard").strip()
@@ -249,14 +248,12 @@ def _build_config(inv):
                 "com_port": d.get("com_port") or "auto",
                 "serial": d.get("serial") or "",
                 "baud": 9600,
-                "leds_per_strip": (d.get("leds_per_strip") or [0] * 8),
+                "leds_per_strip": (d.get("leds_per_strip") or [0] * 10),
                 "test_on_connect": False,
                 "toy": d.get("toy") or _default_toy(),
                 "ledwiz_number": int(d.get("ledwiz_number") or 30),
                 "ledwiz_outputs": int(d.get("ledwiz_outputs") or 9),
             }
-            if t == "WemosD1MPStripController" and d.get("host"):
-                strip["host"] = d["host"]
             cfg["strips"].append(strip)
         elif t == "ArtNet":
             a = {"name": d.get("label") or "ArtNet 1"}
@@ -279,14 +276,16 @@ def register(app, page, esc):
 
     def presence_badge(dev, detected):
         t = dev.get("type")
-        if t == "TeensyStripController":
+        if t in ("TeensyStripController", "WemosD1MPStripController"):
             for x in detected:
                 if dev.get("serial") and x.get("serial") == dev["serial"]:
                     return '<span class="ok">branché (%s)</span>' % esc(x["dev"])
-            for x in detected:
-                if x.get("auto_config") is False and "Teensy" in x.get("kind", ""):
-                    return '<span class="warn">un Teensy est branché (série différente)</span>'
-            return '<span class="bad">non branché</span>'
+            if t == "TeensyStripController":
+                for x in detected:
+                    if x.get("auto_config") is False and "Teensy" in x.get("kind", ""):
+                        return '<span class="warn">un Teensy est branché (série différente)</span>'
+                return '<span class="bad">non branché</span>'
+            return '<span class="warn">USB série — renseigner le n° de série pour suivre la présence</span>'
         if t == "PinOne":
             return '<span class="warn">USB série — vérifier le port</span>'
         return '<span class="ok">réseau — non détectable USB</span>'
@@ -307,20 +306,19 @@ def register(app, page, esc):
                 a, " selected" if a == toy.get("arrangement") else "", a) for a in arrangements)
             co_opts = "".join('<option value="%s"%s>%s</option>' % (
                 c, " selected" if c == toy.get("color_order") else "", c) for c in color_orders)
-            leds = (dev.get("leds_per_strip") or [0] * 8)
+            leds = (dev.get("leds_per_strip") or [0] * 10)
             led_inputs = "".join(
                 '<label style="display:inline-block;margin:4px 8px 4px 0;">S%d '
                 '<input type="number" name="leds_%d" value="%s" min="0" max="1100" style="width:75px;"></label>'
-                % (i + 1, i + 1, leds[i] if i < len(leds) else 0) for i in range(8))
+                % (i + 1, i + 1, leds[i] if i < len(leds) else 0) for i in range(10))
             extra = """
           <tr><td>Port série</td>
               <td><input type="text" name="com_port" value="%s">
                   <small>« auto » = résolution par n° de série au démarrage (recommandé)</small></td></tr>
           <tr><td>N° de série USB</td>
               <td><input type="text" name="serial" value="%s">
-                  <small>sert à distinguer plusieurs Teensy</small></td></tr>
-          <tr><td>Hôte (Wemos réseau)</td><td><input type="text" name="host" value="%s"></td></tr>
-          <tr><td>LEDs par sortie</td><td>%s</td></tr>
+                  <small>sert à distinguer plusieurs cartes (résolution du port au boot)</small></td></tr>
+          <tr><td>LEDs par sortie (S1-S10)</td><td>%s</td></tr>
           <tr><td>Toy — nom</td><td><input type="text" name="toy_name" value="%s"></td></tr>
           <tr><td>Toy — largeur × hauteur</td>
               <td><input type="number" name="toy_width" value="%s" min="1" max="1024" style="width:80px;"> ×
@@ -335,7 +333,7 @@ def register(app, page, esc):
                   <input type="number" name="ledwiz_outputs" value="%s" min="1" max="64" style="width:80px;">
                   <small>doit matcher le device du DOF Config Tool</small></td></tr>""" % (
                 esc(dev.get("com_port", "auto")), esc(dev.get("serial", "")),
-                esc(dev.get("host", "")), led_inputs,
+                led_inputs,
                 esc(toy.get("name", "")), toy.get("width", 144), toy.get("height", 16),
                 arr_opts, co_opts, toy.get("brightness", 25),
                 dev.get("ledwiz_number", 30), dev.get("ledwiz_outputs", 9))
@@ -454,7 +452,7 @@ def register(app, page, esc):
   </table>
 
   <details style="margin-top:14px;">
-    <summary>Ajouter un équipement manuellement (Wemos réseau, ArtNet, PinOne, 2ᵉ Teensy...)</summary>
+    <summary>Ajouter un équipement manuellement (2ᵉ Teensy, Wemos D1, ArtNet, PinOne...)</summary>
     <form method="post" action="/dof/hardware/device/add" style="margin-top:8px;">
       <table>
         <tr><td>Type</td><td><select name="dtype">%s</select></td></tr>
@@ -595,6 +593,12 @@ def register(app, page, esc):
         dev = _new_device(dtype, label, (request.form.get("serial") or "").strip())
         if request.form.get("serial"):
             dev["source"] = "detected"
+        if dtype in ("TeensyStripController", "WemosD1MPStripController"):
+            # n° LedWiz distinct par équipement (collision = deux strips sur le
+            # même fichier directoutputconfigNN.ini du config tool)
+            used = [int(x.get("ledwiz_number") or 0) for x in inv["devices"]
+                    if x.get("type") in ("TeensyStripController", "WemosD1MPStripController")]
+            dev["ledwiz_number"] = max(used + [29]) + 1
         inv["devices"].append(dev)
         _save_inventory(inv)
         return redirect("/dof/hardware")
@@ -647,8 +651,7 @@ def register(app, page, esc):
         if d.get("type") in ("TeensyStripController", "WemosD1MPStripController"):
             d["com_port"] = (f.get("com_port") or "auto").strip() or "auto"
             d["serial"] = (f.get("serial") or "").strip()
-            d["host"] = (f.get("host") or "").strip()
-            d["leds_per_strip"] = [_int("leds_%d" % i, 0, 0, 1100) for i in range(1, 9)]
+            d["leds_per_strip"] = [_int("leds_%d" % i, 0, 0, 1100) for i in range(1, 11)]
             d["toy"] = {
                 "name": (f.get("toy_name") or "Backboard").strip(),
                 "width": _int("toy_width", 144, 1, 1024),

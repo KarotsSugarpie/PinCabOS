@@ -109,15 +109,20 @@ def _el(tag, val):
     return "      <%s>%s</%s>" % (tag, val, tag)
 
 
-def _teensy_controller(s):
+def _strip_controller(s, tag):
+    """Bloc controleur de strips adressables. WemosD1MPStripController HERITE
+    de TeensyStripController dans libdof : memes tags serie (ComPortName...),
+    PAS de HostName. Strips 1..10 (9-10 emis seulement si non nuls, pour
+    rester octet-identique aux cabinet.xml existants a 8 entrees)."""
     port = s.get("com_port", "auto")
     if port == "auto":
         port = _tty_by_serial(s.get("serial")) or _teensy_port() or "/dev/ttyACM0"
-    leds = (s.get("leds_per_strip", []) + [0] * 8)[:8]
-    lines = ["    <TeensyStripController>",
-             _el("Name", s.get("name", "TeensyStripController 1"))]
-    for i in range(8):
-        lines.append(_el("NumberOfLedsStrip%d" % (i + 1), leds[i]))
+    leds = (s.get("leds_per_strip", []) + [0] * 10)[:10]
+    lines = ["    <%s>" % tag,
+             _el("Name", s.get("name", "%s 1" % tag))]
+    for i in range(10):
+        if i < 8 or leds[i]:
+            lines.append(_el("NumberOfLedsStrip%d" % (i + 1), leds[i]))
     lines += [
         _el("ComPortName", port),
         _el("ComPortTimeOutMs", s.get("timeout_ms", 200)),
@@ -128,22 +133,17 @@ def _teensy_controller(s):
         _el("SendPerLedstripLength", "true"),
         _el("UseCompression", "true"),
         _el("TestOnConnect", "true" if s.get("test_on_connect", False) else "false"),
-        "    </TeensyStripController>",
+        "    </%s>" % tag,
     ]
     return "\n".join(lines)
 
 
+def _teensy_controller(s):
+    return _strip_controller(s, "TeensyStripController")
+
+
 def _wemos_controller(s):
-    # WemosD1MPStripController : strip adressable via reseau (host/port) — schema libdof.
-    lines = ["    <WemosD1MPStripController>",
-             _el("Name", s.get("name", "WemosD1MPStripController 1"))]
-    leds = (s.get("leds_per_strip", []) + [0] * 8)[:8]
-    for i in range(8):
-        lines.append(_el("NumberOfLedsStrip%d" % (i + 1), leds[i]))
-    if s.get("host"):
-        lines.append(_el("HostName", s["host"]))
-    lines.append("    </WemosD1MPStripController>")
-    return "\n".join(lines)
+    return _strip_controller(s, "WemosD1MPStripController")
 
 
 def _artnet(a):
