@@ -3675,6 +3675,11 @@ def dof_commander_devices_summary():
 
     families = [
         {
+            "name": "Teensy / PJRC (strips adressables)",
+            "found": has_vendor("16c0"),
+            "vendors": "16c0",
+        },
+        {
             "name": "LedWiz32",
             "found": has_vendor("fafa"),
             "vendors": "fafa",
@@ -4506,6 +4511,7 @@ def dof_commander_page():
       <!-- PINCABOS_DUDESCAB_CONFIG_BUTTON_V3 BEGIN -->
       <a class="button" href="/DudesCabConfig">DudesCabConfig</a>
       <!-- PINCABOS_DUDESCAB_CONFIG_BUTTON_V3 END -->
+      <a class="button" href="/dof/hardware">Mat&eacute;riel &amp; cabinet.xml</a>
       <a class="button secondary" href="/dof">Retour DOF</a>
     </p>
 
@@ -4767,6 +4773,7 @@ def dof_page():
     <script defer src="/static/pincabos-dof-pro.js?v=20260528"></script>
     <!-- PINCABOS_DOF_STATIC_ASSETS_END -->
 
+      <a class="button" href="/dof/hardware">Mat&eacute;riel &amp; cabinet.xml</a>
       <a class="button secondary" href="/dof/commander">Ouvrir DOF Commander</a>
       <a class="button" href="/dof/commander">Importer cabinet JSON</a>
       <a class="button secondary" href="https://configtool.vpuniverse.com/" target="_blank">DOF Config Tool V3</a>
@@ -17298,6 +17305,17 @@ except Exception as _pincabos_dudescab_config_error:
     except Exception:
         pass
 # PINCABOS_DUDESCAB_CONFIG_PAGE_V3_REGISTER END
+
+# PINCABOS_DOF_HARDWARE_PAGE_V1_REGISTER BEGIN
+try:
+    from pincabos_dof_hardware import register as _pincabos_dof_hardware_register
+    _pincabos_dof_hardware_register(app, page, esc)
+except Exception as _pincabos_dof_hardware_error:
+    try:
+        app.logger.exception("PinCabOS DOF hardware page registration failed: %s", _pincabos_dof_hardware_error)
+    except Exception:
+        pass
+# PINCABOS_DOF_HARDWARE_PAGE_V1_REGISTER END
 
 
 # PINCABOS_NTWKDRV_MODULE_LOADER_V1
