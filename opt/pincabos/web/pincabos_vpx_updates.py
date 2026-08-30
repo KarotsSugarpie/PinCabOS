@@ -315,6 +315,12 @@ def _worker(action):
         _invalidate_engine_cache()
         engine = _engine_status(force=True)
 
+        # --status retourne 0 même lorsque l'audit GitHub est impossible.
+        # Pour le bouton "Vérifier", un audit non fiable doit donc être une
+        # erreur visible et non un faux succès.
+        if action == "check" and not engine.get("ok"):
+            rc = 1
+
         state.update({
             "running": False,
             "pid": 0,
