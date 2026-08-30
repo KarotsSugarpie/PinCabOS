@@ -1579,43 +1579,37 @@ def dof_file_status():
 
 
 def detect_dof_devices():
+    """Détection réelle par VID/PID udev (outil dof-cabinet). Seul le matériel
+    effectivement branché est listé — plus de familles « probables » déduites
+    de mots-clés. Les extensions portées par une carte (Walter, MOSLight sur
+    la Dude's Cab) ne sont pas des périphériques USB séparés."""
     usb = run_cmd(["bash", "--noprofile", "--norc", "-c", "lsusb 2>/dev/null || true"], timeout=5)
     tty = run_cmd(["bash", "--noprofile", "--norc", "-c", "ls -lah /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || true"], timeout=5)
     hid = run_cmd(["bash", "--noprofile", "--norc", "-c", "ls -lah /dev/hidraw* 2>/dev/null || true"], timeout=5)
 
-    combined = (usb + "\n" + tty + "\n" + hid).lower()
+    devices = []
+    try:
+        import pincabos_dof_hardware as _pco_dofhw
+        devices = _pco_dofhw._detect()
+    except Exception:
+        devices = []
 
-    checks = [
-        ("Teensy / PJRC (strips adressables)", ["teensy", "teensyduino", "16c0"]),
-        ("Pinscape / KL25Z / NXP", ["pinscape", "kl25z", "freescale", "nxp", "kinetis"]),
-        ("Pinscape Pico / RP2040", ["rp2040", "raspberry pi pico", "pico"]),
-        ("Dude's Cab / Wemos / ESP", ["dudescab", "dude", "wemos", "esp32", "esp8266", "ch340", "1a86"]),
-        ("PacLed / Ultimarc", ["ultimarc", "pacled", "pac-drive", "pacdrive", "d209"]),
-        ("FTDI", ["ftdi", "0403:6001", "0403:6015", "0403:6010"]),
-        ("Arduino / Leonardo / Micro", ["arduino", "2341:", "2a03:", "ttyacm"]),
-        ("Serial USB détecté", ["ttyusb", "ttyacm"]),
-        ("HID raw détecté", ["hidraw"]),
-    ]
-
-    found_rows = []
-    found_any = False
-
-    for label, patterns in checks:
-        matched = any(pat in combined for pat in patterns)
-        if matched:
-            found_any = True
-            found_rows.append(
-                f'<tr><td>{esc(label)}</td><td><span class="ok">détecté / probable</span></td></tr>'
-            )
+    rows = []
+    for d in devices:
+        if d.get("auto_config"):
+            badge = '<span class="ok">AutoConfig — géré tout seul par DOF</span>'
         else:
-            found_rows.append(
-                f'<tr><td>{esc(label)}</td><td><span class="bad">non détecté</span></td></tr>'
-            )
-
-    if found_any:
-        summary = '<span class="ok">Un ou plusieurs périphériques compatibles/probables ont été détectés.</span>'
+            badge = '<span class="warn">à déclarer dans cabinet.xml</span>'
+        rows.append(
+            f'<tr><td><strong>{esc(d.get("kind", "?"))}</strong></td>'
+            f'<td><code>{esc(d.get("dev", ""))}</code> · série <code>{esc(d.get("serial") or "-")}</code></td>'
+            f'<td>{badge}</td></tr>'
+        )
+    if devices:
+        summary = f'<span class="ok">{len(devices)} contrôleur(s) DOF branché(s).</span>'
     else:
-        summary = '<span class="warn">Aucun contrôleur DOF évident détecté par le système.</span>'
+        rows.append('<tr><td colspan="3"><span class="warn">aucun contrôleur DOF détecté</span></td></tr>')
+        summary = '<span class="warn">Aucun contrôleur DOF détecté.</span>'
 
     raw = f"""===== lsusb =====
 {usb}
@@ -1626,7 +1620,7 @@ def detect_dof_devices():
 ===== HID raw devices =====
 {hid}
 """
-    return summary, "\n".join(found_rows), raw
+    return summary, "\n".join(rows), raw
 
 
 def dof_logs():
@@ -4754,92 +4748,74 @@ def api_dof_commander_test():
 
 @app.route("/dof")
 def dof_page():
+    # PINCABOS_DOF_PAGE_SIMPLE_V1
     cfg_path, file_rows = dof_file_status()
     summary, device_rows, raw_devices = detect_dof_devices()
     logs = dof_logs()
 
+    if pincabos_dof_get_saved_api_key():
+        key_hint = "clé enregistrée — laisser vide pour la réutiliser"
+    else:
+        key_hint = "coller ici ta clé API DOF Config Tool"
+
     body = f"""
 <div class="grid">
   <div class="card">
-<h2>DOF — État général</h2>
+    <h2>DOF — Sorties &amp; feedback</h2>
     <p>Service VPinFE : <code>{esc(service_status("pincabos-vpinfe.service"))}</code></p>
-    <p>Dossier config DOF :</p>
-    <p><code>{esc(cfg_path)}</code></p>
-    <p>Détection : {summary}</p>
+    <p>{summary}</p>
+    <table>
+      <tr><th style="text-align:left;">Carte</th><th style="text-align:left;">Périphérique</th><th style="text-align:left;">cabinet.xml</th></tr>
+      {device_rows}
+    </table>
+    <p><small>
+      Les extensions branchées <em>sur</em> une carte (Walter, MOSLight... sur la Dude's Cab)
+      ne sont pas des périphériques USB séparés : elles se configurent dans
+      <a href="/DudesCabConfig">DudesCabConfig</a> et le DOF Config Tool.
+    </small></p>
     <p>
-
-    <!-- PINCABOS_DOF_STATIC_ASSETS_START -->
-    <link rel="stylesheet" href="/static/pincabos-dof-pro.css?v=20260528">
-    <script defer src="/static/pincabos-dof-pro.js?v=20260528"></script>
-    <!-- PINCABOS_DOF_STATIC_ASSETS_END -->
-
       <a class="button" href="/dof/hardware">Mat&eacute;riel &amp; cabinet.xml</a>
-      <a class="button secondary" href="/dof/commander">Ouvrir DOF Commander</a>
-      <a class="button" href="/dof/commander">Importer cabinet JSON</a>
-      <a class="button secondary" href="https://configtool.vpuniverse.com/" target="_blank">DOF Config Tool V3</a>
-
-    <div id="pincabos-dof-import-manual-card" class="card" style="margin-top:20px; border-color:#ffb000;">
-      <h2>Import manuel DOF Config Tool</h2>
-      <p>
-        Si l'import en ligne VPinFE retourne <code>403 Forbidden / Cloudflare</code>,
-        exporte le ZIP DOF avec ton navigateur, puis importe-le ici.
-      </p>
-
-      <form method="post" action="/dof/import-config" enctype="multipart/form-data" style="margin-top:12px;">
-        <input type="hidden" name="mode" value="upload">
-        <input type="file" name="dof_file" accept=".zip,.ini,.xml" style="display:block; margin:8px 0; width:100%;">
-        <button class="button" type="submit">Importer ZIP DOF</button>
-      </form>
-
-      <form method="post" action="/dof/import-config" style="margin-top:10px;">
-        <input type="hidden" name="mode" value="share">
-        <button class="button secondary" type="submit">Importer dernier ZIP depuis /home/pinball/Share</button>
-      </form>
-
-      <hr style="border:0; border-top:1px solid #5f2a91; margin:16px 0;">
-
-      <h3>Import automatique via API DOF Config Tool</h3>
-      <p>
-        Entre ta clé API DOF Config Tool. PinCabOS lancera <code>ledcontrol_pull.py</code>
-        et placera les fichiers directement au bon endroit.
-      </p>
-
-      <form method="post" action="/dof/import-api" style="margin-top:12px;">
-        <label for="dof-api-key"><strong>Clé API DOF Config Tool</strong></label>
-        <input id="dof-api-key" type="text" name="apikey" value="{esc(pincabos_dof_get_saved_api_key())}" placeholder="Clé API DOF Config Tool" autocomplete="off" style="display:block; margin:8px 0; width:100%; padding:10px; border-radius:10px; border:1px solid #5f2a91; background:#050007; color:white;">
-        <label style="display:block; margin:8px 0;">
-          <input type="checkbox" name="force" value="1" checked>
-          Forcer le téléchargement / remplacement
-        </label>
-        <button class="button" type="submit">Importer via API</button>
-      </form>
-
-      <p class="warn" style="margin-top:10px;">
-        Destination : <code>/home/pinball/.local/share/VPinballX/10.8/directoutputconfig</code>
-      </p>
-    </div>
-
-</p>
+      <a class="button secondary" href="/dof/commander">DOF Commander</a>
+    </p>
   </div>
 
   <div class="card">
-    <h2>À quoi sert cette page ?</h2>
+    <h2>Import DOF Config Tool</h2>
     <p>
-      Cette section prépare PinCabOS pour les contrôleurs de feedback :
-      LedWiz, Pinscape, Dude's Cab, PacLed, FTDI, Arduino, Serial USB, ArtNet et Hue.
+      Les effets par table (<code>directoutputconfigNN.ini</code>) viennent de
+      <a href="https://configtool.vpuniverse.com/" target="_blank">DOF Config Tool</a>.<br>
+      Destination : <code>{esc(cfg_path)}</code>
     </p>
-    <p>
-      Le Driver Pack installe les modules PinCabOS nécessaires au routage DOF Commander.
-      Les modules en safe mode restent inactifs côté matériel tant que leur protocole n’est pas activé.
-    </p>
+
+    <form method="post" action="/dof/import-config" enctype="multipart/form-data">
+      <input type="hidden" name="mode" value="upload">
+      <input type="file" name="dof_file" accept=".zip,.ini,.xml" style="display:block; margin:8px 0; width:100%;">
+      <button class="button" type="submit">Importer un ZIP DOF</button>
+    </form>
+
+    <form method="post" action="/dof/import-api" style="margin-top:14px;">
+      <label for="dof-api-key"><strong>Import automatique par clé API</strong></label>
+      <input id="dof-api-key" type="password" name="apikey" value="" placeholder="{esc(key_hint)}" autocomplete="off" style="display:block; margin:8px 0; width:100%; padding:10px; border-radius:10px; border:1px solid #5f2a91; background:#050007; color:white;">
+      <label style="display:block; margin:8px 0;">
+        <input type="checkbox" name="force" value="1" checked>
+        Forcer le téléchargement / remplacement
+      </label>
+      <button class="button" type="submit">Importer via API</button>
+    </form>
+
+    <form method="post" action="/dof/import-config" style="margin-top:10px;">
+      <input type="hidden" name="mode" value="share">
+      <button class="button secondary" type="submit">Importer le dernier ZIP depuis /home/pinball/Share</button>
+    </form>
   </div>
 </div>
 
-
+<details style="margin-top:20px;">
+  <summary>Avancé : dépendances par famille de cartes, fichiers et logs</summary>
+  {dof_utils_card_html()}
+  {dof_detection_summary_card(summary, raw_devices, logs, file_rows)}
+</details>
 """
-
-    body = body + dof_utils_card_html() + dof_detection_summary_card(summary, raw_devices, logs, file_rows)
-
     return page("Outputs", body)
 
 
