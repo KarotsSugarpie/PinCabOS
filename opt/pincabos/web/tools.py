@@ -556,6 +556,24 @@ def tools_hub_html():
           </div>
         </a>
 
+        <a class="tool-card" href="/dof">
+          <div class="pco-tool-art">
+            <img src="/static/pincabos-assets/PCOSDOFOutpouts.png?v=toolsart2"
+                 alt="PinCabOS DOF Matériel et Config" loading="lazy">
+          </div>
+          <div class="pco-tool-body">
+            <strong>DOF — Matériel &amp; Config</strong>
+            <span class="pco-tool-description">
+              État DOF, cartes détectées (Teensy, Dude's Cab, LedWiz...),
+              cabinet.xml, drivers et imports DOF Config Tool.
+            </span>
+            <div class="pco-tool-footer">
+              <span>Ouvrir DOF Matériel &amp; Config</span>
+              <span class="pco-tool-open">→</span>
+            </div>
+          </div>
+        </a>
+
 
         <a class="tool-card" href="/tools/commander">
           <div class="pco-tool-art">
