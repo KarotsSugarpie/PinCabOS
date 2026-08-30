@@ -1,0 +1,187 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_media_recorder",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_media_recorder.py",
+    "manifest_file": "opt/pincabos/web/pincabos_media_recorder.json",
+    "language": "python",
+    "git_blob_sha": "95ca21a35f77c49169e51298c9308beb5bef33cc",
+    "size_bytes": 20662,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/tools.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_mr_media_presence",
+        "line": 49,
+        "top_level": true
+      },
+      {
+        "name": "_mr_presence_badges",
+        "line": 82,
+        "top_level": true
+      },
+      {
+        "name": "_atomic_json",
+        "line": 130,
+        "top_level": true
+      },
+      {
+        "name": "_read_json",
+        "line": 139,
+        "top_level": true
+      },
+      {
+        "name": "_safe_float",
+        "line": 146,
+        "top_level": true
+      },
+      {
+        "name": "_safe_int",
+        "line": 154,
+        "top_level": true
+      },
+      {
+        "name": "_table_inventory",
+        "line": 162,
+        "top_level": true
+      },
+      {
+        "name": "_validate_tables",
+        "line": 176,
+        "top_level": true
+      },
+      {
+        "name": "_status_payload",
+        "line": 198,
+        "top_level": true
+      },
+      {
+        "name": "_log_tail",
+        "line": 207,
+        "top_level": true
+      },
+      {
+        "name": "_page_body",
+        "line": 224,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 326,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_media_recorder_page",
+        "line": 328,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_media_recorder_status",
+        "line": 332,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_media_recorder_start",
+        "line": 337,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_media_recorder_control",
+        "line": 388,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/media-recorder",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_media_recorder_page",
+        "line": 327
+      },
+      {
+        "path": "/api/media-recorder/status",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_media_recorder_status",
+        "line": 331
+      },
+      {
+        "path": "/api/media-recorder/start",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_media_recorder_start",
+        "line": 336
+      },
+      {
+        "path": "/api/media-recorder/control",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_media_recorder_control",
+        "line": 387
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "time",
+      "uuid"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/screen.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [
+      "/home/pinball/Tables",
+      "/var/lib/pincabos/media-recorder"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_media_recorder.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_webapp_exports",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_webapp_exports.py",
+    "manifest_file": "opt/pincabos/web/pincabos_webapp_exports.json",
+    "language": "python",
+    "git_blob_sha": "4204f59118d29b384bcc690bb84b9f6380b9e652",
+    "size_bytes": 4984,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/validate_refactor.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "route",
+        "line": 28,
+        "top_level": true
+      },
+      {
+        "name": "decorator",
+        "line": 30,
+        "top_level": false
+      },
+      {
+        "name": "before_request",
+        "line": 35,
+        "top_level": true
+      },
+      {
+        "name": "after_request",
+        "line": 39,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 43,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_export_table_package_v7",
+        "line": 63,
+        "top_level": true
+      },
+      {
+        "name": "tools_export_table_download_v7",
+        "line": 114,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/export-table/download-v7",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_export_table_download_v7",
+        "line": 113
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "datetime",
+      "flask",
+      "glob",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "shlex",
+      "shutil",
+      "socket",
+      "struct",
+      "subprocess",
+      "tempfile",
+      "time",
+      "zipfile"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/bin/chmod",
+      "/bin/chown"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_webapp_exports.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

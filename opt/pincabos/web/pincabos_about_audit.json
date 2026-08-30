@@ -1,0 +1,122 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_about_audit",
+    "scope": "webapp",
+    "kind": "python_library",
+    "source_file": "opt/pincabos/web/pincabos_about_audit.py",
+    "manifest_file": "opt/pincabos/web/pincabos_about_audit.json",
+    "language": "python",
+    "git_blob_sha": "acced171f76fcf3c5d656b199fa57b532421debf",
+    "size_bytes": 15882,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/PinCabOS-AboutHelp.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_run",
+        "line": 16,
+        "top_level": true
+      },
+      {
+        "name": "_service_state",
+        "line": 32,
+        "top_level": true
+      },
+      {
+        "name": "_service_label",
+        "line": 41,
+        "top_level": true
+      },
+      {
+        "name": "_os_name",
+        "line": 57,
+        "top_level": true
+      },
+      {
+        "name": "_gpu_summary",
+        "line": 80,
+        "top_level": true
+      },
+      {
+        "name": "_table_count",
+        "line": 107,
+        "top_level": true
+      },
+      {
+        "name": "_service_row",
+        "line": 118,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_about_audit_html",
+        "line": 130,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "html",
+      "os",
+      "pathlib",
+      "platform",
+      "subprocess"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "etc/os-release"
+    ],
+    "runtime_paths": [
+      "/home/pinball/Tables",
+      "/usr/bin/lspci",
+      "/usr/bin/nvidia-smi",
+      "/usr/bin/systemctl"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [
+      "pincabos-dashboard-live.service",
+      "pincabos-dudescab-watchdog.service",
+      "pincabos-usb-secure-lock.service",
+      "pincabos-vpinfe.service",
+      "pincabos-webapp.service"
+    ],
+    "commands": [
+      "/usr/bin/lspci",
+      "/usr/bin/nvidia-smi",
+      "/usr/bin/systemctl"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_about_audit.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

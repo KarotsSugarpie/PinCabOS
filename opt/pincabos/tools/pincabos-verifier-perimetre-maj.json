@@ -1,0 +1,120 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-verifier-perimetre-maj",
+    "scope": "tool",
+    "kind": "executable",
+    "source_file": "opt/pincabos/tools/pincabos-verifier-perimetre-maj.py",
+    "manifest_file": "opt/pincabos/tools/pincabos-verifier-perimetre-maj.json",
+    "language": "python",
+    "git_blob_sha": "45c52b7715a2a1871021c46922bd8b2956e5439c",
+    "size_bytes": 4789,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "charger",
+        "line": 87,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 101,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "importlib.util",
+      "pathlib",
+      "sys"
+    ],
+    "local_modules": [
+      "opt/pincabos/scripts/pincabos-screen-topology.py",
+      "opt/pincabos/tools/pincabos-generer-voix-audio.py"
+    ],
+    "repository_files": [
+      "etc/lightdm/lightdm.conf",
+      "etc/lightdm/lightdm.conf.d/01_debian.conf",
+      "etc/lightdm/lightdm.conf.d/50-pincabos.conf",
+      "etc/passwd",
+      "etc/polkit-1/rules.d/49-pincabos-pinball-root.rules",
+      "etc/sudoers",
+      "etc/sudoers.d/91-pincabos-dashboard-admin",
+      "etc/sudoers.d/README",
+      "etc/sudoers.d/pincabos-audio-surround",
+      "etc/systemd/system/multi-user.target.wants/pincabos-audio-surround.service",
+      "etc/systemd/system/multi-user.target.wants/ssh.service",
+      "etc/systemd/system/pincabos-audio-surround.service",
+      "etc/systemd/system/pincabos-gui-kiosk.service",
+      "etc/systemd/system/pincabos-gui-kiosk.service.d/10-wait-for-wizard.conf",
+      "etc/systemd/system/pincabos-vpinfe.service",
+      "etc/systemd/system/pincabos-vpinfe.service.wants/pincabos-vpinfe-focus.service",
+      "etc/tmpfiles.d/pincabos-dudescab.conf",
+      "etc/udev/rules.d/99-pincab-ledwiz.rules",
+      "etc/udev/rules.d/ubuntu--vg-ubuntu--lv.rules",
+      "home/pinball/.config/openbox/autostart",
+      "home/pinball/.config/vpinfe/themes/PinCabOS/theme.js",
+      "home/pinball/.config/vpinfe/themes/Revolution/theme.js",
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "opt/pincabos/installer-gui/app.py",
+      "opt/pincabos/media/audio-voix/fr/side-left.opus",
+      "opt/pincabos/web/app.py",
+      "usr/local/lib/pincabos/pincabos-dashboard-live-webrtc",
+      "usr/local/libexec/pincabos/pincabos-vpinfe-focus-playfield",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-audio-surround"
+    ],
+    "runtime_paths": [
+      "/etc/shadow",
+      "/media/audio-voix/fr/side-left.opus",
+      "/media/tables/gros.mp4",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [
+      "home/pinball/.config/vpinfe/themes/PinCabOS/theme.js",
+      "home/pinball/.config/vpinfe/themes/Revolution/theme.js"
+    ],
+    "systemd_units_mentioned": [
+      "pincabos-audio-surround.service",
+      "pincabos-gui-kiosk.service",
+      "pincabos-vpinfe-focus.service",
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/tools/pincabos-verifier-perimetre-maj.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

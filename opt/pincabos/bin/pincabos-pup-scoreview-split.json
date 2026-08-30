@@ -1,0 +1,135 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-pup-scoreview-split",
+    "scope": "runtime_bin",
+    "kind": "executable",
+    "source_file": "opt/pincabos/bin/pincabos-pup-scoreview-split.py",
+    "manifest_file": "opt/pincabos/bin/pincabos-pup-scoreview-split.json",
+    "language": "python",
+    "git_blob_sha": "ee2cf0b6235ef2ff1f18e971c162e62ab4a5fe7c",
+    "size_bytes": 13219,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/scripts/VPXlauncher.real.sh"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": [
+      "patch_ini",
+      "patch_section"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "q",
+        "line": 25,
+        "top_level": true
+      },
+      {
+        "name": "read_sections",
+        "line": 29,
+        "top_level": true
+      },
+      {
+        "name": "patch_section",
+        "line": 58,
+        "top_level": true
+      },
+      {
+        "name": "detect",
+        "line": 135,
+        "top_level": true
+      },
+      {
+        "name": "find_ini",
+        "line": 143,
+        "top_level": true
+      },
+      {
+        "name": "patch_ini",
+        "line": 147,
+        "top_level": true
+      },
+      {
+        "name": "trigger_uses_screen",
+        "line": 275,
+        "top_level": true
+      },
+      {
+        "name": "make_split",
+        "line": 305,
+        "top_level": true
+      },
+      {
+        "name": "intval",
+        "line": 492,
+        "top_level": false
+      },
+      {
+        "name": "print_shell",
+        "line": 552,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 592,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "csv",
+      "hashlib",
+      "io",
+      "json",
+      "os",
+      "pathlib",
+      "shlex",
+      "subprocess",
+      "sys"
+    ],
+    "local_modules": [
+      "opt/pincabos/launchers/pincabos-detect-table-modes.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [
+      "/run/pincabos-pup-scoreview-split",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/bin/pincabos-pup-scoreview-split.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

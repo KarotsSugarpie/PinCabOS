@@ -1,0 +1,159 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "PinCabOS-ExplorerInstall",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/PinCabOS-ExplorerInstall.py",
+    "manifest_file": "opt/pincabos/web/PinCabOS-ExplorerInstall.json",
+    "language": "python",
+    "git_blob_sha": "48f92a49a942b6c53ec521d8f3b13132572c34ee",
+    "size_bytes": 10123,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_safe_join",
+        "line": 36,
+        "top_level": true
+      },
+      {
+        "name": "_source_from_request",
+        "line": 54,
+        "top_level": true
+      },
+      {
+        "name": "_safe_zip_members",
+        "line": 76,
+        "top_level": true
+      },
+      {
+        "name": "_guess_table_folder",
+        "line": 84,
+        "top_level": true
+      },
+      {
+        "name": "_copy_tree_contents",
+        "line": 111,
+        "top_level": true
+      },
+      {
+        "name": "_install_archive",
+        "line": 122,
+        "top_level": true
+      },
+      {
+        "name": "_install_url_from_download_href",
+        "line": 211,
+        "top_level": true
+      },
+      {
+        "name": "_transform_commander_html",
+        "line": 229,
+        "top_level": true
+      },
+      {
+        "name": "transform_row",
+        "line": 230,
+        "top_level": false
+      },
+      {
+        "name": "_wrap_commander_view",
+        "line": 281,
+        "top_level": true
+      },
+      {
+        "name": "wrapped",
+        "line": 299,
+        "top_level": false
+      },
+      {
+        "name": "register",
+        "line": 320,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/commander/install-pincabos",
+        "methods": [
+          "UNKNOWN"
+        ],
+        "function": null,
+        "line": 324
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "flask",
+      "html",
+      "os",
+      "pathlib",
+      "re",
+      "shutil",
+      "subprocess",
+      "tempfile",
+      "urllib.parse",
+      "zipfile"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [
+      "/home/pinball",
+      "/home/pinball/Exports",
+      "/home/pinball/Imports",
+      "/home/pinball/Media",
+      "/home/pinball/Medias",
+      "/home/pinball/NetworkDrives",
+      "/home/pinball/PinCabShare",
+      "/home/pinball/Tables",
+      "/media/pinball",
+      "/opt/pincabos/logs",
+      "/opt/pincabos/web/backups",
+      "/usr/bin/chmod",
+      "/usr/bin/chown"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/chmod",
+      "/usr/bin/chown"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/PinCabOS-ExplorerInstall.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

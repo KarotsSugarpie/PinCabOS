@@ -1,0 +1,229 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "mod-splash",
+    "scope": "installer_module",
+    "kind": "installer_shell_module",
+    "source_file": "opt/pincabos/modules/system/mod-splash.sh",
+    "manifest_file": "opt/pincabos/modules/system/mod-splash.json",
+    "language": "shell",
+    "git_blob_sha": "8ff63a7c799f9c3a6f0a7af24e29f67e87f68cab",
+    "size_bytes": 15052,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/install/go-pincabos.sh",
+      "opt/pincabos/install/help-pincabos.sh",
+      "opt/pincabos/install/modules/system/mod-splash.sh"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "on_error",
+        "line": 57,
+        "top_level": true
+      },
+      {
+        "name": "pco_title",
+        "line": 69,
+        "top_level": true
+      },
+      {
+        "name": "pco_step",
+        "line": 77,
+        "top_level": true
+      },
+      {
+        "name": "pco_go",
+        "line": 83,
+        "top_level": true
+      },
+      {
+        "name": "pco_warn",
+        "line": 87,
+        "top_level": true
+      },
+      {
+        "name": "pco_info",
+        "line": 91,
+        "top_level": true
+      },
+      {
+        "name": "pco_nogo",
+        "line": 95,
+        "top_level": true
+      },
+      {
+        "name": "run_spin",
+        "line": 103,
+        "top_level": true
+      },
+      {
+        "name": "run_spin_bash",
+        "line": 140,
+        "top_level": true
+      },
+      {
+        "name": "require_root",
+        "line": 146,
+        "top_level": true
+      },
+      {
+        "name": "backup_file",
+        "line": 153,
+        "top_level": true
+      },
+      {
+        "name": "ensure_openssh_server",
+        "line": 167,
+        "top_level": true
+      },
+      {
+        "name": "apply_hostname",
+        "line": 189,
+        "top_level": true
+      },
+      {
+        "name": "apply_ascii_splash",
+        "line": 216,
+        "top_level": true
+      },
+      {
+        "name": "apply_root_prompt",
+        "line": 290,
+        "top_level": true
+      },
+      {
+        "name": "set_root_password",
+        "line": 335,
+        "top_level": true
+      },
+      {
+        "name": "configure_root_ssh",
+        "line": 347,
+        "top_level": true
+      },
+      {
+        "name": "restart_ssh_service",
+        "line": 389,
+        "top_level": true
+      },
+      {
+        "name": "verify_result",
+        "line": 421,
+        "top_level": true
+      },
+      {
+        "name": "show_summary",
+        "line": 454,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 469,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [],
+    "local_modules": [],
+    "repository_files": [
+      "etc/hostname",
+      "etc/hosts",
+      "etc/motd",
+      "etc/ssh/sshd_config",
+      "home/pinball/.bashrc",
+      "opt/pincabos/install/go-pincabos.sh",
+      "opt/pincabos/install/install.json",
+      "opt/pincabos/modules/modules.json",
+      "opt/pincabos/modules/system/mod-splash.sh",
+      "root/.bashrc"
+    ],
+    "runtime_paths": [
+      "/dev/null",
+      "/home/pinball",
+      "/opt/pincabos",
+      "/opt/pincabos/backups/*",
+      "/opt/pincabos/logs/mod-splash-*.log",
+      "/usr/bin/bash",
+      "/usr/bin/env",
+      "/usr/bin/grep",
+      "/usr/bin/hostname",
+      "/usr/bin/hostnamectl",
+      "/usr/bin/python3",
+      "/usr/bin/sed",
+      "/usr/bin/systemctl",
+      "/usr/bin/tee",
+      "/usr/sbin/chpasswd",
+      "/usr/sbin/sshd"
+    ],
+    "configuration_paths": [
+      "/opt/pincabos/install/install.json",
+      "/opt/pincabos/modules/modules.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/bash",
+      "/usr/bin/env",
+      "/usr/bin/grep",
+      "/usr/bin/hostname",
+      "/usr/bin/hostnamectl",
+      "/usr/bin/python3",
+      "/usr/bin/sed",
+      "/usr/bin/systemctl",
+      "/usr/bin/tee",
+      "/usr/sbin/chpasswd",
+      "/usr/sbin/sshd",
+      "apt-get",
+      "hostnamectl",
+      "service",
+      "sshd"
+    ],
+    "environment_variables": [
+      "BACKUP_DIR",
+      "BLUE",
+      "CURRENT_STEP",
+      "CYAN",
+      "DIM",
+      "GREEN",
+      "HOSTNAME_TARGET",
+      "LOG_DIR",
+      "LOG_FILE",
+      "ORANGE",
+      "PINCABOS_ROOT_PASSWORD",
+      "RED",
+      "ROOT",
+      "ROOT_PASSWORD",
+      "TMP_DIR",
+      "YELLOW"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/modules/system/mod-splash.sh",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,806 @@
+{
+  "schema": "pincabos.module-inventory-index/v1",
+  "repository": "KarotsSugarpie/PinCabOS",
+  "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+  "generated_at": "2026-08-30T20:49:33.476Z",
+  "summary": {
+    "python_modules": 98,
+    "doctor_modules": 10,
+    "installer_shell_modules": 5,
+    "total": 113,
+    "locking_enabled": false
+  },
+  "modules": [
+    {
+      "module": "pincabos-tester-report-ingest-v3",
+      "source": "DEV/config-testeur/pincabos-tester-report-ingest-v3.py",
+      "manifest": "DEV/config-testeur/pincabos-tester-report-ingest-v3.json",
+      "scope": "development",
+      "kind": "executable"
+    },
+    {
+      "module": "sitecustomize",
+      "source": "etc/python3.14/sitecustomize.py",
+      "manifest": "etc/python3.14/sitecustomize.json",
+      "scope": "system",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos-display-roles",
+      "source": "opt/pincabos/bin/pincabos-display-roles.py",
+      "manifest": "opt/pincabos/bin/pincabos-display-roles.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-fulldmd-autoarrange",
+      "source": "opt/pincabos/bin/pincabos-fulldmd-autoarrange.py",
+      "manifest": "opt/pincabos/bin/pincabos-fulldmd-autoarrange.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-fulldmd-extract-frame",
+      "source": "opt/pincabos/bin/pincabos-fulldmd-extract-frame.py",
+      "manifest": "opt/pincabos/bin/pincabos-fulldmd-extract-frame.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-fulldmd-import-hook",
+      "source": "opt/pincabos/bin/pincabos-fulldmd-import-hook.py",
+      "manifest": "opt/pincabos/bin/pincabos-fulldmd-import-hook.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-fulldmd-process-table",
+      "source": "opt/pincabos/bin/pincabos-fulldmd-process-table.py",
+      "manifest": "opt/pincabos/bin/pincabos-fulldmd-process-table.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-fulldmd-write-scoreview-ini",
+      "source": "opt/pincabos/bin/pincabos-fulldmd-write-scoreview-ini.py",
+      "manifest": "opt/pincabos/bin/pincabos-fulldmd-write-scoreview-ini.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-hybrid-chooser",
+      "source": "opt/pincabos/bin/pincabos-hybrid-chooser.py",
+      "manifest": "opt/pincabos/bin/pincabos-hybrid-chooser.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-hybrid-scoreview-enable-prelaunch",
+      "source": "opt/pincabos/bin/pincabos-hybrid-scoreview-enable-prelaunch.py",
+      "manifest": "opt/pincabos/bin/pincabos-hybrid-scoreview-enable-prelaunch.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-pup-rawscore-overlay",
+      "source": "opt/pincabos/bin/pincabos-pup-rawscore-overlay.py",
+      "manifest": "opt/pincabos/bin/pincabos-pup-rawscore-overlay.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-pup-scoreview-split",
+      "source": "opt/pincabos/bin/pincabos-pup-scoreview-split.py",
+      "manifest": "opt/pincabos/bin/pincabos-pup-scoreview-split.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-score-mode-policy",
+      "source": "opt/pincabos/bin/pincabos-score-mode-policy.py",
+      "manifest": "opt/pincabos/bin/pincabos-score-mode-policy.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-wallpaper-per-screen",
+      "source": "opt/pincabos/bin/pincabos-wallpaper-per-screen.py",
+      "manifest": "opt/pincabos/bin/pincabos-wallpaper-per-screen.json",
+      "scope": "runtime_bin",
+      "kind": "executable"
+    },
+    {
+      "module": "app",
+      "source": "opt/pincabos/installer-gui/app.py",
+      "manifest": "opt/pincabos/installer-gui/app.json",
+      "scope": "installer_gui",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos-detect-table-modes",
+      "source": "opt/pincabos/launchers/pincabos-detect-table-modes.py",
+      "manifest": "opt/pincabos/launchers/pincabos-detect-table-modes.json",
+      "scope": "launcher",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-hybrid-chooser",
+      "source": "opt/pincabos/launchers/pincabos-hybrid-chooser.py",
+      "manifest": "opt/pincabos/launchers/pincabos-hybrid-chooser.json",
+      "scope": "launcher",
+      "kind": "executable"
+    },
+    {
+      "module": "public_media_downloader",
+      "source": "opt/pincabos/media-hunter/public_media_downloader.py",
+      "manifest": "opt/pincabos/media-hunter/public_media_downloader.json",
+      "scope": "media_hunter",
+      "kind": "executable"
+    },
+    {
+      "module": "mod-dhcp4",
+      "source": "opt/pincabos/modules/network/mod-dhcp4.sh",
+      "manifest": "opt/pincabos/modules/network/mod-dhcp4.json",
+      "scope": "installer_module",
+      "kind": "installer_shell_module"
+    },
+    {
+      "module": "mod-ssid",
+      "source": "opt/pincabos/modules/network/mod-ssid.sh",
+      "manifest": "opt/pincabos/modules/network/mod-ssid.json",
+      "scope": "installer_module",
+      "kind": "installer_shell_module"
+    },
+    {
+      "module": "mod-plymouth-install",
+      "source": "opt/pincabos/modules/system/mod-plymouth-install.sh",
+      "manifest": "opt/pincabos/modules/system/mod-plymouth-install.json",
+      "scope": "installer_module",
+      "kind": "installer_shell_module"
+    },
+    {
+      "module": "mod-plymouth-load",
+      "source": "opt/pincabos/modules/system/mod-plymouth-load.sh",
+      "manifest": "opt/pincabos/modules/system/mod-plymouth-load.json",
+      "scope": "installer_module",
+      "kind": "installer_shell_module"
+    },
+    {
+      "module": "mod-splash",
+      "source": "opt/pincabos/modules/system/mod-splash.sh",
+      "manifest": "opt/pincabos/modules/system/mod-splash.json",
+      "scope": "installer_module",
+      "kind": "installer_shell_module"
+    },
+    {
+      "module": "pincabos_browser_cache",
+      "source": "opt/pincabos/runtime-patches/pincabos_browser_cache.py",
+      "manifest": "opt/pincabos/runtime-patches/pincabos_browser_cache.json",
+      "scope": "runtime_patch",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_explorer_performance",
+      "source": "opt/pincabos/runtime-patches/pincabos_explorer_performance.py",
+      "manifest": "opt/pincabos/runtime-patches/pincabos_explorer_performance.json",
+      "scope": "runtime_patch",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_request_limits",
+      "source": "opt/pincabos/runtime-patches/pincabos_request_limits.py",
+      "manifest": "opt/pincabos/runtime-patches/pincabos_request_limits.json",
+      "scope": "runtime_patch",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_table_analysis_cache",
+      "source": "opt/pincabos/runtime-patches/pincabos_table_analysis_cache.py",
+      "manifest": "opt/pincabos/runtime-patches/pincabos_table_analysis_cache.json",
+      "scope": "runtime_patch",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_webapp_bootstrap",
+      "source": "opt/pincabos/runtime-patches/pincabos_webapp_bootstrap.py",
+      "manifest": "opt/pincabos/runtime-patches/pincabos_webapp_bootstrap.json",
+      "scope": "runtime_patch",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos-display-role-app-sync",
+      "source": "opt/pincabos/scripts/pincabos-display-role-app-sync.py",
+      "manifest": "opt/pincabos/scripts/pincabos-display-role-app-sync.json",
+      "scope": "runtime_script",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-display-role-finalizer",
+      "source": "opt/pincabos/scripts/pincabos-display-role-finalizer.py",
+      "manifest": "opt/pincabos/scripts/pincabos-display-role-finalizer.json",
+      "scope": "runtime_script",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-display-role-normalizer",
+      "source": "opt/pincabos/scripts/pincabos-display-role-normalizer.py",
+      "manifest": "opt/pincabos/scripts/pincabos-display-role-normalizer.json",
+      "scope": "runtime_script",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-screen-topology",
+      "source": "opt/pincabos/scripts/pincabos-screen-topology.py",
+      "manifest": "opt/pincabos/scripts/pincabos-screen-topology.json",
+      "scope": "runtime_script",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos_import_classifier",
+      "source": "opt/pincabos/tools/pincabos_import_classifier.py",
+      "manifest": "opt/pincabos/tools/pincabos_import_classifier.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-dashboard-live-capture",
+      "source": "opt/pincabos/tools/pincabos-dashboard-live-capture.py",
+      "manifest": "opt/pincabos/tools/pincabos-dashboard-live-capture.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-extract-table-script",
+      "source": "opt/pincabos/tools/pincabos-extract-table-script.py",
+      "manifest": "opt/pincabos/tools/pincabos-extract-table-script.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-generer-voix-audio",
+      "source": "opt/pincabos/tools/pincabos-generer-voix-audio.py",
+      "manifest": "opt/pincabos/tools/pincabos-generer-voix-audio.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-import-portable-normalize",
+      "source": "opt/pincabos/tools/pincabos-import-portable-normalize.py",
+      "manifest": "opt/pincabos/tools/pincabos-import-portable-normalize.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-smart-archive-import",
+      "source": "opt/pincabos/tools/pincabos-smart-archive-import.py",
+      "manifest": "opt/pincabos/tools/pincabos-smart-archive-import.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-verifier-perimetre-maj",
+      "source": "opt/pincabos/tools/pincabos-verifier-perimetre-maj.py",
+      "manifest": "opt/pincabos/tools/pincabos-verifier-perimetre-maj.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-verifier-preservation",
+      "source": "opt/pincabos/tools/pincabos-verifier-preservation.py",
+      "manifest": "opt/pincabos/tools/pincabos-verifier-preservation.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-verifier-reponses-installeur",
+      "source": "opt/pincabos/tools/pincabos-verifier-reponses-installeur.py",
+      "manifest": "opt/pincabos/tools/pincabos-verifier-reponses-installeur.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "vpinfe-vpsdb-match",
+      "source": "opt/pincabos/tools/vpinfe-vpsdb-match.py",
+      "manifest": "opt/pincabos/tools/vpinfe-vpsdb-match.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "vpinfeupdate",
+      "source": "opt/pincabos/tools/vpinfeupdate.py",
+      "manifest": "opt/pincabos/tools/vpinfeupdate.json",
+      "scope": "tool",
+      "kind": "executable"
+    },
+    {
+      "module": "build_release_v4",
+      "source": "opt/pincabos/update/build_release_v4.py",
+      "manifest": "opt/pincabos/update/build_release_v4.json",
+      "scope": "updater",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos_updates",
+      "source": "opt/pincabos/update/pincabos_updates.py",
+      "manifest": "opt/pincabos/update/pincabos_updates.json",
+      "scope": "updater",
+      "kind": "executable"
+    },
+    {
+      "module": "app",
+      "source": "opt/pincabos/web/app.py",
+      "manifest": "opt/pincabos/web/app.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "B2SConfig",
+      "source": "opt/pincabos/web/B2SConfig.py",
+      "manifest": "opt/pincabos/web/B2SConfig.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "dashboard_plus",
+      "source": "opt/pincabos/web/dashboard_plus.py",
+      "manifest": "opt/pincabos/web/dashboard_plus.json",
+      "scope": "webapp",
+      "kind": "python_library"
+    },
+    {
+      "module": "internal_disk",
+      "source": "opt/pincabos/web/internal_disk.py",
+      "manifest": "opt/pincabos/web/internal_disk.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_about_audit",
+      "source": "opt/pincabos/web/pincabos_about_audit.py",
+      "manifest": "opt/pincabos/web/pincabos_about_audit.json",
+      "scope": "webapp",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_appearance_global",
+      "source": "opt/pincabos/web/pincabos_appearance_global.py",
+      "manifest": "opt/pincabos/web/pincabos_appearance_global.json",
+      "scope": "webapp",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_audio_volume_widget",
+      "source": "opt/pincabos/web/pincabos_audio_volume_widget.py",
+      "manifest": "opt/pincabos/web/pincabos_audio_volume_widget.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_batch_destination_browser",
+      "source": "opt/pincabos/web/pincabos_batch_destination_browser.py",
+      "manifest": "opt/pincabos/web/pincabos_batch_destination_browser.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_batch_import_live",
+      "source": "opt/pincabos/web/pincabos_batch_import_live.py",
+      "manifest": "opt/pincabos/web/pincabos_batch_import_live.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_batch_import_queue_v2",
+      "source": "opt/pincabos/web/pincabos_batch_import_queue_v2.py",
+      "manifest": "opt/pincabos/web/pincabos_batch_import_queue_v2.json",
+      "scope": "webapp",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_batch_import_worker_v2",
+      "source": "opt/pincabos/web/pincabos_batch_import_worker_v2.py",
+      "manifest": "opt/pincabos/web/pincabos_batch_import_worker_v2.json",
+      "scope": "webapp",
+      "kind": "worker"
+    },
+    {
+      "module": "pincabos_batch_live",
+      "source": "opt/pincabos/web/pincabos_batch_live.py",
+      "manifest": "opt/pincabos/web/pincabos_batch_live.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_batch_transfer",
+      "source": "opt/pincabos/web/pincabos_batch_transfer.py",
+      "manifest": "opt/pincabos/web/pincabos_batch_transfer.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_dashboard_lobby",
+      "source": "opt/pincabos/web/pincabos_dashboard_lobby.py",
+      "manifest": "opt/pincabos/web/pincabos_dashboard_lobby.json",
+      "scope": "webapp",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_dmd_tuner",
+      "source": "opt/pincabos/web/pincabos_dmd_tuner.py",
+      "manifest": "opt/pincabos/web/pincabos_dmd_tuner.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_dudescab_config",
+      "source": "opt/pincabos/web/pincabos_dudescab_config.py",
+      "manifest": "opt/pincabos/web/pincabos_dudescab_config.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_dudescab_protocol",
+      "source": "opt/pincabos/web/pincabos_dudescab_protocol.py",
+      "manifest": "opt/pincabos/web/pincabos_dudescab_protocol.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_explorer_table_test",
+      "source": "opt/pincabos/web/pincabos_explorer_table_test.py",
+      "manifest": "opt/pincabos/web/pincabos_explorer_table_test.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_fulldmd_autoarrange",
+      "source": "opt/pincabos/web/pincabos_fulldmd_autoarrange.py",
+      "manifest": "opt/pincabos/web/pincabos_fulldmd_autoarrange.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_help_guide",
+      "source": "opt/pincabos/web/pincabos_help_guide.py",
+      "manifest": "opt/pincabos/web/pincabos_help_guide.json",
+      "scope": "webapp",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_image_studio",
+      "source": "opt/pincabos/web/pincabos_image_studio.py",
+      "manifest": "opt/pincabos/web/pincabos_image_studio.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_impexp",
+      "source": "opt/pincabos/web/pincabos_impexp.py",
+      "manifest": "opt/pincabos/web/pincabos_impexp.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_live_table_status",
+      "source": "opt/pincabos/web/pincabos_live_table_status.py",
+      "manifest": "opt/pincabos/web/pincabos_live_table_status.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_media_hunter",
+      "source": "opt/pincabos/web/pincabos_media_hunter.py",
+      "manifest": "opt/pincabos/web/pincabos_media_hunter.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_media_recorder_worker",
+      "source": "opt/pincabos/web/pincabos_media_recorder_worker.py",
+      "manifest": "opt/pincabos/web/pincabos_media_recorder_worker.json",
+      "scope": "webapp",
+      "kind": "worker"
+    },
+    {
+      "module": "pincabos_media_recorder",
+      "source": "opt/pincabos/web/pincabos_media_recorder.py",
+      "manifest": "opt/pincabos/web/pincabos_media_recorder.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_pinball_engine_vpx_version",
+      "source": "opt/pincabos/web/pincabos_pinball_engine_vpx_version.py",
+      "manifest": "opt/pincabos/web/pincabos_pinball_engine_vpx_version.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_updates_hub",
+      "source": "opt/pincabos/web/pincabos_updates_hub.py",
+      "manifest": "opt/pincabos/web/pincabos_updates_hub.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_updates",
+      "source": "opt/pincabos/web/pincabos_updates.py",
+      "manifest": "opt/pincabos/web/pincabos_updates.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_vpinfe_updates",
+      "source": "opt/pincabos/web/pincabos_vpinfe_updates.py",
+      "manifest": "opt/pincabos/web/pincabos_vpinfe_updates.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_vpx_updates",
+      "source": "opt/pincabos/web/pincabos_vpx_updates.py",
+      "manifest": "opt/pincabos/web/pincabos_vpx_updates.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_vpxtool_updates",
+      "source": "opt/pincabos/web/pincabos_vpxtool_updates.py",
+      "manifest": "opt/pincabos/web/pincabos_vpxtool_updates.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_webapp_admin",
+      "source": "opt/pincabos/web/pincabos_webapp_admin.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_admin.json",
+      "scope": "webapp",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos_webapp_audio",
+      "source": "opt/pincabos/web/pincabos_webapp_audio.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_audio.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_webapp_core",
+      "source": "opt/pincabos/web/pincabos_webapp_core.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_core.json",
+      "scope": "webapp",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos_webapp_dashboard_control",
+      "source": "opt/pincabos/web/pincabos_webapp_dashboard_control.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_dashboard_control.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_webapp_dev_admin",
+      "source": "opt/pincabos/web/pincabos_webapp_dev_admin.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_dev_admin.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_webapp_exports",
+      "source": "opt/pincabos/web/pincabos_webapp_exports.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_exports.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_webapp_firstrun",
+      "source": "opt/pincabos/web/pincabos_webapp_firstrun.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_firstrun.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_webapp_import_metadata",
+      "source": "opt/pincabos/web/pincabos_webapp_import_metadata.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_import_metadata.json",
+      "scope": "webapp",
+      "kind": "python_library"
+    },
+    {
+      "module": "pincabos_webapp_inputs",
+      "source": "opt/pincabos/web/pincabos_webapp_inputs.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_inputs.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_webapp_keyboard_tools_v6",
+      "source": "opt/pincabos/web/pincabos_webapp_keyboard_tools_v6.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_keyboard_tools_v6.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_webapp_keyboard",
+      "source": "opt/pincabos/web/pincabos_webapp_keyboard.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_keyboard.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincabos_webapp_security",
+      "source": "opt/pincabos/web/pincabos_webapp_security.py",
+      "manifest": "opt/pincabos/web/pincabos_webapp_security.json",
+      "scope": "webapp",
+      "kind": "python_library"
+    },
+    {
+      "module": "PinCabOS-AboutHelp",
+      "source": "opt/pincabos/web/PinCabOS-AboutHelp.py",
+      "manifest": "opt/pincabos/web/PinCabOS-AboutHelp.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "PinCabOS-ExplorerInstall",
+      "source": "opt/pincabos/web/PinCabOS-ExplorerInstall.py",
+      "manifest": "opt/pincabos/web/PinCabOS-ExplorerInstall.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "PinCabOS-NtwkDRV",
+      "source": "opt/pincabos/web/PinCabOS-NtwkDRV.py",
+      "manifest": "opt/pincabos/web/PinCabOS-NtwkDRV.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "PinCabOS-PackageIcon",
+      "source": "opt/pincabos/web/PinCabOS-PackageIcon.py",
+      "manifest": "opt/pincabos/web/PinCabOS-PackageIcon.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "pincaboslink",
+      "source": "opt/pincabos/web/pincaboslink.py",
+      "manifest": "opt/pincabos/web/pincaboslink.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "puppack_options",
+      "source": "opt/pincabos/web/puppack_options.py",
+      "manifest": "opt/pincabos/web/puppack_options.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "recorder",
+      "source": "opt/pincabos/web/recorder.py",
+      "manifest": "opt/pincabos/web/recorder.json",
+      "scope": "webapp",
+      "kind": "executable"
+    },
+    {
+      "module": "screen",
+      "source": "opt/pincabos/web/screen.py",
+      "manifest": "opt/pincabos/web/screen.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "tools",
+      "source": "opt/pincabos/web/tools.py",
+      "manifest": "opt/pincabos/web/tools.json",
+      "scope": "webapp",
+      "kind": "flask_module"
+    },
+    {
+      "module": "validate_refactor",
+      "source": "opt/pincabos/web/validate_refactor.py",
+      "manifest": "opt/pincabos/web/validate_refactor.json",
+      "scope": "webapp",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-kiosk",
+      "source": "usr/local/bin/pincabos-kiosk.py",
+      "manifest": "usr/local/bin/pincabos-kiosk.json",
+      "scope": "system_helper",
+      "kind": "executable"
+    },
+    {
+      "module": "10-system",
+      "source": "usr/local/libexec/pincabos/doctor.d/10-system.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/10-system.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "20-network",
+      "source": "usr/local/libexec/pincabos/doctor.d/20-network.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/20-network.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "30-gpu",
+      "source": "usr/local/libexec/pincabos/doctor.d/30-gpu.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/30-gpu.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "40-displays",
+      "source": "usr/local/libexec/pincabos/doctor.d/40-displays.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/40-displays.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "50-audio",
+      "source": "usr/local/libexec/pincabos/doctor.d/50-audio.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/50-audio.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "60-webapp",
+      "source": "usr/local/libexec/pincabos/doctor.d/60-webapp.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/60-webapp.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "70-vpinfe",
+      "source": "usr/local/libexec/pincabos/doctor.d/70-vpinfe.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/70-vpinfe.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "80-vpx",
+      "source": "usr/local/libexec/pincabos/doctor.d/80-vpx.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/80-vpx.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "90-cleanup",
+      "source": "usr/local/libexec/pincabos/doctor.d/90-cleanup.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/90-cleanup.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "99-ready",
+      "source": "usr/local/libexec/pincabos/doctor.d/99-ready.sh",
+      "manifest": "usr/local/libexec/pincabos/doctor.d/99-ready.json",
+      "scope": "doctor",
+      "kind": "doctor_module"
+    },
+    {
+      "module": "pincabos-table-test-runner",
+      "source": "usr/local/libexec/pincabos/pincabos-table-test-runner.py",
+      "manifest": "usr/local/libexec/pincabos/pincabos-table-test-runner.json",
+      "scope": "system_helper",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-fix-table-pinmame-layout",
+      "source": "usr/local/sbin/pincabos-fix-table-pinmame-layout.py",
+      "manifest": "usr/local/sbin/pincabos-fix-table-pinmame-layout.json",
+      "scope": "system_helper",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-table-rom-assets-sync",
+      "source": "usr/local/sbin/pincabos-table-rom-assets-sync.py",
+      "manifest": "usr/local/sbin/pincabos-table-rom-assets-sync.json",
+      "scope": "system_helper",
+      "kind": "executable"
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_fulldmd_autoarrange",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_fulldmd_autoarrange.py",
+    "manifest_file": "opt/pincabos/web/pincabos_fulldmd_autoarrange.json",
+    "language": "python",
+    "git_blob_sha": "8ff64a0b2d44585069fd4f6e398f9e903a0cc266",
+    "size_bytes": 213,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_fulldmd_autoarrange"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "register_fulldmd_autoarrange",
+        "line": 5,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "pincabos_dmd_tuner"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/pincabos_dmd_tuner.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_fulldmd_autoarrange.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

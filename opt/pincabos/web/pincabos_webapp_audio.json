@@ -1,0 +1,620 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_webapp_audio",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_webapp_audio.py",
+    "manifest_file": "opt/pincabos/web/pincabos_webapp_audio.json",
+    "language": "python",
+    "git_blob_sha": "83236aee27cf15d2f658b3948d93faaffb685858",
+    "size_bytes": 106675,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "route",
+        "line": 28,
+        "top_level": true
+      },
+      {
+        "name": "decorator",
+        "line": 30,
+        "top_level": false
+      },
+      {
+        "name": "before_request",
+        "line": 35,
+        "top_level": true
+      },
+      {
+        "name": "after_request",
+        "line": 39,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 43,
+        "top_level": true
+      },
+      {
+        "name": "audio_run_cmd",
+        "line": 82,
+        "top_level": true
+      },
+      {
+        "name": "audio_load_config",
+        "line": 96,
+        "top_level": true
+      },
+      {
+        "name": "audio_save_config",
+        "line": 112,
+        "top_level": true
+      },
+      {
+        "name": "audio_detect_alsa_devices",
+        "line": 117,
+        "top_level": true
+      },
+      {
+        "name": "audio_device_options",
+        "line": 167,
+        "top_level": true
+      },
+      {
+        "name": "audio_bool_checked",
+        "line": 190,
+        "top_level": true
+      },
+      {
+        "name": "audio_selected",
+        "line": 194,
+        "top_level": true
+      },
+      {
+        "name": "_pco_vpx_audio_values",
+        "line": 204,
+        "top_level": true
+      },
+      {
+        "name": "_pco_vpx_detect_output_names",
+        "line": 228,
+        "top_level": true
+      },
+      {
+        "name": "add",
+        "line": 237,
+        "top_level": false
+      },
+      {
+        "name": "_pco_vpx_device_options",
+        "line": 293,
+        "top_level": true
+      },
+      {
+        "name": "_pco_vpx_sound3d_options",
+        "line": 316,
+        "top_level": true
+      },
+      {
+        "name": "_pco_vpx_mode_from_sound3d",
+        "line": 361,
+        "top_level": true
+      },
+      {
+        "name": "_pco_vpx_validate_device",
+        "line": 373,
+        "top_level": true
+      },
+      {
+        "name": "_pco_vpx_validate_sound3d",
+        "line": 399,
+        "top_level": true
+      },
+      {
+        "name": "_pco_vpx_write_audio",
+        "line": 411,
+        "top_level": true
+      },
+      {
+        "name": "audio_config_rows",
+        "line": 515,
+        "top_level": true
+      },
+      {
+        "name": "audio_test_device",
+        "line": 608,
+        "top_level": true
+      },
+      {
+        "name": "audio_backup_file",
+        "line": 622,
+        "top_level": true
+      },
+      {
+        "name": "audio_comment",
+        "line": 633,
+        "top_level": true
+      },
+      {
+        "name": "audio_read_lines",
+        "line": 638,
+        "top_level": true
+      },
+      {
+        "name": "audio_write_lines",
+        "line": 644,
+        "top_level": true
+      },
+      {
+        "name": "audio_find_section",
+        "line": 649,
+        "top_level": true
+      },
+      {
+        "name": "audio_set_ini_key_with_comment",
+        "line": 671,
+        "top_level": true
+      },
+      {
+        "name": "audio_set_pincabos_section",
+        "line": 720,
+        "top_level": true
+      },
+      {
+        "name": "audio_vpx_sound3d_value",
+        "line": 742,
+        "top_level": true
+      },
+      {
+        "name": "audio_apply_to_vpx_vpinfe",
+        "line": 755,
+        "top_level": true
+      },
+      {
+        "name": "set_ini_key_native",
+        "line": 771,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_safe_audio_alsa_card",
+        "line": 842,
+        "top_level": true
+      },
+      {
+        "name": "audio_session_prefix",
+        "line": 859,
+        "top_level": true
+      },
+      {
+        "name": "audio_pipewire_sinks",
+        "line": 883,
+        "top_level": true
+      },
+      {
+        "name": "audio_nom_position",
+        "line": 941,
+        "top_level": true
+      },
+      {
+        "name": "audio_langue_voix",
+        "line": 976,
+        "top_level": true
+      },
+      {
+        "name": "audio_voix_fichier",
+        "line": 990,
+        "top_level": true
+      },
+      {
+        "name": "audio_jouer_position",
+        "line": 999,
+        "top_level": true
+      },
+      {
+        "name": "audio_codec_analogique",
+        "line": 1076,
+        "top_level": true
+      },
+      {
+        "name": "audio_presence_jacks",
+        "line": 1102,
+        "top_level": true
+      },
+      {
+        "name": "audio_prises_analogiques",
+        "line": 1124,
+        "top_level": true
+      },
+      {
+        "name": "audio_carte_prises_html",
+        "line": 1157,
+        "top_level": true
+      },
+      {
+        "name": "audio_carte_retenue",
+        "line": 1201,
+        "top_level": true
+      },
+      {
+        "name": "audio_sortie_preferee",
+        "line": 1231,
+        "top_level": true
+      },
+      {
+        "name": "audio_sorties_classees",
+        "line": 1256,
+        "top_level": true
+      },
+      {
+        "name": "audio_surround_etat",
+        "line": 1273,
+        "top_level": true
+      },
+      {
+        "name": "audio_carte_surround_html",
+        "line": 1307,
+        "top_level": true
+      },
+      {
+        "name": "audio_reponse_lisible",
+        "line": 1360,
+        "top_level": true
+      },
+      {
+        "name": "audio_alsa_test_card",
+        "line": 1382,
+        "top_level": true
+      },
+      {
+        "name": "audio_wav_test_card",
+        "line": 1725,
+        "top_level": true
+      },
+      {
+        "name": "audio_ini_read_key",
+        "line": 1871,
+        "top_level": true
+      },
+      {
+        "name": "audio_ini_value_cell",
+        "line": 1905,
+        "top_level": true
+      },
+      {
+        "name": "audio_ini_values_card",
+        "line": 1913,
+        "top_level": true
+      },
+      {
+        "name": "audio_system_run",
+        "line": 1993,
+        "top_level": true
+      },
+      {
+        "name": "audio_parse_alsa_hw",
+        "line": 2010,
+        "top_level": true
+      },
+      {
+        "name": "audio_pactl_find_sink_for_alsa_card",
+        "line": 2022,
+        "top_level": true
+      },
+      {
+        "name": "audio_system_volume_get",
+        "line": 2057,
+        "top_level": true
+      },
+      {
+        "name": "audio_system_volume_apply",
+        "line": 2103,
+        "top_level": true
+      },
+      {
+        "name": "audio_system_vu_meter",
+        "line": 2195,
+        "top_level": true
+      },
+      {
+        "name": "audio_system_volume_card",
+        "line": 2199,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_audio_ssf_page_fixed",
+        "line": 2376,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_surround",
+        "line": 2578,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_test_alsa_quick",
+        "line": 2646,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_system_volume_get",
+        "line": 2779,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_system_volume_apply",
+        "line": 2787,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_system_volume_meter_html",
+        "line": 2799,
+        "top_level": true
+      },
+      {
+        "name": "ssf_commander_escape",
+        "line": 2827,
+        "top_level": true
+      },
+      {
+        "name": "ssf_commander_read_controller",
+        "line": 2832,
+        "top_level": true
+      },
+      {
+        "name": "ssf_commander_write_controller",
+        "line": 2865,
+        "top_level": true
+      },
+      {
+        "name": "ssf_commander_select_html",
+        "line": 2964,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_test_wav",
+        "line": 2980,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_test_wav_stop_fixed",
+        "line": 3101,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_save",
+        "line": 3121,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_commander_page",
+        "line": 3303,
+        "top_level": true
+      },
+      {
+        "name": "audio_ssf_commander_save",
+        "line": 3334,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_audio_page_alias",
+        "line": 3355,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/audio-ssf",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_audio_ssf_page_fixed",
+        "line": 2375
+      },
+      {
+        "path": "/audio-ssf/surround",
+        "methods": [
+          "POST"
+        ],
+        "function": "audio_ssf_surround",
+        "line": 2577
+      },
+      {
+        "path": "/audio-ssf/test-alsa-quick",
+        "methods": [
+          "POST"
+        ],
+        "function": "audio_ssf_test_alsa_quick",
+        "line": 2645
+      },
+      {
+        "path": "/audio-ssf/system-volume/get",
+        "methods": [
+          "GET"
+        ],
+        "function": "audio_ssf_system_volume_get",
+        "line": 2778
+      },
+      {
+        "path": "/audio-ssf/system-volume/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "audio_ssf_system_volume_apply",
+        "line": 2786
+      },
+      {
+        "path": "/audio-ssf/system-volume/meter-html",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "audio_ssf_system_volume_meter_html",
+        "line": 2798
+      },
+      {
+        "path": "/audio-ssf/test-wav",
+        "methods": [
+          "POST"
+        ],
+        "function": "audio_ssf_test_wav",
+        "line": 2979
+      },
+      {
+        "path": "/audio-ssf/test-wav-stop",
+        "methods": [
+          "POST"
+        ],
+        "function": "audio_ssf_test_wav_stop_fixed",
+        "line": 3100
+      },
+      {
+        "path": "/audio-ssf/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "audio_ssf_save",
+        "line": 3120
+      },
+      {
+        "path": "/audio-ssf/commander",
+        "methods": [
+          "GET"
+        ],
+        "function": "audio_ssf_commander_page",
+        "line": 3302
+      },
+      {
+        "path": "/audio-ssf/commander/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "audio_ssf_commander_save",
+        "line": 3333
+      },
+      {
+        "path": "/audio",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_audio_page_alias",
+        "line": 3354
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "datetime",
+      "flask",
+      "glob",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "shlex",
+      "shutil",
+      "socket",
+      "struct",
+      "subprocess",
+      "tempfile",
+      "time",
+      "zipfile"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [
+      "etc/default/locale",
+      "etc/locale.conf",
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "opt/pincabos/config/audio-router.json",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-audio-surround"
+    ],
+    "runtime_paths": [
+      "/dev/null",
+      "/home/pinball/Share",
+      "/opt/pincabos/backups/ssf-commander",
+      "/opt/pincabos/config/audio/surround.json",
+      "/opt/pincabos/logs/audio-ssf-apply.log",
+      "/opt/pincabos/media",
+      "/opt/pincabos/media/audio-tests",
+      "/opt/pincabos/media/audio-voix",
+      "/run/user/1000",
+      "/run/user/1000/bus",
+      "/run/user/{PINCABOS_SESSION_UID}",
+      "/run/user/{PINCABOS_SESSION_UID}/bus",
+      "/sys/class/sound",
+      "/usr/bin/aplay",
+      "/usr/bin/env",
+      "/usr/bin/ffmpeg",
+      "/usr/bin/pactl",
+      "/usr/bin/pkill",
+      "/usr/bin/pw-play",
+      "/usr/bin/speaker-test",
+      "/usr/bin/sudo",
+      "/usr/bin/timeout",
+      "/usr/sbin/runuser"
+    ],
+    "configuration_paths": [
+      "/etc/locale.conf",
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "/opt/pincabos/config/audio-router.json",
+      "/opt/pincabos/config/audio/surround.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/bin/chown",
+      "/usr/bin/aplay",
+      "/usr/bin/env",
+      "/usr/bin/ffmpeg",
+      "/usr/bin/pactl",
+      "/usr/bin/pkill",
+      "/usr/bin/pw-play",
+      "/usr/bin/speaker-test",
+      "/usr/bin/sudo",
+      "/usr/bin/timeout",
+      "/usr/local/sbin/pincabos-audio-surround",
+      "/usr/sbin/runuser",
+      "chown"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_webapp_audio.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

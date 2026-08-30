@@ -1,0 +1,220 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_batch_import_queue_v2",
+    "scope": "webapp",
+    "kind": "python_library",
+    "source_file": "opt/pincabos/web/pincabos_batch_import_queue_v2.py",
+    "manifest_file": "opt/pincabos/web/pincabos_batch_import_queue_v2.json",
+    "language": "python",
+    "git_blob_sha": "670c7deceb04429b5c1169221309a65482e0496d",
+    "size_bytes": 21215,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_batch_import_live.py",
+      "opt/pincabos/web/pincabos_batch_import_worker_v2.py",
+      "opt/pincabos/web/validate_refactor.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "utc_now",
+        "line": 40,
+        "top_level": true
+      },
+      {
+        "name": "ensure_dirs",
+        "line": 44,
+        "top_level": true
+      },
+      {
+        "name": "state_lock",
+        "line": 103,
+        "top_level": true
+      },
+      {
+        "name": "read_json",
+        "line": 116,
+        "top_level": true
+      },
+      {
+        "name": "atomic_write",
+        "line": 123,
+        "top_level": true
+      },
+      {
+        "name": "job_path",
+        "line": 130,
+        "top_level": true
+      },
+      {
+        "name": "upload_dir",
+        "line": 134,
+        "top_level": true
+      },
+      {
+        "name": "load_job_unlocked",
+        "line": 138,
+        "top_level": true
+      },
+      {
+        "name": "save_job_unlocked",
+        "line": 143,
+        "top_level": true
+      },
+      {
+        "name": "load_job",
+        "line": 148,
+        "top_level": true
+      },
+      {
+        "name": "update_job",
+        "line": 153,
+        "top_level": true
+      },
+      {
+        "name": "active_job_id_unlocked",
+        "line": 163,
+        "top_level": true
+      },
+      {
+        "name": "active_job_id",
+        "line": 171,
+        "top_level": true
+      },
+      {
+        "name": "set_active_unlocked",
+        "line": 176,
+        "top_level": true
+      },
+      {
+        "name": "add_event",
+        "line": 186,
+        "top_level": true
+      },
+      {
+        "name": "refresh_progress",
+        "line": 194,
+        "top_level": true
+      },
+      {
+        "name": "public_job",
+        "line": 232,
+        "top_level": true
+      },
+      {
+        "name": "list_jobs",
+        "line": 252,
+        "top_level": true
+      },
+      {
+        "name": "create_job",
+        "line": 264,
+        "top_level": true
+      },
+      {
+        "name": "job_is_stale",
+        "line": 318,
+        "top_level": true
+      },
+      {
+        "name": "pause_job",
+        "line": 334,
+        "top_level": true
+      },
+      {
+        "name": "complete_pause",
+        "line": 388,
+        "top_level": true
+      },
+      {
+        "name": "resume_job",
+        "line": 413,
+        "top_level": true
+      },
+      {
+        "name": "skip_job",
+        "line": 505,
+        "top_level": true
+      },
+      {
+        "name": "collect_orphan_uploads",
+        "line": 568,
+        "top_level": true
+      },
+      {
+        "name": "next_queued_job_id",
+        "line": 597,
+        "top_level": true
+      },
+      {
+        "name": "cleanup_uploads",
+        "line": 637,
+        "top_level": true
+      },
+      {
+        "name": "recover_after_restart",
+        "line": 650,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "contextlib",
+      "datetime",
+      "fcntl",
+      "json",
+      "os",
+      "pathlib",
+      "pwd",
+      "shutil",
+      "typing",
+      "uuid"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/var/lib/pincabos/batch-live-import",
+      "/var/lib/pincabos/batch-live/export.lock"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": [
+      "PINCABOS_BATCH_IMPORT_LIVE_DIR",
+      "PINCABOS_BATCH_LIVE_SHARED_LOCK",
+      "PINCABOS_BATCH_MAX_EVENTS",
+      "PINCABOS_BATCH_STALE_SECONDS"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_batch_import_queue_v2.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

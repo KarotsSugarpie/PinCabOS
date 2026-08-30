@@ -1,0 +1,181 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_image_studio",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_image_studio.py",
+    "manifest_file": "opt/pincabos/web/pincabos_image_studio.json",
+    "language": "python",
+    "git_blob_sha": "f29c46b270678ade42fd17e1509598515812d03c",
+    "size_bytes": 15980,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_json_response",
+        "line": 21,
+        "top_level": true
+      },
+      {
+        "name": "_fail",
+        "line": 25,
+        "top_level": true
+      },
+      {
+        "name": "_allowed_global_bases",
+        "line": 29,
+        "top_level": true
+      },
+      {
+        "name": "_is_under_allowed_base",
+        "line": 42,
+        "top_level": true
+      },
+      {
+        "name": "_root_base",
+        "line": 53,
+        "top_level": true
+      },
+      {
+        "name": "_safe_target",
+        "line": 93,
+        "top_level": true
+      },
+      {
+        "name": "_is_image_live_request",
+        "line": 117,
+        "top_level": true
+      },
+      {
+        "name": "_studio_html",
+        "line": 124,
+        "top_level": true
+      },
+      {
+        "name": "_extract_absolute_image_from_body",
+        "line": 245,
+        "top_level": true
+      },
+      {
+        "name": "_inject_image_studio",
+        "line": 273,
+        "top_level": true
+      },
+      {
+        "name": "_serve_image_file",
+        "line": 334,
+        "top_level": true
+      },
+      {
+        "name": "_save_image",
+        "line": 363,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 439,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/commander/live/image-studio-file",
+        "methods": [
+          "UNKNOWN"
+        ],
+        "function": null,
+        "line": 442
+      },
+      {
+        "path": "/tools/commander/live/image-save",
+        "methods": [
+          "UNKNOWN"
+        ],
+        "function": null,
+        "line": 448
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "base64",
+      "flask",
+      "grp",
+      "html",
+      "json",
+      "mimetypes",
+      "os",
+      "pathlib",
+      "pwd",
+      "re",
+      "shutil",
+      "time",
+      "urllib.parse"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/web/static/pincabos-image-studio-v1.css",
+      "opt/pincabos/web/static/pincabos-image-studio-v1.js"
+    ],
+    "runtime_paths": [
+      "/home/pinball",
+      "/home/pinball/Backups",
+      "/home/pinball/Exports",
+      "/home/pinball/NetworkDrives",
+      "/home/pinball/Tables",
+      "/home/pinball/[",
+      "/media/pinball",
+      "/media/pinball/[",
+      "/opt/pincabos",
+      "/opt/pincabos/config",
+      "/opt/pincabos/media",
+      "/opt/pincabos/media/[",
+      "/opt/pincabos/media/images",
+      "/opt/pincabos/media/images/balls",
+      "/opt/pincabos/media/images/balls/file.png",
+      "/opt/pincabos/web/static",
+      "/run/media/pinball"
+    ],
+    "configuration_paths": [],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-image-studio-v1.css",
+      "opt/pincabos/web/static/pincabos-image-studio-v1.js"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_image_studio.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

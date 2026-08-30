@@ -1,0 +1,278 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_webapp_firstrun",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_webapp_firstrun.py",
+    "manifest_file": "opt/pincabos/web/pincabos_webapp_firstrun.json",
+    "language": "python",
+    "git_blob_sha": "b1e67c7d29dd26536c3d2febc0211ad8bdf25f9e",
+    "size_bytes": 27389,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/validate_refactor.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "route",
+        "line": 28,
+        "top_level": true
+      },
+      {
+        "name": "decorator",
+        "line": 30,
+        "top_level": false
+      },
+      {
+        "name": "before_request",
+        "line": 35,
+        "top_level": true
+      },
+      {
+        "name": "after_request",
+        "line": 39,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 43,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_default_cfg",
+        "line": 68,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_required_keys",
+        "line": 77,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_boot_time_ts",
+        "line": 81,
+        "top_level": true
+      },
+      {
+        "name": "_firstrun_boot_id",
+        "line": 92,
+        "top_level": true
+      },
+      {
+        "name": "_firstrun_gpu_probe",
+        "line": 102,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_gpu_state",
+        "line": 155,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_gpu_status_text",
+        "line": 198,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_load_cfg",
+        "line": 209,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_save_cfg",
+        "line": 229,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_card",
+        "line": 248,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_network_card",
+        "line": 281,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_page",
+        "line": 315,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_reboot",
+        "line": 727,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_action",
+        "line": 744,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_popup_disable",
+        "line": 824,
+        "top_level": true
+      },
+      {
+        "name": "firstrun_save",
+        "line": 846,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_firstrun_gpu_manual",
+        "line": 874,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_firstrun_gpu_manual_status",
+        "line": 899,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/first-run",
+        "methods": [
+          "GET"
+        ],
+        "function": "firstrun_page",
+        "line": 314
+      },
+      {
+        "path": "/first-run/reboot",
+        "methods": [
+          "POST"
+        ],
+        "function": "firstrun_reboot",
+        "line": 726
+      },
+      {
+        "path": "/first-run/action/<action>",
+        "methods": [
+          "POST"
+        ],
+        "function": "firstrun_action",
+        "line": 743
+      },
+      {
+        "path": "/first-run/popup-disable",
+        "methods": [
+          "POST"
+        ],
+        "function": "firstrun_popup_disable",
+        "line": 823
+      },
+      {
+        "path": "/first-run/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "firstrun_save",
+        "line": 845
+      },
+      {
+        "path": "/first-run/gpu-manual",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_firstrun_gpu_manual",
+        "line": 873
+      },
+      {
+        "path": "/first-run/gpu-manual-status",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_firstrun_gpu_manual_status",
+        "line": 898
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "datetime",
+      "flask",
+      "glob",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "shlex",
+      "shutil",
+      "socket",
+      "struct",
+      "subprocess",
+      "tempfile",
+      "time",
+      "zipfile"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [
+      "opt/pincabos/config/firstrun.json",
+      "opt/pincabos/web/static/branding/FBBanner.png",
+      "opt/pincabos/web/static/branding/firstrun-welcome-bg.png"
+    ],
+    "runtime_paths": [
+      "/opt/pincabos/config/firstrun-gpu-state.json",
+      "/proc/stat",
+      "/proc/sys/kernel/random/boot_id",
+      "/sys/class/drm",
+      "/usr/bin/lspci",
+      "/usr/bin/nvidia-smi",
+      "/usr/bin/sudo",
+      "/usr/sbin/reboot"
+    ],
+    "configuration_paths": [
+      "/opt/pincabos/config/firstrun-gpu-state.json",
+      "/opt/pincabos/config/firstrun.json"
+    ],
+    "assets": [
+      "opt/pincabos/web/static/branding/FBBanner.png",
+      "opt/pincabos/web/static/branding/firstrun-welcome-bg.png"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/lspci",
+      "/usr/bin/nvidia-smi",
+      "/usr/bin/sudo",
+      "/usr/sbin/reboot",
+      "chown"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_webapp_firstrun.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

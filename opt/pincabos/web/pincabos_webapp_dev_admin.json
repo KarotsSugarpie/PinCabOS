@@ -1,0 +1,688 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_webapp_dev_admin",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_webapp_dev_admin.py",
+    "manifest_file": "opt/pincabos/web/pincabos_webapp_dev_admin.json",
+    "language": "python",
+    "git_blob_sha": "10566226e5418fc8e0bb36abf3ca477323499c6f",
+    "size_bytes": 66141,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "route",
+        "line": 29,
+        "top_level": true
+      },
+      {
+        "name": "decorator",
+        "line": 31,
+        "top_level": false
+      },
+      {
+        "name": "before_request",
+        "line": 36,
+        "top_level": true
+      },
+      {
+        "name": "after_request",
+        "line": 40,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 44,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dev_logout_page_final",
+        "line": 76,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dev_page_remote",
+        "line": 86,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dev_login_page",
+        "line": 234,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_feedback_config",
+        "line": 259,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dev_cmd",
+        "line": 302,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dev_sysinfo_remote",
+        "line": 309,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_feedback_watchdog",
+        "line": 406,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_send_feedback_remote",
+        "line": 447,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dev_is_logged",
+        "line": 479,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dev_auth_guard",
+        "line": 487,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_curl_probe",
+        "line": 511,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_ping_probe",
+        "line": 565,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_ssh_probe",
+        "line": 602,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_http_status",
+        "line": 667,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_status_card_html",
+        "line": 749,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_all_status_cards_html",
+        "line": 787,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_logs_options_html",
+        "line": 805,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_page",
+        "line": 831,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_cmd_for_script",
+        "line": 1155,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_write_action_log",
+        "line": 1159,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_iframe_result",
+        "line": 1173,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_is_logged",
+        "line": 1181,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_auth_guard",
+        "line": 1189,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_action_iso_status",
+        "line": 1202,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_action_iso_mode",
+        "line": 1211,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_action_game_mode",
+        "line": 1220,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_credentials_default_notice",
+        "line": 1230,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_default_credentials_notice",
+        "line": 1249,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_login_body",
+        "line": 1261,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_index",
+        "line": 1282,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_logout",
+        "line": 1309,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_publy_webpass_secret_path",
+        "line": 1314,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_publy_read_webpass_secret",
+        "line": 1318,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_publy_env",
+        "line": 1328,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_action_empty",
+        "line": 1339,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_publy_script_path",
+        "line": 1355,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_frame_publy_dry_run",
+        "line": 1376,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_frame_publy_apply",
+        "line": 1385,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_clean_depot_script_path",
+        "line": 1393,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_frame_cleanup_dry_run",
+        "line": 1410,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_frame_cleanup_apply",
+        "line": 1418,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_log_dir",
+        "line": 1425,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_log_timestamp_from_name",
+        "line": 1431,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_log_files",
+        "line": 1451,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_safe_log_path",
+        "line": 1490,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_logs_list",
+        "line": 1516,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_logs_view",
+        "line": 1533,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_logs_download",
+        "line": 1581,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_logs_delete",
+        "line": 1594,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_logs_delete_all",
+        "line": 1610,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_action_cleanup_dry_run",
+        "line": 1631,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_action_cleanup_apply",
+        "line": 1639,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_require_login",
+        "line": 1647,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_run_script",
+        "line": 1653,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_status_page",
+        "line": 1751,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_publish_tree_dry_run",
+        "line": 1795,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_publish_tree_apply",
+        "line": 1804,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_cleanup_dry_run",
+        "line": 1812,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_cleanup_apply",
+        "line": 1820,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_status_local",
+        "line": 1829,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_admin_console_root",
+        "line": 1846,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dev_login_page_safe",
+        "line": 1868,
+        "top_level": true
+      },
+      {
+        "name": "_read",
+        "line": 1876,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dev_submit",
+        "line": 1928,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dev_cleanup_nosnap",
+        "line": 1964,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/dev/logout",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincabos_dev_logout_page_final",
+        "line": 75
+      },
+      {
+        "path": "/dev",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincabos_dev_page_remote",
+        "line": 85
+      },
+      {
+        "path": "/admin/action/iso-status",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_admin_action_iso_status",
+        "line": 1201
+      },
+      {
+        "path": "/admin/action/iso-mode",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_admin_action_iso_mode",
+        "line": 1210
+      },
+      {
+        "path": "/admin/action/game-mode",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_admin_action_game_mode",
+        "line": 1219
+      },
+      {
+        "path": "/admin",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincabos_admin_index",
+        "line": 1281
+      },
+      {
+        "path": "/admin/logout",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_admin_logout",
+        "line": 1308
+      },
+      {
+        "path": "/admin/action-empty",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_admin_action_empty",
+        "line": 1338
+      },
+      {
+        "path": "/admin/frame/publy-dry-run",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincabos_admin_frame_publy_dry_run",
+        "line": 1375
+      },
+      {
+        "path": "/admin/frame/publy-apply",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincabos_admin_frame_publy_apply",
+        "line": 1384
+      },
+      {
+        "path": "/admin/frame/cleanup-dry-run",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincabos_admin_frame_cleanup_dry_run",
+        "line": 1409
+      },
+      {
+        "path": "/admin/frame/cleanup-apply",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincabos_admin_frame_cleanup_apply",
+        "line": 1417
+      },
+      {
+        "path": "/admin/logs/list",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_admin_logs_list",
+        "line": 1515
+      },
+      {
+        "path": "/admin/logs/view",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_admin_logs_view",
+        "line": 1532
+      },
+      {
+        "path": "/admin/logs/download",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_admin_logs_download",
+        "line": 1580
+      },
+      {
+        "path": "/admin/logs/delete",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_admin_logs_delete",
+        "line": 1593
+      },
+      {
+        "path": "/admin/logs/delete-all",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_admin_logs_delete_all",
+        "line": 1609
+      },
+      {
+        "path": "/admin/publish-tree/dry-run",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_admin_publish_tree_dry_run",
+        "line": 1794
+      },
+      {
+        "path": "/admin/publish-tree/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_admin_publish_tree_apply",
+        "line": 1803
+      },
+      {
+        "path": "/admin/status",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_admin_status_local",
+        "line": 1828
+      },
+      {
+        "path": "/admin/console-root",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_admin_console_root",
+        "line": 1845
+      },
+      {
+        "path": "/dev/login",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincabos_dev_login_page_safe",
+        "line": 1867
+      },
+      {
+        "path": "/dev/submit",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_dev_submit",
+        "line": 1927
+      },
+      {
+        "path": "/dev/cleanup-nosnap",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_dev_cleanup_nosnap",
+        "line": 1963
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "datetime",
+      "flask",
+      "glob",
+      "hmac",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "shlex",
+      "shutil",
+      "socket",
+      "struct",
+      "subprocess",
+      "tempfile",
+      "time",
+      "urllib.request",
+      "zipfile"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [
+      "etc/os-release",
+      "opt/pincabos/config/admin-login.txt",
+      "opt/pincabos/config/dev-login.txt",
+      "opt/pincabos/config/feedback-server.json",
+      "opt/pincabos/config/screens/screens.json",
+      "opt/pincabos/tools/pincabos-cleanup.sh",
+      "opt/pincabos/tools/publy.sh"
+    ],
+    "runtime_paths": [
+      "/dev/cleanup-nosnap",
+      "/dev/login",
+      "/dev/logout",
+      "/dev/null",
+      "/dev/submit",
+      "/home/pinball/Share",
+      "/home/pinball/Tables",
+      "/opt/pincabos",
+      "/opt/pincabos/backups",
+      "/opt/pincabos/bin/pincabos-publy",
+      "/opt/pincabos/bin/publy",
+      "/opt/pincabos/config/admin-password.txt",
+      "/opt/pincabos/config/dev-password.txt",
+      "/opt/pincabos/config/iso-firstboot-safe.flag",
+      "/opt/pincabos/config/webserver-webpass.secret",
+      "/opt/pincabos/install/99-clean-depot.sh",
+      "/opt/pincabos/install/pincabos-publy.sh",
+      "/opt/pincabos/install/publy.sh",
+      "/opt/pincabos/logs",
+      "/opt/pincabos/logs/*",
+      "/opt/pincabos/tools/pincabos-cleanup-nosnap.sh",
+      "/opt/pincabos/tools/pincabos-publy.sh",
+      "/opt/pincabos/web",
+      "/usr/bin/curl",
+      "/usr/bin/ssh",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl"
+    ],
+    "configuration_paths": [
+      "/opt/pincabos/config/feedback-server.json",
+      "/opt/pincabos/config/screens/screens.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [
+      "pincabos-console.service",
+      "pincabos-vpinfe.service",
+      "pincabos-webapp.service"
+    ],
+    "commands": [
+      "/bin/ping",
+      "/opt/pincabos/bin/pincabos-publy",
+      "/opt/pincabos/bin/publy",
+      "/opt/pincabos/tools/pincabos-cleanup-nosnap.sh",
+      "/opt/pincabos/tools/pincabos-cleanup.sh",
+      "/opt/pincabos/tools/pincabos-publy.sh",
+      "/opt/pincabos/tools/publy.sh",
+      "/usr/bin/curl",
+      "/usr/bin/ssh",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_webapp_dev_admin.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

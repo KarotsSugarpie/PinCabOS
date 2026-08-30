@@ -1,0 +1,74 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-fulldmd-import-hook",
+    "scope": "runtime_bin",
+    "kind": "executable",
+    "source_file": "opt/pincabos/bin/pincabos-fulldmd-import-hook.py",
+    "manifest_file": "opt/pincabos/bin/pincabos-fulldmd-import-hook.json",
+    "language": "python",
+    "git_blob_sha": "692eb2f353ee26df77edec10b0f9922e88da365c",
+    "size_bytes": 631,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "main",
+        "line": 13,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "pathlib",
+      "subprocess",
+      "sys"
+    ],
+    "local_modules": [
+      "opt/pincabos/bin/pincabos-fulldmd-process-table.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/bin/pincabos-fulldmd-process-table.py",
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/bin/pincabos-fulldmd-import-hook.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

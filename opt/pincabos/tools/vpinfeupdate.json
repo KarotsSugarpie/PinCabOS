@@ -1,0 +1,248 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "vpinfeupdate",
+    "scope": "tool",
+    "kind": "executable",
+    "source_file": "opt/pincabos/tools/vpinfeupdate.py",
+    "manifest_file": "opt/pincabos/tools/vpinfeupdate.json",
+    "language": "python",
+    "git_blob_sha": "6c3f82bbffc619512fe9f3266cfba9fa9fc4337a",
+    "size_bytes": 21771,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/tools/update-vpinfe.sh",
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/pincabos_dashboard_lobby.py",
+      "opt/pincabos/web/pincabos_vpinfe_updates.py",
+      "opt/pincabos/web/pincabos_webapp_core.py",
+      "opt/pincabos/web/tools.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "utc_now",
+        "line": 37,
+        "top_level": true
+      },
+      {
+        "name": "log",
+        "line": 40,
+        "top_level": true
+      },
+      {
+        "name": "fail",
+        "line": 43,
+        "top_level": true
+      },
+      {
+        "name": "require_root",
+        "line": 46,
+        "top_level": true
+      },
+      {
+        "name": "read_state",
+        "line": 50,
+        "top_level": true
+      },
+      {
+        "name": "write_state",
+        "line": 59,
+        "top_level": true
+      },
+      {
+        "name": "sha256_file",
+        "line": 79,
+        "top_level": true
+      },
+      {
+        "name": "static_build_id",
+        "line": 86,
+        "top_level": true
+      },
+      {
+        "name": "binary_fingerprint",
+        "line": 100,
+        "top_level": true
+      },
+      {
+        "name": "detect_local",
+        "line": 114,
+        "top_level": true
+      },
+      {
+        "name": "api_request",
+        "line": 140,
+        "top_level": true
+      },
+      {
+        "name": "is_linux_x64_slim_archive",
+        "line": 151,
+        "top_level": true
+      },
+      {
+        "name": "fetch_remote",
+        "line": 160,
+        "top_level": true
+      },
+      {
+        "name": "version_key",
+        "line": 206,
+        "top_level": true
+      },
+      {
+        "name": "update_summary",
+        "line": 212,
+        "top_level": true
+      },
+      {
+        "name": "status_payload",
+        "line": 227,
+        "top_level": true
+      },
+      {
+        "name": "ensure_safe_member",
+        "line": 248,
+        "top_level": true
+      },
+      {
+        "name": "extract_archive",
+        "line": 253,
+        "top_level": true
+      },
+      {
+        "name": "validate_install_root",
+        "line": 282,
+        "top_level": true
+      },
+      {
+        "name": "locate_install_root",
+        "line": 312,
+        "top_level": true
+      },
+      {
+        "name": "chown_tree",
+        "line": 328,
+        "top_level": true
+      },
+      {
+        "name": "systemctl",
+        "line": 341,
+        "top_level": true
+      },
+      {
+        "name": "service_active",
+        "line": 353,
+        "top_level": true
+      },
+      {
+        "name": "wait_service_active",
+        "line": 356,
+        "top_level": true
+      },
+      {
+        "name": "same_filesystem",
+        "line": 364,
+        "top_level": true
+      },
+      {
+        "name": "download",
+        "line": 372,
+        "top_level": true
+      },
+      {
+        "name": "operation_state",
+        "line": 397,
+        "top_level": true
+      },
+      {
+        "name": "run_check",
+        "line": 417,
+        "top_level": true
+      },
+      {
+        "name": "run_update",
+        "line": 429,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 536,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "datetime",
+      "fcntl",
+      "grp",
+      "hashlib",
+      "json",
+      "os",
+      "pathlib",
+      "pwd",
+      "re",
+      "shutil",
+      "stat",
+      "subprocess",
+      "sys",
+      "tarfile",
+      "tempfile",
+      "time",
+      "typing",
+      "urllib.parse",
+      "urllib.request",
+      "zipfile"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/home/pinball/vpinfe",
+      "/opt/pincabos/backups/vpinfe-update",
+      "/opt/pincabos/runtime/vpinfe-update",
+      "/opt/pincabos/state",
+      "/run/lock/pincabos-vpinfeupdate.lock",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/bin/systemctl",
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/tools/vpinfeupdate.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

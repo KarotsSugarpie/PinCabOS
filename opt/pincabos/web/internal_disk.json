@@ -1,0 +1,175 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "internal_disk",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/internal_disk.py",
+    "manifest_file": "opt/pincabos/web/internal_disk.json",
+    "language": "python",
+    "git_blob_sha": "825217b6170ba6dff48fb155cd841022170f8ac3",
+    "size_bytes": 12014,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "esc",
+        "line": 33,
+        "top_level": true
+      },
+      {
+        "name": "aide",
+        "line": 37,
+        "top_level": true
+      },
+      {
+        "name": "taille_lisible",
+        "line": 48,
+        "top_level": true
+      },
+      {
+        "name": "page",
+        "line": 60,
+        "top_level": true
+      },
+      {
+        "name": "bloc_etat",
+        "line": 103,
+        "top_level": true
+      },
+      {
+        "name": "page_disque",
+        "line": 117,
+        "top_level": true
+      },
+      {
+        "name": "explorer",
+        "line": 157,
+        "top_level": true
+      },
+      {
+        "name": "adopter",
+        "line": 217,
+        "top_level": true
+      },
+      {
+        "name": "redemarrer_frontend",
+        "line": 248,
+        "top_level": true
+      },
+      {
+        "name": "liberer",
+        "line": 265,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/internal-disk",
+        "methods": [
+          "GET"
+        ],
+        "function": "page_disque",
+        "line": 116
+      },
+      {
+        "path": "/tools/internal-disk/probe",
+        "methods": [
+          "POST"
+        ],
+        "function": "explorer",
+        "line": 156
+      },
+      {
+        "path": "/tools/internal-disk/adopt",
+        "methods": [
+          "POST"
+        ],
+        "function": "adopter",
+        "line": 216
+      },
+      {
+        "path": "/tools/internal-disk/restart-frontend",
+        "methods": [
+          "POST"
+        ],
+        "function": "redemarrer_frontend",
+        "line": 247
+      },
+      {
+        "path": "/tools/internal-disk/release",
+        "methods": [
+          "POST"
+        ],
+        "function": "liberer",
+        "line": 264
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "html",
+      "json",
+      "pathlib",
+      "subprocess",
+      "sys"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [
+      "opt/pincabos/web/static/pincabos-theme-global.css",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-internal-disk"
+    ],
+    "runtime_paths": [
+      "/home/pinball/Tables",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl"
+    ],
+    "configuration_paths": [],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-theme-global.css"
+    ],
+    "systemd_units_mentioned": [
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl",
+      "/usr/local/sbin/pincabos-internal-disk"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/internal_disk.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

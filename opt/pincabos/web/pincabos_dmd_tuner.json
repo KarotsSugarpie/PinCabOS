@@ -1,0 +1,228 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_dmd_tuner",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_dmd_tuner.py",
+    "manifest_file": "opt/pincabos/web/pincabos_dmd_tuner.json",
+    "language": "python",
+    "git_blob_sha": "9c20dcef1efc6623a3dfe066aba7c2d981851bb3",
+    "size_bytes": 39588,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_fulldmd_autoarrange.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_dmd_tuner"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_read_env",
+        "line": 28,
+        "top_level": true
+      },
+      {
+        "name": "_int",
+        "line": 40,
+        "top_level": true
+      },
+      {
+        "name": "_active_table",
+        "line": 47,
+        "top_level": true
+      },
+      {
+        "name": "_screen_geometry",
+        "line": 76,
+        "top_level": true
+      },
+      {
+        "name": "_scoreview_window",
+        "line": 96,
+        "top_level": true
+      },
+      {
+        "name": "_read_ini_values",
+        "line": 119,
+        "top_level": true
+      },
+      {
+        "name": "_read_sections",
+        "line": 143,
+        "top_level": true
+      },
+      {
+        "name": "_table_ini_payload",
+        "line": 157,
+        "top_level": true
+      },
+      {
+        "name": "_official_payload",
+        "line": 169,
+        "top_level": true
+      },
+      {
+        "name": "_clamp",
+        "line": 182,
+        "top_level": true
+      },
+      {
+        "name": "_write_command",
+        "line": 192,
+        "top_level": true
+      },
+      {
+        "name": "_runtime_for_pid",
+        "line": 205,
+        "top_level": true
+      },
+      {
+        "name": "_pup_mode_for_pid",
+        "line": 276,
+        "top_level": true
+      },
+      {
+        "name": "_rawscore_ini_values",
+        "line": 332,
+        "top_level": true
+      },
+      {
+        "name": "_wait_runtime",
+        "line": 429,
+        "top_level": true
+      },
+      {
+        "name": "_status_payload",
+        "line": 447,
+        "top_level": true
+      },
+      {
+        "name": "_replace_first_info_card",
+        "line": 814,
+        "top_level": true
+      },
+      {
+        "name": "_card_html",
+        "line": 844,
+        "top_level": true
+      },
+      {
+        "name": "register_dmd_tuner",
+        "line": 884,
+        "top_level": true
+      },
+      {
+        "name": "dmd_overlay_status",
+        "line": 891,
+        "top_level": false
+      },
+      {
+        "name": "dmd_overlay_preview",
+        "line": 896,
+        "top_level": false
+      },
+      {
+        "name": "dmd_overlay_apply",
+        "line": 912,
+        "top_level": false
+      },
+      {
+        "name": "dmd_overlay_nudge",
+        "line": 926,
+        "top_level": false
+      },
+      {
+        "name": "dmd_overlay_save",
+        "line": 966,
+        "top_level": false
+      },
+      {
+        "name": "dmd_overlay_reset",
+        "line": 987,
+        "top_level": false
+      },
+      {
+        "name": "dmd_overlay_inject",
+        "line": 1004,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "configparser",
+      "flask",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "subprocess",
+      "threading",
+      "time"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/screen.py"
+    ],
+    "repository_files": [
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-dmd-bridge-helper"
+    ],
+    "runtime_paths": [
+      "/home/pinball/.Xauthority",
+      "/home/pinball/Tables",
+      "/proc/{pid}/environ",
+      "/run/lightdm/root/:0",
+      "/run/pincabos-b2s-dmd-tuner",
+      "/run/pincabos-dashboard-live/screen2.jpg",
+      "/run/pincabos-scoreview-x11-hq/preview.jpg",
+      "/run/user/1000",
+      "/usr/bin/sudo",
+      "/usr/bin/wmctrl",
+      "/usr/bin/xrandr"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/sudo",
+      "/usr/bin/wmctrl",
+      "/usr/bin/xrandr",
+      "/usr/local/sbin/pincabos-dmd-bridge-helper"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_dmd_tuner.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

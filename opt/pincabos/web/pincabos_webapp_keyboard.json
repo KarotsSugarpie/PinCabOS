@@ -1,0 +1,128 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_webapp_keyboard",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_webapp_keyboard.py",
+    "manifest_file": "opt/pincabos/web/pincabos_webapp_keyboard.json",
+    "language": "python",
+    "git_blob_sha": "6546b4a2ac5b8601dc5f6e56af1107511d191d86",
+    "size_bytes": 10100,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_keyboard_routes"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_tool",
+        "line": 17,
+        "top_level": true
+      },
+      {
+        "name": "_csrf",
+        "line": 34,
+        "top_level": true
+      },
+      {
+        "name": "_csrf_ok",
+        "line": 42,
+        "top_level": true
+      },
+      {
+        "name": "_option",
+        "line": 48,
+        "top_level": true
+      },
+      {
+        "name": "_page_html",
+        "line": 52,
+        "top_level": true
+      },
+      {
+        "name": "register_keyboard_routes",
+        "line": 107,
+        "top_level": true
+      },
+      {
+        "name": "keyboard_page",
+        "line": 108,
+        "top_level": false
+      },
+      {
+        "name": "variants_api",
+        "line": 114,
+        "top_level": false
+      },
+      {
+        "name": "status_api",
+        "line": 118,
+        "top_level": false
+      },
+      {
+        "name": "apply_api",
+        "line": 121,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "hmac",
+      "html",
+      "json",
+      "secrets",
+      "subprocess",
+      "typing"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "etc/default/keyboard",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-keyboard-layout"
+    ],
+    "runtime_paths": [
+      "/usr/bin/sudo"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/sudo",
+      "/usr/local/sbin/pincabos-keyboard-layout"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_webapp_keyboard.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

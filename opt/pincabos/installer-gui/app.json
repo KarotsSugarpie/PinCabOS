@@ -1,0 +1,184 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "app",
+    "scope": "installer_gui",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/installer-gui/app.py",
+    "manifest_file": "opt/pincabos/installer-gui/app.json",
+    "language": "python",
+    "git_blob_sha": "b1ef80ed737d319c6a19f76c905269f4643838f5",
+    "size_bytes": 9304,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/script/iso.sh",
+      "opt/pincabos/tools/pincabos-verifier-perimetre-maj.py"
+    ],
+    "systemd_units": [
+      "etc/systemd/system/pincabos-gui-wizard.service",
+      "etc/systemd/system/pincabos-webapp.service"
+    ],
+    "has_main_guard": true,
+    "registration_functions": [
+      "install"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "index",
+        "line": 39,
+        "top_level": true
+      },
+      {
+        "name": "disques_reels",
+        "line": 44,
+        "top_level": true
+      },
+      {
+        "name": "disks",
+        "line": 70,
+        "top_level": true
+      },
+      {
+        "name": "keyboard",
+        "line": 75,
+        "top_level": true
+      },
+      {
+        "name": "install",
+        "line": 115,
+        "top_level": true
+      },
+      {
+        "name": "progress",
+        "line": 170,
+        "top_level": true
+      },
+      {
+        "name": "stream",
+        "line": 171,
+        "top_level": false
+      },
+      {
+        "name": "reboot",
+        "line": 218,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/",
+        "methods": [
+          "GET"
+        ],
+        "function": "index",
+        "line": 38
+      },
+      {
+        "path": "/api/disks",
+        "methods": [
+          "GET"
+        ],
+        "function": "disks",
+        "line": 69
+      },
+      {
+        "path": "/api/keyboard",
+        "methods": [
+          "POST"
+        ],
+        "function": "keyboard",
+        "line": 74
+      },
+      {
+        "path": "/api/install",
+        "methods": [
+          "POST"
+        ],
+        "function": "install",
+        "line": 114
+      },
+      {
+        "path": "/api/progress",
+        "methods": [
+          "GET"
+        ],
+        "function": "progress",
+        "line": 169
+      },
+      {
+        "path": "/api/reboot",
+        "methods": [
+          "POST"
+        ],
+        "function": "reboot",
+        "line": 217
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "flask",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "shlex",
+      "subprocess",
+      "time"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/installer-gui/i18n.json",
+      "opt/pincabos/installer-gui/templates/wizard.html",
+      "usr/local/sbin/pincabos"
+    ],
+    "runtime_paths": [
+      "/dev/[a-z0-9]+",
+      "/dev/nvme0n1",
+      "/dev/sda",
+      "/run/pincabos",
+      "/usr/bin/env",
+      "/usr/local/sbin/pincabos-live-installer"
+    ],
+    "configuration_paths": [],
+    "assets": [
+      "opt/pincabos/installer-gui/templates/wizard.html"
+    ],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "/usr/local/sbin/pincabos-live-installer",
+      "lsblk",
+      "systemctl"
+    ],
+    "environment_variables": [
+      "PCO_DEMO",
+      "PCO_RUN_DIR",
+      "PCO_WIZARD_BIND"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/installer-gui/app.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

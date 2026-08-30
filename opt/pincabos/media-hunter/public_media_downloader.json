@@ -1,0 +1,119 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "public_media_downloader",
+    "scope": "media_hunter",
+    "kind": "executable",
+    "source_file": "opt/pincabos/media-hunter/public_media_downloader.py",
+    "manifest_file": "opt/pincabos/media-hunter/public_media_downloader.json",
+    "language": "python",
+    "git_blob_sha": "3db9eac49dd0249fcc4c7a5b6b2b4a4e45920f23",
+    "size_bytes": 10064,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "sanitize_filename",
+        "line": 36,
+        "top_level": true
+      },
+      {
+        "name": "classify_media",
+        "line": 43,
+        "top_level": true
+      },
+      {
+        "name": "media_extension",
+        "line": 62,
+        "top_level": true
+      },
+      {
+        "name": "robots_allowed",
+        "line": 66,
+        "top_level": true
+      },
+      {
+        "name": "filename_from_response",
+        "line": 86,
+        "top_level": true
+      },
+      {
+        "name": "unique_path",
+        "line": 109,
+        "top_level": true
+      },
+      {
+        "name": "download_file",
+        "line": 121,
+        "top_level": true
+      },
+      {
+        "name": "crawl",
+        "line": 184,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 299,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "argparse",
+      "bs4",
+      "collections",
+      "hashlib",
+      "logging",
+      "os",
+      "pathlib",
+      "re",
+      "requests",
+      "time",
+      "urllib.parse",
+      "urllib.robotparser"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/home/pinball/MediaHunter/downloads",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/media-hunter/public_media_downloader.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

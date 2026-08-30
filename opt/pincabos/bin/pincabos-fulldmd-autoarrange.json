@@ -1,0 +1,128 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-fulldmd-autoarrange",
+    "scope": "runtime_bin",
+    "kind": "executable",
+    "source_file": "opt/pincabos/bin/pincabos-fulldmd-autoarrange.py",
+    "manifest_file": "opt/pincabos/bin/pincabos-fulldmd-autoarrange.json",
+    "language": "python",
+    "git_blob_sha": "c8c08b8a6321473232935f573c7845b5119adc93",
+    "size_bytes": 13999,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/bin/pincabos-fulldmd-process-table.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "parse_env",
+        "line": 28,
+        "top_level": true
+      },
+      {
+        "name": "x11_env",
+        "line": 42,
+        "top_level": true
+      },
+      {
+        "name": "target_geometry",
+        "line": 57,
+        "top_level": true
+      },
+      {
+        "name": "decode_png",
+        "line": 78,
+        "top_level": true
+      },
+      {
+        "name": "is_dark",
+        "line": 187,
+        "top_level": true
+      },
+      {
+        "name": "max_rectangles",
+        "line": 194,
+        "top_level": true
+      },
+      {
+        "name": "detect_rect",
+        "line": 248,
+        "top_level": true
+      },
+      {
+        "name": "atomic_write",
+        "line": 281,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 296,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "json",
+      "math",
+      "os",
+      "pathlib",
+      "re",
+      "struct",
+      "subprocess",
+      "sys",
+      "tempfile",
+      "time",
+      "zlib"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/config/display-aliases.env"
+    ],
+    "runtime_paths": [
+      "/home/pinball/.Xauthority",
+      "/run/lightdm/root/:0",
+      "/usr/bin/env",
+      "/var/run/lightdm/root/:0"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "xdpyinfo",
+      "xrandr"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/bin/pincabos-fulldmd-autoarrange.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

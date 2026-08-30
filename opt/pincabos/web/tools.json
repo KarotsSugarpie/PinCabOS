@@ -1,0 +1,828 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "tools",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/tools.py",
+    "manifest_file": "opt/pincabos/web/tools.json",
+    "language": "python",
+    "git_blob_sha": "15ef44aeaa59ca6fd6ab533d8d5e8a63bc611490",
+    "size_bytes": 212775,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/pincabos_updates.py",
+      "opt/pincabos/web/validate_refactor.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_tools_routes"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "tools_hub_html",
+        "line": 30,
+        "top_level": true
+      },
+      {
+        "name": "tools_page_html",
+        "line": 864,
+        "top_level": true
+      },
+      {
+        "name": "register_tools_routes",
+        "line": 894,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_vpinfe_update_spinner_after_request",
+        "line": 897,
+        "top_level": false
+      },
+      {
+        "name": "tools",
+        "line": 1152,
+        "top_level": false
+      },
+      {
+        "name": "_tools_esc",
+        "line": 1236,
+        "top_level": true
+      },
+      {
+        "name": "_tools_read_ini_preserve_lines",
+        "line": 1240,
+        "top_level": true
+      },
+      {
+        "name": "push_current",
+        "line": 1268,
+        "top_level": false
+      },
+      {
+        "name": "_tools_ini_description_legacy_v1",
+        "line": 1317,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_b2_profiles_base",
+        "line": 1353,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_b2_read_value",
+        "line": 1540,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_b2_validate_value",
+        "line": 1557,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_b2_set_key",
+        "line": 1610,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_b2_backup",
+        "line": 1650,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_b2_save_legacy_v1",
+        "line": 1660,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_page_html_legacy_v1",
+        "line": 1694,
+        "top_level": true
+      },
+      {
+        "name": "push_current",
+        "line": 1778,
+        "top_level": false
+      },
+      {
+        "name": "section_color_class",
+        "line": 1884,
+        "top_level": false
+      },
+      {
+        "name": "default_value",
+        "line": 1903,
+        "top_level": false
+      },
+      {
+        "name": "function_name",
+        "line": 1906,
+        "top_level": false
+      },
+      {
+        "name": "input_html",
+        "line": 1909,
+        "top_level": false
+      },
+      {
+        "name": "_tools_wrap_page",
+        "line": 2384,
+        "top_level": true
+      },
+      {
+        "name": "_tools_register_ini_readonly_routes",
+        "line": 2401,
+        "top_level": true
+      },
+      {
+        "name": "tools_vpinfe_ini",
+        "line": 2403,
+        "top_level": false
+      },
+      {
+        "name": "tools_vpinballx_ini",
+        "line": 2414,
+        "top_level": false
+      },
+      {
+        "name": "tools_vpinfe_ini_save",
+        "line": 2425,
+        "top_level": false
+      },
+      {
+        "name": "tools_vpinballx_ini_save",
+        "line": 2434,
+        "top_level": false
+      },
+      {
+        "name": "_tools_list_table_dirs_for_export",
+        "line": 2450,
+        "top_level": true
+      },
+      {
+        "name": "_tools_smart_transfer_css",
+        "line": 2470,
+        "top_level": true
+      },
+      {
+        "name": "_tools_export_table_get_html",
+        "line": 2895,
+        "top_level": true
+      },
+      {
+        "name": "_tools_register_export_table_get_route",
+        "line": 3097,
+        "top_level": true
+      },
+      {
+        "name": "tools_export_table_get",
+        "line": 3099,
+        "top_level": false
+      },
+      {
+        "name": "_tools_import_table_get_html",
+        "line": 3113,
+        "top_level": true
+      },
+      {
+        "name": "_tools_register_import_table_get_route",
+        "line": 3267,
+        "top_level": true
+      },
+      {
+        "name": "tools_import_table_get",
+        "line": 3269,
+        "top_level": false
+      },
+      {
+        "name": "_tools_appearance_safe_json_load",
+        "line": 3284,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_theme_files",
+        "line": 3294,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_active_data",
+        "line": 3315,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_page_html",
+        "line": 3326,
+        "top_level": true
+      },
+      {
+        "name": "token",
+        "line": 3335,
+        "top_level": false
+      },
+      {
+        "name": "_tools_register_appearance_routes",
+        "line": 3805,
+        "top_level": true
+      },
+      {
+        "name": "tools_appearance_page",
+        "line": 3808,
+        "top_level": false
+      },
+      {
+        "name": "_tools_appearance_backup_write_context",
+        "line": 3830,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_safe_theme_name",
+        "line": 3845,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_safe_filename",
+        "line": 3859,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_allowed_theme_path",
+        "line": 3867,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_css_value_ok",
+        "line": 3885,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_collect_tokens_from_form",
+        "line": 3894,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_load_active_theme",
+        "line": 3921,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_write_active",
+        "line": 3929,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_generate_css_from_theme",
+        "line": 3941,
+        "top_level": true
+      },
+      {
+        "name": "clean_key",
+        "line": 3944,
+        "top_level": false
+      },
+      {
+        "name": "v",
+        "line": 3956,
+        "top_level": false
+      },
+      {
+        "name": "_tools_appearance_apply_theme_file",
+        "line": 4036,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_next_custom_copy_name",
+        "line": 4047,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_duplicate_classic",
+        "line": 4057,
+        "top_level": true
+      },
+      {
+        "name": "_tools_appearance_delete_custom",
+        "line": 4080,
+        "top_level": true
+      },
+      {
+        "name": "_tools_register_appearance_write_routes",
+        "line": 4102,
+        "top_level": true
+      },
+      {
+        "name": "tools_appearance_save_custom",
+        "line": 4104,
+        "top_level": false
+      },
+      {
+        "name": "tools_appearance_apply",
+        "line": 4172,
+        "top_level": false
+      },
+      {
+        "name": "tools_appearance_duplicate_classic_route",
+        "line": 4181,
+        "top_level": false
+      },
+      {
+        "name": "tools_appearance_delete_custom_route",
+        "line": 4189,
+        "top_level": false
+      },
+      {
+        "name": "tools_appearance_restore_classic",
+        "line": 4198,
+        "top_level": false
+      },
+      {
+        "name": "_tools_ini_b2_profiles",
+        "line": 4219,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_b2_save_legacy_v2",
+        "line": 4240,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_page_html_legacy_v2",
+        "line": 4271,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_full_defaults",
+        "line": 4430,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_browse_button_html",
+        "line": 4472,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_full_field_base",
+        "line": 4485,
+        "top_level": true
+      },
+      {
+        "name": "opt",
+        "line": 4490,
+        "top_level": false
+      },
+      {
+        "name": "_tools_ini_page_html_base",
+        "line": 4545,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_b2_save_legacy_v3",
+        "line": 4851,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_description_base",
+        "line": 4932,
+        "top_level": true
+      },
+      {
+        "name": "_tools_register_ini_readonly_routes__with_browser",
+        "line": 5090,
+        "top_level": true
+      },
+      {
+        "name": "tools_ini_browse",
+        "line": 5094,
+        "top_level": false
+      },
+      {
+        "name": "_tools_ini_b2_save",
+        "line": 5406,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_full_field",
+        "line": 5540,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_description",
+        "line": 5597,
+        "top_level": true
+      },
+      {
+        "name": "_tools_ini_page_html",
+        "line": 5631,
+        "top_level": true
+      },
+      {
+        "name": "_tools_vpinfe_update_status",
+        "line": 5679,
+        "top_level": true
+      },
+      {
+        "name": "_tools_vpinfe_update_token",
+        "line": 5693,
+        "top_level": true
+      },
+      {
+        "name": "_tools_vpinfe_update_page",
+        "line": 5701,
+        "top_level": true
+      },
+      {
+        "name": "_tools_register_vpinfe_update_routes",
+        "line": 5742,
+        "top_level": true
+      },
+      {
+        "name": "_tools_vpinfe_embed_page",
+        "line": 5754,
+        "top_level": true
+      },
+      {
+        "name": "_tools_register_vpinfe_8001_embed_routes",
+        "line": 5871,
+        "top_level": true
+      },
+      {
+        "name": "tools_vpinfe_tables_embedded",
+        "line": 5873,
+        "top_level": false
+      },
+      {
+        "name": "tools_vpinfe_collections_embedded",
+        "line": 5880,
+        "top_level": false
+      },
+      {
+        "name": "tools_vpinfe_media_embedded",
+        "line": 5887,
+        "top_level": false
+      },
+      {
+        "name": "_sample_tables_status",
+        "line": 5918,
+        "top_level": true
+      },
+      {
+        "name": "_sample_tables_token",
+        "line": 5933,
+        "top_level": true
+      },
+      {
+        "name": "_sample_tables_page",
+        "line": 5941,
+        "top_level": true
+      },
+      {
+        "name": "_tools_register_sample_tables_routes",
+        "line": 6006,
+        "top_level": true
+      },
+      {
+        "name": "tools_sample_tables",
+        "line": 6008,
+        "top_level": false
+      },
+      {
+        "name": "tools_sample_tables_apply",
+        "line": 6012,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools",
+        "line": 1151
+      },
+      {
+        "path": "/tools/vpinfe/ini",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_vpinfe_ini",
+        "line": 2402
+      },
+      {
+        "path": "/tools/vpinballx/ini",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_vpinballx_ini",
+        "line": 2413
+      },
+      {
+        "path": "/tools/vpinfe/ini/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_vpinfe_ini_save",
+        "line": 2424
+      },
+      {
+        "path": "/tools/vpinballx/ini/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_vpinballx_ini_save",
+        "line": 2433
+      },
+      {
+        "path": "/tools/export-table",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_export_table_get",
+        "line": 3098
+      },
+      {
+        "path": "/tools/import-table",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_import_table_get",
+        "line": 3268
+      },
+      {
+        "path": "/tools/appearance",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_appearance_page",
+        "line": 3806
+      },
+      {
+        "path": "/tools/apparence",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_appearance_page",
+        "line": 3807
+      },
+      {
+        "path": "/tools/appearance/save-custom",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_appearance_save_custom",
+        "line": 4103
+      },
+      {
+        "path": "/tools/appearance/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_appearance_apply",
+        "line": 4171
+      },
+      {
+        "path": "/tools/appearance/duplicate-classic",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_appearance_duplicate_classic_route",
+        "line": 4180
+      },
+      {
+        "path": "/tools/appearance/delete-custom",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_appearance_delete_custom_route",
+        "line": 4188
+      },
+      {
+        "path": "/tools/appearance/restore-classic",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_appearance_restore_classic",
+        "line": 4197
+      },
+      {
+        "path": "/tools/ini/browse",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_ini_browse",
+        "line": 5093
+      },
+      {
+        "path": "/tools/vpinfe/tables",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_vpinfe_tables_embedded",
+        "line": 5872
+      },
+      {
+        "path": "/tools/vpinfe/collections",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_vpinfe_collections_embedded",
+        "line": 5879
+      },
+      {
+        "path": "/tools/vpinfe/media",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_vpinfe_media_embedded",
+        "line": 5886
+      },
+      {
+        "path": "/tools/vpinfe/sample-tables",
+        "methods": [
+          "GET"
+        ],
+        "function": "tools_sample_tables",
+        "line": 6007
+      },
+      {
+        "path": "/tools/vpinfe/sample-tables/apply",
+        "methods": [
+          "POST"
+        ],
+        "function": "tools_sample_tables_apply",
+        "line": 6011
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "flask",
+      "hmac",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "pincabos_media_hunter",
+      "pincabos_media_recorder",
+      "pincabos_updates",
+      "pincabos_updates_hub",
+      "pincabos_vpinfe_updates",
+      "pincabos_vpx_updates",
+      "pincabos_vpxtool_updates",
+      "re",
+      "secrets",
+      "shutil",
+      "subprocess",
+      "time"
+    ],
+    "local_modules": [
+      "opt/pincabos/tools/vpinfeupdate.py",
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/pincabos_impexp.py",
+      "opt/pincabos/web/pincabos_media_hunter.py",
+      "opt/pincabos/web/pincabos_media_recorder.py",
+      "opt/pincabos/web/pincabos_updates.py",
+      "opt/pincabos/web/pincabos_updates_hub.py",
+      "opt/pincabos/web/pincabos_vpinfe_updates.py",
+      "opt/pincabos/web/pincabos_vpx_updates.py",
+      "opt/pincabos/web/pincabos_vpxtool_updates.py",
+      "opt/pincabos/web/screen.py"
+    ],
+    "repository_files": [
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "opt/pincabos/config/webapp-appearance/active.json",
+      "opt/pincabos/tools/update-vpinfe.sh",
+      "opt/pincabos/web/static/pincabos-appearance-vars.css",
+      "opt/pincabos/web/static/pincabos-assets/PCOSApparence.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSAudioSSF.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConfigINIVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConfigINIVPinballX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConsole.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSDOFOutpouts.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSDisquesExternes.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSEcransGPUVPX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSExplorer.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSExport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSFullDMDConfigurator.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSImport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMapInputs.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMediaHunter.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSNetwork.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSRecorder.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSSMExport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSSMImport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSTablesVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdatePinCabOS.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdateVPX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdateVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPXBallCabinet.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFECollections.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFEMediasPage.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFETablePage.png",
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-sample-tables"
+    ],
+    "runtime_paths": [
+      "/home/pinball",
+      "/home/pinball/.config/vpinfe",
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.vpinball",
+      "/home/pinball/Tables",
+      "/home/pinball/Visual",
+      "/home/pinball/vpx/VPinballX_BGFX",
+      "/mnt/tables",
+      "/opt/pincabos",
+      "/opt/pincabos/apps",
+      "/opt/pincabos/backups",
+      "/opt/pincabos/bin",
+      "/opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "/opt/pincabos/config",
+      "/opt/pincabos/config/webapp-appearance",
+      "/opt/pincabos/config/webapp-appearance/custom",
+      "/opt/pincabos/config/webapp-appearance/presets",
+      "/tmp/pincabos_ini_editor_filtered_",
+      "/usr/bin",
+      "/usr/bin/pgrep",
+      "/usr/bin/python3",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl",
+      "/usr/local/bin"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.config/vpinfe/vpinfe.ini.",
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+      "/opt/pincabos/config/webapp-appearance/active.json"
+    ],
+    "assets": [
+      "opt/pincabos/web/static/pincabos-appearance-vars.css",
+      "opt/pincabos/web/static/pincabos-assets/PCOSApparence.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSAudioSSF.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConfigINIVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConfigINIVPinballX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSConsole.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSDOFOutpouts.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSDisquesExternes.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSEcransGPUVPX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSExplorer.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSExport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSFullDMDConfigurator.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSImport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMapInputs.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSMediaHunter.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSNetwork.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSRecorder.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSSMExport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSSMImport.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSTablesVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdatePinCabOS.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdateVPX.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSUpdateVPinFE.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPXBallCabinet.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFECollections.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFEMediasPage.png",
+      "opt/pincabos/web/static/pincabos-assets/PCOSVPinFETablePage.png"
+    ],
+    "systemd_units_mentioned": [
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/opt/pincabos/bin/vpx-vpinfe-default.sh",
+      "/opt/pincabos/tools/update-vpinfe.sh",
+      "/opt/pincabos/tools/vpinfeupdate.py",
+      "/usr/bin/pgrep",
+      "/usr/bin/python3",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl",
+      "/usr/local/sbin/pincabos-sample-tables"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/tools.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

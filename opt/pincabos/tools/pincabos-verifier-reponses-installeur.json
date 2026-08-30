@@ -1,0 +1,92 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-verifier-reponses-installeur",
+    "scope": "tool",
+    "kind": "executable",
+    "source_file": "opt/pincabos/tools/pincabos-verifier-reponses-installeur.py",
+    "manifest_file": "opt/pincabos/tools/pincabos-verifier-reponses-installeur.json",
+    "language": "python",
+    "git_blob_sha": "d3ccc34f7ec92d0e0e7ccf391d5c26b5a6acc9a8",
+    "size_bytes": 5675,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": [
+      "install"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "regles",
+        "line": 29,
+        "top_level": true
+      },
+      {
+        "name": "install",
+        "line": 41,
+        "top_level": true
+      },
+      {
+        "name": "execute_quelque_chose",
+        "line": 61,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 75,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "ast",
+      "pathlib",
+      "re",
+      "shlex",
+      "subprocess",
+      "sys",
+      "tempfile"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/dev/sda",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "bash"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/tools/pincabos-verifier-reponses-installeur.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

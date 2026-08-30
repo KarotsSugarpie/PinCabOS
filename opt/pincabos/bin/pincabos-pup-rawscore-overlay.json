@@ -1,0 +1,144 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-pup-rawscore-overlay",
+    "scope": "runtime_bin",
+    "kind": "executable",
+    "source_file": "opt/pincabos/bin/pincabos-pup-rawscore-overlay.py",
+    "manifest_file": "opt/pincabos/bin/pincabos-pup-rawscore-overlay.json",
+    "language": "python",
+    "git_blob_sha": "6aec83253bafa67f9d07d36d5738b984a947a2e5",
+    "size_bytes": 9761,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/bin/pincabos-pup-rawscore-overlay-start.sh"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "pid_alive",
+        "line": 62,
+        "top_level": true
+      },
+      {
+        "name": "read_env",
+        "line": 79,
+        "top_level": true
+      },
+      {
+        "name": "integer",
+        "line": 109,
+        "top_level": true
+      },
+      {
+        "name": "screen_geometry",
+        "line": 118,
+        "top_level": true
+      },
+      {
+        "name": "load_table_layout",
+        "line": 203,
+        "top_level": true
+      },
+      {
+        "name": "rawtap_source",
+        "line": 305,
+        "top_level": true
+      },
+      {
+        "name": "write_state",
+        "line": 332,
+        "top_level": true
+      },
+      {
+        "name": "remove_if_ours",
+        "line": 374,
+        "top_level": true
+      },
+      {
+        "name": "cleanup_runtime",
+        "line": 399,
+        "top_level": true
+      },
+      {
+        "name": "apply_geometry",
+        "line": 453,
+        "top_level": true
+      },
+      {
+        "name": "handle_command",
+        "line": 496,
+        "top_level": true
+      },
+      {
+        "name": "update_frame",
+        "line": 574,
+        "top_level": true
+      },
+      {
+        "name": "refresh",
+        "line": 630,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "PIL",
+      "atexit",
+      "configparser",
+      "os",
+      "pathlib",
+      "re",
+      "subprocess",
+      "sys",
+      "time",
+      "tkinter"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/dev/shm/pincabos-rawscore.ppm",
+      "/dev/shm/pincabos-rawscore.ppm.tmp",
+      "/run/pincabos-b2s-dmd-tuner",
+      "/tmp/pincabos-pup-rawscore-overlay.pid",
+      "/tmp/pincabos-rawtap-v20.log",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "xrandr"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/bin/pincabos-pup-rawscore-overlay.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

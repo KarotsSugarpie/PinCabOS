@@ -1,0 +1,318 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "recorder",
+    "scope": "webapp",
+    "kind": "executable",
+    "source_file": "opt/pincabos/web/recorder.py",
+    "manifest_file": "opt/pincabos/web/recorder.json",
+    "language": "python",
+    "git_blob_sha": "9c27cc0859fe6ef98d3b7ca132b43ba01faf4171",
+    "size_bytes": 49133,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_media_recorder_worker.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": [
+      "install_capture",
+      "setup_logging"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "description",
+        "line": 159,
+        "top_level": false
+      },
+      {
+        "name": "setup_logging",
+        "line": 172,
+        "top_level": true
+      },
+      {
+        "name": "now_stamp",
+        "line": 186,
+        "top_level": true
+      },
+      {
+        "name": "ensure_command",
+        "line": 190,
+        "top_level": true
+      },
+      {
+        "name": "run",
+        "line": 197,
+        "top_level": true
+      },
+      {
+        "name": "atomic_json_write",
+        "line": 221,
+        "top_level": true
+      },
+      {
+        "name": "table_log_path",
+        "line": 239,
+        "top_level": true
+      },
+      {
+        "name": "append_table_log",
+        "line": 243,
+        "top_level": true
+      },
+      {
+        "name": "normalize_table",
+        "line": 253,
+        "top_level": true
+      },
+      {
+        "name": "parse_screens",
+        "line": 286,
+        "top_level": true
+      },
+      {
+        "name": "load_screen_config",
+        "line": 305,
+        "top_level": true
+      },
+      {
+        "name": "xrandr_geometries",
+        "line": 319,
+        "top_level": true
+      },
+      {
+        "name": "role_screen_geometry",
+        "line": 344,
+        "top_level": true
+      },
+      {
+        "name": "list_windows",
+        "line": 365,
+        "top_level": true
+      },
+      {
+        "name": "find_window",
+        "line": 405,
+        "top_level": true
+      },
+      {
+        "name": "resolve_capture_sources",
+        "line": 428,
+        "top_level": true
+      },
+      {
+        "name": "resolve_capture_source",
+        "line": 592,
+        "top_level": true
+      },
+      {
+        "name": "detector_info",
+        "line": 642,
+        "top_level": true
+      },
+      {
+        "name": "choose_game_mode",
+        "line": 665,
+        "top_level": true
+      },
+      {
+        "name": "launcher_environment",
+        "line": 697,
+        "top_level": true
+      },
+      {
+        "name": "launch_table",
+        "line": 719,
+        "top_level": true
+      },
+      {
+        "name": "wait_for_vpx_ready",
+        "line": 772,
+        "top_level": true
+      },
+      {
+        "name": "ffmpeg_has_encoder",
+        "line": 806,
+        "top_level": true
+      },
+      {
+        "name": "select_encoder",
+        "line": 815,
+        "top_level": true
+      },
+      {
+        "name": "x11_input_args",
+        "line": 834,
+        "top_level": true
+      },
+      {
+        "name": "ffmpeg_capture_command",
+        "line": 866,
+        "top_level": true
+      },
+      {
+        "name": "probe_media",
+        "line": 941,
+        "top_level": true
+      },
+      {
+        "name": "validate_capture",
+        "line": 966,
+        "top_level": true
+      },
+      {
+        "name": "media_target",
+        "line": 1019,
+        "top_level": true
+      },
+      {
+        "name": "counterpart_candidates",
+        "line": 1024,
+        "top_level": true
+      },
+      {
+        "name": "backup_existing",
+        "line": 1044,
+        "top_level": true
+      },
+      {
+        "name": "install_capture",
+        "line": 1073,
+        "top_level": true
+      },
+      {
+        "name": "create_temp_capture_path",
+        "line": 1108,
+        "top_level": true
+      },
+      {
+        "name": "terminate_launched_table",
+        "line": 1125,
+        "top_level": true
+      },
+      {
+        "name": "capture_selected",
+        "line": 1161,
+        "top_level": true
+      },
+      {
+        "name": "process_table",
+        "line": 1313,
+        "top_level": true
+      },
+      {
+        "name": "parse_args",
+        "line": 1437,
+        "top_level": true
+      },
+      {
+        "name": "preflight",
+        "line": 1607,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 1642,
+        "top_level": true
+      }
+    ],
+    "classes": [
+      {
+        "name": "RecorderError",
+        "line": 126,
+        "top_level": true
+      },
+      {
+        "name": "Geometry",
+        "line": 131,
+        "top_level": true
+      },
+      {
+        "name": "WindowInfo",
+        "line": 140,
+        "top_level": true
+      },
+      {
+        "name": "CaptureSource",
+        "line": 152,
+        "top_level": true
+      }
+    ],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "dataclasses",
+      "json",
+      "logging",
+      "os",
+      "pathlib",
+      "re",
+      "shlex",
+      "shutil",
+      "signal",
+      "subprocess",
+      "sys",
+      "tempfile",
+      "time",
+      "typing"
+    ],
+    "local_modules": [
+      "opt/pincabos/launchers/pincabos-detect-table-modes.py",
+      "opt/pincabos/web/screen.py"
+    ],
+    "repository_files": [
+      "opt/pincabos/bin/vpx-lowlatency.sh",
+      "opt/pincabos/config/screens/screens.json",
+      "opt/pincabos/web/recorder.py"
+    ],
+    "runtime_paths": [
+      "/home/pinball",
+      "/home/pinball/.Xauthority",
+      "/home/pinball/Tables",
+      "/home/pinball/Tables/Attack",
+      "/opt/pincabos/web/.venv/bin/python",
+      "/run/user/1000",
+      "/run/user/{uid}",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [
+      "/opt/pincabos/config/screens/screens.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/bin/vpx-lowlatency.sh",
+      "/usr/bin/env"
+    ],
+    "environment_variables": [
+      "DISPLAY",
+      "XAUTHORITY"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/recorder.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

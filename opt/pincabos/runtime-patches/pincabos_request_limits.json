@@ -1,0 +1,90 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_request_limits",
+    "scope": "runtime_patch",
+    "kind": "python_library",
+    "source_file": "opt/pincabos/runtime-patches/pincabos_request_limits.py",
+    "manifest_file": "opt/pincabos/runtime-patches/pincabos_request_limits.json",
+    "language": "python",
+    "git_blob_sha": "ea7403731144f2d145894730b39930fa5942448a",
+    "size_bytes": 2775,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "patch_flask",
+      "patch_waitress"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "patch_flask",
+        "line": 17,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_flask_init",
+        "line": 38,
+        "top_level": false
+      },
+      {
+        "name": "patch_waitress",
+        "line": 58,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_serve",
+        "line": 82,
+        "top_level": false
+      }
+    ],
+    "classes": [
+      {
+        "name": "PinCabOSRequest",
+        "line": 24,
+        "top_level": false
+      }
+    ],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "waitress",
+      "waitress.adjustments"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/runtime-patches/pincabos_request_limits.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

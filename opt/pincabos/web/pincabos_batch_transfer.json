@@ -1,0 +1,242 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_batch_transfer",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_batch_transfer.py",
+    "manifest_file": "opt/pincabos/web/pincabos_batch_transfer.json",
+    "language": "python",
+    "git_blob_sha": "ca40ac70b2377d9be0871191997c95adde4ee05e",
+    "size_bytes": 39122,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/validate_refactor.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_pincabos_batch_transfer"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "register_pincabos_batch_transfer",
+        "line": 25,
+        "top_level": true
+      },
+      {
+        "name": "_inside",
+        "line": 43,
+        "top_level": false
+      },
+      {
+        "name": "_safe_table_name",
+        "line": 50,
+        "top_level": false
+      },
+      {
+        "name": "_format_size",
+        "line": 57,
+        "top_level": false
+      },
+      {
+        "name": "_sha256",
+        "line": 66,
+        "top_level": false
+      },
+      {
+        "name": "_disk_free",
+        "line": 73,
+        "top_level": false
+      },
+      {
+        "name": "_write_log",
+        "line": 79,
+        "top_level": false
+      },
+      {
+        "name": "_active_vpx_processes",
+        "line": 84,
+        "top_level": false
+      },
+      {
+        "name": "_batch_lock",
+        "line": 99,
+        "top_level": false
+      },
+      {
+        "name": "_mounted_destinations",
+        "line": 115,
+        "top_level": false
+      },
+      {
+        "name": "_tree_size",
+        "line": 201,
+        "top_level": false
+      },
+      {
+        "name": "_validate_zip",
+        "line": 229,
+        "top_level": false
+      },
+      {
+        "name": "_safe_extract_zip",
+        "line": 255,
+        "top_level": false
+      },
+      {
+        "name": "_portable_table_root",
+        "line": 280,
+        "top_level": false
+      },
+      {
+        "name": "_normalize_imported_tree",
+        "line": 303,
+        "top_level": false
+      },
+      {
+        "name": "_next_renamed_target",
+        "line": 324,
+        "top_level": false
+      },
+      {
+        "name": "_render_results",
+        "line": 336,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_export_page",
+        "line": 385,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_export_run",
+        "line": 518,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_page",
+        "line": 727,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_import_run",
+        "line": 805,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_batch_cards_in_smart_pages",
+        "line": 991,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/batch-export",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_batch_export_page",
+        "line": 384
+      },
+      {
+        "path": "/tools/batch-export/run",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_export_run",
+        "line": 517
+      },
+      {
+        "path": "/tools/batch-import",
+        "methods": [
+          "GET"
+        ],
+        "function": "pincabos_batch_import_page",
+        "line": 726
+      },
+      {
+        "path": "/tools/batch-import/run",
+        "methods": [
+          "POST"
+        ],
+        "function": "pincabos_batch_import_run",
+        "line": 804
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "contextlib",
+      "datetime",
+      "fcntl",
+      "flask",
+      "hashlib",
+      "json",
+      "os",
+      "pathlib",
+      "pincabos_batch_destination_browser",
+      "pincabos_batch_import_live",
+      "pincabos_batch_live",
+      "re",
+      "shutil",
+      "stat",
+      "subprocess",
+      "tempfile",
+      "traceback",
+      "zipfile"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/pincabos_batch_destination_browser.py",
+      "opt/pincabos/web/pincabos_batch_import_live.py",
+      "opt/pincabos/web/pincabos_batch_live.py"
+    ],
+    "repository_files": [],
+    "runtime_paths": [
+      "/home/pinball/Backups/PinCabOS-BatchImport",
+      "/home/pinball/Exports",
+      "/opt/pincabos/logs",
+      "/opt/pincabos/uploads/batch-import",
+      "/run/media",
+      "/usr/bin/findmnt",
+      "/usr/bin/pgrep",
+      "/var/lib/pincabos/batch-live/export.lock"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/findmnt",
+      "/usr/bin/pgrep"
+    ],
+    "environment_variables": [
+      "PINCABOS_BATCH_LIVE_SHARED_LOCK"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_batch_transfer.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

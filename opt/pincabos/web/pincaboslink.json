@@ -1,0 +1,196 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincaboslink",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincaboslink.py",
+    "manifest_file": "opt/pincabos/web/pincaboslink.json",
+    "language": "python",
+    "git_blob_sha": "d875acc1dde80cb7cc8a2f849a0379f9a1379191",
+    "size_bytes": 33916,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register_pincaboslink"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_systemctl",
+        "line": 31,
+        "top_level": true
+      },
+      {
+        "name": "_normalize_pairing_code",
+        "line": 50,
+        "top_level": true
+      },
+      {
+        "name": "_join_cabinet",
+        "line": 58,
+        "top_level": true
+      },
+      {
+        "name": "_csrf_ok",
+        "line": 95,
+        "top_level": true
+      },
+      {
+        "name": "_bridge_json",
+        "line": 104,
+        "top_level": true
+      },
+      {
+        "name": "_display_action",
+        "line": 146,
+        "top_level": true
+      },
+      {
+        "name": "_main_body",
+        "line": 166,
+        "top_level": true
+      },
+      {
+        "name": "_backglass_html",
+        "line": 526,
+        "top_level": true
+      },
+      {
+        "name": "pincaboslink_page",
+        "line": 622,
+        "top_level": true
+      },
+      {
+        "name": "pincaboslink_chat_backglass",
+        "line": 668,
+        "top_level": true
+      },
+      {
+        "name": "pincaboslink_api_context",
+        "line": 681,
+        "top_level": true
+      },
+      {
+        "name": "pincaboslink_api_presence",
+        "line": 687,
+        "top_level": true
+      },
+      {
+        "name": "pincaboslink_api_chat",
+        "line": 698,
+        "top_level": true
+      },
+      {
+        "name": "pincaboslink_api_avatar",
+        "line": 728,
+        "top_level": true
+      },
+      {
+        "name": "pincaboslink_api_backglass",
+        "line": 754,
+        "top_level": true
+      },
+      {
+        "name": "register_pincaboslink",
+        "line": 782,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/pincabos-link",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincaboslink_page",
+        "line": 621
+      },
+      {
+        "path": "/pincabos-link/api/chat/<int:friend_user_id>",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincaboslink_api_chat",
+        "line": 694
+      },
+      {
+        "path": "/pincabos-link/api/backglass",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "function": "pincaboslink_api_backglass",
+        "line": 750
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "base64",
+      "flask",
+      "hmac",
+      "html",
+      "json",
+      "re",
+      "secrets",
+      "shutil",
+      "subprocess",
+      "typing"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-account-bridge",
+      "usr/local/sbin/pincabos-chat-backglass",
+      "usr/local/sbin/pincabos-link-web-pair"
+    ],
+    "runtime_paths": [
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [
+      "pincabos-link-heartbeat.timer"
+    ],
+    "commands": [
+      "/usr/bin/env",
+      "/usr/local/sbin/pincabos-account-bridge",
+      "/usr/local/sbin/pincabos-chat-backglass",
+      "/usr/local/sbin/pincabos-link-web-pair",
+      "sudo",
+      "systemctl"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincaboslink.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

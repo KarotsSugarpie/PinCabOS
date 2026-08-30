@@ -1,0 +1,139 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-wallpaper-per-screen",
+    "scope": "runtime_bin",
+    "kind": "executable",
+    "source_file": "opt/pincabos/bin/pincabos-wallpaper-per-screen.py",
+    "manifest_file": "opt/pincabos/bin/pincabos-wallpaper-per-screen.json",
+    "language": "python",
+    "git_blob_sha": "0286fe4d90fed17a7406df0bfefb7073445a11a4",
+    "size_bytes": 10408,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "fail",
+        "line": 35,
+        "top_level": true
+      },
+      {
+        "name": "load_json",
+        "line": 43,
+        "top_level": true
+      },
+      {
+        "name": "x_environment",
+        "line": 66,
+        "top_level": true
+      },
+      {
+        "name": "detect_monitors",
+        "line": 98,
+        "top_level": true
+      },
+      {
+        "name": "role_item",
+        "line": 154,
+        "top_level": true
+      },
+      {
+        "name": "resolve_role_output",
+        "line": 180,
+        "top_level": true
+      },
+      {
+        "name": "role_wallpaper",
+        "line": 218,
+        "top_level": true
+      },
+      {
+        "name": "build_mapping",
+        "line": 261,
+        "top_level": true
+      },
+      {
+        "name": "feh_command",
+        "line": 324,
+        "top_level": true
+      },
+      {
+        "name": "run_as_pinball",
+        "line": 364,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 399,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "json",
+      "os",
+      "pathlib",
+      "pwd",
+      "shutil",
+      "subprocess",
+      "sys",
+      "typing"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/config/screens/screens.json",
+      "opt/pincabos/config/screens/wallpapers.json"
+    ],
+    "runtime_paths": [
+      "/home/pinball",
+      "/run/user/1000",
+      "/run/user/{account.pw_uid}",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [
+      "/opt/pincabos/config/screens/screens.json",
+      "/opt/pincabos/config/screens/wallpapers.json"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "feh",
+      "xrandr"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/bin/pincabos-wallpaper-per-screen.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$id": "pincabos.module-inventory/v1",
+  "title": "PinCabOS module inventory manifest",
+  "type": "object",
+  "required": [
+    "schema",
+    "inventory",
+    "module",
+    "activation",
+    "exposes",
+    "requires",
+    "repair_policy"
+  ],
+  "note": "Inventory schema only. It must not be used by the repair engine until ownership_status is reviewed and repair_enabled is explicitly approved.",
+  "naming_rule": "A source Name.py or Name.sh receives Name.json in the same directory.",
+  "repair_locking": "disabled"
+}

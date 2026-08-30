@@ -1,0 +1,164 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "PinCabOS-NtwkDRV",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/PinCabOS-NtwkDRV.py",
+    "manifest_file": "opt/pincabos/web/PinCabOS-NtwkDRV.json",
+    "language": "python",
+    "git_blob_sha": "1dd3f7701abe3ef8ab27ddde4320e4358a592949",
+    "size_bytes": 15435,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_run",
+        "line": 26,
+        "top_level": true
+      },
+      {
+        "name": "_is_mountpoint",
+        "line": 35,
+        "top_level": true
+      },
+      {
+        "name": "_direct_child",
+        "line": 42,
+        "top_level": true
+      },
+      {
+        "name": "_findmnt_smb_targets",
+        "line": 61,
+        "top_level": true
+      },
+      {
+        "name": "_smb_entries",
+        "line": 111,
+        "top_level": true
+      },
+      {
+        "name": "_usb_entries",
+        "line": 133,
+        "top_level": true
+      },
+      {
+        "name": "_usb_taille",
+        "line": 154,
+        "top_level": true
+      },
+      {
+        "name": "_result_page",
+        "line": 166,
+        "top_level": true
+      },
+      {
+        "name": "_disconnect_view",
+        "line": 177,
+        "top_level": true
+      },
+      {
+        "name": "_external_disks_page",
+        "line": 275,
+        "top_level": true
+      },
+      {
+        "name": "_replace_or_add_route",
+        "line": 435,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 452,
+        "top_level": true
+      },
+      {
+        "name": "external_disks_view",
+        "line": 453,
+        "top_level": false
+      },
+      {
+        "name": "smb_disconnect_view",
+        "line": 456,
+        "top_level": false
+      },
+      {
+        "name": "_usb_action",
+        "line": 475,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "datetime",
+      "flask",
+      "json",
+      "os",
+      "pathlib",
+      "shutil",
+      "subprocess"
+    ],
+    "local_modules": [
+      "opt/pincabos/web/app.py"
+    ],
+    "repository_files": [
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-smb-umount",
+      "usr/local/sbin/pincabos-usb-disk"
+    ],
+    "runtime_paths": [
+      "/home/pinball/.config/pincabos/smb",
+      "/home/pinball/.config/pincabos/smb-disconnected",
+      "/home/pinball/NetworkDrives",
+      "/media/pinball",
+      "/run/media/pinball",
+      "/usr/bin/findmnt",
+      "/usr/bin/mountpoint",
+      "/usr/bin/sudo"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/findmnt",
+      "/usr/bin/mountpoint",
+      "/usr/bin/sudo",
+      "/usr/local/sbin/pincabos-smb-umount",
+      "/usr/local/sbin/pincabos-usb-disk"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/PinCabOS-NtwkDRV.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

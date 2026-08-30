@@ -1,0 +1,289 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "B2SConfig",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/B2SConfig.py",
+    "manifest_file": "opt/pincabos/web/B2SConfig.json",
+    "language": "python",
+    "git_blob_sha": "cf94ac1c1c5cb80cb2e0c7c9334e958960347845",
+    "size_bytes": 37864,
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_vpxtool_updates.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "esc",
+        "line": 90,
+        "top_level": true
+      },
+      {
+        "name": "render",
+        "line": 94,
+        "top_level": true
+      },
+      {
+        "name": "csrf",
+        "line": 98,
+        "top_level": true
+      },
+      {
+        "name": "csrf_ok",
+        "line": 106,
+        "top_level": true
+      },
+      {
+        "name": "vpx_running",
+        "line": 112,
+        "top_level": true
+      },
+      {
+        "name": "lines",
+        "line": 126,
+        "top_level": true
+      },
+      {
+        "name": "bounds",
+        "line": 131,
+        "top_level": true
+      },
+      {
+        "name": "getv_data",
+        "line": 143,
+        "top_level": true
+      },
+      {
+        "name": "getv",
+        "line": 157,
+        "top_level": true
+      },
+      {
+        "name": "setv",
+        "line": 164,
+        "top_level": true
+      },
+      {
+        "name": "delv",
+        "line": 192,
+        "top_level": true
+      },
+      {
+        "name": "safe_table",
+        "line": 210,
+        "top_level": true
+      },
+      {
+        "name": "table_rows",
+        "line": 221,
+        "top_level": true
+      },
+      {
+        "name": "b2s_files",
+        "line": 238,
+        "top_level": true
+      },
+      {
+        "name": "engine",
+        "line": 252,
+        "top_level": true
+      },
+      {
+        "name": "sha256",
+        "line": 271,
+        "top_level": true
+      },
+      {
+        "name": "backup",
+        "line": 279,
+        "top_level": true
+      },
+      {
+        "name": "_backup_path_allowed",
+        "line": 302,
+        "top_level": true
+      },
+      {
+        "name": "restore",
+        "line": 308,
+        "top_level": true
+      },
+      {
+        "name": "_atomic_copy",
+        "line": 332,
+        "top_level": true
+      },
+      {
+        "name": "_write_atomic_text",
+        "line": 352,
+        "top_level": true
+      },
+      {
+        "name": "validate_update",
+        "line": 382,
+        "top_level": true
+      },
+      {
+        "name": "write_updates",
+        "line": 397,
+        "top_level": true
+      },
+      {
+        "name": "normalized",
+        "line": 430,
+        "top_level": true
+      },
+      {
+        "name": "reset_table_updates",
+        "line": 466,
+        "top_level": true
+      },
+      {
+        "name": "field_control",
+        "line": 481,
+        "top_level": true
+      },
+      {
+        "name": "_group",
+        "line": 528,
+        "top_level": true
+      },
+      {
+        "name": "_fields_for",
+        "line": 532,
+        "top_level": true
+      },
+      {
+        "name": "page",
+        "line": 536,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 682,
+        "top_level": true
+      },
+      {
+        "name": "b2s_page",
+        "line": 687,
+        "top_level": false
+      },
+      {
+        "name": "b2s_save",
+        "line": 691,
+        "top_level": false
+      },
+      {
+        "name": "b2s_reset_table",
+        "line": 713,
+        "top_level": false
+      },
+      {
+        "name": "b2s_rollback",
+        "line": 735,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/tools/vpinballx/b2s",
+        "methods": [
+          "GET"
+        ],
+        "function": "b2s_page",
+        "line": 686
+      },
+      {
+        "path": "/tools/vpinballx/b2s/save",
+        "methods": [
+          "POST"
+        ],
+        "function": "b2s_save",
+        "line": 690
+      },
+      {
+        "path": "/tools/vpinballx/b2s/reset-table",
+        "methods": [
+          "POST"
+        ],
+        "function": "b2s_reset_table",
+        "line": 712
+      },
+      {
+        "path": "/tools/vpinballx/b2s/rollback",
+        "methods": [
+          "POST"
+        ],
+        "function": "b2s_rollback",
+        "line": 734
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "flask",
+      "hashlib",
+      "hmac",
+      "html",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "secrets",
+      "shutil",
+      "subprocess",
+      "tempfile",
+      "time",
+      "urllib.parse"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+    ],
+    "runtime_paths": [
+      "/home/pinball/.local/share/PinCabOS/backups/b2s-config",
+      "/home/pinball/Tables",
+      "/usr/bin/pgrep"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/pgrep"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/B2SConfig.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

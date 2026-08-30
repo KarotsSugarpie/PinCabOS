@@ -1,0 +1,154 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-detect-table-modes",
+    "scope": "launcher",
+    "kind": "executable",
+    "source_file": "opt/pincabos/launchers/pincabos-detect-table-modes.py",
+    "manifest_file": "opt/pincabos/launchers/pincabos-detect-table-modes.json",
+    "language": "python",
+    "git_blob_sha": "323a7fd9da86c71a52085513a54ae9236fa323fc",
+    "size_bytes": 10051,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/bin/pincabos-pup-scoreview-split.py",
+      "opt/pincabos/launchers/pincabos-hybrid-remote-audit-test.sh",
+      "opt/pincabos/launchers/pincabos-launch-core.sh",
+      "opt/pincabos/scripts/tabletest.sh",
+      "opt/pincabos/web/recorder.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "normalize_name",
+        "line": 27,
+        "top_level": true
+      },
+      {
+        "name": "unique",
+        "line": 32,
+        "top_level": true
+      },
+      {
+        "name": "load_config",
+        "line": 47,
+        "top_level": true
+      },
+      {
+        "name": "find_casefold_file",
+        "line": 58,
+        "top_level": true
+      },
+      {
+        "name": "pup_root_candidates",
+        "line": 72,
+        "top_level": true
+      },
+      {
+        "name": "pack_has_content",
+        "line": 83,
+        "top_level": true
+      },
+      {
+        "name": "inspect_pup_root",
+        "line": 99,
+        "top_level": true
+      },
+      {
+        "name": "candidate_script_files",
+        "line": 120,
+        "top_level": true
+      },
+      {
+        "name": "extract_rom_candidates",
+        "line": 136,
+        "top_level": true
+      },
+      {
+        "name": "local_rom_dirs",
+        "line": 159,
+        "top_level": true
+      },
+      {
+        "name": "zip_index",
+        "line": 167,
+        "top_level": true
+      },
+      {
+        "name": "find_roms",
+        "line": 180,
+        "top_level": true
+      },
+      {
+        "name": "detect",
+        "line": 209,
+        "top_level": true
+      },
+      {
+        "name": "shell_output",
+        "line": 277,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 295,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "argparse",
+      "json",
+      "pathlib",
+      "re",
+      "shlex",
+      "typing"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/home/pinball/.local/share/VPinballX/10.8/pinmame/roms",
+      "/home/pinball/.local/share/VPinballX/pinmame/roms",
+      "/home/pinball/.local/share/vpinball/pinmame/roms",
+      "/home/pinball/Tables/pinmame/roms",
+      "/home/pinball/pinmame/roms",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/launchers/pincabos-detect-table-modes.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

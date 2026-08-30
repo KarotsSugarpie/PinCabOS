@@ -1,0 +1,505 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_dudescab_protocol",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_dudescab_protocol.py",
+    "manifest_file": "opt/pincabos/web/pincabos_dudescab_protocol.json",
+    "language": "python",
+    "git_blob_sha": "63e14ef8ededed0e4d0c10592094242cfb2efef2",
+    "size_bytes": 54111,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "__init__",
+        "line": 97,
+        "top_level": false
+      },
+      {
+        "name": "open",
+        "line": 131,
+        "top_level": false
+      },
+      {
+        "name": "error",
+        "line": 137,
+        "top_level": false
+      },
+      {
+        "name": "_hidapi",
+        "line": 147,
+        "top_level": true
+      },
+      {
+        "name": "_read_text",
+        "line": 154,
+        "top_level": true
+      },
+      {
+        "name": "_interface_number",
+        "line": 161,
+        "top_level": true
+      },
+      {
+        "name": "_report_ids",
+        "line": 176,
+        "top_level": true
+      },
+      {
+        "name": "_is_dudescab_hidraw",
+        "line": 195,
+        "top_level": true
+      },
+      {
+        "name": "hid_nodes",
+        "line": 205,
+        "top_level": true
+      },
+      {
+        "name": "_node_for_report",
+        "line": 222,
+        "top_level": true
+      },
+      {
+        "name": "_frame_parts",
+        "line": 231,
+        "top_level": true
+      },
+      {
+        "name": "_normalize_read",
+        "line": 244,
+        "top_level": true
+      },
+      {
+        "name": "hid_command",
+        "line": 254,
+        "top_level": true
+      },
+      {
+        "name": "_ascii",
+        "line": 334,
+        "top_level": true
+      },
+      {
+        "name": "_parse_version",
+        "line": 338,
+        "top_level": true
+      },
+      {
+        "name": "_parse_status",
+        "line": 354,
+        "top_level": true
+      },
+      {
+        "name": "_parse_pwm_config",
+        "line": 371,
+        "top_level": true
+      },
+      {
+        "name": "__init__",
+        "line": 405,
+        "top_level": false
+      },
+      {
+        "name": "take",
+        "line": 409,
+        "top_level": false
+      },
+      {
+        "name": "u8",
+        "line": 416,
+        "top_level": false
+      },
+      {
+        "name": "u16",
+        "line": 419,
+        "top_level": false
+      },
+      {
+        "name": "string",
+        "line": 422,
+        "top_level": false
+      },
+      {
+        "name": "_parse_mx_config",
+        "line": 427,
+        "top_level": true
+      },
+      {
+        "name": "__init__",
+        "line": 471,
+        "top_level": false
+      },
+      {
+        "name": "remaining",
+        "line": 476,
+        "top_level": false
+      },
+      {
+        "name": "take",
+        "line": 479,
+        "top_level": false
+      },
+      {
+        "name": "u8",
+        "line": 489,
+        "top_level": false
+      },
+      {
+        "name": "u16",
+        "line": 492,
+        "top_level": false
+      },
+      {
+        "name": "boolean",
+        "line": 495,
+        "top_level": false
+      },
+      {
+        "name": "string",
+        "line": 498,
+        "top_level": false
+      },
+      {
+        "name": "pin",
+        "line": 503,
+        "top_level": false
+      },
+      {
+        "name": "color",
+        "line": 513,
+        "top_level": false
+      },
+      {
+        "name": "_parse_admin_config",
+        "line": 523,
+        "top_level": true
+      },
+      {
+        "name": "_read_admin_config",
+        "line": 727,
+        "top_level": true
+      },
+      {
+        "name": "_version",
+        "line": 756,
+        "top_level": true
+      },
+      {
+        "name": "_is_new_firmware",
+        "line": 762,
+        "top_level": true
+      },
+      {
+        "name": "_pwm_command_numbers",
+        "line": 766,
+        "top_level": true
+      },
+      {
+        "name": "_probe_inner",
+        "line": 770,
+        "top_level": true
+      },
+      {
+        "name": "_probe",
+        "line": 864,
+        "top_level": true
+      },
+      {
+        "name": "_vpx_processes",
+        "line": 870,
+        "top_level": true
+      },
+      {
+        "name": "_require_idle",
+        "line": 895,
+        "top_level": true
+      },
+      {
+        "name": "_send_admin",
+        "line": 903,
+        "top_level": true
+      },
+      {
+        "name": "_cancel_timer",
+        "line": 933,
+        "top_level": true
+      },
+      {
+        "name": "_send_pwm_value",
+        "line": 940,
+        "top_level": true
+      },
+      {
+        "name": "_safe_output_off",
+        "line": 949,
+        "top_level": true
+      },
+      {
+        "name": "_all_off",
+        "line": 958,
+        "top_level": true
+      },
+      {
+        "name": "_test_output",
+        "line": 970,
+        "top_level": true
+      },
+      {
+        "name": "_serial_path",
+        "line": 1008,
+        "top_level": true
+      },
+      {
+        "name": "_read_serial",
+        "line": 1020,
+        "top_level": true
+      },
+      {
+        "name": "_json_body",
+        "line": 1055,
+        "top_level": true
+      },
+      {
+        "name": "_maintenance_token",
+        "line": 1059,
+        "top_level": true
+      },
+      {
+        "name": "_maintenance_call",
+        "line": 1066,
+        "top_level": true
+      },
+      {
+        "name": "_maintenance_public",
+        "line": 1084,
+        "top_level": true
+      },
+      {
+        "name": "_require_maintenance",
+        "line": 1090,
+        "top_level": true
+      },
+      {
+        "name": "_error_response",
+        "line": 1102,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 1106,
+        "top_level": true
+      },
+      {
+        "name": "pincabos_dudescab_protocol_status_v3",
+        "line": 1113,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_maintenance_status_v320",
+        "line": 1162,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_maintenance_enter_v320",
+        "line": 1169,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_maintenance_heartbeat_v320",
+        "line": 1177,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_maintenance_exit_v320",
+        "line": 1184,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_maintenance_recover_v320",
+        "line": 1201,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_connect_v3",
+        "line": 1211,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_disconnect_v3",
+        "line": 1221,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_probe_v3",
+        "line": 1230,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_config_read_v31",
+        "line": 1239,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_live_v3",
+        "line": 1249,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_log_level_v3",
+        "line": 1271,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_logs_v3",
+        "line": 1284,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_logs_clear_v3",
+        "line": 1292,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_reset_v3",
+        "line": 1297,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_watchdog_v3",
+        "line": 1310,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_outputs_v3",
+        "line": 1323,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_outputs_test_v3",
+        "line": 1336,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_outputs_alloff_v3",
+        "line": 1357,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_mx_v3",
+        "line": 1366,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_mx_test_v3",
+        "line": 1375,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescab_protocol_mx_alloff_v3",
+        "line": 1397,
+        "top_level": false
+      }
+    ],
+    "classes": [
+      {
+        "name": "DudesCabProtocolError",
+        "line": 90,
+        "top_level": true
+      },
+      {
+        "name": "_HidApi",
+        "line": 94,
+        "top_level": true
+      },
+      {
+        "name": "_Reader",
+        "line": 404,
+        "top_level": true
+      },
+      {
+        "name": "_ConfigReader",
+        "line": 468,
+        "top_level": true
+      }
+    ],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "base64",
+      "collections",
+      "ctypes",
+      "errno",
+      "flask",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "struct",
+      "subprocess",
+      "threading",
+      "time",
+      "typing"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "usr/local/sbin/pincabos",
+      "usr/local/sbin/pincabos-dudescab-maintenance"
+    ],
+    "runtime_paths": [
+      "/dev/dudescab",
+      "/dev/serial/by-id",
+      "/opt/pincabos/bin/vpx",
+      "/sys/class/hidraw",
+      "/usr/bin/env",
+      "/usr/bin/pgrep",
+      "/usr/bin/sudo",
+      "/usr/lib/x86_64-linux-gnu/libhidapi-hidraw.so.0"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/bin/vpx",
+      "/usr/bin/env",
+      "/usr/bin/pgrep",
+      "/usr/bin/sudo",
+      "/usr/local/sbin/pincabos-dudescab-maintenance"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_dudescab_protocol.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

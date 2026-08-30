@@ -1,0 +1,342 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos_dudescab_config",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_dudescab_config.py",
+    "manifest_file": "opt/pincabos/web/pincabos_dudescab_config.json",
+    "language": "python",
+    "git_blob_sha": "b282a58d3e8ae4ffc1f5682519bb17cff26c3557",
+    "size_bytes": 54058,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": [
+      "register"
+    ]
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "_utc_now",
+        "line": 57,
+        "top_level": true
+      },
+      {
+        "name": "_ensure_dirs",
+        "line": 61,
+        "top_level": true
+      },
+      {
+        "name": "_atomic_json",
+        "line": 66,
+        "top_level": true
+      },
+      {
+        "name": "_read_json",
+        "line": 76,
+        "top_level": true
+      },
+      {
+        "name": "_run",
+        "line": 83,
+        "top_level": true
+      },
+      {
+        "name": "_sysfs_text",
+        "line": 98,
+        "top_level": true
+      },
+      {
+        "name": "_usb_devices",
+        "line": 105,
+        "top_level": true
+      },
+      {
+        "name": "_hidraw_nodes",
+        "line": 126,
+        "top_level": true
+      },
+      {
+        "name": "_tty_is_dudescab",
+        "line": 148,
+        "top_level": true
+      },
+      {
+        "name": "_serial_nodes",
+        "line": 168,
+        "top_level": true
+      },
+      {
+        "name": "_process_matches",
+        "line": 206,
+        "top_level": true
+      },
+      {
+        "name": "_service_active",
+        "line": 225,
+        "top_level": true
+      },
+      {
+        "name": "_space",
+        "line": 230,
+        "top_level": true
+      },
+      {
+        "name": "_hardware_status",
+        "line": 244,
+        "top_level": true
+      },
+      {
+        "name": "_validate_uf2",
+        "line": 266,
+        "top_level": true
+      },
+      {
+        "name": "_normalise_manifest",
+        "line": 306,
+        "top_level": true
+      },
+      {
+        "name": "_cache_path",
+        "line": 356,
+        "top_level": true
+      },
+      {
+        "name": "_fetch_manifest",
+        "line": 360,
+        "top_level": true
+      },
+      {
+        "name": "_cached_manifest",
+        "line": 396,
+        "top_level": true
+      },
+      {
+        "name": "_safe_firmware_path",
+        "line": 403,
+        "top_level": true
+      },
+      {
+        "name": "_list_local_firmwares",
+        "line": 418,
+        "top_level": true
+      },
+      {
+        "name": "_download_firmware",
+        "line": 444,
+        "top_level": true
+      },
+      {
+        "name": "_job_state",
+        "line": 510,
+        "top_level": true
+      },
+      {
+        "name": "_html_options",
+        "line": 526,
+        "top_level": true
+      },
+      {
+        "name": "_input_rows",
+        "line": 535,
+        "top_level": true
+      },
+      {
+        "name": "_output_selectors",
+        "line": 570,
+        "top_level": true
+      },
+      {
+        "name": "_output_cards",
+        "line": 577,
+        "top_level": true
+      },
+      {
+        "name": "_mx_lanes",
+        "line": 612,
+        "top_level": true
+      },
+      {
+        "name": "_page_body",
+        "line": 625,
+        "top_level": true
+      },
+      {
+        "name": "_no_device_body",
+        "line": 865,
+        "top_level": true
+      },
+      {
+        "name": "register",
+        "line": 918,
+        "top_level": true
+      },
+      {
+        "name": "dudescabconfig_page",
+        "line": 921,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescabconfig_status_v3",
+        "line": 939,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescabconfig_firmwares_v3",
+        "line": 943,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescabconfig_firmwares_refresh_v3",
+        "line": 957,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescabconfig_firmwares_download_v3",
+        "line": 975,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescabconfig_firmwares_upload_v3",
+        "line": 990,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescabconfig_firmwares_flash_v3",
+        "line": 1038,
+        "top_level": false
+      },
+      {
+        "name": "pincabos_dudescabconfig_job_v3",
+        "line": 1095,
+        "top_level": false
+      }
+    ],
+    "classes": [],
+    "routes": [
+      {
+        "path": "/DudesCabConfig",
+        "methods": [
+          "UNKNOWN"
+        ],
+        "function": null,
+        "line": 931
+      }
+    ]
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "datetime",
+      "flask",
+      "hashlib",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "shutil",
+      "subprocess",
+      "threading",
+      "time",
+      "typing",
+      "urllib.error",
+      "urllib.parse",
+      "urllib.request",
+      "uuid",
+      "werkzeug.utils"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/web/static/dudescabconfig/arnoz-white.png",
+      "opt/pincabos/web/static/dudescabconfig/directoutput.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-de.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-en.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-es.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-fr.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-it.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-pt.png",
+      "opt/pincabos/web/static/dudescabconfig/status-admin.png",
+      "opt/pincabos/web/static/dudescabconfig/status-beer.png",
+      "opt/pincabos/web/static/dudescabconfig/status-calibration.png",
+      "opt/pincabos/web/static/dudescabconfig/status-error.png",
+      "opt/pincabos/web/static/dudescabconfig/status-night.png",
+      "opt/pincabos/web/static/dudescabconfig/status-shift.png",
+      "opt/pincabos/web/static/dudescabconfig/status-warning.png",
+      "opt/pincabos/web/static/pincabos-dudescab-config-v3.css",
+      "opt/pincabos/web/static/pincabos-dudescab-config-v3.js",
+      "usr/local/libexec/pincabos-dudescab-flash"
+    ],
+    "runtime_paths": [
+      "/dev/dudescab",
+      "/dev/serial/by-id",
+      "/opt/pincabos/bin/vpx",
+      "/opt/pincabos/config/dudescab",
+      "/opt/pincabos/logs/dudescab-firmware",
+      "/run/pincabos-dudescab",
+      "/sys/bus/usb/devices",
+      "/sys/class/hidraw",
+      "/sys/class/tty",
+      "/usr/bin/env",
+      "/usr/bin/pgrep",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl"
+    ],
+    "configuration_paths": [],
+    "assets": [
+      "opt/pincabos/web/static/dudescabconfig/arnoz-white.png",
+      "opt/pincabos/web/static/dudescabconfig/directoutput.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-de.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-en.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-es.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-fr.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-it.png",
+      "opt/pincabos/web/static/dudescabconfig/flag-pt.png",
+      "opt/pincabos/web/static/dudescabconfig/status-admin.png",
+      "opt/pincabos/web/static/dudescabconfig/status-beer.png",
+      "opt/pincabos/web/static/dudescabconfig/status-calibration.png",
+      "opt/pincabos/web/static/dudescabconfig/status-error.png",
+      "opt/pincabos/web/static/dudescabconfig/status-night.png",
+      "opt/pincabos/web/static/dudescabconfig/status-shift.png",
+      "opt/pincabos/web/static/dudescabconfig/status-warning.png",
+      "opt/pincabos/web/static/pincabos-dudescab-config-v3.css",
+      "opt/pincabos/web/static/pincabos-dudescab-config-v3.js"
+    ],
+    "systemd_units_mentioned": [
+      "pincabos-vpinfe.service"
+    ],
+    "commands": [
+      "/opt/pincabos/bin/vpx",
+      "/usr/bin/env",
+      "/usr/bin/pgrep",
+      "/usr/bin/sudo",
+      "/usr/bin/systemctl"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/web/pincabos_dudescab_config.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

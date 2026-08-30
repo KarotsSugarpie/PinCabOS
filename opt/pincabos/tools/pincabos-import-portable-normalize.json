@@ -1,0 +1,120 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-import-portable-normalize",
+    "scope": "tool",
+    "kind": "executable",
+    "source_file": "opt/pincabos/tools/pincabos-import-portable-normalize.py",
+    "manifest_file": "opt/pincabos/tools/pincabos-import-portable-normalize.json",
+    "language": "python",
+    "git_blob_sha": "a3cd4e007e9187c10b63e0654bf5cc3c6b7a626a",
+    "size_bytes": 6870,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_webapp_core.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "safe_name",
+        "line": 41,
+        "top_level": true
+      },
+      {
+        "name": "ensure_table",
+        "line": 48,
+        "top_level": true
+      },
+      {
+        "name": "copy_or_move",
+        "line": 58,
+        "top_level": true
+      },
+      {
+        "name": "latest_table_dir",
+        "line": 78,
+        "top_level": true
+      },
+      {
+        "name": "classify_file",
+        "line": 89,
+        "top_level": true
+      },
+      {
+        "name": "move_legacy_into_table",
+        "line": 116,
+        "top_level": true
+      },
+      {
+        "name": "cleanup_import_work",
+        "line": 157,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 200,
+        "top_level": true
+      },
+      {
+        "name": "_pco_tree_after_import",
+        "line": 256,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "argparse",
+      "atexit",
+      "os",
+      "pathlib",
+      "re",
+      "shutil",
+      "subprocess"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/tools/pincabos-table-tree.sh"
+    ],
+    "runtime_paths": [
+      "/home/pinball/Downloads/work",
+      "/opt/pincabos",
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/opt/pincabos/tools/pincabos-table-tree.sh",
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/tools/pincabos-import-portable-normalize.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-screen-topology",
+    "scope": "runtime_script",
+    "kind": "executable",
+    "source_file": "opt/pincabos/scripts/pincabos-screen-topology.py",
+    "manifest_file": "opt/pincabos/scripts/pincabos-screen-topology.json",
+    "language": "python",
+    "git_blob_sha": "fd90aa7f05b8c52577e3f87c3475bb65441a79f7",
+    "size_bytes": 20307,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/script/iso.sh",
+      "opt/pincabos/tools/pincabos-verifier-perimetre-maj.py",
+      "opt/pincabos/web/app.py",
+      "usr/local/libexec/pincabos/pincabos-screen-topology-preflight.sh"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "log",
+        "line": 26,
+        "top_level": true
+      },
+      {
+        "name": "now",
+        "line": 30,
+        "top_level": true
+      },
+      {
+        "name": "restore_owner",
+        "line": 34,
+        "top_level": true
+      },
+      {
+        "name": "atomic_write",
+        "line": 45,
+        "top_level": true
+      },
+      {
+        "name": "load_json",
+        "line": 80,
+        "top_level": true
+      },
+      {
+        "name": "xrandr_as_pinball",
+        "line": 86,
+        "top_level": true
+      },
+      {
+        "name": "parse_edids",
+        "line": 103,
+        "top_level": true
+      },
+      {
+        "name": "discover_monitors",
+        "line": 141,
+        "top_level": true
+      },
+      {
+        "name": "infer_roles",
+        "line": 183,
+        "top_level": true
+      },
+      {
+        "name": "resolve_roles",
+        "line": 245,
+        "top_level": true
+      },
+      {
+        "name": "role_object",
+        "line": 276,
+        "top_level": true
+      },
+      {
+        "name": "update_section",
+        "line": 298,
+        "top_level": true
+      },
+      {
+        "name": "update_global",
+        "line": 344,
+        "top_level": true
+      },
+      {
+        "name": "apply_consumers",
+        "line": 363,
+        "top_level": true
+      },
+      {
+        "name": "refresh",
+        "line": 459,
+        "top_level": true
+      },
+      {
+        "name": "adopt_current_roles",
+        "line": 680,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 735,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "argparse",
+      "datetime",
+      "hashlib",
+      "json",
+      "os",
+      "pathlib",
+      "pwd",
+      "re",
+      "subprocess",
+      "sys",
+      "tempfile"
+    ],
+    "local_modules": [],
+    "repository_files": [
+      "home/pinball/.config/vpinfe/vpinfe.ini",
+      "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+    ],
+    "runtime_paths": [
+      "/home/pinball/.Xauthority",
+      "/opt/pincabos",
+      "/run/pincabos-screen-topology",
+      "/usr/bin/env",
+      "/usr/bin/xrandr",
+      "/usr/sbin/runuser"
+    ],
+    "configuration_paths": [
+      "/home/pinball/.config/vpinfe/vpinfe.ini",
+      "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+    ],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env",
+      "/usr/bin/xrandr",
+      "/usr/sbin/runuser"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/scripts/pincabos-screen-topology.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

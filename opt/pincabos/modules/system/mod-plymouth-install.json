@@ -1,0 +1,134 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "mod-plymouth-install",
+    "scope": "installer_module",
+    "kind": "installer_shell_module",
+    "source_file": "opt/pincabos/modules/system/mod-plymouth-install.sh",
+    "manifest_file": "opt/pincabos/modules/system/mod-plymouth-install.json",
+    "language": "shell",
+    "git_blob_sha": "59051feaa42ee261c1b7bdd6df17db7b48ed63b3",
+    "size_bytes": 7068,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/install/01-install-system.sh",
+      "opt/pincabos/install/go-pincabos.sh",
+      "opt/pincabos/install/packages/pkg-plymouth.sh"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "go",
+        "line": 33,
+        "top_level": true
+      },
+      {
+        "name": "warn",
+        "line": 34,
+        "top_level": true
+      },
+      {
+        "name": "nogo",
+        "line": 35,
+        "top_level": true
+      },
+      {
+        "name": "ensure_plymouth_deps",
+        "line": 37,
+        "top_level": true
+      },
+      {
+        "name": "find_cmd",
+        "line": 72,
+        "top_level": true
+      },
+      {
+        "name": "run_with_spinner",
+        "line": 187,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [],
+    "local_modules": [],
+    "repository_files": [
+      "opt/pincabos/modules/system/assets/plymouth/pkg-plymouth-install.tar.zst"
+    ],
+    "runtime_paths": [
+      "/dev/null",
+      "/opt/pincabos/backups",
+      "/opt/pincabos/backups/plymouth-install-",
+      "/opt/pincabos/modules/system/assets/plymouth",
+      "/tmp/pco-plymouth-alt-query.err",
+      "/tmp/pco-plymouth-alt-query.txt",
+      "/tmp/pco-plymouth-install-module-list.txt",
+      "/tmp/pco-plymouth-install-module.err",
+      "/tmp/pincabos-plymouth-initramfs-",
+      "/usr/bin/bash",
+      "/usr/bin/env",
+      "/usr/bin/sha256sum",
+      "/usr/bin/tar",
+      "/usr/bin/update-alternatives",
+      "/usr/sbin",
+      "/usr/sbin/update-initramfs",
+      "/usr/share/plymouth/themes",
+      "/usr/share/plymouth/themes/default.plymouth",
+      "/usr/share/plymouth/themes/pincabos-install"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/bash",
+      "/usr/bin/env",
+      "/usr/bin/sha256sum",
+      "/usr/bin/tar",
+      "/usr/bin/update-alternatives",
+      "/usr/sbin/update-initramfs",
+      "update-alternatives"
+    ],
+    "environment_variables": [
+      "ACTIVE_THEME",
+      "BACKUP_DIR",
+      "EXPECTED_THEME",
+      "GREEN",
+      "INITRAMFS_CMD",
+      "ORANGE",
+      "PKG",
+      "RED",
+      "SHA",
+      "THEME_DIR",
+      "THEME_FILE",
+      "THEME_NAME",
+      "YELLOW"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/modules/system/mod-plymouth-install.sh",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

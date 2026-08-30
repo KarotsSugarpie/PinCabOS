@@ -1,0 +1,120 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-tester-report-ingest-v3",
+    "scope": "development",
+    "kind": "executable",
+    "source_file": "DEV/config-testeur/pincabos-tester-report-ingest-v3.py",
+    "manifest_file": "DEV/config-testeur/pincabos-tester-report-ingest-v3.json",
+    "language": "python",
+    "git_blob_sha": "a03a1c3f5a1bae34204346967f2482d88c8fed9b",
+    "size_bytes": 7770,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "fail",
+        "line": 32,
+        "top_level": true
+      },
+      {
+        "name": "api_get",
+        "line": 36,
+        "top_level": true
+      },
+      {
+        "name": "slugify",
+        "line": 55,
+        "top_level": true
+      },
+      {
+        "name": "parse_issue_metadata",
+        "line": 62,
+        "top_level": true
+      },
+      {
+        "name": "fetch_all_comments",
+        "line": 75,
+        "top_level": true
+      },
+      {
+        "name": "parse_chunks",
+        "line": 93,
+        "top_level": true
+      },
+      {
+        "name": "decompress_report",
+        "line": 126,
+        "top_level": true
+      },
+      {
+        "name": "main",
+        "line": 157,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "__future__",
+      "base64",
+      "datetime",
+      "gzip",
+      "hashlib",
+      "io",
+      "json",
+      "os",
+      "pathlib",
+      "re",
+      "sys",
+      "unicodedata",
+      "urllib.error",
+      "urllib.parse",
+      "urllib.request"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env"
+    ],
+    "environment_variables": [
+      "GITHUB_OUTPUT",
+      "GITHUB_REPOSITORY",
+      "GITHUB_TOKEN"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "DEV/config-testeur/pincabos-tester-report-ingest-v3.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}
