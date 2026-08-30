@@ -142,27 +142,48 @@ def _configured_candidates() -> list[Path]:
 
 
 def _local_vpx() -> dict[str, Any]:
-    candidates = _configured_candidates()
+    # PINCABOS_VPX_CANONICAL_LINK_V2
+    #
+    # La source de vérité locale est le symlink officiel ~/vpx.
+    # Plusieurs versions VPX sont volontairement conservées pour rollback :
+    # il ne faut donc jamais choisir arbitrairement le premier répertoire
+    # VPinballX_BGFX-* trouvé sur disque.
+    canonical = Path("/home/pinball/vpx/VPinballX_BGFX")
 
-    if not candidates:
-        return {
-            "available": False,
-            "display": "VPX local introuvable",
-            "path": "",
-            "version": "",
-            "revision": "",
-            "commit": "",
-            "engine": "",
-        }
+    preferred = None
 
-    preferred = sorted(
-        candidates,
-        key=lambda item: (
-            "VPinballX_BGFX" not in item.name,
-            "/home/pinball/VPinballX_BGFX-" not in str(item),
-            str(item),
-        ),
-    )[0]
+    try:
+        resolved = canonical.resolve()
+        if (
+            resolved.is_file()
+            and os.access(resolved, os.X_OK)
+            and resolved.name.startswith("VPinballX")
+        ):
+            preferred = resolved
+    except OSError:
+        preferred = None
+
+    if preferred is None:
+        candidates = _configured_candidates()
+
+        if not candidates:
+            return {
+                "available": False,
+                "display": "VPX local introuvable",
+                "path": "",
+                "version": "",
+                "revision": "",
+                "commit": "",
+                "engine": "",
+            }
+
+        preferred = sorted(
+            candidates,
+            key=lambda item: (
+                "VPinballX_BGFX" not in item.name,
+                str(item),
+            ),
+        )[-1]
 
     version, revision, commit = _version_parts(str(preferred))
 

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Agrege l'etat des mises a jour de chaque composant en un seul fichier.
 
-PINCABOS_UPDATES_AGGREGATE_V1
+PINCABOS_UPDATES_AGGREGATE_V2
 
 Chaque composant sait deja repondre "version installee / disponible" :
-  - PinCabOS (OS) : getpcos check           (texte)
-  - VPinFE        : vpinfeupdate.py --status --remote   (JSON)
+  - PinCabOS (OS) : getpcos check                         (texte)
+  - VPinFE        : vpinfeupdate.py --status --remote    (JSON)
   - vpxtool       : pincabos-vpxtool-update --status     (JSON)
+  - VPX-BGFX      : pincabos-vpx-update --status         (JSON)
 
 Ce script les interroge (avec reseau), normalise le tout, et ecrit
 /opt/pincabos/state/updates-available.json. La page unifiee et la tuile du
@@ -15,13 +16,15 @@ chargement. Un timer systemd le rafraichit periodiquement.
 
 Chaque verification est isolee : si un composant echoue (reseau, binaire
 absent), il est marque "inconnu" et n'entraine pas de faux "mise a jour dispo".
+
+Important pour VPX : l'agregateur ne reimplemente plus la selection des GitHub
+Releases. Le moteur pincabos-vpx-update est la source de verite unique : il
+ignore les releases « DO NOT USE » et exige un asset BGFX Linux x64 réellement
+installable avant d'annoncer une version disponible.
 """
 from __future__ import annotations
 
 import json
-import os
-import re
-import urllib.request
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -91,48 +94,41 @@ def check_vpxtool():
         return comp("vpxtool", "vpxtool", ok=False)
 
 
-def _vpx_installe():
-    p = Path("/home/pinball/vpx")
-    if not (p.is_symlink() or p.exists()):
-        return None
-    nom = os.path.basename(os.path.realpath(str(p)))
-    m = re.search(r"VPinballX_BGFX-(.+?)-linux", nom)
-    return m.group(1) if m else None
-
-
-def _vpx_dernier():
-    req = urllib.request.Request(
-        "https://api.github.com/repos/vpinball/vpinball/releases?per_page=15",
-        headers={"Accept": "application/vnd.github+json",
-                 "User-Agent": "pincabos-updates-check"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        rels = json.load(r)
-    for rel in rels:
-        etiquette = ((rel.get("name") or "") + " "
-                     + (rel.get("tag_name") or "")).upper()
-        if "DO NOT USE" in etiquette:
-            continue
-        return (rel.get("tag_name") or "").lstrip("v"), rel.get("html_url")
-    return None, None
-
-
 def check_vpx():
-    inst = _vpx_installe()
+    """Délègue entièrement l'audit release au moteur VPX canonique."""
     try:
-        dernier, url = _vpx_dernier()
+        exe = "/opt/pincabos/tools/pincabos-vpx-update"
+        r = run([exe, "--status"], timeout=45)
+        d = json.loads((r.stdout or "").strip() or "{}")
+
+        inst = d.get("installed")
+        avail = d.get("available")
+        ok = bool(d.get("ok")) and bool(avail)
+
+        c = comp(
+            "vpx",
+            "VPX-BGFX",
+            inst,
+            avail,
+            bool(avail) and inst != avail,
+            ok=ok,
+        )
+        c["release_url"] = d.get("release_url") or ""
+        c["manage_url"] = "/tools/vpx/update"
+        return c
     except Exception:
-        return comp("vpx", "VPX-BGFX", inst, None, False, ok=False)
-    if not dernier:
-        return comp("vpx", "VPX-BGFX", inst, None, False, ok=False)
-    c = comp("vpx", "VPX-BGFX", inst, dernier, bool(inst) and inst != dernier)
-    c["release_url"] = url
-    c["manage_url"] = "/tools/vpx/update"  # page de MAJ interne
-    return c
+        c = comp("vpx", "VPX-BGFX", ok=False)
+        c["manage_url"] = "/tools/vpx/update"
+        return c
 
 
 def main():
-    composants = [check_pincabos(), check_vpinfe(), check_vpxtool(),
-                  check_vpx()]
+    composants = [
+        check_pincabos(),
+        check_vpinfe(),
+        check_vpxtool(),
+        check_vpx(),
+    ]
     donnees = {
         "generated_at": datetime.now(timezone.utc).isoformat()
         .replace("+00:00", "Z"),
@@ -141,8 +137,10 @@ def main():
     }
     ETAT.parent.mkdir(parents=True, exist_ok=True)
     tmp = ETAT.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(donnees, indent=2, ensure_ascii=False) + "\n",
-                   encoding="utf-8")
+    tmp.write_text(
+        json.dumps(donnees, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
     tmp.chmod(0o644)
     tmp.replace(ETAT)
     print(json.dumps(donnees, indent=2, ensure_ascii=False))
