@@ -1,0 +1,50 @@
+name: Smart Import archive hardening
+
+on:
+  pull_request:
+    paths:
+      - 'opt/pincabos/tools/pincabos-smart-archive-import.py'
+      - 'opt/pincabos/tools/pincabos-smart-archive-import-core.py'
+      - 'opt/pincabos/tools/pincabos_smart_import_hardening/**'
+      - 'opt/pincabos/tests/test-smart-import-archive-hardening.py'
+      - '.github/workflows/smart-import-archive-hardening.yml'
+  push:
+    branches:
+      - 'fix/smart-import-archive-hardening'
+    paths:
+      - 'opt/pincabos/tools/pincabos-smart-archive-import.py'
+      - 'opt/pincabos/tools/pincabos-smart-archive-import-core.py'
+      - 'opt/pincabos/tools/pincabos_smart_import_hardening/**'
+      - 'opt/pincabos/tests/test-smart-import-archive-hardening.py'
+      - '.github/workflows/smart-import-archive-hardening.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  archive-hardening:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install 7-Zip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+
+      - name: Compile Smart Import Python
+        run: |
+          python3 -m py_compile \
+            opt/pincabos/tools/pincabos-smart-archive-import.py \
+            opt/pincabos/tools/pincabos-smart-archive-import-core.py \
+            opt/pincabos/tools/pincabos_smart_import_hardening/__init__.py \
+            opt/pincabos/tools/pincabos_smart_import_hardening/archive.py \
+            opt/pincabos/tools/pincabos_smart_import_hardening/runtime.py \
+            opt/pincabos/tests/test-smart-import-archive-hardening.py
+
+      - name: Run archive hardening self-test
+        run: |
+          python3 opt/pincabos/tests/test-smart-import-archive-hardening.py
