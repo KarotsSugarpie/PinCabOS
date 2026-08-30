@@ -7,6 +7,7 @@ from pathlib import Path
 
 CORE = None
 MAX_NESTED_PASSES = 6
+AUTHORITATIVE_ROM_PATHS = set()
 
 PASSWORD_MARKERS = (
     "wrong password",
@@ -168,6 +169,13 @@ def archive_kind(src):
         return ""
 
     files = [value.lower().replace("\\", "/") for value in archive_validate(src)]
+
+    try:
+        authoritative_rom = src.resolve() in AUTHORITATIVE_ROM_PATHS
+    except Exception:
+        authoritative_rom = False
+    if src.suffix.lower() == ".zip" and authoritative_rom:
+        return "rom_zip"
     names = [Path(value).name.lower() for value in files]
 
     if any(value.endswith(".dif") for value in files):
@@ -263,7 +271,12 @@ def extract_all_inputs(batch_dir, extract_root, resource_manifest=None):
         # A VPSDB romFile is authoritative, but the ZIP still has to be readable.
         if suffix == ".zip" and _resource_type(resource) == "romFile":
             archive_validate(item)
-            core.copy_file(item, item_raw_dir)
+            copied_rom = core.copy_file(item, item_raw_dir)
+            for candidate in (item, copied_rom):
+                try:
+                    AUTHORITATIVE_ROM_PATHS.add(Path(candidate).resolve())
+                except Exception:
+                    pass
             continue
 
         try:
