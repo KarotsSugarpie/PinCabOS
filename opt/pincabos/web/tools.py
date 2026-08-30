@@ -770,6 +770,19 @@ def tools_hub_html():
           </div>
         </a>
 
+        <!-- PINCABOS_VPX_UPDATE_CARD_V1 -->
+        <a class="tool-card" href="/tools/vpx/update">
+          <div class="pco-tool-art">
+            <img src="/static/pincabos-assets/PCOSUpdateVPX.png?v=vpxupdates1"
+                 alt="Mise à jour VPX" loading="lazy">
+          </div>
+          <div class="pco-tool-body">
+            <strong>Update VPX</strong>
+            <span class="pco-tool-description">Vérifier la release officielle GitHub, conserver la version précédente puis appliquer une mise à jour VPX BGFX contrôlée.</span>
+            <div class="pco-tool-footer"><span>Vérifier et mettre à jour</span><span class="pco-tool-open">→</span></div>
+          </div>
+        </a>
+
         <!-- PINCABOS_B2S_CONFIG_CARD_V1 -->
         <a class="tool-card" href="/tools/vpinballx/b2s">
           <div class="pco-tool-art">
@@ -5747,8 +5760,7 @@ def _tools_vpinfe_embed_page(title, instruction):
         ensure_ascii=False,
     )
 
-    template = r'''
-<!-- PINCABOS_TOOLS_VPINFE_WIDGETS_PORT8001_V10 -->
+    template = r'''<!-- PINCABOS_TOOLS_VPINFE_WIDGETS_PORT8001_V10 -->
 <style>
 .pco-vpinfe-embed-shell {
   width: calc(100% - 32px);
