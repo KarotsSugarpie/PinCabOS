@@ -538,37 +538,21 @@ def tools_hub_html():
           </div>
         </a>
 
-        <a class="tool-card" href="/dof/commander">
-          <div class="pco-tool-art">
-            <img src="/static/pincabos-assets/PCOSDOFOutpouts.png?v=toolsart2"
-                 alt="PinCabOS DOF Commander Outputs" loading="lazy">
-          </div>
-          <div class="pco-tool-body">
-            <strong>DOF Commander — Outputs</strong>
-            <span class="pco-tool-description">
-              Gérer les sorties DOF, toys, contrôleurs,
-              effets et périphériques du cabinet.
-            </span>
-            <div class="pco-tool-footer">
-              <span>Ouvrir DOF Commander</span>
-              <span class="pco-tool-open">→</span>
-            </div>
-          </div>
-        </a>
-
+        <!-- PCOS_TOOLS_DOF_SINGLE_TILE_V1 -->
         <a class="tool-card" href="/dof">
           <div class="pco-tool-art">
             <img src="/static/pincabos-assets/PCOSDOFOutpouts.png?v=toolsart2"
-                 alt="PinCabOS DOF Matériel et Config" loading="lazy">
+                 alt="PinCabOS DOF" loading="lazy">
           </div>
           <div class="pco-tool-body">
-            <strong>DOF — Matériel &amp; Config</strong>
+            <strong>DOF</strong>
             <span class="pco-tool-description">
-              État DOF, cartes détectées (Teensy, Dude's Cab, LedWiz...),
-              cabinet.xml, drivers et imports DOF Config Tool.
+              Feedback du cabinet : matériel (Teensy, Dude's Cab...),
+              cabinet.xml, imports DOF Config Tool et tests des
+              sorties (Commander).
             </span>
             <div class="pco-tool-footer">
-              <span>Ouvrir DOF Matériel &amp; Config</span>
+              <span>Ouvrir DOF</span>
               <span class="pco-tool-open">→</span>
             </div>
           </div>
