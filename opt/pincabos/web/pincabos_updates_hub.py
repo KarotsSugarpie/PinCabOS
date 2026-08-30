@@ -1,12 +1,12 @@
-"""Onglet unique des mises a jour : OS, VPinFE, vpxtool au meme endroit.
+"""Onglet unique des mises a jour : OS, VPinFE, vpxtool et VPX.
 
-PINCABOS_UPDATES_HUB_V1
+PINCABOS_UPDATES_HUB_V2
 
 Les mises a jour etaient eclatees : une tuile/page par composant (PinCabOS,
-VPinFE, vpxtool). Ce hub les rassemble en une seule vue. Il ne reimplemente
-rien : il lit l'etat agrege ecrit par pincabos-updates-check (rafraichi par un
-timer), et route chaque composant vers sa page de gestion existante, qui garde
-ses propres garde-fous (l'OS, notamment, avec sa confirmation de redemarrage).
+VPinFE, vpxtool, VPX). Ce hub les rassemble en une seule vue. Il ne
+reimplemente rien : il lit l'etat agrege ecrit par pincabos-updates-check
+(rafraichi par un timer), et route chaque composant vers sa page de gestion
+existante, qui garde ses propres garde-fous.
 
 Le fichier d'etat est lu tel quel (instantane, hors ligne). Le bouton
 'Verifier maintenant' relance l'agregateur cote serveur (compte pinball, qui
@@ -23,11 +23,12 @@ from flask import jsonify
 ETAT = Path("/opt/pincabos/state/updates-available.json")
 AGREGATEUR = "/opt/pincabos/tools/pincabos-updates-check"
 
-# Chaque composant renvoie vers sa page de gestion existante.
+# Chaque composant renvoie vers sa page de gestion canonique.
 PAGES = {
     "pincabos": "/tools/updates",
     "vpinfe": "/tools/vpinfe/update",
     "vpxtool": "/tools/vpxtool/update",
+    "vpx": "/tools/vpx/update",
 }
 
 
@@ -72,7 +73,7 @@ _BODY = """
 </div>
 
 <script>
-const PAGES = {"pincabos":"/tools/updates","vpinfe":"/tools/vpinfe/update","vpxtool":"/tools/vpxtool/update"};
+const PAGES = {"pincabos":"/tools/updates","vpinfe":"/tools/vpinfe/update","vpxtool":"/tools/vpxtool/update","vpx":"/tools/vpx/update"};
 const tbody = document.getElementById("lignes");
 const btn = document.getElementById("btn-check");
 const majDate = document.getElementById("maj-date");
