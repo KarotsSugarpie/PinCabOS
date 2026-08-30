@@ -93,6 +93,17 @@ def _teensy_port():
     return None
 
 
+def _tty_by_serial(serial):
+    """Retrouve le /dev/tty* d'une carte par son numero de serie USB.
+    Indispensable avec plusieurs Teensy : 'auto' seul serait ambigu."""
+    if not serial:
+        return None
+    for dev in sorted(glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")):
+        if _udev(dev).get("ID_SERIAL_SHORT") == serial:
+            return dev
+    return None
+
+
 # ----------------------------- génération XML -----------------------------
 def _el(tag, val):
     return "      <%s>%s</%s>" % (tag, val, tag)
@@ -101,7 +112,7 @@ def _el(tag, val):
 def _teensy_controller(s):
     port = s.get("com_port", "auto")
     if port == "auto":
-        port = _teensy_port() or "/dev/ttyACM0"
+        port = _tty_by_serial(s.get("serial")) or _teensy_port() or "/dev/ttyACM0"
     leds = (s.get("leds_per_strip", []) + [0] * 8)[:8]
     lines = ["    <TeensyStripController>",
              _el("Name", s.get("name", "TeensyStripController 1"))]
