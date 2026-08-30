@@ -1586,6 +1586,7 @@ def detect_dof_devices():
     combined = (usb + "\n" + tty + "\n" + hid).lower()
 
     checks = [
+        ("Teensy / PJRC (strips adressables)", ["teensy", "teensyduino", "16c0"]),
         ("Pinscape / KL25Z / NXP", ["pinscape", "kl25z", "freescale", "nxp", "kinetis"]),
         ("Pinscape Pico / RP2040", ["rp2040", "raspberry pi pico", "pico"]),
         ("Dude's Cab / Wemos / ESP", ["dudescab", "dude", "wemos", "esp32", "esp8266", "ch340", "1a86"]),
@@ -3156,6 +3157,17 @@ def dof_component_definitions():
             "notes": "libusb / hidraw / serial"
         },
         {
+            "key": "teensy",
+            "name": "Teensy / PJRC (strips adressables)",
+            "check": [
+                ("Package python3-serial", lambda: dof_pkg_ok("python3-serial")),
+                ("Module usbhid", lambda: dof_module_ok("usbhid")),
+                ("Module cdc_acm", lambda: dof_module_ok("cdc_acm")),
+                ("udev Teensy 16c0", lambda: dof_udev_ok("16c0")),
+            ],
+            "notes": "serial USB / TeensyStripController / backboard adressable"
+        },
+        {
             "key": "dudes-esp",
             "name": "Dude's Cab / Wemos / ESP",
             "check": [
@@ -3270,8 +3282,10 @@ def dof_utils_card_html():
 
   <p>
     Installe et vérifie les dépendances Linux nécessaires pour les contrôleurs DOF :
-    LedWiz32, Pinscape / KL25Z / NXP, Pinscape Pico / RP2040, Dude's Cab / Wemos / ESP,
-    PacLed / Ultimarc, FTDI, Arduino / Leonardo / Micro et Serial USB.
+    LedWiz32, Pinscape / KL25Z / NXP, Pinscape Pico / RP2040, Teensy / PJRC,
+    Dude's Cab / Wemos / ESP, PacLed / Ultimarc, FTDI, Arduino / Leonardo / Micro
+    et Serial USB. Chaque famille est indépendante : n'installe que ce qui
+    correspond aux cartes réellement présentes dans ton cab.
   </p>
 
   <table style="width:100%; border-collapse:collapse;">
@@ -4817,7 +4831,7 @@ def dof_page():
 
 """
 
-    body = body + dof_detection_summary_card(summary, raw_devices, logs, file_rows)
+    body = body + dof_utils_card_html() + dof_detection_summary_card(summary, raw_devices, logs, file_rows)
 
     return page("Outputs", body)
 
