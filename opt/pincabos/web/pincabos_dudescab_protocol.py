@@ -940,16 +940,66 @@ def _verify_config_roundtrip() -> dict[str, Any]:
     }
 
 
-def _write_admin_config(config: dict[str, Any], save: bool = True, verify: bool = True) -> dict[str, Any]:
-    """Ecrit la config sur la carte : SetConfig (101), VERIFICATION post-ecriture
-    (relecture GetConfig 100 + comparaison), puis SaveToFlash (114).
+# Champs rapportes par GetConfig mais GERES PAR LE FIRMWARE : SetConfig les ignore
+# (declencheurs de test MX). Les exclure de la verification post-ecriture, sinon
+# faux positif a chaque ecriture. Confirme experimentalement (cab reel, fw 2.0.6).
+_DEVICE_MANAGED_FIELDS = {
+    "mx.test_on_reset",
+    "mx.test_on_reset_duration",
+    "mx.test_on_connect",
+    "mx.test_on_connect_duration",
+}
+# Sections REELLES de la config carte : on ne compare QUE celles-ci. Tout le
+# reste (parsed_size, raw_size, raw_hex, raw_sha256, firmware, version_match,
+# announced_config_version...) est du meta ajoute par la lecture -> ignore.
+_CONFIG_SECTIONS = {
+    "version", "general", "inputs", "extensions",
+    "accelerometer", "plunger", "mx",
+}
 
-    La carte n'accuse PAS reception de SetConfig (envoi sans reponse). Sans
-    verification, une config rejetee par la carte (ex. version de config/firmware
-    differente de la v11 reverse-engineeree) passe totalement inapercue : l'API
-    renvoie un succes alors que rien n'a change. On relit donc la config juste
-    apres l'ecriture et on compare le blob re-serialise a celui envoye ; on ne
-    sauvegarde en flash QUE si la carte a bien applique la config."""
+
+def _flatten_config(value: Any, prefix: str = "") -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    if isinstance(value, dict):
+        for k, v in value.items():
+            out.update(_flatten_config(v, f"{prefix}.{k}" if prefix else str(k)))
+    elif isinstance(value, list):
+        for i, v in enumerate(value):
+            out.update(_flatten_config(v, f"{prefix}[{i}]"))
+    else:
+        out[prefix] = value
+    return out
+
+
+def _config_write_diff(intended: dict[str, Any], readback: dict[str, Any]) -> dict[str, Any]:
+    """Champs qui different entre la config voulue et la config relue apres
+    SetConfig, hors champs meta et champs geres par le firmware."""
+    fa = _flatten_config(intended)
+    fb = _flatten_config(readback)
+    diffs: dict[str, Any] = {}
+    for key in set(fa) | set(fb):
+        top = key.split(".", 1)[0].split("[", 1)[0]
+        if top not in _CONFIG_SECTIONS:
+            continue  # champ meta (tailles, hash, firmware...) -> non compare
+        base = key.split("[", 1)[0]
+        if base in _DEVICE_MANAGED_FIELDS:
+            continue  # champ gere par le firmware (test MX) -> non inscriptible
+        if fa.get(key) != fb.get(key):
+            diffs[key] = {"intended": fa.get(key), "device": fb.get(key)}
+    return diffs
+
+
+def _write_admin_config(config: dict[str, Any], save: bool = True, verify: bool = True) -> dict[str, Any]:
+    """Ecrit la config : SetConfig (101), VERIFICATION SEMANTIQUE post-ecriture
+    (relit GetConfig 100, compare champ par champ), puis SaveToFlash (114) SEULEMENT
+    si tout a bien ete applique.
+
+    La carte n'accuse pas reception de SetConfig. Sans verification, une config
+    partiellement rejetee (ex. mapping non applique sur un firmware different)
+    passe pour un succes. On compare donc la config voulue a la config relue, en
+    excluant les champs meta et les champs geres par le firmware (declencheurs de
+    test MX, non inscriptibles). En cas d'ecart REEL, on ne sauvegarde pas en
+    flash et on liste les champs fautifs."""
     with _state_lock:
         admin = _admin_enabled
     if not admin:
@@ -957,28 +1007,27 @@ def _write_admin_config(config: dict[str, Any], save: bool = True, verify: bool 
             "Mode admin inactif : appelle /protocol/connect avant d'ecrire."
         )
     buffer = _build_admin_config(config)
-    result: dict[str, Any] = {"sent_bytes": len(buffer), "saved": False, "verified": None}
+    result: dict[str, Any] = {"sent_bytes": len(buffer), "saved": False, "verified": None, "diff": {}}
     with _operation_lock:
         hid_command(REPORT_ADMIN, 101, buffer, expect_response=False)
         if verify:
             raw = hid_command(
                 REPORT_ADMIN, 100, bytes((1,)), expect_response=True, timeout_ms=12000
             )
-            rebuilt = _build_admin_config(_parse_admin_config(raw))
-            applied = rebuilt == buffer
-            result["verified"] = applied
-            if not applied:
-                diff_at = next(
-                    (i for i, (a, b) in enumerate(zip(buffer, rebuilt)) if a != b),
-                    min(len(buffer), len(rebuilt)),
+            readback = _parse_admin_config(raw)
+            diffs = _config_write_diff(config, readback)
+            result["verified"] = not diffs
+            result["diff"] = diffs
+            if diffs:
+                sample = ", ".join(
+                    f"{k} (voulu={d['intended']}, carte={d['device']})"
+                    for k, d in list(diffs.items())[:6]
                 )
+                more = " ..." if len(diffs) > 6 else ""
                 raise DudesCabProtocolError(
-                    "La carte n'a pas applique la configuration (aucune erreur signalee "
-                    "cote carte). Verification post-ecriture : divergence a l'octet "
-                    f"{diff_at} (ecrit {len(buffer)} o, relu {len(rebuilt)} o). Cause "
-                    "probable : version de config/firmware differente de celle supportee "
-                    "(reverse-engineeree sur firmware 2.0.x / config v11). Rien n'a ete "
-                    "sauvegarde en flash."
+                    "La carte n'a pas applique certains champs (rien sauvegarde en "
+                    f"flash) : {sample}{more}. Cause possible : version de "
+                    "config/firmware differente, ou champ non inscriptible."
                 )
         if save:
             hid_command(REPORT_ADMIN, 114, expect_response=False)
