@@ -140,11 +140,6 @@
 
       var r = cur.getBoundingClientRect();
       var t = txt(cur).toLowerCase();
-
-      /*
-        We want the compact top block containing Navigation/Safe editor/filter,
-        not the giant whole page containing all INI keys.
-      */
       if (
         r.top < 420 &&
         r.height < 520 &&
@@ -196,23 +191,11 @@
     blocks.forEach(function (el) {
       rememberIni(el);
       el.classList.add("pco-ini-offset-forced");
-
-      /*
-        Force it. Some INI blocks are sticky, some are normal.
-        Normal blocks need sticky/fixed behavior to stay under menu while scrolling.
-      */
       el.style.position = "sticky";
       el.style.top = top + "px";
       el.style.zIndex = "2147482500";
       el.style.boxShadow = "0 8px 18px rgba(0,0,0,.35)";
-
-      /*
-        Do not force a color; use existing theme. This only helps if the block
-        had transparent background and text passes under it.
-      */
-      if (!el.style.background) {
-        el.style.background = "inherit";
-      }
+      if (!el.style.background) el.style.background = "inherit";
     });
   }
 
@@ -252,16 +235,12 @@
     var card = findFullMenuCard();
     var pinBtn = q("#pco-menu-pin-btn");
 
-    if (!card) {
-      alert("PinCabOS: aucun menu trouvé");
-      return false;
-    }
+    if (!card) return false;
 
     rememberCard(card);
 
     if (v) {
       var h = getMenuHeight(card);
-
       card.classList.add("pco-menu-force-fixed");
       card.style.position = "fixed";
       card.style.top = "0";
@@ -272,7 +251,6 @@
       card.style.zIndex = "2147482999";
       card.style.boxShadow = "0 12px 32px rgba(0,0,0,.70)";
       card.style.borderBottom = "3px solid #ff8a00";
-
       document.body.style.paddingTop = h + "px";
       setOffset(h);
       forceIniOffset(h);
@@ -281,6 +259,7 @@
         pinBtn.classList.add("pco-pinned");
         pinBtn.textContent = "📍";
         pinBtn.title = "Menu complet épinglé";
+        pinBtn.setAttribute("aria-pressed", "true");
       }
     } else {
       card.classList.remove("pco-menu-force-fixed");
@@ -307,11 +286,21 @@
         pinBtn.classList.remove("pco-pinned");
         pinBtn.textContent = "📌";
         pinBtn.title = "Épingler le menu complet";
+        pinBtn.setAttribute("aria-pressed", "false");
       }
     }
 
     setPinnedStored(v);
     return false;
+  }
+
+  function bindSingleClick(btn, handler) {
+    if (!btn || !btn.parentNode) return btn;
+    var clean = btn.cloneNode(true);
+    clean.removeAttribute("onclick");
+    btn.parentNode.replaceChild(clean, btn);
+    clean.addEventListener("click", handler, true);
+    return clean;
   }
 
   window.pcoMenuTogglePin = function (ev) {
@@ -320,18 +309,7 @@
   };
 
   window.pcoMenuClosePage = function (ev) {
-    if (ev) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
-    }
-
-    /*
-      Real Chrome tab close:
-      1) ask local Flask backend to send Ctrl+W to the active Chrome window;
-      2) if backend fails, try browser close;
-      3) if blocked, fallback to about:blank.
-    */
+    stop(ev);
     fetch("/api/menu/close-tab", {
       method: "POST",
       cache: "no-store",
@@ -339,50 +317,99 @@
       body: "{}"
     }).then(function (res) {
       if (res.ok) return;
-      try {
-        window.open("", "_self");
-        window.close();
-      } catch (e) {}
-      setTimeout(function () {
-        try { window.location.href = "about:blank"; } catch (e2) {}
-      }, 150);
+      try { window.open("", "_self"); window.close(); } catch (e) {}
+      setTimeout(function () { try { window.location.href = "about:blank"; } catch (e2) {} }, 150);
     }).catch(function () {
-      try {
-        window.open("", "_self");
-        window.close();
-      } catch (e) {}
-      setTimeout(function () {
-        try { window.location.href = "about:blank"; } catch (e2) {}
-      }, 150);
+      try { window.open("", "_self"); window.close(); } catch (e) {}
+      setTimeout(function () { try { window.location.href = "about:blank"; } catch (e2) {} }, 150);
+    });
+    return false;
+  };
+
+  function csrfFromPage() {
+    if (window.PCO_LOBBY && window.PCO_LOBBY.csrf) return String(window.PCO_LOBBY.csrf);
+    var input = q('input[name="csrf"]');
+    return input && input.value ? String(input.value) : "";
+  }
+
+  function csrfFromHome() {
+    var current = csrfFromPage();
+    if (current) return Promise.resolve(current);
+
+    return fetch("/", { method: "GET", credentials: "same-origin", cache: "no-store" })
+      .then(function (res) { return res.text(); })
+      .then(function (body) {
+        var match = body.match(/["']csrf["']\s*:\s*["']([^"']+)["']/i);
+        return match ? match[1] : "";
+      });
+  }
+
+  function submitShutdown(csrf) {
+    var form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/dashboard/control/service/system/shutdown";
+    form.style.display = "none";
+    var token = document.createElement("input");
+    token.type = "hidden";
+    token.name = "csrf";
+    token.value = csrf;
+    form.appendChild(token);
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  window.pcoMenuShutdown = function (ev) {
+    stop(ev);
+    if (!window.confirm("Éteindre complètement le PinCab maintenant ?")) return false;
+
+    var button = q("#pco-menu-power-btn");
+    if (button) button.disabled = true;
+
+    csrfFromHome().then(function (csrf) {
+      if (!csrf) throw new Error("Jeton de sécurité Dashboard introuvable.");
+      submitShutdown(csrf);
+    }).catch(function (error) {
+      if (button) button.disabled = false;
+      window.alert("PinCabOS : arrêt impossible. " + (error && error.message ? error.message : "Erreur inconnue."));
     });
 
     return false;
   };
 
+  function ensurePowerButton() {
+    var existing = q("#pco-menu-power-btn");
+    if (existing) return existing;
+
+    var tools = q(".pco-menu-tools");
+    var closeBtn = q("#pco-menu-close-btn");
+    if (!tools && closeBtn) tools = closeBtn.parentElement;
+    if (!tools) return null;
+
+    var button = document.createElement("button");
+    button.type = "button";
+    button.id = "pco-menu-power-btn";
+    button.className = "pco-menu-tool-btn pco-menu-close-btn";
+    button.textContent = "⏻";
+    button.title = "Éteindre le PinCab";
+    button.setAttribute("aria-label", "Éteindre le PinCab");
+    if (closeBtn && closeBtn.parentNode === tools) tools.insertBefore(button, closeBtn);
+    else tools.appendChild(button);
+    return button;
+  }
+
   function boot() {
     var pinBtn = q("#pco-menu-pin-btn");
     var closeBtn = q("#pco-menu-close-btn");
+    var powerBtn = ensurePowerButton();
 
-    if (pinBtn) {
-      pinBtn.onclick = window.pcoMenuTogglePin;
-      pinBtn.addEventListener("click", window.pcoMenuTogglePin, true);
-    }
-
-    if (closeBtn) {
-      closeBtn.onclick = window.pcoMenuClosePage;
-      closeBtn.addEventListener("click", window.pcoMenuClosePage, true);
-    }
+    pinBtn = bindSingleClick(pinBtn, window.pcoMenuTogglePin);
+    closeBtn = bindSingleClick(closeBtn, window.pcoMenuClosePage);
+    powerBtn = bindSingleClick(powerBtn, window.pcoMenuShutdown);
 
     applyPinned(getPinned());
 
-    window.addEventListener("scroll", function () {
-      refreshIniOffset();
-    }, { passive: true });
-
-    window.addEventListener("resize", function () {
-      setTimeout(refreshIniOffset, 80);
-    });
-
+    window.addEventListener("scroll", refreshIniOffset, { passive: true });
+    window.addEventListener("resize", function () { setTimeout(refreshIniOffset, 80); });
     setInterval(refreshIniOffset, 1000);
   }
 
