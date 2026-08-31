@@ -25,6 +25,7 @@ TOOLS_ORDER_SECTIONS = ("pincabos", "vpinfe", "vpinballx")
 ALLOWED_SERVICES = {
     "vpinfe": {"start", "stop", "restart", "freeze", "thaw"},
     "webapp": {"restart"},
+    "system": {"shutdown"},
     "chrony": {"start", "restart"},
     "media_recorder": {"start", "stop", "restart"},
     "vpx": {"stop", "restart"},  # PINCABOS_DASHBOARD_VPX_SERVICE_V1
@@ -302,6 +303,7 @@ def register_dashboard_control_routes(app):
             "vpinfe": "VPinFE",
             "vpx": "Visual Pinball X",
             "webapp": "WebApp",
+            "system": "PinCabOS",
             "chrony": "Chrony",
             "media_recorder": "PinCab Recorder Worker",
         }.get(service, service)
