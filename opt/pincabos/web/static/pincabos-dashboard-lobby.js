@@ -42,7 +42,21 @@
     remove?.addEventListener('click', ev => { ev.stopPropagation(); const title = registry[item.id]?.title || 'Widget'; lastRemovedSlot = {x:item.x, y:item.y, w:item.w, h:item.h}; layout = layout.filter(x => x.id !== item.id); render(); if (editing) { openCatalog(); notify(`${title} retiré : disponible de nouveau dans le catalogue.`); } });
     const grip = el.querySelector('.pco-grip');
     if (grip) {
-      grip.addEventListener('dragstart', ev => { if (!editing) return ev.preventDefault(); drag = {kind:'move', id:item.id}; ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', `move:${item.id}`); el.classList.add('pco-dragging'); });
+      // PINCABOS_DASHBOARD_CARD_MOVE_SWAP_V1
+      // Conserver le point de prise pour éviter que le coin de la carte saute sous la souris.
+      grip.addEventListener('dragstart', ev => {
+        if (!editing) return ev.preventDefault();
+        const pointer = boardPos(ev);
+        drag = {
+          kind:'move',
+          id:item.id,
+          offsetX:Math.max(0, pointer.x - item.x),
+          offsetY:Math.max(0, pointer.y - item.y)
+        };
+        ev.dataTransfer.effectAllowed = 'move';
+        ev.dataTransfer.setData('text/plain', `move:${item.id}`);
+        el.classList.add('pco-dragging');
+      });
       grip.addEventListener('dragend', () => { drag = null; el.classList.remove('pco-dragging'); board.classList.remove('pco-drop-target'); });
     }
     const handle = el.querySelector('.pco-resize');
@@ -129,7 +143,15 @@
   board.addEventListener('dragleave', ev => { if (!board.contains(ev.relatedTarget)) board.classList.remove('pco-drop-target'); });
   board.addEventListener('drop', ev => {
     if (!editing) return; ev.preventDefault(); board.classList.remove('pco-drop-target');
-    const value = ev.dataTransfer.getData('text/plain') || ''; const [kind,id] = value.split(':'); const pos = boardPos(ev);
+    const value = ev.dataTransfer.getData('text/plain') || '';
+    const [kind,id] = value.split(':');
+    const rawPos = boardPos(ev);
+    const pos = (kind === 'move' && drag?.id === id)
+      ? {
+          x: Math.max(0, rawPos.x - (Number(drag.offsetX) || 0)),
+          y: Math.max(0, rawPos.y - (Number(drag.offsetY) || 0))
+        }
+      : rawPos;
     if (kind === 'new') {
       // PINCABOS_DASHBOARD_EDIT_ADD_TOP_GAP_V1
       // Par défaut: remplir le premier trou libre en haut du Dashboard.
@@ -139,7 +161,71 @@
       notify(ev.shiftKey ? 'Widget ajouté à l’endroit choisi.' : 'Widget ajouté au premier espace libre en haut.');
       return;
     }
-    if (kind === 'move') { const item=itemById(id); if (!item) return; const place=firstFit(item,Math.min(pos.x,cols-item.w),pos.y,item.id); item.x=place.x; item.y=place.y; render(); }
+    if (kind === 'move') {
+      const item = itemById(id);
+      if (!item) return;
+
+      const origin = {x:item.x, y:item.y};
+      const targetX = Math.max(0, Math.min(pos.x, cols - item.w));
+      const targetY = Math.max(0, pos.y);
+      const collides = (candidate, x, y, other) => !(
+        x + candidate.w <= other.x ||
+        other.x + other.w <= x ||
+        y + candidate.h <= other.y ||
+        other.y + other.h <= y
+      );
+      const collisions = layout.filter(other =>
+        other.id !== item.id && collides(item, targetX, targetY, other)
+      );
+
+      // Espace libre : position exacte.
+      if (!collisions.length) {
+        item.x = targetX;
+        item.y = targetY;
+        render();
+        return;
+      }
+
+      // Une seule carte ciblée : échange des emplacements si possible.
+      if (collisions.length === 1) {
+        const other = collisions[0];
+        const ignored = new Set([item.id, other.id]);
+        const blockers = layout.filter(entry => !ignored.has(entry.id));
+        const fitsAgainstBlockers = (candidate, x, y) => {
+          if (x < 0 || y < 0 || x + candidate.w > cols) return false;
+          return !blockers.some(blocker => collides(candidate, x, y, blocker));
+        };
+
+        const itemX = other.x;
+        const itemY = other.y;
+        const otherX = origin.x;
+        const otherY = origin.y;
+        const pairSeparated =
+          itemX + item.w <= otherX ||
+          otherX + other.w <= itemX ||
+          itemY + item.h <= otherY ||
+          otherY + other.h <= itemY;
+
+        if (
+          pairSeparated &&
+          fitsAgainstBlockers(item, itemX, itemY) &&
+          fitsAgainstBlockers(other, otherX, otherY)
+        ) {
+          item.x = itemX;
+          item.y = itemY;
+          other.x = otherX;
+          other.y = otherY;
+          render();
+          return;
+        }
+      }
+
+      // Cas complexe : repli sur le placement sûr historique.
+      const place = firstFit(item, targetX, targetY, item.id);
+      item.x = place.x;
+      item.y = place.y;
+      render();
+    }
   });
   document.addEventListener('pointermove', ev => {
     if (!resize) return; const item=itemById(resize.id); if (!item) return;
