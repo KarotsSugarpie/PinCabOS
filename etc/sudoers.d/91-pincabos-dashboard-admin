@@ -6,6 +6,7 @@ pinball ALL=(root) NOPASSWD: \
   /usr/local/sbin/pincabos-dashboard-admin service vpinfe freeze, \
   /usr/local/sbin/pincabos-dashboard-admin service vpinfe thaw, \
   /usr/local/sbin/pincabos-dashboard-admin service webapp restart, \
+  /usr/local/sbin/pincabos-dashboard-admin service system shutdown, \
   /usr/local/sbin/pincabos-dashboard-admin service chrony start, \
   /usr/local/sbin/pincabos-dashboard-admin service chrony restart, \
   /usr/local/sbin/pincabos-dashboard-admin service vpx stop, \
