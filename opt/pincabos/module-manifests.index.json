@@ -1,14 +1,15 @@
 {
   "schema": "pincabos.module-inventory-index/v1",
   "repository": "KarotsSugarpie/PinCabOS",
-  "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
-  "generated_at": "2026-08-30T20:49:33.476Z",
+  "commit": "235bc4f5fa6d7cd92f3adf1e79b1b73d30b5bdb3",
+  "generated_at": "2026-08-31T01:53:45.672Z",
   "summary": {
     "python_modules": 98,
     "doctor_modules": 10,
     "installer_shell_modules": 5,
-    "total": 113,
-    "locking_enabled": false
+    "total": 114,
+    "locking_enabled": false,
+    "maintenance_shell_modules": 1
   },
   "modules": [
     {
@@ -786,6 +787,13 @@
       "source": "usr/local/libexec/pincabos/pincabos-table-test-runner.py",
       "manifest": "usr/local/libexec/pincabos/pincabos-table-test-runner.json",
       "scope": "system_helper",
+      "kind": "executable"
+    },
+    {
+      "module": "pincabos-cleanup-safe-v1",
+      "source": "usr/local/sbin/pincabos-cleanup-safe-v1",
+      "manifest": "usr/local/sbin/pincabos-cleanup-safe-v1.json",
+      "scope": "system_maintenance",
       "kind": "executable"
     },
     {
