@@ -1,0 +1,97 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "KarotsSugarpie/PinCabOS",
+    "commit": "235bc4f5fa6d7cd92f3adf1e79b1b73d30b5bdb3",
+    "generated_at": "2026-08-31T01:53:45.672Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Cabinet cleanup requires an explicit root --apply invocation.",
+      "Dynamic live references are rechecked before dormant scripts or patches are removed."
+    ]
+  },
+  "module": {
+    "id": "pincabos-cleanup-safe-v1",
+    "scope": "system_maintenance",
+    "kind": "executable",
+    "source_file": "usr/local/sbin/pincabos-cleanup-safe-v1",
+    "manifest_file": "usr/local/sbin/pincabos-cleanup-safe-v1.json",
+    "language": "shell",
+    "git_blob_sha": "24f6793f589c46e70c279b584c0a6a6585e779a5",
+    "size_bytes": 9803,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "manual root invocation after an Updates V4 release"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      "say",
+      "die"
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [],
+    "local_modules": [],
+    "repository_files": [
+      "DEV/module-inventory/cleanup-applied-20260831.md"
+    ],
+    "runtime_paths": [
+      "/opt/pincabos/config/version.json",
+      "/opt/pincabos/backups/cleanup-safe-v1",
+      "/root",
+      "/var/lib/pincabos",
+      "/home/pinball",
+      "/usr/local/lib/python3.14/dist-packages"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "clear",
+      "date",
+      "find",
+      "grep",
+      "head",
+      "hostname",
+      "pgrep",
+      "sha256sum",
+      "tar"
+    ],
+    "environment_variables": [
+      "EUID"
+    ]
+  },
+  "cabinet_cleanup": {
+    "default_mode": "audit",
+    "apply_requires_root": true,
+    "exact_target_allowlist": true,
+    "backup_before_delete": true,
+    "backup_format": "tar.zst",
+    "backup_checksum": "sha256",
+    "rollback_supported": true,
+    "protected_live_paths": [
+      "/var/lib/pincabos/doctor-firstboot.done",
+      "/var/lib/pincabos/doctor-last.json",
+      "/var/lib/pincabos/firstboot-initramfs-refresh.done",
+      "/var/lib/pincabos/firstboot-network-webapp.done",
+      "/var/lib/pincabos/hardware-autoconfig.done"
+    ]
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "usr/local/sbin/pincabos-cleanup-safe-v1",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}
