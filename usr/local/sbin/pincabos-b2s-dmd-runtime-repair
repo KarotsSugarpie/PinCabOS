@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# PINCABOS_B2S_DMD_RUNTIME_REPAIR_V2
+# Répare uniquement le plugin B2SLegacy DMDOverlay nécessaire au déplacement
+# temps réel du DMD dans le FullDMD. Ne stoppe/ne relance aucun service et
+# ne tue aucun processus VPX/VPinFE/BGFX.
+
+clear
+
+echo "================================================================"
+echo " PINFORGE-SAFE — B2S DMD RUNTIME REPAIR V2"
+echo " FullDMD ScoreView · réparation atomique sans arrêt de service"
+echo "================================================================"
+
+if [[ ${EUID} -ne 0 ]]; then
+    echo "NOGO [X] Exécuter comme root."
+    exit 1
+fi
+
+for cmd in curl tar g++ find ldd nm strings sha256sum install stat flock; do
+    command -v "$cmd" >/dev/null 2>&1 || {
+        echo "NOGO [X] Commande absente : $cmd"
+        exit 1
+    }
+done
+
+exec 9>/run/lock/pincabos-b2s-dmd-runtime-repair.lock
+if ! flock -n 9; then
+    echo "NOGO [X] Une réparation B2S DMD est déjà en cours."
+    exit 75
+fi
+
+VPX_COMMIT="7ca174632876a9b89644afe4f1cc423946396049"
+SDL_COMMIT="8e37db5e797b6167f3a00d697d816a684bd259c7"
+RUNTIME_DIR="/run/pincabos-b2s-dmd-tuner"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP="/opt/pincabos/backups/b2s-dmd-runtime/${STAMP}"
+BUILD="$(mktemp -d /var/tmp/pincabos-b2s-dmd-runtime.XXXXXX)"
+INSTALLED=0
+PLUGIN_SO=""
+PLUGIN_BACKUP=""
+
+cleanup() {
+    local rc=$?
+    if [[ $rc -ne 0 && $INSTALLED -eq 1 && -n "$PLUGIN_BACKUP" && -f "$PLUGIN_BACKUP" && -n "$PLUGIN_SO" ]]; then
+        echo "NOGO [X] Validation post-installation échouée — rollback du plugin."
+        tmp_restore="${PLUGIN_SO}.pincabos-rollback.$$"
+        cp -a -- "$PLUGIN_BACKUP" "$tmp_restore"
+        mv -Tf -- "$tmp_restore" "$PLUGIN_SO"
+        echo "GO [OK] Plugin précédent restauré."
+    fi
+    rm -rf -- "$BUILD"
+    exit "$rc"
+}
+trap cleanup EXIT INT TERM
+
+add_candidate() {
+    local candidate="$1"
+    [[ -f "$candidate" ]] || return 0
+    local seen
+    for seen in "${PLUGIN_CANDIDATES[@]:-}"; do
+        [[ "$seen" == "$candidate" ]] && return 0
+    done
+    PLUGIN_CANDIDATES+=("$candidate")
+}
+
+PLUGIN_CANDIDATES=()
+add_candidate "/home/pinball/VPinballX_BGFX-10.8.1-5231-7ca174632-linux-x64/plugins/b2slegacy/plugin-b2slegacy.so"
+
+shopt -s nullglob
+for root in /home/pinball/VPinballX_BGFX-* /home/pinball/VPinballX-* /home/pinball/vpinball-*; do
+    [[ -d "$root" ]] || continue
+    add_candidate "$root/plugins/b2slegacy/plugin-b2slegacy.so"
+done
+shopt -u nullglob
+
+for candidate in "${PLUGIN_CANDIDATES[@]:-}"; do
+    if [[ "$candidate" == *"10.8.1-5231"* || "$candidate" == *"7ca174632"* ]]; then
+        PLUGIN_SO="$candidate"
+        break
+    fi
+done
+
+if [[ -z "$PLUGIN_SO" && ${#PLUGIN_CANDIDATES[@]} -eq 1 ]]; then
+    PLUGIN_SO="${PLUGIN_CANDIDATES[0]}"
+fi
+
+if [[ -z "$PLUGIN_SO" || ! -f "$PLUGIN_SO" ]]; then
+    echo "NOGO [X] Plugin B2SLegacy de production introuvable ou ambigu."
+    printf 'Candidat : %s\n' "${PLUGIN_CANDIDATES[@]:-aucun}"
+    exit 1
+fi
+
+PLUGIN_DIR="$(dirname "$PLUGIN_SO")"
+VPX_ROOT="$(dirname "$(dirname "$PLUGIN_DIR")")"
+
+echo "GO [OK] Plugin : $PLUGIN_SO"
+echo "GO [OK] VPX    : $VPX_ROOT"
+
+install -d -o pinball -g pinball -m 0770 "$RUNTIME_DIR"
+
+if strings "$PLUGIN_SO" | grep -Fq 'PINCABOS_B2S_DMD_RUNTIME_V2' \
+   && strings "$PLUGIN_SO" | grep -Fq '/run/pincabos-b2s-dmd-tuner' \
+   && strings "$PLUGIN_SO" | grep -Fq 'state.env'; then
+    echo "GO [OK] Moteur FullDMD runtime V2 déjà présent. Aucune modification."
+    exit 0
+fi
+
+SDL_LIB="$(ldd "$PLUGIN_SO" 2>/dev/null | awk '/libSDL3\.so/ {print $3; exit}')"
+if [[ -z "$SDL_LIB" || ! -f "$SDL_LIB" ]]; then
+    SDL_LIB="$(find "$PLUGIN_DIR" "$VPX_ROOT" -maxdepth 3 -type f -name 'libSDL3.so*' -print 2>/dev/null | head -n 1)"
+fi
+if [[ -z "$SDL_LIB" || ! -f "$SDL_LIB" ]]; then
+    echo "NOGO [X] SDL3 du plugin B2SLegacy introuvable."
+    exit 1
+fi
+
+echo "GO [OK] SDL3   : $SDL_LIB"
+
+VPX_RUNNING=0
+if pgrep -u pinball -f 'VPinballX' >/dev/null 2>&1; then
+    VPX_RUNNING=1
+    echo "INFO [=] VPX est actif : aucun arrêt. Le nouveau plugin prendra effet à la prochaine table."
+else
+    echo "GO [OK] Aucun processus VPX actif."
+fi
+
+mkdir -p "$BACKUP"
+PLUGIN_BACKUP="$BACKUP/plugin-b2slegacy.so.before"
+cp -a -- "$PLUGIN_SO" "$PLUGIN_BACKUP"
+sha256sum "$PLUGIN_BACKUP" > "$BACKUP/SHA256-BEFORE.txt"
+printf 'plugin=%s\nvpx_commit=%s\nsdl_commit=%s\n' "$PLUGIN_SO" "$VPX_COMMIT" "$SDL_COMMIT" > "$BACKUP/metadata.env"
+echo "GO [OK] Backup : $BACKUP"
+
+cd "$BUILD"
+curl -fL --retry 3 --connect-timeout 20 \
+    "https://github.com/vpinball/vpinball/archive/${VPX_COMMIT}.tar.gz" \
+    -o vpinball.tar.gz
+curl -fL --retry 3 --connect-timeout 20 \
+    "https://github.com/libsdl-org/SDL/archive/${SDL_COMMIT}.tar.gz" \
+    -o sdl.tar.gz
+
+tar xzf vpinball.tar.gz
+tar xzf sdl.tar.gz
+SRC="$BUILD/vpinball-${VPX_COMMIT}"
+SDL_SRC="$BUILD/SDL-${SDL_COMMIT}"
+
+if [[ ! -f "$SRC/plugins/b2slegacy/utils/DMDOverlay.cpp" \
+   || ! -f "$SRC/plugins/b2slegacy/utils/DMDOverlay.h" \
+   || ! -f "$SDL_SRC/include/SDL3/SDL.h" ]]; then
+    echo "NOGO [X] Sources exactes incomplètes."
+    exit 1
+fi
+
+grep -Fq 'MSGPI_INT_VAL_SETTING(scoreViewDMDXProp' "$SRC/plugins/b2slegacy/utils/DMDOverlay.cpp" || {
+    echo "NOGO [X] Source B2SLegacy inattendue; installation refusée."
+    exit 1
+}
+
+echo "GO [OK] Sources exactes validées."
+
+PATCHER="/opt/pincabos/scripts/pincabos_b2s_dmd_runtime_patch.py"
+if [[ ! -f "$PATCHER" ]]; then
+    PATCHER="$BUILD/pincabos_b2s_dmd_runtime_patch.py"
+    curl -fL --retry 3 --connect-timeout 20 \
+        "https://raw.githubusercontent.com/KarotsSugarpie/PinCabOS/main/opt/pincabos/scripts/pincabos_b2s_dmd_runtime_patch.py" \
+        -o "$PATCHER"
+fi
+python3 -S "$PATCHER" "$SRC"
+
+grep -Fq 'kPinCabOSCommandFile' "$SRC/plugins/b2slegacy/utils/DMDOverlay.cpp"
+grep -Fq 'PINCABOS_B2S_DMD_RUNTIME_V2' "$SRC/plugins/b2slegacy/utils/DMDOverlay.cpp"
+
+echo "GO [OK] Patch DMDOverlay validé."
+
+mkdir -p "$BUILD/lib"
+ln -sfn "$SDL_LIB" "$BUILD/lib/libSDL3.so"
+
+mapfile -d '' SOURCES < <(find "$SRC/plugins/b2slegacy" -type f -name '*.cpp' -print0)
+SOURCES+=(
+    "$SRC/plugins/plugins/ResURIResolver.cpp"
+    "$SRC/third-party/include/tinyxml2/tinyxml2.cpp"
+)
+NEW_PLUGIN="$BUILD/plugin-b2slegacy.so"
+
+g++ \
+    -std=c++20 \
+    -O2 \
+    -fPIC \
+    -shared \
+    -I"$SRC" \
+    -I"$SRC/plugins" \
+    -I"$SRC/plugins/b2slegacy" \
+    -I"$SRC/src/core" \
+    -I"$SRC/src" \
+    -I"$SRC/third-party/include" \
+    -I"$SDL_SRC/include" \
+    "${SOURCES[@]}" \
+    -L"$BUILD/lib" \
+    -Wl,-rpath,'$ORIGIN' \
+    -lSDL3 \
+    -pthread \
+    -ldl \
+    -o "$NEW_PLUGIN"
+
+[[ -s "$NEW_PLUGIN" ]] || { echo "NOGO [X] Plugin compilé vide."; exit 1; }
+nm -D "$NEW_PLUGIN" | grep -q 'B2SLegacyPluginLoad' || { echo "NOGO [X] B2SLegacyPluginLoad absent."; exit 1; }
+nm -D "$NEW_PLUGIN" | grep -q 'B2SLegacyPluginUnload' || { echo "NOGO [X] B2SLegacyPluginUnload absent."; exit 1; }
+strings "$NEW_PLUGIN" | grep -Fq 'PINCABOS_B2S_DMD_RUNTIME_V2' || { echo "NOGO [X] Marqueur runtime absent du binaire."; exit 1; }
+strings "$NEW_PLUGIN" | grep -Fq '/run/pincabos-b2s-dmd-tuner' || { echo "NOGO [X] Contrat runtime absent du binaire."; exit 1; }
+if LD_LIBRARY_PATH="$PLUGIN_DIR:$BUILD/lib" ldd "$NEW_PLUGIN" | grep -q 'not found'; then
+    echo "NOGO [X] Dépendance manquante dans le nouveau plugin."
+    LD_LIBRARY_PATH="$PLUGIN_DIR:$BUILD/lib" ldd "$NEW_PLUGIN"
+    exit 1
+fi
+
+echo "GO [OK] Nouveau plugin compilé et validé."
+sha256sum "$NEW_PLUGIN" | tee "$BACKUP/SHA256-NEW.txt"
+
+OWNER="$(stat -c %u "$PLUGIN_SO")"
+GROUP="$(stat -c %g "$PLUGIN_SO")"
+MODE="$(stat -c %a "$PLUGIN_SO")"
+ATOMIC_TARGET="${PLUGIN_SO}.pincabos-new.$$"
+install -o "$OWNER" -g "$GROUP" -m "$MODE" "$NEW_PLUGIN" "$ATOMIC_TARGET"
+mv -Tf -- "$ATOMIC_TARGET" "$PLUGIN_SO"
+INSTALLED=1
+
+strings "$PLUGIN_SO" | grep -Fq 'PINCABOS_B2S_DMD_RUNTIME_V2'
+strings "$PLUGIN_SO" | grep -Fq 'state.env'
+nm -D "$PLUGIN_SO" | grep -q 'B2SLegacyPluginLoad'
+if LD_LIBRARY_PATH="$PLUGIN_DIR" ldd "$PLUGIN_SO" | grep -q 'not found'; then
+    echo "NOGO [X] Dépendance manquante après installation."
+    exit 1
+fi
+
+sha256sum "$PLUGIN_SO" > "$BACKUP/SHA256-AFTER.txt"
+INSTALLED=0
+
+echo "GO [OK] Moteur FullDMD runtime V2 installé atomiquement."
+if [[ $VPX_RUNNING -eq 1 ]]; then
+    echo "INFO [=] La table en cours garde l'ancien plugin en mémoire. Fermer puis relancer la table pour activer le moteur réparé."
+else
+    echo "GO [OK] Le moteur réparé sera chargé au prochain lancement de table."
+fi
+
+echo "GO [OK] Aucun service VPX/BGFX/VPinFE n'a été arrêté ou redémarré."
