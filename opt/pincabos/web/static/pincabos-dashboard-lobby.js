@@ -37,12 +37,32 @@
   };
   const itemById = id => layout.find(item => item.id === id);
   const applyStyle = (el, item) => { el.style.gridColumn = `${item.x + 1} / span ${item.w}`; el.style.gridRow = `${item.y + 1} / span ${item.h}`; el.dataset.w = item.w; el.dataset.h = item.h; };
+  const boardPos = event => {
+    const rect = board.getBoundingClientRect(); const g = gap(); const cellW = (rect.width - g * (cols - 1)) / cols;
+    let x = Math.floor((event.clientX - rect.left) / (cellW + g));
+    let y = Math.floor((event.clientY - rect.top) / (row() + g));
+    return {x:Math.max(0,Math.min(cols-1,x)), y:Math.max(0,y)};
+  };
   const wireCard = (el, item) => {
     const remove = el.querySelector('.pco-remove');
     remove?.addEventListener('click', ev => { ev.stopPropagation(); const title = registry[item.id]?.title || 'Widget'; lastRemovedSlot = {x:item.x, y:item.y, w:item.w, h:item.h}; layout = layout.filter(x => x.id !== item.id); render(); if (editing) { openCatalog(); notify(`${title} retiré : disponible de nouveau dans le catalogue.`); } });
     const grip = el.querySelector('.pco-grip');
     if (grip) {
-      grip.addEventListener('dragstart', ev => { if (!editing) return ev.preventDefault(); drag = {kind:'move', id:item.id}; ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', `move:${item.id}`); el.classList.add('pco-dragging'); });
+      // PINCABOS_DASHBOARD_CARD_MOVE_SWAP_V1
+      // Conserve le point de prise afin que la carte reste sous la souris.
+      grip.addEventListener('dragstart', ev => {
+        if (!editing) return ev.preventDefault();
+        const pointer = boardPos(ev);
+        drag = {
+          kind:'move',
+          id:item.id,
+          offsetX:Math.max(0, pointer.x - item.x),
+          offsetY:Math.max(0, pointer.y - item.y)
+        };
+        ev.dataTransfer.effectAllowed = 'move';
+        ev.dataTransfer.setData('text/plain', `move:${item.id}`);
+        el.classList.add('pco-dragging');
+      });
       grip.addEventListener('dragend', () => { drag = null; el.classList.remove('pco-dragging'); board.classList.remove('pco-drop-target'); });
     }
     const handle = el.querySelector('.pco-resize');
@@ -64,12 +84,6 @@
     document.getElementById('pco-lobby-edit').textContent = editing ? 'Mode édition actif' : 'Modifier le Dashboard';
     document.getElementById('pco-lobby-edit').classList.toggle('pco-good', editing);
     if (!editing) refreshLive();
-  };
-  const boardPos = event => {
-    const rect = board.getBoundingClientRect(); const g = gap(); const cellW = (rect.width - g * (cols - 1)) / cols;
-    let x = Math.floor((event.clientX - rect.left) / (cellW + g));
-    let y = Math.floor((event.clientY - rect.top) / (row() + g));
-    return {x:Math.max(0,Math.min(cols-1,x)), y:Math.max(0,y)};
   };
   const addWidget = (id, pos = null) => {
     const meta = registry[id]; if (!meta || itemById(id)) return;
@@ -129,7 +143,15 @@
   board.addEventListener('dragleave', ev => { if (!board.contains(ev.relatedTarget)) board.classList.remove('pco-drop-target'); });
   board.addEventListener('drop', ev => {
     if (!editing) return; ev.preventDefault(); board.classList.remove('pco-drop-target');
-    const value = ev.dataTransfer.getData('text/plain') || ''; const [kind,id] = value.split(':'); const pos = boardPos(ev);
+    const value = ev.dataTransfer.getData('text/plain') || '';
+    const [kind,id] = value.split(':');
+    const rawPos = boardPos(ev);
+    const pos = (kind === 'move' && drag?.id === id)
+      ? {
+          x: Math.max(0, rawPos.x - (Number(drag.offsetX) || 0)),
+          y: Math.max(0, rawPos.y - (Number(drag.offsetY) || 0))
+        }
+      : rawPos;
     if (kind === 'new') {
       // PINCABOS_DASHBOARD_EDIT_ADD_TOP_GAP_V1
       // Par défaut: remplir le premier trou libre en haut du Dashboard.
@@ -139,7 +161,71 @@
       notify(ev.shiftKey ? 'Widget ajouté à l’endroit choisi.' : 'Widget ajouté au premier espace libre en haut.');
       return;
     }
-    if (kind === 'move') { const item=itemById(id); if (!item) return; const place=firstFit(item,Math.min(pos.x,cols-item.w),pos.y,item.id); item.x=place.x; item.y=place.y; render(); }
+    if (kind === 'move') {
+      const item = itemById(id);
+      if (!item) return;
+
+      const origin = {x:item.x, y:item.y};
+      const targetX = Math.max(0, Math.min(pos.x, cols - item.w));
+      const targetY = Math.max(0, pos.y);
+      const collides = (candidate, x, y, other) => !(
+        x + candidate.w <= other.x ||
+        other.x + other.w <= x ||
+        y + candidate.h <= other.y ||
+        other.y + other.h <= y
+      );
+      const collisions = layout.filter(other =>
+        other.id !== item.id && collides(item, targetX, targetY, other)
+      );
+
+      // Espace libre : dépôt exact.
+      if (!collisions.length) {
+        item.x = targetX;
+        item.y = targetY;
+        render();
+        return;
+      }
+
+      // Une seule carte ciblée : échange des emplacements si la géométrie le permet.
+      if (collisions.length === 1) {
+        const other = collisions[0];
+        const ignored = new Set([item.id, other.id]);
+        const blockers = layout.filter(entry => !ignored.has(entry.id));
+        const fitsAgainstBlockers = (candidate, x, y) => {
+          if (x < 0 || y < 0 || x + candidate.w > cols) return false;
+          return !blockers.some(blocker => collides(candidate, x, y, blocker));
+        };
+
+        const itemX = other.x;
+        const itemY = other.y;
+        const otherX = origin.x;
+        const otherY = origin.y;
+        const pairSeparated =
+          itemX + item.w <= otherX ||
+          otherX + other.w <= itemX ||
+          itemY + item.h <= otherY ||
+          otherY + other.h <= itemY;
+
+        if (
+          pairSeparated &&
+          fitsAgainstBlockers(item, itemX, itemY) &&
+          fitsAgainstBlockers(other, otherX, otherY)
+        ) {
+          item.x = itemX;
+          item.y = itemY;
+          other.x = otherX;
+          other.y = otherY;
+          render();
+          return;
+        }
+      }
+
+      // Cas complexe : conserver le repli historique sûr.
+      const place = firstFit(item, targetX, targetY, item.id);
+      item.x = place.x;
+      item.y = place.y;
+      render();
+    }
   });
   document.addEventListener('pointermove', ev => {
     if (!resize) return; const item=itemById(resize.id); if (!item) return;
@@ -375,10 +461,6 @@
       "pincabos-live-fullscreen-open-v3"
     );
 
-    /*
-     * Vrai plein écran navigateur.
-     * Cette demande reste directement dans le geste utilisateur.
-     */
     if (
       document.fullscreenEnabled &&
       !document.fullscreenElement &&
@@ -389,10 +471,6 @@
 
     refresh();
 
-    /*
-     * Le worker source tourne déjà à 5 FPS.
-     * Une requête toutes les 200 ms suffit.
-     */
     timer = setInterval(
       refresh,
       200
@@ -444,10 +522,6 @@
         return;
       }
 
-      /*
-       * Le bouton est attaché directement au conteneur
-       * de SON image, pas à une carte parente commune.
-       */
       const host =
         source.parentElement;
 
@@ -479,11 +553,6 @@
         (event) => {
           event.preventDefault();
           event.stopPropagation();
-
-          /*
-           * IMPORTANT :
-           * ce bouton conserve SON slot.
-           */
           openFullscreen(slot);
         }
       );
@@ -644,7 +713,7 @@
         background: rgba(4,20,30,.38);
       }
 
-      .pco-services-scroll > .pco-service-unified-card:first-child {
+      .pco-tools-service-unified-card:first-child {
         margin-top: 0;
       }
 
@@ -1013,7 +1082,6 @@
   style.id = STYLE_ID;
 
   style.textContent = `
-    /* Cartes de services normales */
     .pco-services-scroll > .pco-service-unified-card {
       gap: 6px !important;
       margin: 6px 0 !important;
@@ -1086,7 +1154,6 @@
       line-height: 1.15 !important;
     }
 
-    /* Batch Import / Export */
     #pco-dashboard-batch-controls {
       gap: 6px !important;
       margin: 8px 0 !important;
@@ -1144,7 +1211,6 @@
   document.head.appendChild(style);
 })();
 /* END PINCABOS_DASHBOARD_SERVICES_ULTRA_COMPACT_V1 */
-
 
 /* PINCABOS_NETWORK_TRUECHART_V1 */
 (()=>{
@@ -1552,7 +1618,6 @@
     boot();
   }
 })();
-
 
 /* PINCABOS_SERVICES_REMOVE_BATCH_OPEN_BUTTON_V3 */
 (function(){
