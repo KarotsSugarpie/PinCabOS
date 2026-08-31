@@ -1579,42 +1579,37 @@ def dof_file_status():
 
 
 def detect_dof_devices():
+    """Détection réelle par VID/PID udev (outil dof-cabinet). Seul le matériel
+    effectivement branché est listé — plus de familles « probables » déduites
+    de mots-clés. Les extensions portées par une carte (Walter, MOSLight sur
+    la Dude's Cab) ne sont pas des périphériques USB séparés."""
     usb = run_cmd(["bash", "--noprofile", "--norc", "-c", "lsusb 2>/dev/null || true"], timeout=5)
     tty = run_cmd(["bash", "--noprofile", "--norc", "-c", "ls -lah /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || true"], timeout=5)
     hid = run_cmd(["bash", "--noprofile", "--norc", "-c", "ls -lah /dev/hidraw* 2>/dev/null || true"], timeout=5)
 
-    combined = (usb + "\n" + tty + "\n" + hid).lower()
+    devices = []
+    try:
+        import pincabos_dof_hardware as _pco_dofhw
+        devices = _pco_dofhw._detect()
+    except Exception:
+        devices = []
 
-    checks = [
-        ("Pinscape / KL25Z / NXP", ["pinscape", "kl25z", "freescale", "nxp", "kinetis"]),
-        ("Pinscape Pico / RP2040", ["rp2040", "raspberry pi pico", "pico"]),
-        ("Dude's Cab / Wemos / ESP", ["dudescab", "dude", "wemos", "esp32", "esp8266", "ch340", "1a86"]),
-        ("PacLed / Ultimarc", ["ultimarc", "pacled", "pac-drive", "pacdrive", "d209"]),
-        ("FTDI", ["ftdi", "0403:6001", "0403:6015", "0403:6010"]),
-        ("Arduino / Leonardo / Micro", ["arduino", "2341:", "2a03:", "ttyacm"]),
-        ("Serial USB détecté", ["ttyusb", "ttyacm"]),
-        ("HID raw détecté", ["hidraw"]),
-    ]
-
-    found_rows = []
-    found_any = False
-
-    for label, patterns in checks:
-        matched = any(pat in combined for pat in patterns)
-        if matched:
-            found_any = True
-            found_rows.append(
-                f'<tr><td>{esc(label)}</td><td><span class="ok">détecté / probable</span></td></tr>'
-            )
+    rows = []
+    for d in devices:
+        if d.get("auto_config"):
+            badge = '<span class="ok">AutoConfig — géré tout seul par DOF</span>'
         else:
-            found_rows.append(
-                f'<tr><td>{esc(label)}</td><td><span class="bad">non détecté</span></td></tr>'
-            )
-
-    if found_any:
-        summary = '<span class="ok">Un ou plusieurs périphériques compatibles/probables ont été détectés.</span>'
+            badge = '<span class="warn">à déclarer dans cabinet.xml</span>'
+        rows.append(
+            f'<tr><td><strong>{esc(d.get("kind", "?"))}</strong></td>'
+            f'<td><code>{esc(d.get("dev", ""))}</code> · série <code>{esc(d.get("serial") or "-")}</code></td>'
+            f'<td>{badge}</td></tr>'
+        )
+    if devices:
+        summary = f'<span class="ok">{len(devices)} contrôleur(s) DOF branché(s).</span>'
     else:
-        summary = '<span class="warn">Aucun contrôleur DOF évident détecté par le système.</span>'
+        rows.append('<tr><td colspan="3"><span class="warn">aucun contrôleur DOF détecté</span></td></tr>')
+        summary = '<span class="warn">Aucun contrôleur DOF détecté.</span>'
 
     raw = f"""===== lsusb =====
 {usb}
@@ -1625,7 +1620,7 @@ def detect_dof_devices():
 ===== HID raw devices =====
 {hid}
 """
-    return summary, "\n".join(found_rows), raw
+    return summary, "\n".join(rows), raw
 
 
 def dof_logs():
@@ -3156,6 +3151,17 @@ def dof_component_definitions():
             "notes": "libusb / hidraw / serial"
         },
         {
+            "key": "teensy",
+            "name": "Teensy / PJRC (strips adressables)",
+            "check": [
+                ("Package python3-serial", lambda: dof_pkg_ok("python3-serial")),
+                ("Module usbhid", lambda: dof_module_ok("usbhid")),
+                ("Module cdc_acm", lambda: dof_module_ok("cdc_acm")),
+                ("udev Teensy 16c0", lambda: dof_udev_ok("16c0")),
+            ],
+            "notes": "serial USB / TeensyStripController / backboard adressable"
+        },
+        {
             "key": "dudes-esp",
             "name": "Dude's Cab / Wemos / ESP",
             "check": [
@@ -3270,8 +3276,10 @@ def dof_utils_card_html():
 
   <p>
     Installe et vérifie les dépendances Linux nécessaires pour les contrôleurs DOF :
-    LedWiz32, Pinscape / KL25Z / NXP, Pinscape Pico / RP2040, Dude's Cab / Wemos / ESP,
-    PacLed / Ultimarc, FTDI, Arduino / Leonardo / Micro et Serial USB.
+    LedWiz32, Pinscape / KL25Z / NXP, Pinscape Pico / RP2040, Teensy / PJRC,
+    Dude's Cab / Wemos / ESP, PacLed / Ultimarc, FTDI, Arduino / Leonardo / Micro
+    et Serial USB. Chaque famille est indépendante : n'installe que ce qui
+    correspond aux cartes réellement présentes dans ton cab.
   </p>
 
   <table style="width:100%; border-collapse:collapse;">
@@ -3357,423 +3365,6 @@ def dof_simple_cmd(cmd, timeout=6):
         return ""
 
 
-def dof_usb_present(vendors):
-    if isinstance(vendors, str):
-        vendors = [vendors]
-    raw = dof_simple_cmd("lsusb || true")
-    raw_l = raw.lower()
-    return any(v.lower() in raw_l for v in vendors)
-
-
-def dof_path_exists(path):
-    return Path(path).exists()
-
-
-def dof_support_ready(kind):
-    udev = Path("/etc/udev/rules.d/99-pincabos-dof-controllers.rules").exists()
-
-    libusb_ok = dof_simple_cmd(
-        "dpkg -s libusb-1.0-0 >/dev/null 2>&1 && "
-        "dpkg -s libhidapi-hidraw0 >/dev/null 2>&1 && echo yes || echo no"
-    ) == "yes"
-
-    serial_ok = dof_simple_cmd(
-        "dpkg -s python3-serial >/dev/null 2>&1 && echo yes || echo no"
-    ) == "yes"
-
-    # Après installation, PinCabOS prépare aussi pco_path('dof_tools')/<famille>.
-    # Si la famille est prête côté dossier + udev, on considère le support prêt.
-    if kind in ["serial", "dudes-esp", "ftdi", "arduino", "serial-usb"]:
-        return udev and serial_ok
-
-    return udev and libusb_ok
-
-
-def dof_configurator_status(kind):
-    base = Path(str(pco_path("dof_tools"))) / kind
-    if not base.exists():
-        return "non installé", False
-
-    # Pour l’instant, dossier préparé = installé côté PinCabOS.
-    return "préparé", True
-
-
-def dof_status_badge(ok, good="actif", bad="non détecté"):
-    if ok:
-        return f'<span style="color:#2fff7f;font-weight:bold;">● {esc(good)}</span>'
-    return f'<span style="color:#ff3333;font-weight:bold;">● {esc(bad)}</span>'
-
-
-def dof_manager_families():
-    return [
-        {
-            "key": "ledwiz",
-            "name": "LedWiz32",
-            "vendors": ["fafa"],
-            "support_kind": "hid",
-            "configurator": "Outils USB/HID PinCabOS"
-        },
-        {
-            "key": "pinscape-kl25z",
-            "name": "Pinscape / KL25Z / NXP",
-            "vendors": ["15a2", "1fc9"],
-            "support_kind": "hid",
-            "configurator": "Dossier configurateur Pinscape"
-        },
-        {
-            "key": "pinscape-pico",
-            "name": "Pinscape Pico / RP2040",
-            "vendors": ["2e8a", "1209"],
-            "support_kind": "hid",
-            "configurator": "Dossier configurateur Pico"
-        },
-        {
-            "key": "dudes-esp",
-            "name": "Dude's Cab / Wemos / ESP",
-            "vendors": ["303a", "1a86", "10c4"],
-            "support_kind": "serial",
-            "configurator": "Dossier configurateur Dude's Cab"
-        },
-        {
-            "key": "pacled",
-            "name": "PacLed / Ultimarc",
-            "vendors": ["d209"],
-            "support_kind": "hid",
-            "configurator": "Outils USB/HID PinCabOS"
-        },
-        {
-            "key": "ftdi",
-            "name": "FTDI",
-            "vendors": ["0403"],
-            "support_kind": "serial",
-            "configurator": "Outils serial"
-        },
-        {
-            "key": "arduino",
-            "name": "Arduino / Leonardo / Micro",
-            "vendors": ["2341", "2a03", "1b4f"],
-            "support_kind": "serial",
-            "configurator": "Outils serial/HID"
-        },
-        {
-            "key": "serial-usb",
-            "name": "Serial USB",
-            "vendors": ["0403", "10c4", "1a86", "303a", "2341", "2a03", "1b4f"],
-            "support_kind": "serial",
-            "configurator": "Outils serial génériques"
-        },
-    ]
-
-
-def dof_simple_manager_card_friendly():
-    rows = []
-
-    for fam in dof_manager_families():
-        detected = dof_usb_present(fam["vendors"])
-        support = dof_support_ready(fam["key"]) or dof_support_ready(fam["support_kind"])
-
-        hardware_html = dof_status_badge(detected, "détecté", "non détecté")
-        support_html = dof_status_badge(support, "prêt", "à installer")
-
-        if detected and support:
-            status_hint = '<span class="ok">Actif et prêt</span>'
-        elif support:
-            status_hint = '<span class="warn">Support prêt, carte non branchée</span>'
-        else:
-            status_hint = '<span class="bad">Support à installer</span>'
-
-        key = esc(fam["key"])
-
-        rows.append(f"""
-        <tr>
-          <td>
-            <strong>{esc(fam["name"])}</strong><br>
-            {status_hint}
-          </td>
-          <td>{hardware_html}</td>
-          <td>{support_html}</td>
-          <td style="white-space:nowrap;">
-            <button class="button secondary dof-live-btn" type="button" data-action="install" data-family="{key}">
-              Installer / réparer
-            </button>
-          </td>
-        </tr>
-        """)
-
-    html = """
-<div class="card" style="margin-top:20px;">
-  <h2>Gestionnaire DOF automatique</h2>
-
-  <p>
-    PinCabOS détecte les cartes branchées et prépare automatiquement le support Linux nécessaire :
-    USB, HID, Serial, permissions et règles udev.
-  </p>
-
-  <table style="width:100%; border-collapse:collapse;">
-    <tr>
-      <th style="text-align:left;">Périphérique</th>
-      <th style="text-align:left;">Matériel</th>
-      <th style="text-align:left;">Support PinCabOS</th>
-      <th style="text-align:left;">Action</th>
-    </tr>
-    __ROWS__
-  </table>
-
-  <p style="margin-top:14px;">
-    <button class="button dof-live-btn" type="button" data-action="install" data-family="all">
-      Installer / préparer tout
-    </button>
-  </p>
-
-  <p class="warn">
-    Le matériel reste rouge tant qu’aucune vraie carte n’est branchée.
-    Le support PinCabOS doit devenir vert après installation des dépendances et règles udev.
-  </p>
-
-  <div id="dof-live-panel" class="card" style="margin-top:18px; display:none; border-color:#ffb000;">
-    <h2>Installation DOF en direct</h2>
-
-    <table>
-      <tr><td>Composant</td><td><code id="dof-live-family">-</code></td></tr>
-      <tr><td>Action</td><td><code id="dof-live-action">-</code></td></tr>
-      <tr><td>Commande</td><td><code id="dof-live-command">-</code></td></tr>
-      <tr><td>Log</td><td><code id="dof-live-logfile">-</code></td></tr>
-    </table>
-
-    <p id="dof-live-status" class="warn">En attente...</p>
-
-    <pre id="dof-live-log" style="max-height:420px; overflow:auto; background:#050007; border:1px solid #5f2a91; border-radius:12px; padding:12px;">Aucune commande lancée.</pre>
-
-    <p>
-      <a class="button secondary" href="/dof">Vérifier / rafraîchir DOF</a>
-    </p>
-  </div>
-
-
-<script>
-function pcoUserBallSetPreview(imgId, url) {
-  const img = document.getElementById(imgId);
-  const empty = document.getElementById(imgId + "-empty");
-  if (!img) return;
-
-  if (url) {
-    img.onload = function() {
-      img.style.display = "block";
-      if (empty) empty.style.display = "none";
-    };
-    img.onerror = function() {
-      img.removeAttribute("src");
-      img.style.display = "none";
-      if (empty) {
-        empty.style.display = "block";
-        empty.textContent = "Aperçu indisponible";
-      }
-    };
-    img.src = url;
-  } else {
-    img.removeAttribute("src");
-    img.style.display = "none";
-    if (empty) {
-      empty.style.display = "block";
-      empty.textContent = "Aperçu";
-    }
-  }
-}
-
-function pcoUserBallPreview(selectId, imgId) {
-  const sel = document.getElementById(selectId);
-  if (!sel) return;
-
-  const opt = sel.options[sel.selectedIndex];
-  const url = opt ? (opt.getAttribute("data-url") || "") : "";
-
-  if (url) {
-    pcoUserBallSetPreview(imgId, url + "?v=" + Date.now());
-  } else {
-    pcoUserBallSetPreview(imgId, "");
-  }
-}
-
-function pcoUserBallUploadPreview(input, imgId) {
-  if (!input || !input.files || !input.files[0]) {
-    return;
-  }
-
-  const file = input.files[0];
-  const url = URL.createObjectURL(file);
-  pcoUserBallSetPreview(imgId, url);
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-  pcoUserBallPreview("pco-ball-existing", "pco-ball-preview");
-  pcoUserBallPreview("pco-decal-existing", "pco-decal-preview");
-});
-</script>
-
-  
-<script>
-function pcoUserBallSetPreview(imgId, url) {
-  const img = document.getElementById(imgId);
-  const empty = document.getElementById(imgId + "-empty");
-  if (!img) return;
-
-  if (!url) {
-    img.removeAttribute("src");
-    img.style.display = "none";
-    if (empty) {
-      empty.style.display = "block";
-      empty.textContent = "Aperçu";
-    }
-    return;
-  }
-
-  img.onload = function() {
-    img.style.display = "block";
-    if (empty) empty.style.display = "none";
-  };
-
-  img.onerror = function() {
-    img.removeAttribute("src");
-    img.style.display = "none";
-    if (empty) {
-      empty.style.display = "block";
-      empty.textContent = "Aperçu indisponible";
-    }
-  };
-
-  img.src = url;
-}
-
-function pcoUserBallPreview(selectId, imgId) {
-  const sel = document.getElementById(selectId);
-  if (!sel) return;
-
-  const opt = sel.options[sel.selectedIndex];
-  const url = opt ? (opt.getAttribute("data-url") || "") : "";
-
-  if (url) {
-    pcoUserBallSetPreview(imgId, url + "?v=" + Date.now());
-  } else {
-    pcoUserBallSetPreview(imgId, "");
-  }
-}
-
-function pcoUserBallUploadPreview(input, imgId) {
-  if (!input || !input.files || !input.files[0]) return;
-  const file = input.files[0];
-  const url = URL.createObjectURL(file);
-  pcoUserBallSetPreview(imgId, url);
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-  pcoUserBallPreview("pco-ball-existing", "pco-ball-preview");
-  pcoUserBallPreview("pco-decal-existing", "pco-decal-preview");
-});
-</script>
-
-<details style="margin-top:12px;">
-    <summary>Notes sur les configurateurs</summary>
-    <p>
-      Certains configurateurs, comme Dude’s Cab Configurator, sont des outils Windows.
-      PinCabOS préparera le support Linux et pourra plus tard lancer ces outils localement via Wine,
-      mais ils ne s’ouvrent pas directement dans la page Web.
-    </p>
-  </details>
-</div>
-
-<script>
-(function() {
-  let dofPollTimer = null;
-
-  async function pollDofLog(logUrl) {
-    try {
-      const r = await fetch(logUrl + '?t=' + Date.now());
-      const data = await r.json();
-
-      const logBox = document.getElementById('dof-live-log');
-      const status = document.getElementById('dof-live-status');
-
-      logBox.textContent = data.log || 'Log vide...';
-      logBox.scrollTop = logBox.scrollHeight;
-
-      if (data.done) {
-        status.textContent = 'Installation terminée ou arrêtée. Clique “Vérifier / rafraîchir DOF” pour mettre à jour les statuts.';
-        status.className = 'ok';
-        if (dofPollTimer) {
-          clearInterval(dofPollTimer);
-          dofPollTimer = null;
-        }
-      } else {
-        status.textContent = 'Installation en cours...';
-        status.className = 'warn';
-      }
-    } catch (e) {
-      const status = document.getElementById('dof-live-status');
-      status.textContent = 'Erreur lecture log : ' + e;
-      status.className = 'bad';
-    }
-  }
-
-  async function startDofAction(action, family) {
-    const panel = document.getElementById('dof-live-panel');
-    const logBox = document.getElementById('dof-live-log');
-    const status = document.getElementById('dof-live-status');
-
-    panel.style.display = 'block';
-    document.getElementById('dof-live-family').textContent = family;
-    document.getElementById('dof-live-action').textContent = action;
-    document.getElementById('dof-live-command').textContent = 'Préparation...';
-    document.getElementById('dof-live-logfile').textContent = '-';
-
-    status.textContent = 'Lancement de la commande...';
-    status.className = 'warn';
-    logBox.textContent = 'Lancement...';
-
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    try {
-      const r = await fetch('/api/dof/manager/' + encodeURIComponent(action) + '/' + encodeURIComponent(family), {
-        method: 'POST',
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      const data = await r.json();
-
-      if (!data.ok) {
-        status.textContent = 'Erreur au lancement.';
-        status.className = 'bad';
-        logBox.textContent = JSON.stringify(data, null, 2);
-        return;
-      }
-
-      document.getElementById('dof-live-command').textContent = data.command || '-';
-      document.getElementById('dof-live-logfile').textContent = data.log_file || '-';
-
-      if (dofPollTimer) clearInterval(dofPollTimer);
-      await pollDofLog(data.log_url);
-      dofPollTimer = setInterval(function() {
-        pollDofLog(data.log_url);
-      }, 1500);
-
-    } catch (e) {
-      status.textContent = 'Erreur lancement : ' + e;
-      status.className = 'bad';
-      logBox.textContent = String(e);
-    }
-  }
-
-  document.querySelectorAll('.dof-live-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      const action = btn.getAttribute('data-action') || 'install';
-      const family = btn.getAttribute('data-family') || 'all';
-      startDofAction(action, family);
-    });
-  });
-})();
-</script>
-"""
-    return html.replace("__ROWS__", "".join(rows))
-
-
 def dof_detection_summary_card(summary, raw_devices, logs, file_rows):
     usb_count = dof_simple_cmd("lsusb | grep -vc 'root hub' || true")
     hid_count = dof_simple_cmd("ls /dev/hidraw* 2>/dev/null | wc -l || true")
@@ -3823,81 +3414,6 @@ def dof_detection_summary_card(summary, raw_devices, logs, file_rows):
   </details>
 </div>
 """
-
-
-def dof_simple_manager_card():
-    rows = []
-    for fam in dof_manager_families():
-        detected = dof_usb_present(fam["vendors"])
-        support = dof_support_ready(fam["support_kind"])
-        cfg_label, cfg_ok = dof_configurator_status(fam["key"])
-
-        hardware_html = dof_status_badge(detected, "détecté", "non détecté")
-        support_html = dof_status_badge(support, "prêt", "à installer")
-        cfg_html = dof_status_badge(cfg_ok, cfg_label, "non installé")
-
-        key = esc(fam["key"])
-
-        rows.append(f"""
-        <tr>
-          <td><strong>{esc(fam["name"])}</strong><br><small>{esc(fam["configurator"])}</small></td>
-          <td>{hardware_html}</td>
-          <td>{support_html}</td>
-          <td>{cfg_html}</td>
-          <td style="white-space:nowrap;">
-            <form method="post" action="/dof/manager/install/{key}" style="display:inline;">
-              <button class="button secondary" type="submit">Installer</button>
-            </form>
-            <form method="post" action="/dof/manager/update/{key}" style="display:inline;">
-              <button class="button secondary" type="submit">Mettre à jour</button>
-            </form>
-            <form method="post" action="/dof/manager/reinstall/{key}" style="display:inline;">
-              <button class="button secondary" type="submit">Réinstaller</button>
-            </form>
-          </td>
-        </tr>
-        """)
-
-    return f"""
-<div class="card" style="margin-top:20px;">
-  <h2>Gestionnaire DOF automatique</h2>
-
-  <p>
-    PinCabOS détecte les périphériques branchés, prépare les ressources nécessaires
-    et installe le dossier/utilitaire de configuration correspondant quand disponible.
-  </p>
-
-  <table style="width:100%; border-collapse:collapse;">
-    <tr>
-      <th style="text-align:left;">Famille</th>
-      <th style="text-align:left;">Matériel</th>
-      <th style="text-align:left;">Support système</th>
-      <th style="text-align:left;">Configurateur</th>
-      <th style="text-align:left;">Actions</th>
-    </tr>
-    {''.join(rows)}
-  </table>
-
-  <form method="post" action="/dof/manager/install/all" style="margin-top:14px;">
-    <button class="button" type="submit">Installer / préparer tout</button>
-  </form>
-
-  <p class="warn">
-    Vert = prêt côté PinCabOS. Pour le matériel, vert seulement si le périphérique est réellement branché et visible par Linux.
-  </p>
-
-  <p>
-    Dossier outils : <code>{esc(pco_path_text('dof_tools'))}</code><br>
-    Règles udev : <code>/etc/udev/rules.d/99-pincabos-dof-controllers.rules</code><br>
-    Log : <code>/opt/pincabos/logs/dof-manager-action.log</code>
-  </p>
-</div>
-"""
-
-
-@app.route("/dof/manager/<action>/<family>", methods=["POST"])
-def dof_manager_action(action, family):
-    return redirect(url_for("dof_page"))
 
 
 PINCABOS_DOF_API_KEY_FILE = Path("/opt/pincabos/config/dof/configtool-api-key.txt")
@@ -4051,154 +3567,6 @@ def dof_commander_load_inventory():
             errors.append(f"{f}: {err}")
 
     return configs, sorted(all_controllers), all_outputs, errors
-
-
-def dof_commander_devices_summary():
-    # PINCABOS_DOF_EXACT_USB_FAMILY_DETECTION_V2
-    #
-    # La Dude's Cab utilise 2e8a:106f.
-    # Le VID 2e8a seul ne signifie pas « Pinscape Pico » :
-    # il est partagé par plusieurs appareils RP2040.
-    raw_usb = dof_simple_cmd("lsusb || true")
-    raw_hid = dof_simple_cmd("ls -l /dev/hidraw* 2>/dev/null || true")
-    raw_serial = dof_simple_cmd(
-        "ls -l /dev/ttyACM* /dev/ttyUSB* 2>/dev/null || true"
-    )
-
-    usb_entries = []
-
-    for raw_line in raw_usb.splitlines():
-        line = raw_line.strip()
-        lower = line.lower()
-        parts = lower.split()
-
-        if "id" not in parts:
-            continue
-
-        index = parts.index("id")
-        if index + 1 >= len(parts):
-            continue
-
-        usb_id = parts[index + 1].strip()
-
-        if (
-            len(usb_id) != 9
-            or usb_id[4] != ":"
-            or any(
-                char not in "0123456789abcdef:"
-                for char in usb_id
-            )
-        ):
-            continue
-
-        vid, pid = usb_id.split(":", 1)
-
-        usb_entries.append({
-            "id": usb_id,
-            "vid": vid,
-            "pid": pid,
-            "line": lower,
-        })
-
-    def has_vendor(*vendors):
-        wanted = {str(value).lower() for value in vendors}
-        return any(
-            entry["vid"] in wanted
-            for entry in usb_entries
-        )
-
-    def has_exact(*usb_ids):
-        wanted = {str(value).lower() for value in usb_ids}
-        return any(
-            entry["id"] in wanted
-            for entry in usb_entries
-        )
-
-    def has_dudescab():
-        # Dude's Cab RP2040 actuelle.
-        if has_exact("2e8a:106f"):
-            return True
-
-        # Anciennes variantes ESP/Wemos compatibles.
-        return has_vendor("303a", "1a86", "10c4")
-
-    def has_pinscape_pico():
-        for entry in usb_entries:
-            # Exclusion absolue de la Dude's Cab.
-            if entry["id"] == "2e8a:106f":
-                continue
-
-            if (
-                "dudescab" in entry["line"]
-                or "atelier d'arnoz" in entry["line"]
-            ):
-                continue
-
-            # VID communautaire explicitement associé à Pinscape.
-            if entry["vid"] == "1209":
-                return True
-
-            # RP2040 reconnu comme Pinscape seulement par son descriptif USB.
-            if entry["vid"] == "2e8a" and any(
-                token in entry["line"]
-                for token in (
-                    "pinscape",
-                    "pinscape pico",
-                    "kl25z",
-                )
-            ):
-                return True
-
-        return False
-
-    families = [
-        {
-            "name": "LedWiz32",
-            "found": has_vendor("fafa"),
-            "vendors": "fafa",
-        },
-        {
-            "name": "PacLed / Ultimarc",
-            "found": has_vendor("d209"),
-            "vendors": "d209",
-        },
-        {
-            "name": "Pinscape / KL25Z / NXP",
-            "found": has_vendor("15a2", "1fc9"),
-            "vendors": "15a2, 1fc9",
-        },
-        {
-            "name": "Pinscape Pico / RP2040",
-            "found": has_pinscape_pico(),
-            "vendors": "1209 ou RP2040 nommé Pinscape",
-        },
-        {
-            "name": "Dude's Cab / Wemos / ESP",
-            "found": has_dudescab(),
-            "vendors": "2e8a:106f, 303a, 1a86, 10c4",
-        },
-        {
-            "name": "FTDI",
-            "found": has_vendor("0403"),
-            "vendors": "0403",
-        },
-        {
-            "name": "Arduino / Leonardo / Micro",
-            "found": has_vendor("2341", "2a03", "1b4f"),
-            "vendors": "2341, 2a03, 1b4f",
-        },
-    ]
-
-    devices = [
-        {
-            "name": family["name"],
-            "found": bool(family["found"]),
-            "vendors": family["vendors"],
-        }
-        for family in families
-    ]
-
-    return devices, raw_usb, raw_hid, raw_serial
 
 
 PINCABOS_DOF_CABINET_DIR = Path("/opt/pincabos/config/dof/cabinets")
@@ -4870,8 +4238,9 @@ def dof_import_cabinet_json():
 
 @app.route("/dof/commander")
 def dof_commander_page():
+    # PINCABOS_DOF_COMMANDER_SIMPLE_V1 : le matériel branché est listé sur
+    # /dof et géré dans /dof/hardware ; cette page se concentre sur les outputs.
     configs, controllers, outputs, errors, inventory_source, cabinet_name = dof_commander_load_inventory_active_pcb()
-    devices, raw_usb, raw_hid, raw_serial = dof_commander_devices_summary()
 
     config_rows = []
     for f in configs:
@@ -4886,17 +4255,6 @@ def dof_commander_page():
     if not config_rows:
         config_rows.append("""
         <tr><td colspan="3"><span class="warn">Aucun fichier DOF XML/INI trouvé.</span></td></tr>
-        """)
-
-    device_rows = []
-    for d in devices:
-        badge = '<span style="color:#2fff7f;font-weight:bold;">● détecté</span>' if d["found"] else '<span style="color:#ff3333;font-weight:bold;">● non détecté</span>'
-        device_rows.append(f"""
-        <tr>
-          <td>{esc(d["name"])}</td>
-          <td>{badge}</td>
-          <td><code>{esc(d["vendors"])}</code></td>
-        </tr>
         """)
 
     controller_rows = []
@@ -4984,48 +4342,38 @@ def dof_commander_page():
       <!-- PINCABOS_DUDESCAB_CONFIG_BUTTON_V3 BEGIN -->
       <a class="button" href="/DudesCabConfig">DudesCabConfig</a>
       <!-- PINCABOS_DUDESCAB_CONFIG_BUTTON_V3 END -->
+      <a class="button" href="/dof/hardware">Mat&eacute;riel &amp; cabinet.xml</a>
       <a class="button secondary" href="/dof">Retour DOF</a>
     </p>
 
     <p class="warn">
       Les tests sont limités en durée pour éviter de laisser un toy activé trop longtemps.
     </p>
-  </div>
-
-  
-
-    </div>
-
-    <p>
-      Dossier cible : <code>/home/pinball/.local/share/VPinballX/10.8/directoutputconfig</code>
-    </p>
+    <p><small>
+      Le matériel branché est listé sur <a href="/dof">la page DOF</a> et géré dans
+      <a href="/dof/hardware">Matériel &amp; cabinet.xml</a> ; cette page sert à
+      tester les <strong>outputs</strong>.
+    </small></p>
   </div>
 </div>
 
-<div class="grid" style="margin-top:20px;">
-  <div class="card">
-    <h2>Périphériques branchés</h2>
-    <table>
-      <tr><th style="text-align:left;">Famille</th><th style="text-align:left;">État</th><th style="text-align:left;">Vendor IDs</th></tr>
-      {''.join(device_rows)}
-    </table>
-  </div>
-
-  <div class="card">
+<details style="margin-top:20px;">
+  <summary>Avancé : contrôleurs et fichiers des configs DOF</summary>
+  <div class="card" style="margin-top:10px;">
     <h2>Contrôleurs dans les configs</h2>
     <table>
       {''.join(controller_rows)}
     </table>
   </div>
-</div>
-
-<div class="card" style="margin-top:20px;">
-  <h2>Fichiers DOF trouvés</h2>
-  <table>
-    <tr><th style="text-align:left;">Fichier</th><th style="text-align:left;">Type</th><th style="text-align:left;">Taille</th></tr>
-    {''.join(config_rows)}
-  </table>
-</div>
+  <div class="card" style="margin-top:10px;">
+    <h2>Fichiers DOF trouvés</h2>
+    <p>Dossier cible : <code>/home/pinball/.local/share/VPinballX/10.8/directoutputconfig</code></p>
+    <table>
+      <tr><th style="text-align:left;">Fichier</th><th style="text-align:left;">Type</th><th style="text-align:left;">Taille</th></tr>
+      {''.join(config_rows)}
+    </table>
+  </div>
+</details>
 
 <div class="card" style="margin-top:20px;">
   <div class="dof-section-title">
@@ -5147,22 +4495,6 @@ def dof_commander_page():
   <pre id="dof-commander-log" style="max-height:360px; overflow:auto; background:#050007; border:1px solid #5f2a91; border-radius:12px; padding:12px;">Aucun test lancé.</pre>
 </div>
 
-<div class="card" style="margin-top:20px;">
-  <h2>Détails techniques</h2>
-  <details>
-    <summary>USB brut</summary>
-    <pre>{esc(raw_usb)}</pre>
-  </details>
-  <details>
-    <summary>HID raw</summary>
-    <pre>{esc(raw_hid)}</pre>
-  </details>
-  <details>
-    <summary>Serial</summary>
-    <pre>{esc(raw_serial)}</pre>
-  </details>
-</div>
-
 {error_html}
 
 <link rel="stylesheet" href="/static/dof-commander-pro.css?v=20260518-toggle-css-pure">
@@ -5224,394 +4556,76 @@ def api_dof_commander_test():
     return app.response_class(json.dumps(payload), mimetype="application/json")
 
 
-def dof_driver_pack_status_html():
-    tools = Path("/opt/pincabos/tools")
-    config = Path("/opt/pincabos/config/dof")
-
-    def read_json(path):
-        try:
-            if path.exists():
-                return json.loads(path.read_text(errors="replace"))
-        except Exception:
-            pass
-        return {}
-
-    def usb_detected(vendors, keywords=""):
-        try:
-            out = subprocess.run(
-                ["/usr/bin/lsusb"],
-                capture_output=True,
-                text=True,
-                timeout=3
-            ).stdout.lower()
-        except Exception:
-            out = ""
-
-        for v in vendors:
-            if str(v).lower() in out:
-                return True
-
-        for k in str(keywords).lower().split("|"):
-            k = k.strip()
-            if k and k in out:
-                return True
-
-        return False
-
-    def serial_detected():
-        return bool(list(Path("/dev").glob("ttyUSB*")) or list(Path("/dev").glob("ttyACM*")))
-
-    drivers = [
-        {
-            "name": "LedWiz",
-            "exe": "pincabos-ledwizctl",
-            "transport": "USB HID/libusb",
-            "config": None,
-            "vendors": ["fafa"],
-            "keywords": "ledwiz|groovy",
-            "real_if_installed": True
-        },
-        {
-            "name": "WS2811 / MX",
-            "exe": "pincabos-ws2811ctl",
-            "transport": "Serial / UDP / protocole à configurer",
-            "config": "ws2811.json",
-            "vendors": ["1a86", "10c4", "303a"],
-            "keywords": "wch|cp210|espressif|wemos|esp"
-        },
-        {
-            "name": "Dude’s Cab",
-            "exe": "pincabos-dudescabctl",
-            "transport": "ESP / Wemos / Serial / WiFi",
-            "config": "dudescab.json",
-            "vendors": ["1a86", "10c4", "303a"],
-            "keywords": "wch|cp210|espressif|wemos|esp"
-        },
-        {
-            "name": "Pinscape / KL25Z",
-            "exe": "pincabos-pinscapectl",
-            "transport": "USB HID custom",
-            "config": "pinscape.json",
-            "vendors": ["15a2", "1fc9"],
-            "keywords": "freescale|nxp|kl25z|pinscape"
-        },
-        {
-            "name": "Pinscape Pico / RP2040",
-            "exe": "pincabos-pinscape-picoctl",
-            "transport": "USB HID custom",
-            "config": "pinscape-pico.json",
-            "vendors": ["2e8a", "1209"],
-            "keywords": "raspberry|rp2040|pico"
-        },
-        {
-            "name": "Ultimarc / PacDrive / PacLed / Ultimate I/O",
-            "exe": "pincabos-ultimarcctl",
-            "transport": "USB HID",
-            "config": "ultimarc.json",
-            "vendors": ["d209"],
-            "keywords": "ultimarc|pacdrive|pacled"
-        },
-        {
-            "name": "SainSmart",
-            "exe": "pincabos-sainsmartctl",
-            "transport": "USB relay / Serial selon modèle",
-            "config": "sainsmart.json",
-            "vendors": [],
-            "keywords": "sainsmart|relay"
-        },
-        {
-            "name": "PinOne",
-            "exe": "pincabos-pinonectl",
-            "transport": "USB HID / Serial",
-            "config": "pinone.json",
-            "vendors": [],
-            "keywords": "pinone"
-        },
-        {
-            "name": "Pincontrol1 / Pincontrol2",
-            "exe": "pincabos-pinctl",
-            "transport": "USB HID / Serial",
-            "config": "pincontrol.json",
-            "vendors": [],
-            "keywords": "pincontrol"
-        },
-        {
-            "name": "Philips Hue",
-            "exe": "pincabos-huectl",
-            "transport": "Bridge Hue API",
-            "config": "hue.json",
-            "vendors": [],
-            "keywords": "",
-            "network": True
-        },
-        {
-            "name": "ArtNet",
-            "exe": "pincabos-artnetctl",
-            "transport": "UDP Art-Net",
-            "config": None,
-            "vendors": [],
-            "keywords": "",
-            "network": True,
-            "real_if_installed": True
-        },
-    ]
-
-    rows = []
-    installed_count = 0
-    real_count = 0
-
-    for d in drivers:
-        path = tools / d["exe"]
-        installed = path.exists() and path.is_file()
-        executable = installed and bool(path.stat().st_mode & 0o111)
-
-        cfg_enabled = False
-        cfg_file = None
-
-        if d.get("config"):
-            cfg_file = config / d["config"]
-            cfg_data = read_json(cfg_file)
-            cfg_enabled = bool(cfg_data.get("enabled", False))
-
-        if d.get("network"):
-            detected = True
-        elif d["name"] in ["WS2811 / MX", "Dude’s Cab", "SainSmart", "PinOne", "Pincontrol1 / Pincontrol2"]:
-            detected = usb_detected(d.get("vendors", []), d.get("keywords", "")) or serial_detected()
-        else:
-            detected = usb_detected(d.get("vendors", []), d.get("keywords", ""))
-
-        if executable:
-            installed_count += 1
-            status = '<span class="ok">● installé</span>'
-        elif installed:
-            status = '<span class="warn">● présent / non exécutable</span>'
-        else:
-            status = '<span class="bad">● absent</span>'
-
-        if not executable:
-            mode = '<span class="bad">absent</span>'
-        elif d.get("real_if_installed"):
-            real_count += 1
-            mode = '<span class="ok">driver réel minimal</span>'
-        elif cfg_enabled:
-            real_count += 1
-            mode = '<span class="ok">driver réel minimal</span>'
-        elif detected:
-            mode = '<span class="warn">détecté / safe mode</span>'
-        else:
-            mode = '<span class="warn">safe mode</span>'
-
-        if d.get("network"):
-            hw = '<span class="ok">réseau</span>'
-        elif detected:
-            hw = '<span class="ok">détecté</span>'
-        else:
-            hw = '<span class="bad">non détecté</span>'
-
-        cfg_note = ""
-        if cfg_file:
-            cfg_note = f'<br><small>Config : <code>{esc(str(cfg_file))}</code> / enabled=<code>{str(cfg_enabled).lower()}</code></small>'
-
-        rows.append(f"""
-        <tr>
-          <td><strong>{esc(d["name"])}</strong><br><small>{esc(d["transport"])}</small>{cfg_note}</td>
-          <td>{status}</td>
-          <td>{hw}</td>
-          <td><code>{esc(str(path))}</code></td>
-          <td>{mode}</td>
-        </tr>
-        """)
-
-    pack_file = config / "driver-pack.json"
-    pack_status = '<span class="ok">installé</span>' if pack_file.exists() else '<span class="bad">absent</span>'
-
-    return f"""
-<div class="card" id="dof-driver-pack-status-card">
-  <h2>État DOF Driver Pack</h2>
-  <p>
-    Pack : {pack_status}<br>
-    Drivers détectés : <code>{installed_count}/{len(drivers)}</code><br>
-    Drivers en mode réel minimal : <code>{real_count}/{len(drivers)}</code>
-  </p>
-
-  <p class="warn">
-    Le mode est dynamique : si le driver est installé mais que la config reste désactivée,
-    PinCabOS affiche <strong>safe mode</strong>. Quand <code>enabled=true</code> est confirmé
-    pour une famille, le mode devient <strong>driver réel minimal</strong>.
-  </p>
-
-  <table>
-    <tr>
-      <th style="text-align:left;">Famille</th>
-      <th style="text-align:left;">Driver</th>
-      <th style="text-align:left;">Matériel</th>
-      <th style="text-align:left;">Module PinCabOS</th>
-      <th style="text-align:left;">Mode</th>
-    </tr>
-    {''.join(rows)}
-  </table>
-
-  <p>
-    Outil diagnostic : <code>{esc(pco_script_text('dof_driver_status'))}</code>
-  </p>
-</div>
-"""
-
-
-@app.route("/api/dof/driver-pack-status")
-def api_dof_driver_pack_status():
-    try:
-        return jsonify({
-            "ok": True,
-            "html": dof_driver_pack_status_html(),
-            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
-    except Exception as e:
-        return jsonify({
-            "ok": False,
-            "error": str(e),
-            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }), 500
-
-
 @app.route("/dof")
 def dof_page():
+    # PINCABOS_DOF_PAGE_SIMPLE_V1
     cfg_path, file_rows = dof_file_status()
     summary, device_rows, raw_devices = detect_dof_devices()
     logs = dof_logs()
 
+    if pincabos_dof_get_saved_api_key():
+        key_hint = "clé enregistrée — laisser vide pour la réutiliser"
+    else:
+        key_hint = "coller ici ta clé API DOF Config Tool"
+
     body = f"""
 <div class="grid">
   <div class="card">
-<h2>DOF — État général</h2>
+    <h2>DOF — Sorties &amp; feedback</h2>
     <p>Service VPinFE : <code>{esc(service_status("pincabos-vpinfe.service"))}</code></p>
-    <p>Dossier config DOF :</p>
-    <p><code>{esc(cfg_path)}</code></p>
-    <p>Détection : {summary}</p>
+    <p>{summary}</p>
+    <table>
+      <tr><th style="text-align:left;">Carte</th><th style="text-align:left;">Périphérique</th><th style="text-align:left;">cabinet.xml</th></tr>
+      {device_rows}
+    </table>
+    <p><small>
+      Les extensions branchées <em>sur</em> une carte (Walter, MOSLight... sur la Dude's Cab)
+      ne sont pas des périphériques USB séparés : elles se configurent dans
+      <a href="/DudesCabConfig">DudesCabConfig</a> et le DOF Config Tool.
+    </small></p>
     <p>
-
-    <!-- PINCABOS_DOF_STATIC_ASSETS_START -->
-    <link rel="stylesheet" href="/static/pincabos-dof-pro.css?v=20260528">
-    <script defer src="/static/pincabos-dof-pro.js?v=20260528"></script>
-    <!-- PINCABOS_DOF_STATIC_ASSETS_END -->
-
-      <a class="button secondary" href="/dof/commander">Ouvrir DOF Commander</a>
-      <a class="button" href="/dof/commander">Importer cabinet JSON</a>
-      <a class="button secondary" href="https://configtool.vpuniverse.com/" target="_blank">DOF Config Tool V3</a>
-
-    <div id="pincabos-dof-import-manual-card" class="card" style="margin-top:20px; border-color:#ffb000;">
-      <h2>Import manuel DOF Config Tool</h2>
-      <p>
-        Si l'import en ligne VPinFE retourne <code>403 Forbidden / Cloudflare</code>,
-        exporte le ZIP DOF avec ton navigateur, puis importe-le ici.
-      </p>
-
-      <form method="post" action="/dof/import-config" enctype="multipart/form-data" style="margin-top:12px;">
-        <input type="hidden" name="mode" value="upload">
-        <input type="file" name="dof_file" accept=".zip,.ini,.xml" style="display:block; margin:8px 0; width:100%;">
-        <button class="button" type="submit">Importer ZIP DOF</button>
-      </form>
-
-      <form method="post" action="/dof/import-config" style="margin-top:10px;">
-        <input type="hidden" name="mode" value="share">
-        <button class="button secondary" type="submit">Importer dernier ZIP depuis /home/pinball/Share</button>
-      </form>
-
-      <hr style="border:0; border-top:1px solid #5f2a91; margin:16px 0;">
-
-      <h3>Import automatique via API DOF Config Tool</h3>
-      <p>
-        Entre ta clé API DOF Config Tool. PinCabOS lancera <code>ledcontrol_pull.py</code>
-        et placera les fichiers directement au bon endroit.
-      </p>
-
-      <form method="post" action="/dof/import-api" style="margin-top:12px;">
-        <label for="dof-api-key"><strong>Clé API DOF Config Tool</strong></label>
-        <input id="dof-api-key" type="text" name="apikey" value="{esc(pincabos_dof_get_saved_api_key())}" placeholder="Clé API DOF Config Tool" autocomplete="off" style="display:block; margin:8px 0; width:100%; padding:10px; border-radius:10px; border:1px solid #5f2a91; background:#050007; color:white;">
-        <label style="display:block; margin:8px 0;">
-          <input type="checkbox" name="force" value="1" checked>
-          Forcer le téléchargement / remplacement
-        </label>
-        <button class="button" type="submit">Importer via API</button>
-      </form>
-
-      <p class="warn" style="margin-top:10px;">
-        Destination : <code>/home/pinball/.local/share/VPinballX/10.8/directoutputconfig</code>
-      </p>
-    </div>
-
-</p>
+      <a class="button" href="/dof/hardware">Mat&eacute;riel &amp; cabinet.xml</a>
+      <a class="button secondary" href="/dof/commander">DOF Commander</a>
+    </p>
   </div>
 
   <div class="card">
-    <h2>À quoi sert cette page ?</h2>
+    <h2>Import DOF Config Tool</h2>
     <p>
-      Cette section prépare PinCabOS pour les contrôleurs de feedback :
-      LedWiz, Pinscape, Dude's Cab, PacLed, FTDI, Arduino, Serial USB, ArtNet et Hue.
+      Les effets par table (<code>directoutputconfigNN.ini</code>) viennent de
+      <a href="https://configtool.vpuniverse.com/" target="_blank">DOF Config Tool</a>.<br>
+      Destination : <code>{esc(cfg_path)}</code>
     </p>
-    <p>
-      Le Driver Pack installe les modules PinCabOS nécessaires au routage DOF Commander.
-      Les modules en safe mode restent inactifs côté matériel tant que leur protocole n’est pas activé.
-    </p>
+
+    <form method="post" action="/dof/import-config" enctype="multipart/form-data">
+      <input type="hidden" name="mode" value="upload">
+      <input type="file" name="dof_file" accept=".zip,.ini,.xml" style="display:block; margin:8px 0; width:100%;">
+      <button class="button" type="submit">Importer un ZIP DOF</button>
+    </form>
+
+    <form method="post" action="/dof/import-api" style="margin-top:14px;">
+      <label for="dof-api-key"><strong>Import automatique par clé API</strong></label>
+      <input id="dof-api-key" type="password" name="apikey" value="" placeholder="{esc(key_hint)}" autocomplete="off" style="display:block; margin:8px 0; width:100%; padding:10px; border-radius:10px; border:1px solid #5f2a91; background:#050007; color:white;">
+      <label style="display:block; margin:8px 0;">
+        <input type="checkbox" name="force" value="1" checked>
+        Forcer le téléchargement / remplacement
+      </label>
+      <button class="button" type="submit">Importer via API</button>
+    </form>
+
+    <form method="post" action="/dof/import-config" style="margin-top:10px;">
+      <input type="hidden" name="mode" value="share">
+      <button class="button secondary" type="submit">Importer le dernier ZIP depuis /home/pinball/Share</button>
+    </form>
   </div>
 </div>
 
-{dof_driver_pack_status_html()}
-
-
-<script>
-(function() {{
-  async function refreshDofDriverPackStatus() {{
-    const card = document.getElementById('dof-driver-pack-status-card');
-    if (!card) return;
-
-    try {{
-      const r = await fetch('/api/dof/driver-pack-status?t=' + Date.now(), {{
-        cache: 'no-store'
-      }});
-
-      const data = await r.json();
-
-      if (!data.ok) {{
-        const err = document.createElement('p');
-        err.className = 'bad';
-        err.textContent = 'Erreur rafraîchissement Driver Pack : ' + (data.error || 'inconnue');
-        card.appendChild(err);
-        return;
-      }}
-
-      const temp = document.createElement('div');
-      temp.innerHTML = data.html.trim();
-
-      const newCard = temp.querySelector('#dof-driver-pack-status-card');
-      if (newCard) {{
-        card.replaceWith(newCard);
-
-        const stamp = document.createElement('p');
-        stamp.className = 'dof-muted';
-        stamp.innerHTML = 'Dernier rafraîchissement : <code>' + data.updated_at + '</code>';
-        newCard.appendChild(stamp);
-      }}
-    }} catch (e) {{
-      const current = document.getElementById('dof-driver-pack-status-card');
-      if (current) {{
-        const err = document.createElement('p');
-        err.className = 'bad';
-        err.textContent = 'Erreur refresh Driver Pack : ' + e;
-        current.appendChild(err);
-      }}
-    }}
-  }}
-
-  refreshDofDriverPackStatus();
-  setInterval(refreshDofDriverPackStatus, 3000);
-}})();
-</script>
-
+<details style="margin-top:20px;">
+  <summary>Avancé : dépendances par famille de cartes, fichiers et logs</summary>
+  {dof_utils_card_html()}
+  {dof_detection_summary_card(summary, raw_devices, logs, file_rows)}
+</details>
 """
-
-    body = body + dof_detection_summary_card(summary, raw_devices, logs, file_rows)
-
     return page("Outputs", body)
 
 
@@ -18077,6 +17091,17 @@ except Exception as _pincabos_dudescab_config_error:
     except Exception:
         pass
 # PINCABOS_DUDESCAB_CONFIG_PAGE_V3_REGISTER END
+
+# PINCABOS_DOF_HARDWARE_PAGE_V1_REGISTER BEGIN
+try:
+    from pincabos_dof_hardware import register as _pincabos_dof_hardware_register
+    _pincabos_dof_hardware_register(app, page, esc)
+except Exception as _pincabos_dof_hardware_error:
+    try:
+        app.logger.exception("PinCabOS DOF hardware page registration failed: %s", _pincabos_dof_hardware_error)
+    except Exception:
+        pass
+# PINCABOS_DOF_HARDWARE_PAGE_V1_REGISTER END
 
 
 # PINCABOS_NTWKDRV_MODULE_LOADER_V1

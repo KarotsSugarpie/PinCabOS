@@ -634,6 +634,10 @@ pincabos_publy_write_policy() {
 ^opt/pincabos/config/.*secret.*$
 ^opt/pincabos/config/.*api[-_]?key.*$
 
+# Firmwares Dude's Cab (propriété d'Arnoz) : téléchargés à la volée depuis
+# dude.arnoz.com par le configurateur, JAMAIS redistribués (ni cache, ni manifests).
+^opt/pincabos/config/dudescab(/|$)
+
 # DOF Config Tool / cabinet local : spécifique au cab, jamais dans l'engine public.
 ^opt/pincabos/config/dof/active-cabinet\.txt$
 ^opt/pincabos/config/dof/configtool-api-key\.txt$
