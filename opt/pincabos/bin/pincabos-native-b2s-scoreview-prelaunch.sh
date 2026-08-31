@@ -285,11 +285,11 @@ def main() -> int:
 
                 'ScoreViewWndX': '0',
                 'ScoreViewWndY': '0',
-                'ScoreViewWidth': '1920',
-                'ScoreViewHeight': '1200',
+                'ScoreViewWidth': str(fulldmd_width),
+                'ScoreViewHeight': str(fulldmd_height),
 
-                'ScoreViewFSWidth': '1920',
-                'ScoreViewFSHeight': '1200',
+                'ScoreViewFSWidth': str(fulldmd_width),
+                'ScoreViewFSHeight': str(fulldmd_height),
 
                 'Priority.ScoreView': '0',
                 'Priority.B2SLegacyDMD': '2',
