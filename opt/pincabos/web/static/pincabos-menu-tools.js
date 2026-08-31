@@ -3,6 +3,7 @@
 
   var KEY = "pincabos_menu_force_pinned_v5";
   var originalCard = null;
+  var originalCardElement = null;
   var iniOriginals = new WeakMap();
 
   function q(sel) {
@@ -30,6 +31,16 @@
     return r.width > 80 && r.height > 20;
   }
 
+  function getPinned() {
+    try { return localStorage.getItem(KEY) === "1"; }
+    catch (e) { return false; }
+  }
+
+  function setPinnedStored(v) {
+    try { localStorage.setItem(KEY, v ? "1" : "0"); }
+    catch (e) {}
+  }
+
   function findFullMenuCard() {
     var about = q('a[href="/about"]');
     if (!about) return null;
@@ -43,10 +54,12 @@
 
     var best = about.parentElement || about;
     var bestScore = -999999;
+    var allowHidden = getPinned();
 
     candidates.forEach(function (el) {
-      if (!visible(el)) return;
-      var r = el.getBoundingClientRect();
+      var isVisible = visible(el);
+      if (!isVisible && !allowHidden) return;
+      var r = el.getBoundingClientRect ? el.getBoundingClientRect() : { top: 0, width: 0 };
       var t = txt(el).toLowerCase();
       var links = el.querySelectorAll ? el.querySelectorAll("a,button,select,input").length : 0;
       var hasAbout = el.querySelector && el.querySelector('a[href="/about"]') ? 1 : 0;
@@ -58,8 +71,9 @@
       score += hasTools * 900;
       score += hasLang * 350;
       score += Math.min(links, 30) * 25;
-      score += Math.min(r.width, window.innerWidth || r.width) / 20;
-      score -= Math.abs(r.top) * 2;
+      score += Math.min(r.width || 0, window.innerWidth || r.width || 0) / 20;
+      score += isVisible ? 100 : 0;
+      score -= Math.abs(r.top || 0) * 2;
       if (el === document.body) score -= 5000;
 
       if (score > bestScore) {
@@ -71,16 +85,6 @@
     return best;
   }
 
-  function getPinned() {
-    try { return localStorage.getItem(KEY) === "1"; }
-    catch (e) { return false; }
-  }
-
-  function setPinnedStored(v) {
-    try { localStorage.setItem(KEY, v ? "1" : "0"); }
-    catch (e) {}
-  }
-
   function setOffset(px) {
     px = Math.max(0, Math.ceil(px || 0));
     document.documentElement.style.setProperty("--pco-menu-pinned-offset", px + "px");
@@ -88,7 +92,9 @@
   }
 
   function rememberCard(card) {
-    if (originalCard || !card) return;
+    if (!card) return;
+    if (originalCard && originalCardElement === card) return;
+    originalCardElement = card;
     originalCard = {
       position: card.style.position || "",
       top: card.style.top || "",
@@ -218,28 +224,42 @@
     });
   }
 
-  function refreshIniOffset() {
-    if (!getPinned()) {
-      setOffset(0);
-      clearIniOffset();
-      return;
-    }
+  function setPinButtonVisual(v) {
+    var pinBtn = q("#pco-menu-pin-btn");
+    if (!pinBtn) return;
 
-    var card = findFullMenuCard();
-    var h = getMenuHeight(card);
-    setOffset(h);
-    forceIniOffset(h);
+    if (v) {
+      pinBtn.classList.add("pco-pinned");
+      pinBtn.textContent = "📍";
+      pinBtn.title = "Menu complet épinglé";
+      pinBtn.setAttribute("aria-label", "Menu complet épinglé");
+      pinBtn.setAttribute("aria-pressed", "true");
+    } else {
+      pinBtn.classList.remove("pco-pinned");
+      pinBtn.textContent = "📌";
+      pinBtn.title = "Épingler le menu complet";
+      pinBtn.setAttribute("aria-label", "Épingler le menu complet");
+      pinBtn.setAttribute("aria-pressed", "false");
+    }
   }
 
-  function applyPinned(v) {
+  function enforcePinnedState() {
+    var pinned = getPinned();
     var card = findFullMenuCard();
-    var pinBtn = q("#pco-menu-pin-btn");
 
-    if (!card) return false;
+    setPinButtonVisual(pinned);
+
+    if (!card) {
+      if (!pinned) {
+        setOffset(0);
+        clearIniOffset();
+      }
+      return false;
+    }
 
     rememberCard(card);
 
-    if (v) {
+    if (pinned) {
       var h = getMenuHeight(card);
       card.classList.add("pco-menu-force-fixed");
       card.style.position = "fixed";
@@ -254,53 +274,44 @@
       document.body.style.paddingTop = h + "px";
       setOffset(h);
       forceIniOffset(h);
-
-      if (pinBtn) {
-        pinBtn.classList.add("pco-pinned");
-        pinBtn.textContent = "📍";
-        pinBtn.title = "Menu complet épinglé";
-        pinBtn.setAttribute("aria-pressed", "true");
-      }
-    } else {
-      card.classList.remove("pco-menu-force-fixed");
-
-      if (originalCard) {
-        card.style.position = originalCard.position;
-        card.style.top = originalCard.top;
-        card.style.left = originalCard.left;
-        card.style.right = originalCard.right;
-        card.style.width = originalCard.width;
-        card.style.maxWidth = originalCard.maxWidth;
-        card.style.zIndex = originalCard.zIndex;
-        card.style.boxShadow = originalCard.boxShadow;
-        card.style.borderBottom = originalCard.borderBottom;
-        document.body.style.paddingTop = originalCard.bodyPaddingTop;
-      } else {
-        document.body.style.paddingTop = "";
-      }
-
-      setOffset(0);
-      clearIniOffset();
-
-      if (pinBtn) {
-        pinBtn.classList.remove("pco-pinned");
-        pinBtn.textContent = "📌";
-        pinBtn.title = "Épingler le menu complet";
-        pinBtn.setAttribute("aria-pressed", "false");
-      }
+      return true;
     }
 
+    card.classList.remove("pco-menu-force-fixed");
+
+    if (originalCard && originalCardElement === card) {
+      card.style.position = originalCard.position;
+      card.style.top = originalCard.top;
+      card.style.left = originalCard.left;
+      card.style.right = originalCard.right;
+      card.style.width = originalCard.width;
+      card.style.maxWidth = originalCard.maxWidth;
+      card.style.zIndex = originalCard.zIndex;
+      card.style.boxShadow = originalCard.boxShadow;
+      card.style.borderBottom = originalCard.borderBottom;
+      document.body.style.paddingTop = originalCard.bodyPaddingTop;
+    } else {
+      document.body.style.paddingTop = "";
+    }
+
+    setOffset(0);
+    clearIniOffset();
+    return false;
+  }
+
+  function applyPinned(v) {
     setPinnedStored(v);
+    enforcePinnedState();
     return false;
   }
 
   function bindSingleClick(btn, handler) {
-    if (!btn || !btn.parentNode) return btn;
-    var clean = btn.cloneNode(true);
-    clean.removeAttribute("onclick");
-    btn.parentNode.replaceChild(clean, btn);
-    clean.addEventListener("click", handler, true);
-    return clean;
+    if (!btn) return btn;
+    if (btn.getAttribute("data-pco-menu-bound") === "1") return btn;
+    btn.removeAttribute("onclick");
+    btn.addEventListener("click", handler, true);
+    btn.setAttribute("data-pco-menu-bound", "1");
+    return btn;
   }
 
   window.pcoMenuTogglePin = function (ev) {
@@ -388,7 +399,7 @@
     var button = document.createElement("button");
     button.type = "button";
     button.id = "pco-menu-power-btn";
-    button.className = "pco-menu-tool-btn pco-menu-close-btn";
+    button.className = "pco-menu-tool-btn pco-menu-close-btn pco-menu-power-btn";
     button.textContent = "⏻";
     button.title = "Éteindre le PinCab";
     button.setAttribute("aria-label", "Éteindre le PinCab");
@@ -397,20 +408,22 @@
     return button;
   }
 
+  function syncMenuTools() {
+    bindSingleClick(q("#pco-menu-pin-btn"), window.pcoMenuTogglePin);
+    bindSingleClick(q("#pco-menu-close-btn"), window.pcoMenuClosePage);
+    bindSingleClick(ensurePowerButton(), window.pcoMenuShutdown);
+    enforcePinnedState();
+  }
+
   function boot() {
-    var pinBtn = q("#pco-menu-pin-btn");
-    var closeBtn = q("#pco-menu-close-btn");
-    var powerBtn = ensurePowerButton();
+    syncMenuTools();
 
-    pinBtn = bindSingleClick(pinBtn, window.pcoMenuTogglePin);
-    closeBtn = bindSingleClick(closeBtn, window.pcoMenuClosePage);
-    powerBtn = bindSingleClick(powerBtn, window.pcoMenuShutdown);
-
-    applyPinned(getPinned());
-
-    window.addEventListener("scroll", refreshIniOffset, { passive: true });
-    window.addEventListener("resize", function () { setTimeout(refreshIniOffset, 80); });
-    setInterval(refreshIniOffset, 1000);
+    window.addEventListener("scroll", enforcePinnedState, { passive: true });
+    window.addEventListener("resize", function () { setTimeout(syncMenuTools, 80); });
+    window.addEventListener("storage", function (event) {
+      if (event && event.key === KEY) syncMenuTools();
+    });
+    setInterval(syncMenuTools, 1000);
   }
 
   if (document.readyState === "loading") {
