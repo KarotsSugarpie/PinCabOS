@@ -292,6 +292,7 @@
   function applyExtension(index) {
     const config = state.cardConfig;
     const extension = config?.extensions?.[Number(index)] || null;
+    if (state.extLoaded && Number(index) !== state.extensionIndex) writeBackSelectedOutputs();
     state.extensionIndex = Number(index) || 0;
     if (!extension) return;
     setControl("extension.1.name", extension.name || `Extension ${extension.address}`);
@@ -319,6 +320,7 @@
       const selector = document.querySelector(`[data-output-select="${number}"]`);
       if (selector) selector.classList.toggle("dc-output-disabled", !output.enabled);
     });
+    state.extLoaded = true;
   }
   function renderExtensionSelector(extensions) {
     const select = $("dc-extension-select");
@@ -349,19 +351,7 @@
       if(empty) empty.hidden=false;
       if(count) count.textContent="0";
     }
-    (mx.ledstrips || []).forEach((strip) => {
-      const first = strip.splits?.[0]?.data_output_num ?? 0;
-      const lane = first >= 0 && first <= 7 ? first + 1 : Math.max(1, Math.min(8, Number(first) || 1));
-      const holder=document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-strips`);
-      const empty=document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-empty`);
-      if(!holder) return;
-      const row=document.createElement("div");
-      row.className="dc-mx-strip dc-mx-strip-read";
-      const splitText=(strip.splits || []).map((split)=>`Ligne ${Number(split.data_output_num)+1}: ${split.nb_leds} LEDs`).join(" · ");
-      row.innerHTML=`<label>Nom<input type="text" value="${escapeHtml(strip.name)}"></label><label>Largeur<input type="number" value="${Number(strip.width)}"></label><label>Hauteur<input type="number" value="${Number(strip.height)}"></label><label>Numéro sortie DOF<input type="number" value="${Number(strip.dof_output_num)}"></label><label>Arrangement<select><option>${escapeHtml(arrangementLabel(strip.led_arrangement))}</option></select></label><label>Brillance<input type="number" value="${Number(strip.brightness)}"></label><div class="dc-mx-splits" title="${escapeHtml(splitText)}">${escapeHtml(splitText || "Aucun split")}</div>`;
-      holder.appendChild(row);
-      if(empty) empty.hidden=true;
-    });
+    (mx.ledstrips || []).forEach((strip) => mxAppendStrip(strip));
     for (let lane=1; lane<=8; lane++) {
       const count=document.querySelector(`[data-mx-lane="${lane}"] [data-mx-count]`);
       const total=(mx.ledstrips || []).flatMap((strip)=>strip.splits || []).filter((split)=>Number(split.data_output_num)+1===lane).reduce((sum,split)=>sum+Number(split.nb_leds||0),0);
@@ -413,6 +403,7 @@
     setControl("plunger.pulled", pinLabel(plunger.pull_button_pin, "Aucun"));
     setControl("plunger.pushed", pinLabel(plunger.push_button_pin, "Aucun"));
     if($("dc-plunger-calibrated")) $("dc-plunger-calibrated").checked=!!plunger.calibrated;
+    state.extLoaded = false;
     renderExtensionSelector(config.extensions || []);
     renderMxCardConfig(config.mx);
     state.dirty=false; state.memoryDirty=false;
@@ -600,6 +591,10 @@
     if (action === "monitor") { setTab("monitor"); return; }
     if (action === "reset") { resetDude(); return; }
     if (action === "watchdog-test") { testWatchdog(); return; }
+    if (action === "send") { await saveCardConfig(); return; }
+    if (action === "memory-read") { await memoryRead(); return; }
+    if (action === "memory-reset") { await memoryReset(); return; }
+    if (action === "memory-save") { toast("Écriture mémoire flash : structure du blob non documentée (endpoint brut /flash/write disponible).", true); return; }
     toast(messages[action] || "Commande Admin d'écriture volontairement bloquée.", true);
   }
   function unitFor(id, value) {
@@ -664,19 +659,10 @@
   function addMxStrip(lane) {
     const holder = document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-strips`);
     const empty = document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-empty`);
-    const index = holder.children.length + 1;
-    const row = document.createElement("div");
-    row.className = "dc-mx-strip";
-    row.innerHTML = `<label>Nom<input type="text" value="Ledstrip ${lane}.${index}"></label><label>Largeur<input type="number" min="1" max="512" value="1"></label><label>Hauteur<input type="number" min="1" max="512" value="1"></label><label>Numéro sortie DOF<input type="number" min="1" max="999" value="${(lane-1)*3+1}"></label><label>Arrangement<select><option>LeftRightTopDown</option><option>LeftRightBottomUp</option><option>TopDownLeftRight</option><option>BottomUpLeftRight</option></select></label><label>Brillance<input type="number" min="0" max="100" value="50"></label><button type="button" class="dc-remove-strip">🗑</button>`;
-    holder.appendChild(row); empty.hidden = true;
-    const update = () => {
-      let total = 0;
-      $$('.dc-mx-strip', holder).forEach((strip) => { const nums = $$('input[type=number]', strip); total += Number(nums[0]?.value || 0) * Number(nums[1]?.value || 0); });
-      document.querySelector(`[data-mx-lane="${lane}"] [data-mx-count]`).textContent = String(total);
-    };
-    row.addEventListener("input", () => { update(); markDirty(); });
-    row.querySelector('.dc-remove-strip').addEventListener("click", () => { row.remove(); empty.hidden = holder.children.length > 0; update(); markDirty(); });
-    update(); markDirty();
+    if(!holder) return;
+    holder.appendChild(mxStripRow({ name:"Ledstrip "+lane, width:1, height:1, dof_output_num:(lane-1)*3+1, led_arrangement:0, fading_curve:0, color_order:0, brightness:50, splits:[{data_output_num:lane-1, nb_leds:0}] }));
+    if(empty) empty.hidden = true;
+    markDirty();
   }
   function installMxUi() {
     $$('[data-add-strip]').forEach((button) => button.addEventListener("click", () => addMxStrip(button.dataset.addStrip)));
@@ -882,16 +868,310 @@
     const note=document.createElement('div');note.className='dc-safe-note';note.textContent='Gestion du firmware mise sur glace. Cette V3 travaille uniquement avec le protocole HID documenté et ne flashe rien.';box.appendChild(note);
     const local=$("dc-local-list");if(local)local.innerHTML='';
   }
+  // === PINCABOS_DUDESCAB_WRITE_V1 : ecriture config carte (UI -> modele -> SetConfig) ===
+  const KEYBOARD_LABELS = ["Qwerty","Azerty","Qwertz","Colemak"];
+  const ORIENTATION_LABELS = ["Arrière","Droite","Avant","Gauche"];
+  const PRECISION_LABELS = ["±4g","±8g","±16g","±32g"];
+  const PRESET_LABELS = ["Custom","Flipper Logic","Contacteurs","Moteurs","Leds","Ampoules"];
+  const CHIPSET_LABELS = ["WS2811","WS2812","WS2812B","WS2813","WS2815","SK6812"];
+  const TEST_LABELS = ["Aucun","RGB","Couleurs","Laser"];
+  function ctrlEl(key){ return document.querySelector(`[data-config-key="${CSS.escape(key)}"]`); }
+  function ctrlVal(key){ const e=ctrlEl(key); if(!e) return undefined; return e.type==="checkbox"?e.checked:e.value; }
+  function num0(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
+  function idxOfLabel(arr,label){ const i=arr.indexOf(String(label ?? "")); return i<0?null:i; }
+  function pinFromLabel(t){ const m=/(\d+)/.exec(String(t ?? "")); return (/aucun/i.test(String(t ?? "")) || !m)?0:Number(m[1]); }
+  function hexToRgb(hex){ const m=/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex ?? "")); if(!m) return null; return {r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16),hex:("#"+m[1]+m[2]+m[3]).toLowerCase()}; }
+
+  const FUNCTION_CHOICES = (() => {
+    const list=[]; const seen=new Set();
+    const add=(t,f)=>{ const lbl=inputFunctionLabel({type:t, function:f}); if(lbl && !seen.has(lbl)){ seen.add(lbl); list.push({label:lbl, type:t, function:f}); } };
+    add(0,0);                                   // None
+    for(let f=0; f<32; f++) add(2,f);            // Button 1-32
+    for(let f=32; f<36; f++) add(2,f);           // DPAD Up/Right/Down/Left
+    for(let f=4; f<KEY_NAMES.length; f++){ const nm=KEY_NAMES[f]; if(nm && !/Invalid|ErrorRollOver|POSTFail|ErrorUndefined/.test(nm)) add(1,f); } // clavier + medias
+    return list;
+  })();
+  const LABEL_TO_BINDING = Object.fromEntries(FUNCTION_CHOICES.map((c)=>[c.label, {type:c.type, function:c.function}]));
+  function populateInputFunctionSelects(){
+    const esc=(x)=>String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    const html=FUNCTION_CHOICES.map((c)=>`<option value="${esc(c.label)}">${esc(c.label)}</option>`).join("");
+    document.querySelectorAll('select[data-config-key$=".primary"],select[data-config-key$=".shifted"]').forEach((sel)=>{
+      if(!/^input\./.test(sel.dataset.configKey||"")) return;
+      const cur=sel.value; sel.innerHTML=html; if(cur && LABEL_TO_BINDING[cur]) sel.value=cur;
+    });
+  }
+  function bindingFromLabel(label, original){
+    original = original || {type:0, function:0};
+    const orig = {type:Number(original.type)||0, function:Number(original.function)||0};
+    if (inputFunctionLabel(orig) === String(label)) return orig; // inchange -> exact
+    const b = LABEL_TO_BINDING[String(label)];
+    return b ? {type:b.type, function:b.function} : orig; // change -> map inverse, sinon preserve
+  }
+  function writeBackSelectedOutputs(){
+    const c=state.cardConfig; const ext=c && c.extensions && c.extensions[state.extensionIndex||0]; if(!ext) return;
+    if(ctrlEl("extension.1.name")) ext.name=String(ctrlVal("extension.1.name") ?? "");
+    if(ctrlEl("extension.1.id")) ext.address=num0(ctrlVal("extension.1.id"));
+    if(ctrlEl("extension.1.pwm") && ext.pwm_frequency!=null) ext.pwm_frequency=num0(ctrlVal("extension.1.pwm"));
+    (ext.outputs||[]).forEach((o,off)=>{ const n=off+1;
+      if(ctrlEl(`output.${n}.enabled`)) o.enabled=!!ctrlVal(`output.${n}.enabled`);
+      if(ctrlEl(`output.${n}.name`)) o.name=String(ctrlVal(`output.${n}.name`) ?? "");
+      const pr=idxOfLabel(PRESET_LABELS, ctrlVal(`output.${n}.preset`)); if(pr!==null) o.preset=pr;
+      if(ctrlEl(`output.${n}.night`)) o.night_mode_affected=!!ctrlVal(`output.${n}.night`);
+      if(ctrlEl(`output.${n}.digital`)) o.digital=!!ctrlVal(`output.${n}.digital`);
+      if(ctrlEl(`output.${n}.gamma`)) o.gamma_correct=!!ctrlVal(`output.${n}.gamma`);
+      if(ctrlEl(`output.${n}.inverted`)) o.inverted=!!ctrlVal(`output.${n}.inverted`);
+      if(ctrlEl(`output.${n}.max`)) o.max_value=num0(ctrlVal(`output.${n}.max`));
+      if(ctrlEl(`output.${n}.intensity`)) o.intensity=num0(ctrlVal(`output.${n}.intensity`));
+      if(ctrlEl(`output.${n}.falloff`)) o.falloff_value=num0(ctrlVal(`output.${n}.falloff`));
+      if(ctrlEl(`output.${n}.minimum`)) o.min_active_time=num0(ctrlVal(`output.${n}.minimum`));
+      if(ctrlEl(`output.${n}.falloff_delay`)) o.falloff_delay=num0(ctrlVal(`output.${n}.falloff_delay`));
+      if(ctrlEl(`output.${n}.safety`)) o.security_delay=num0(ctrlVal(`output.${n}.safety`));
+      let f=0; if(o.enabled)f|=0x80; if(o.night_mode_affected)f|=0x01; if(!o.digital)f|=0x02; if(o.gamma_correct)f|=0x04; if(o.inverted)f|=0x08;
+      o.flags=((Number(o.flags)||0) & 0x70) | f;
+    });
+  }
+
+  function writeConfigBack(){
+    const c=state.cardConfig; if(!c) throw new Error("Lis d'abord la configuration de la carte (Lire Config).");
+    const g=c.general=c.general||{};
+    if(ctrlEl("general.name")) g.name=String(ctrlVal("general.name") ?? "");
+    if(ctrlEl("general.id")) g.card_id=num0(ctrlVal("general.id"));
+    if(ctrlEl("general.cpu") && g.cpu_frequency!=null) g.cpu_frequency=num0(ctrlVal("general.cpu"));
+    if(ctrlEl("general.night_boot")) g.default_night_mode=!!ctrlVal("general.night_boot");
+    if(ctrlEl("general.watchdog") && g.watchdog_delay!=null) g.watchdog_delay=num0(ctrlVal("general.watchdog"));
+    const kb=idxOfLabel(KEYBOARD_LABELS, ctrlVal("inputs.keyboard")); if(kb!==null) g.keyboard_layout=kb;
+    const ori=idxOfLabel(ORIENTATION_LABELS, ctrlVal("accelerometer.orientation")); if(ori!==null) g.usb_orientation=ori;
+    if(g.colors){ ["default","admin","night","calibration"].forEach((k)=>{ const col=hexToRgb(ctrlVal("color."+k)); if(col) g.colors[k]=col; }); }
+    c.inputs=c.inputs||{};
+    if(ctrlEl("inputs.shift")) c.inputs.shift_button_pin=pinFromLabel(ctrlVal("inputs.shift"));
+    if(ctrlEl("inputs.night")) c.inputs.night_mode_button_pin=pinFromLabel(ctrlVal("inputs.night"));
+    (c.inputs.items||[]).forEach((item,i)=>{ const n=i+1;
+      const pl=ctrlVal(`input.${n}.primary`); if(pl!==undefined) item.default=bindingFromLabel(pl, item.default);
+      const sl=ctrlVal(`input.${n}.shifted`); if(sl!==undefined) item.shifted=bindingFromLabel(sl, item.shifted);
+      const lat=ctrlVal(`input.${n}.latency`); if(lat!==undefined) item.latency=(String(lat)==="Optimal")?0:(Number(item.latency)||1);
+      if(ctrlEl(`input.${n}.debounce`)) item.debounce_delay=num0(ctrlVal(`input.${n}.debounce`));
+    });
+    const a=c.accelerometer=c.accelerometer||{};
+    if(ctrlEl("accelerometer.poll")) a.report_delay=num0(ctrlVal("accelerometer.poll"));
+    if(ctrlEl("accelerometer.x")) a.x_sensitivity=num0(ctrlVal("accelerometer.x"));
+    if(ctrlEl("accelerometer.y")) a.y_sensitivity=num0(ctrlVal("accelerometer.y"));
+    if(ctrlEl("accelerometer.dead")) a.dead_zone=num0(ctrlVal("accelerometer.dead"));
+    if(ctrlEl("accelerometer.tilt")) a.tilt_range=num0(ctrlVal("accelerometer.tilt"));
+    if(ctrlEl("accelerometer.tilt_button")) a.tilt_button_pin=pinFromLabel(ctrlVal("accelerometer.tilt_button"));
+    const prec=idxOfLabel(PRECISION_LABELS, ctrlVal("accelerometer.range")); if(prec!==null && a.precision!=null) a.precision=prec;
+    if(ctrlEl("accelerometer.cache") && a.history_buffer!=null) a.history_buffer=num0(ctrlVal("accelerometer.cache"));
+    if(ctrlEl("accelerometer.filter") && a.filter_strength!=null) a.filter_strength=num0(ctrlVal("accelerometer.filter"));
+    const p=c.plunger=c.plunger||{};
+    if(ctrlEl("plunger.enabled")) p.enabled=!!ctrlVal("plunger.enabled");
+    if(ctrlEl("plunger.inverted")) p.inverted=!!ctrlVal("plunger.inverted");
+    if(ctrlEl("plunger.poll")) p.report_delay=num0(ctrlVal("plunger.poll"));
+    if(ctrlEl("plunger.shake")) p.jitter_window=num0(ctrlVal("plunger.shake"));
+    if(ctrlEl("plunger.calibration")) p.calibration_duration=num0(ctrlVal("plunger.calibration"));
+    if(ctrlEl("plunger.cal_button")) p.calibration_button_pin=pinFromLabel(ctrlVal("plunger.cal_button"));
+    if(ctrlEl("plunger.pulled")) p.pull_button_pin=pinFromLabel(ctrlVal("plunger.pulled"));
+    if(ctrlEl("plunger.pushed")) p.push_button_pin=pinFromLabel(ctrlVal("plunger.pushed"));
+    writeBackSelectedOutputs();
+    if(c.mx){ const m=c.mx;
+      if(ctrlEl("mx.enabled")) m.enabled=!!ctrlVal("mx.enabled");
+      if(ctrlEl("mx.ledwiz")) m.ledwiz_equivalent=num0(ctrlVal("mx.ledwiz"));
+      if(ctrlEl("mx.brightness")) m.test_brightness=num0(ctrlVal("mx.brightness"));
+      const chip=idxOfLabel(CHIPSET_LABELS, ctrlVal("mx.model")); if(chip!==null) m.led_chipset=chip;
+      const rt=idxOfLabel(TEST_LABELS, ctrlVal("mx.reset_test")); if(rt!==null) m.test_on_reset=rt;
+      const ct=idxOfLabel(TEST_LABELS, ctrlVal("mx.connection_test")); if(ct!==null) m.test_on_connect=ct;
+      if(ctrlEl("mx.duration")){ const d=num0(ctrlVal("mx.duration")); m.test_on_connect_duration=d; m.test_on_reset_duration=d; }
+      if(ctrlEl("mx.compression") && m.compression_ratio!=null) m.compression_ratio=num0(ctrlVal("mx.compression"));
+      m.ledstrips = collectMxStrips();
+      m.nb_ledstrips = m.ledstrips.length;
+    }
+    return c;
+  }
+
+  async function saveCardConfig(){
+    if(!requireMaintenanceUi()) return;
+    if(!state.connectedUi){ toast("Connecte d'abord la Dude's Cab.",true); return; }
+    if(state.configBusy || state.connectBusy) return;
+    const btn=document.querySelector('[data-card-action="send"]');
+    state.configBusy=true; if(btn) btn.disabled=true;
+    try{
+      const config=writeConfigBack();
+      await waitForLiveIdle(3000);
+      await api("/api/dudescabconfig/protocol/config/write",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({config,save:true})});
+      state.dirty=false; if($("dc-send-dirty")) $("dc-send-dirty").hidden=true;
+      toast("Configuration écrite et sauvegardée sur la carte.");
+      state.configBusy=false;
+      await readCardConfig(true);
+    }catch(error){
+      state.configBusy=false;
+      toast(`Envoyer Config: ${error.message}`,true);
+    }finally{
+      state.configBusy=false; if(btn) btn.disabled=false;
+    }
+  }
+
+  async function calibratePlunger(){
+    if(!requireMaintenanceUi()) return;
+    if(!state.connectedUi){ toast("Connecte d'abord la Dude's Cab.",true); return; }
+    try{
+      await api("/api/dudescabconfig/protocol/plunger/calibrate",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+      toast("Calibration du plunger déclenchée — suis la procédure (tire/pousse) puis relis la config.");
+    }catch(error){ toast(`Calibration: ${error.message}`,true); }
+  }
+
+  async function memoryRead(){
+    if(!requireMaintenanceUi()) return;
+    if(!state.connectedUi){ toast("Connecte d'abord la Dude's Cab.",true); return; }
+    try{
+      const data=await api("/api/dudescabconfig/protocol/flash/read",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+      if($("dc-monitor-json")){ setTab("monitor"); $("dc-monitor-json").textContent=`Mémoire flash (${data.size} octets):\n${data.response_hex}`; }
+      toast(`Mémoire flash lue: ${data.size} octets.`);
+    }catch(error){ toast(`Lire mémoire: ${error.message}`,true); }
+  }
+
+  async function memoryReset(){
+    if(!requireMaintenanceUi()) return;
+    if(!state.connectedUi){ toast("Connecte d'abord la Dude's Cab.",true); return; }
+    if(!window.confirm("Réinitialiser la mémoire flash de la carte ? Action irréversible.")) return;
+    try{
+      await api("/api/dudescabconfig/protocol/flash/reset",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({confirmed:true})});
+      toast("Mémoire flash réinitialisée.");
+    }catch(error){ toast(`Réinitialiser mémoire: ${error.message}`,true); }
+  }
+
+
+  // === PINCABOS_DUDESCAB_GAPS_V1 : Nouvelle Extension / Supprimer / Forcer les entrees ===
+  function defaultOutput(n, address){
+    return {
+      number:n, dof_number:(Math.max(Number(address),1)-1)*16 + n,
+      name:"", preset:0, flags:0,
+      enabled:false, night_mode_affected:false, analog:false, digital:true, gamma_correct:false, inverted:false,
+      max_value:255, intensity:100, falloff_value:0,
+      min_active_time:0, falloff_delay:0, security_delay:0
+    };
+  }
+  function addExtension(){
+    if(!requireMaintenanceUi()) return;
+    const c=state.cardConfig;
+    if(!c){ toast("Lis d'abord la configuration de la carte.",true); return; }
+    c.extensions=c.extensions||[];
+    if(c.extensions.length>=8){ toast("Maximum 8 cartes d'extension.",true); return; }
+    const used=new Set(c.extensions.map((e)=>Number(e.address)));
+    let addr=1; while(addr<=8 && used.has(addr)) addr++;
+    const ext={ index:c.extensions.length, address:addr, name:"Extension "+addr, pwm_frequency:1000,
+      legacy_card_security_delay:null, outputs:Array.from({length:16},(_,i)=>defaultOutput(i+1, addr)) };
+    c.extensions.push(ext);
+    state.extLoaded=false;
+    renderExtensionSelector(c.extensions);
+    const sel=$("dc-extension-select");
+    if(sel){ sel.value=String(c.extensions.length-1); applyExtension(c.extensions.length-1); }
+    markDirty();
+    toast("Extension #"+addr+" ajoutee. Regle le Numero d'ID sur l'adresse physique de la carte, configure les sorties, puis « Envoyer Config ».");
+  }
+  function deleteExtension(){
+    if(!requireMaintenanceUi()) return;
+    const c=state.cardConfig;
+    if(!c || !(c.extensions||[]).length){ toast("Aucune extension a supprimer.",true); return; }
+    const idx=state.extensionIndex||0;
+    const addr=c.extensions[idx] && c.extensions[idx].address;
+    if(!window.confirm("Supprimer l'extension #"+addr+" ? (appliquer avec Envoyer Config)")) return;
+    c.extensions.splice(idx,1);
+    c.extensions.forEach((e,i)=>{ e.index=i; });
+    state.extLoaded=false;
+    renderExtensionSelector(c.extensions);
+    if(c.extensions.length){ const sel=$("dc-extension-select"); if(sel){ sel.value="0"; applyExtension(0); } }
+    markDirty();
+    toast("Extension supprimee. « Envoyer Config » pour appliquer.");
+  }
+  async function forceInputs(){
+    if(!requireMaintenanceUi()) return;
+    if(!state.connectedUi){ toast("Connecte d'abord la Dude's Cab.",true); return; }
+    try{
+      await api("/api/dudescabconfig/protocol/inputs/force",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+      toast("Commande « Forcer les entrees » envoyee (test).");
+    }catch(error){ toast("Forcer les entrees: "+error.message,true); }
+  }
+
+  // === PINCABOS_DUDESCAB_MX_EDITOR_V1 : edition complete ledstrips/splits MX ===
+  const MX_ARRANGEMENTS = ["LeftRightTopDown","LeftRightBottomUp","RightLeftTopDown","RightLeftBottomUp","TopDownLeftRight","TopDownRightLeft","BottomUpLeftRight","BottomUpRightLeft","LeftRightAlternateTopDown","LeftRightAlternateBottomUp","RightLeftAlternateTopDown","RightLeftAlternateBottomUp","TopDownAlternateLeftRight","TopDownAlternateRightLeft","BottomUpAlternateLeftRight","BottomUpAlternateRightLeft"];
+  const MX_FADING = ["Linear","Linear0To224","Linear0To192","Linear0To160","Linear0To128","Linear0To96","Linear0To64","Linear0To32","Linear0To16","InvertedLinear","SwissLizardsLedCurve"];
+  const MX_COLOR_ORDER = ["RGB","RBG","GRB","GBR","BRG","BGR"];
+  function mxSel(field, options, sel){
+    return `<select data-mx-field="${field}">`+options.map((o,i)=>`<option value="${i}"${i===Number(sel)?" selected":""}>${escapeHtml(o)}</option>`).join("")+`</select>`;
+  }
+  function mxSplitRow(split){
+    split=split||{};
+    const div=document.createElement("div"); div.className="dc-mx-split";
+    div.innerHTML=`<label>Ligne<input type="number" min="1" max="8" data-mx-field="split.line" value="${(Number(split.data_output_num)||0)+1}"></label>`
+      +`<label>LEDs<input type="number" min="0" max="65535" data-mx-field="split.nb_leds" value="${Number(split.nb_leds)||0}"></label>`
+      +`<button type="button" class="dc-remove-split" title="Retirer le split">✕</button>`;
+    div.querySelector(".dc-remove-split").addEventListener("click",()=>{ div.remove(); markDirty(); });
+    return div;
+  }
+  function mxStripRow(strip){
+    strip=strip||{};
+    const row=document.createElement("div"); row.className="dc-mx-strip";
+    row.innerHTML=
+       `<label>Nom<input type="text" data-mx-field="name" value="${escapeHtml(strip.name||"")}"></label>`
+      +`<label>Largeur<input type="number" min="1" max="512" data-mx-field="width" value="${Number(strip.width)||1}"></label>`
+      +`<label>Hauteur<input type="number" min="1" max="512" data-mx-field="height" value="${Number(strip.height)||1}"></label>`
+      +`<label>Sortie DOF<input type="number" min="0" max="999" data-mx-field="dof_output_num" value="${Number(strip.dof_output_num)||0}"></label>`
+      +`<label>Arrangement${mxSel("led_arrangement",MX_ARRANGEMENTS,strip.led_arrangement||0)}</label>`
+      +`<label>Courbe${mxSel("fading_curve",MX_FADING,strip.fading_curve||0)}</label>`
+      +`<label>Ordre couleur${mxSel("color_order",MX_COLOR_ORDER,strip.color_order||0)}</label>`
+      +`<label>Brillance<input type="number" min="0" max="100" data-mx-field="brightness" value="${Number(strip.brightness)||0}"></label>`
+      +`<div class="dc-mx-split-list"></div>`
+      +`<div class="dc-mx-strip-actions"><button type="button" class="dc-add-split dc-small-button">+ Split</button><button type="button" class="dc-remove-strip" title="Retirer la bande">🗑</button></div>`;
+    const list=row.querySelector(".dc-mx-split-list");
+    const splits=(strip.splits&&strip.splits.length)?strip.splits:[{data_output_num:0,nb_leds:0}];
+    splits.forEach((sp)=>list.appendChild(mxSplitRow(sp)));
+    row.querySelector(".dc-add-split").addEventListener("click",()=>{ if(list.children.length>=8){ toast("Maximum 8 splits par bande.",true); return; } list.appendChild(mxSplitRow({data_output_num:0,nb_leds:0})); markDirty(); });
+    row.querySelector(".dc-remove-strip").addEventListener("click",()=>{ const holder=row.parentElement; row.remove(); if(holder){ const empty=holder.parentElement&&holder.parentElement.querySelector(".dc-mx-empty"); if(empty) empty.hidden=holder.children.length>0; } markDirty(); });
+    row.addEventListener("input", markDirty);
+    return row;
+  }
+  function mxAppendStrip(strip){
+    const first=(strip.splits&&strip.splits[0]&&Number(strip.splits[0].data_output_num))||0;
+    const lane=Math.max(1,Math.min(8,first+1));
+    const holder=document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-strips`);
+    const empty=document.querySelector(`[data-mx-lane="${lane}"] .dc-mx-empty`);
+    if(!holder) return;
+    holder.appendChild(mxStripRow(strip));
+    if(empty) empty.hidden=true;
+  }
+  function collectMxStrips(){
+    const strips=[];
+    document.querySelectorAll('[data-mx-lane] .dc-mx-strips .dc-mx-strip').forEach((row)=>{
+      const f=(name)=>{ const el=row.querySelector(`[data-mx-field="${name}"]`); return el?el.value:undefined; };
+      const splits=[];
+      row.querySelectorAll(".dc-mx-split").forEach((sp)=>{
+        const line=sp.querySelector('[data-mx-field="split.line"]');
+        const leds=sp.querySelector('[data-mx-field="split.nb_leds"]');
+        splits.push({ data_output_num: Math.max(0,(num0(line&&line.value)||1)-1), nb_leds: num0(leds&&leds.value) });
+      });
+      strips.push({
+        name: f("name")||"",
+        width: num0(f("width")), height: num0(f("height")),
+        dof_output_num: num0(f("dof_output_num")),
+        fading_curve: num0(f("fading_curve")), led_arrangement: num0(f("led_arrangement")),
+        color_order: num0(f("color_order")), brightness: num0(f("brightness")),
+        splits: splits
+      });
+    });
+    return strips;
+  }
+
   function install() {
     ensureMaintenanceBanner();
-    installTabs(); installConfigEvents(); installOutputUi(); installMxUi(); installMonitor(); pauseFirmware();
+    installTabs(); installConfigEvents(); populateInputFunctionSelects(); installOutputUi(); installMxUi(); installMonitor(); pauseFirmware();
     setMaintenanceControls(false);
     $("dc-connect-btn").addEventListener("click", toggleConnection);
     $$('[data-card-action]').forEach((button) => button.addEventListener("click", () => protectedAction(button.dataset.cardAction).catch(()=>{})));
     $$('[data-lang]').forEach((button) => button.addEventListener("click", () => { $$('[data-lang]').forEach((x) => x.classList.toggle("is-active", x===button)); toast(button.dataset.lang === "fr" ? "Interface française active." : "La traduction complète sera reliée aux dictionnaires du logiciel original."); }));
     $("dc-refresh-status").addEventListener("click", refreshProtocol);
     $("dc-job-close").addEventListener("click", () => { $("dc-job-card").hidden=true; state.jobId=null; });
-    $("dc-plunger-calibrate").addEventListener("click", () => toast("La commande Admin de calibration du plunger n'est pas documentée et reste bloquée.", true));
+    $("dc-plunger-calibrate").addEventListener("click", calibratePlunger);
+    $("dc-add-extension")?.addEventListener("click", addExtension);
+    $("dc-delete-extension")?.addEventListener("click", deleteExtension);
+    $("dc-force-inputs")?.addEventListener("click", forceInputs);
     window.addEventListener('pagehide', () => {
       stopLivePolling();
       stopMonitorPolling();

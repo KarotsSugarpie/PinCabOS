@@ -306,7 +306,8 @@ def _validate_uf2(path: Path) -> tuple[bool, str, dict[str, Any]]:
 def _normalise_manifest(channel: str, raw: Any) -> list[dict[str, str]]:
     if not isinstance(raw, dict):
         return []
-    values = raw.get("firmwares", [])
+    raw_ci = {str(k).lower(): v for k, v in raw.items()}
+    values = raw_ci.get("firmwares", [])
     rows: list[dict[str, str]] = []
     if isinstance(values, dict):
         values = [
@@ -322,16 +323,17 @@ def _normalise_manifest(channel: str, raw: Any) -> list[dict[str, str]]:
             version = Path(item).stem
             file_value = item
         elif isinstance(item, dict):
+            it = {str(k).lower(): v for k, v in item.items()}
             version = str(
-                item.get("version")
-                or item.get("name")
-                or item.get("tag")
+                it.get("version")
+                or it.get("name")
+                or it.get("tag")
                 or ""
             ).strip()
             file_value = str(
-                item.get("file")
-                or item.get("url")
-                or item.get("firmware")
+                it.get("file")
+                or it.get("url")
+                or it.get("firmware")
                 or ""
             ).strip()
         else:
@@ -748,6 +750,7 @@ def _page_body() -> str:
           <label>Bouton Night Mode<select data-config-key="inputs.night"><option>Night Mode</option>{_html_options([f"Bouton {i}" for i in range(1, 33)])}</select></label>
           <label>Type de clavier<select data-config-key="inputs.keyboard"><option>Azerty</option><option>Qwerty</option><option>Qwertz</option></select></label>
           <label>Entrée active <output id="dc-active-input">Aucune</output></label>
+          <button type="button" class="dc-small-button" id="dc-force-inputs">Forcer les entrées</button>
         </div>
         <div class="dc-inputs-heading"><strong>Entrées</strong><span>Fonction</span><span>Shifted</span><span>Latence</span><span>Stabilisation</span></div>
         <div class="dc-input-list">{_input_rows()}</div>
@@ -805,6 +808,7 @@ def _page_body() -> str:
         <div class="dc-outputs-top">
           <label>Durée de la Pulsation <span><input type="range" min="10" max="2000" value="50" data-range-output="dc-pulse-duration" data-config-key="outputs.pulse"><output id="dc-pulse-duration">50 ms</output></span></label>
           <label>Extension<select id="dc-extension-select"><option value="0">Aucune extension lue</option></select></label>
+          <button type="button" class="dc-small-button" id="dc-add-extension">Nouvelle Extension</button>
           <button type="button" class="dc-danger-button" id="dc-delete-extension">Supprimer l'extension</button>
           <label>Nom<input type="text" value="Extension 1" data-config-key="extension.1.name"></label>
           <label>Numéro d'ID <span><input type="range" min="1" max="8" value="1" data-range-output="dc-extension-id" data-config-key="extension.1.id"><output id="dc-extension-id">1</output></span></label>
