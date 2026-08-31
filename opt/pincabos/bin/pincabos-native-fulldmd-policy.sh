@@ -122,23 +122,34 @@ SCOREVIEW_WINDOW = scoreview_window()
 SCOREVIEW_DISABLED_OUTPUT = dict(SCOREVIEW_WINDOW)
 SCOREVIEW_DISABLED_OUTPUT["ScoreViewOutput"] = "0"
 
-B2S_GEOMETRY = {
-    "Enable": "1",
-    "B2SHideGrill": "1",
-    "B2SHideB2SBackglass": "0",
-    "B2SDualMode": "0",
-    "BackglassDMDOverlay": "0",
-    "BackglassDMDAutoPos": "0",
-    "B2SBackglassWidth": "1920",
-    "B2SBackglassHeight": "1080",
-    "B2SBackglassX": "3840",
-    "B2SBackglassY": "0",
-    "B2SDMDWidth": "1920",
-    "B2SDMDHeight": "1200",
-    "B2SDMDX": "5760",
-    "B2SDMDY": "0",
-    "B2SDMDRotation": "0",
-}
+def _b2s_geometry_from_screens() -> dict:
+    """Positions backglass/DMD B2S derivees des roles reels de screens.json
+    (au lieu de coords figees). Backglass -> role backglass ; DMD B2S -> role
+    fulldmd. Repli sur d'anciennes valeurs si un role manque."""
+    bg = role_geometry("backglass") or (3840, 0, 1920, 1080)
+    fd = role_geometry("fulldmd") or (5760, 0, 1920, 1200)
+    bgx, bgy, bgw, bgh = bg
+    fdx, fdy, fdw, fdh = fd
+    return {
+        "Enable": "1",
+        "B2SHideGrill": "1",
+        "B2SHideB2SBackglass": "0",
+        "B2SDualMode": "0",
+        "BackglassDMDOverlay": "0",
+        "BackglassDMDAutoPos": "0",
+        "B2SBackglassWidth": str(bgw),
+        "B2SBackglassHeight": str(bgh),
+        "B2SBackglassX": str(bgx),
+        "B2SBackglassY": str(bgy),
+        "B2SDMDWidth": str(fdw),
+        "B2SDMDHeight": str(fdh),
+        "B2SDMDX": str(fdx),
+        "B2SDMDY": str(fdy),
+        "B2SDMDRotation": "0",
+    }
+
+
+B2S_GEOMETRY = _b2s_geometry_from_screens()
 
 B2S_FULLDMD = {
     **B2S_GEOMETRY,
@@ -207,6 +218,26 @@ DMD_DEFAULTS_ONLY = {
     "ScoreViewDMDW": "0",
     "ScoreViewDMDH": "0",
 }
+
+
+# Un ecran FullDMD DEDIE existe-t-il ? (role fulldmd present ET distinct du
+# backglass). Sur un cab a 2 ecrans (playfield+backglass, pas de FullDMD) le DMD
+# ne doit PAS etre force ailleurs : on ne touche a rien dans ce cas.
+_FULLDMD_ROLE = role_geometry("fulldmd")
+_BACKGLASS_ROLE = role_geometry("backglass")
+HAS_DEDICATED_FULLDMD = bool(_FULLDMD_ROLE) and _FULLDMD_ROLE != _BACKGLASS_ROLE
+
+# Tables STANDARD (DMD reel PinMAME via B2SLegacy, pas de FullDMD directB2S) :
+# si un FullDMD dedie existe, y placer le DMD explicitement (l'AutoPos rend un
+# DMD reel 128x32 minuscule / mal place). Geometrie derivee du role fulldmd.
+STANDARD_DMD_FILL = {
+    "ScoreViewDMDOverlay": "1",
+    "ScoreViewDMDAutoPos": "0",
+    "ScoreViewDMDX": "0",
+    "ScoreViewDMDY": "0",
+    "ScoreViewDMDW": str(_FULLDMD_ROLE[2]),
+    "ScoreViewDMDH": str(_FULLDMD_ROLE[3]),
+} if HAS_DEDICATED_FULLDMD else {}
 
 
 def find_section(lines: list[str], section_name: str) -> tuple[int | None, int]:
@@ -410,15 +441,19 @@ if TARGET_VPX and TARGET_VPX.is_file():
         )
         mode = "B2S_FULLDMD"
     else:
-        # Aucune règle invasive pour les tables sans FullDMD directB2S.
+        # Tables sans FullDMD directB2S. Si un ecran FullDMD dedie existe, on y
+        # pose le DMD reel explicitement (sinon AutoPos -> DMD minuscule). Sur un
+        # cab sans FullDMD, on garde le comportement minimal d'origine.
+        overwrite = {"Plugin.ScoreView": {"Enable": "1"}}
+        if STANDARD_DMD_FILL:
+            overwrite["ScoreView"] = SCOREVIEW_WINDOW
+            overwrite["Plugin.B2SLegacy"] = STANDARD_DMD_FILL
         patch_ini(
             table_ini,
-            {
-                "Plugin.ScoreView": {"Enable": "1"},
-            },
+            overwrite,
             remove_sections=("PinCabOS.ScoreViewWindow",),
         )
-        mode = "STANDARD"
+        mode = "STANDARD" if STANDARD_DMD_FILL else "STANDARD_NO_FULLDMD"
 
     print(f"MODE={mode}")
     print(f"TABLE={TARGET_VPX}")

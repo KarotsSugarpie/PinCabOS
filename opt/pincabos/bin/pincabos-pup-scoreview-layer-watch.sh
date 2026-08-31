@@ -15,10 +15,31 @@ VPX_HOME="$(getent passwd "$VPX_USER" | cut -d: -f6)"
 
 [[ -n "$VPX_HOME" ]] || VPX_HOME="/home/pinball"
 
-FULL_X=5760
-FULL_Y=0
-FULL_W=1920
-FULL_H=1200
+# PINCABOS_PUP_FULLDMD_GEOMETRY_UNIVERSAL : geometrie FullDMD derivee de la
+# config ecrans REELLE du cab (screens.json, rôle fulldmd), au lieu de
+# coordonnees figees. Fallback sur les anciennes valeurs si indisponible.
+SCREENS_JSON="${PINCABOS_SCREENS_JSON:-/opt/pincabos/config/screens/screens.json}"
+_pincabos_fulldmd_geom() {
+    [ -r "$SCREENS_JSON" ] || return 0
+    python3 - "$SCREENS_JSON" <<'PYGEOM' 2>/dev/null
+import json, re, sys
+try:
+    data = json.load(open(sys.argv[1]))
+    geom = ((data.get("fulldmd") or {}).get("geometry")) or ""
+    m = re.match(r'^(\d+)x(\d+)\+(-?\d+)\+(-?\d+)$', geom)
+    if m:
+        w, h, x, y = m.groups()
+        print(f"{x} {y} {w} {h}")
+except Exception:
+    pass
+PYGEOM
+}
+_PCB_FX=""; _PCB_FY=""; _PCB_FW=""; _PCB_FH=""
+read -r _PCB_FX _PCB_FY _PCB_FW _PCB_FH < <(_pincabos_fulldmd_geom) || true
+FULL_X="${_PCB_FX:-5760}"
+FULL_Y="${_PCB_FY:-0}"
+FULL_W="${_PCB_FW:-1920}"
+FULL_H="${_PCB_FH:-1200}"
 
 SPLIT="${PINCABOS_PUP_SPLIT_ACTIVE:-0}"
 
