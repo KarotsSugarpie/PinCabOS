@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import hmac
+import json
 import os
+import secrets
 import subprocess
 from pathlib import Path
 from urllib.parse import quote
@@ -18,6 +20,8 @@ from pincabos_dashboard_lobby import (
 HELPER = "/usr/local/sbin/pincabos-dashboard-admin"
 LIVE_DIR = Path("/run/pincabos-dashboard-live")
 LIVE_LEASE = LIVE_DIR / "lease"
+TOOLS_ORDER_PATH = Path("/home/pinball/.config/pincabos/tools-order.json")
+TOOLS_ORDER_SECTIONS = ("pincabos", "vpinfe", "vpinballx")
 ALLOWED_SERVICES = {
     "vpinfe": {"start", "stop", "restart", "freeze", "thaw"},
     "webapp": {"restart"},
@@ -60,12 +64,107 @@ def add_route_once(app, rule, endpoint, view, methods):
     app.add_url_rule(rule, endpoint=endpoint, view_func=view, methods=methods)
 
 
+def _tools_order_clean(raw_sections):
+    raw_sections = raw_sections if isinstance(raw_sections, dict) else {}
+    cleaned = {}
+    for section in TOOLS_ORDER_SECTIONS:
+        values = raw_sections.get(section, [])
+        if not isinstance(values, list):
+            values = []
+        output = []
+        seen = set()
+        for value in values[:100]:
+            text = str(value or "").strip()[:400]
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            output.append(text)
+        cleaned[section] = output
+    return cleaned
+
+
+def _tools_order_load():
+    if not TOOLS_ORDER_PATH.is_file():
+        return {section: [] for section in TOOLS_ORDER_SECTIONS}, False
+    try:
+        payload = json.loads(TOOLS_ORDER_PATH.read_text(encoding="utf-8"))
+        sections = payload.get("sections", payload) if isinstance(payload, dict) else {}
+        return _tools_order_clean(sections), True
+    except Exception:
+        return {section: [] for section in TOOLS_ORDER_SECTIONS}, False
+
+
+def _tools_order_save(raw_sections):
+    sections = _tools_order_clean(raw_sections)
+    TOOLS_ORDER_PATH.parent.mkdir(parents=True, exist_ok=True)
+    temporary = TOOLS_ORDER_PATH.with_name(f".{TOOLS_ORDER_PATH.name}.{os.getpid()}.tmp")
+    payload = {"version": 1, "sections": sections}
+    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, TOOLS_ORDER_PATH)
+    return sections
+
+
+def _tools_order_csrf():
+    token = str(session.get("pco_tools_order_csrf", ""))
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["pco_tools_order_csrf"] = token
+    return token
+
+
+def install_tools_card_order_v1(app):
+    if app.extensions.get("pco_tools_card_order_v1"):
+        return
+    app.extensions["pco_tools_card_order_v1"] = True
+
+    def tools_order_api():
+        token = _tools_order_csrf()
+        if request.method == "GET":
+            sections, saved = _tools_order_load()
+            response = jsonify({"ok": True, "sections": sections, "saved": saved, "csrf": token})
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+            return response
+
+        payload = request.get_json(silent=True) or {}
+        supplied = str(payload.get("csrf") or request.headers.get("X-CSRF-Token", ""))
+        if not supplied or not hmac.compare_digest(token, supplied):
+            return jsonify({"ok": False, "error": "Session Outils invalide."}), 403
+        try:
+            sections = _tools_order_save(payload.get("sections", {}))
+        except Exception as error:
+            return jsonify({"ok": False, "error": f"Sauvegarde de l'ordre impossible : {error}"}), 500
+        return jsonify({"ok": True, "sections": sections})
+
+    add_route_once(app, "/tools/order", "pco_tools_order_v1", tools_order_api, ["GET", "POST"])
+
+    @app.after_request
+    def pco_tools_order_script_after_request(response):
+        if response.direct_passthrough or response.mimetype != "text/html":
+            return response
+        if request.path.rstrip("/") != "/tools":
+            return response
+        try:
+            body = response.get_data(as_text=True)
+            tag = '<script src="/static/pincabos-tools-card-order-v1.js?v=20260831-tools-order-v1" defer></script>'
+            if "pincabos-tools-card-order-v1.js" not in body:
+                index = body.lower().rfind("</body>")
+                body = body[:index] + tag + body[index:] if index >= 0 else body + tag
+                response.set_data(body)
+                response.headers.pop("Content-Length", None)
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        except Exception:
+            pass
+        return response
+
+
 def register_dashboard_control_routes(app):
     if app.extensions.get("pco_dashboard_lobby_routes"):
         return
     app.extensions["pco_dashboard_lobby_routes"] = True
     install_pco_menu_tools_fulldmd_v13_7(app)
     install_global_menu_cleanup(app)
+    install_tools_card_order_v1(app)
 
     def layout_api():
         registry = registry_for_request()
@@ -192,6 +291,7 @@ def register_dashboard_control_routes(app):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["X-PinCabOS-Capture"] = "live-lite"
         return response
+
     def service_action(service, action):
         if not csrf_ok():
             return notice("Action refusée : session Dashboard invalide.")
