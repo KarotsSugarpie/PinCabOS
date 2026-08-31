@@ -12,6 +12,7 @@ service_action(){
     vpinfe:freeze) log 'vpinfe freeze'; exec systemctl freeze pincabos-vpinfe.service ;;
     vpinfe:thaw) log 'vpinfe thaw'; exec systemctl thaw pincabos-vpinfe.service ;;
     webapp:restart) log 'webapp restart scheduled'; systemd-run --quiet --collect --unit="pincabos-dashboard-webapp-restart-$(date +%s)" /bin/sh -c 'sleep 2; exec systemctl restart pincabos-webapp.service'; echo 'WebApp restart scheduled.' ;;
+    system:shutdown) log 'cabinet shutdown scheduled'; systemd-run --quiet --collect --unit="pincabos-dashboard-shutdown-$(date +%s)" --on-active=2s /usr/sbin/shutdown -h now; echo 'Arrêt PinCabOS planifié.' ;;
     chrony:start|chrony:restart) log "chrony ${action}"; exec systemctl "$action" chrony.service ;;
     # PINCABOS_DASHBOARD_MEDIA_RECORDER_SERVICE_V1
     media_recorder:start|media_recorder:stop|media_recorder:restart)
