@@ -940,10 +940,16 @@ def _verify_config_roundtrip() -> dict[str, Any]:
     }
 
 
-def _write_admin_config(config: dict[str, Any], save: bool = True) -> dict[str, Any]:
-    """Ecrit la config sur la carte : SetConfig (101) puis SaveToFlash (114).
-    Requiert le mode admin actif. Ne DOIT etre appele que derriere le mode
-    maintenance (via l'endpoint)."""
+def _write_admin_config(config: dict[str, Any], save: bool = True, verify: bool = True) -> dict[str, Any]:
+    """Ecrit la config sur la carte : SetConfig (101), VERIFICATION post-ecriture
+    (relecture GetConfig 100 + comparaison), puis SaveToFlash (114).
+
+    La carte n'accuse PAS reception de SetConfig (envoi sans reponse). Sans
+    verification, une config rejetee par la carte (ex. version de config/firmware
+    differente de la v11 reverse-engineeree) passe totalement inapercue : l'API
+    renvoie un succes alors que rien n'a change. On relit donc la config juste
+    apres l'ecriture et on compare le blob re-serialise a celui envoye ; on ne
+    sauvegarde en flash QUE si la carte a bien applique la config."""
     with _state_lock:
         admin = _admin_enabled
     if not admin:
@@ -951,11 +957,32 @@ def _write_admin_config(config: dict[str, Any], save: bool = True) -> dict[str, 
             "Mode admin inactif : appelle /protocol/connect avant d'ecrire."
         )
     buffer = _build_admin_config(config)
-    hid_command(REPORT_ADMIN, 101, buffer, expect_response=False)
-    result: dict[str, Any] = {"sent_bytes": len(buffer), "saved": False}
-    if save:
-        hid_command(REPORT_ADMIN, 114, expect_response=False)
-        result["saved"] = True
+    result: dict[str, Any] = {"sent_bytes": len(buffer), "saved": False, "verified": None}
+    with _operation_lock:
+        hid_command(REPORT_ADMIN, 101, buffer, expect_response=False)
+        if verify:
+            raw = hid_command(
+                REPORT_ADMIN, 100, bytes((1,)), expect_response=True, timeout_ms=12000
+            )
+            rebuilt = _build_admin_config(_parse_admin_config(raw))
+            applied = rebuilt == buffer
+            result["verified"] = applied
+            if not applied:
+                diff_at = next(
+                    (i for i, (a, b) in enumerate(zip(buffer, rebuilt)) if a != b),
+                    min(len(buffer), len(rebuilt)),
+                )
+                raise DudesCabProtocolError(
+                    "La carte n'a pas applique la configuration (aucune erreur signalee "
+                    "cote carte). Verification post-ecriture : divergence a l'octet "
+                    f"{diff_at} (ecrit {len(buffer)} o, relu {len(rebuilt)} o). Cause "
+                    "probable : version de config/firmware differente de celle supportee "
+                    "(reverse-engineeree sur firmware 2.0.x / config v11). Rien n'a ete "
+                    "sauvegarde en flash."
+                )
+        if save:
+            hid_command(REPORT_ADMIN, 114, expect_response=False)
+            result["saved"] = True
     return result
 
 
@@ -1501,7 +1528,11 @@ def register(app) -> None:
             if body.get("dry_run"):
                 buf = _build_admin_config(config)
                 return jsonify({"ok": True, "dry_run": True, "bytes": len(buf), "hex": buf.hex()})
-            result = _write_admin_config(config, save=bool(body.get("save", True)))
+            result = _write_admin_config(
+                config,
+                save=bool(body.get("save", True)),
+                verify=bool(body.get("verify", True)),
+            )
             return jsonify({"ok": True, **result})
         except Exception as exc:
             app.logger.exception("DudesCab config write failed")
