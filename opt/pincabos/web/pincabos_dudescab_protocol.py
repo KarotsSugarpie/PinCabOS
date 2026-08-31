@@ -776,7 +776,7 @@ class _ConfigWriter:
         self.u8(value.get("b", 0))
 
 
-def _build_admin_config(config: dict[str, Any]) -> bytes:
+def _build_admin_config(config: dict[str, Any], for_write: bool = False) -> bytes:
     """Inverse exact de _parse_admin_config : structure -> buffer Admin SetConfig.
 
     Attend une structure au meme format que celle renvoyee par _parse_admin_config
@@ -876,15 +876,21 @@ def _build_admin_config(config: dict[str, Any]) -> bytes:
     w.u16(plunger.get("report_delay"))
     w.pin_raw(plunger.get("calibration_button_pin"))
     w.u8(plunger.get("calibration_duration"))
-    w.boolean(plunger.get("calibrated"))
-    w.u16(plunger.get("calibration_pull_max"))
-    w.u16(plunger.get("calibration_still"))
-    w.u16(plunger.get("calibration_push_max"))
+    if not for_write:
+        # Calibrated/PullMax/Still/PushMax : lus depuis la flash, JAMAIS envoyes
+        # via SetConfig (doc protocole DudesCab). Les inclure decale toute la
+        # suite du blob (jusqu'a MxOutputs) -> ledstrips MX non ecrits.
+        w.boolean(plunger.get("calibrated"))
+        w.u16(plunger.get("calibration_pull_max"))
+        w.u16(plunger.get("calibration_still"))
+        w.u16(plunger.get("calibration_push_max"))
     w.u16(plunger.get("jitter_window"))
     w.pin_raw(plunger.get("pull_button_pin"))
     w.pin_raw(plunger.get("push_button_pin"))
-    w.u16(plunger.get("physical_range_min"))
-    w.u16(plunger.get("physical_range_max"))
+    if not for_write:
+        # MinRange/MaxRange : uniquement envoyes en reponse a GetConfig.
+        w.u16(plunger.get("physical_range_min"))
+        w.u16(plunger.get("physical_range_max"))
 
     if version >= 2:
         mx = config.get("mx") or {}
@@ -984,6 +990,8 @@ def _config_write_diff(intended: dict[str, Any], readback: dict[str, Any]) -> di
         base = key.split("[", 1)[0]
         if base in _DEVICE_MANAGED_FIELDS:
             continue  # champ gere par le firmware (test MX) -> non inscriptible
+        if key.endswith("].index"):
+            continue  # index positionnel des ledstrips (lecture seule, non ecrit)
         if fa.get(key) != fb.get(key):
             diffs[key] = {"intended": fa.get(key), "device": fb.get(key)}
     return diffs
@@ -1006,7 +1014,7 @@ def _write_admin_config(config: dict[str, Any], save: bool = True, verify: bool 
         raise DudesCabProtocolError(
             "Mode admin inactif : appelle /protocol/connect avant d'ecrire."
         )
-    buffer = _build_admin_config(config)
+    buffer = _build_admin_config(config, for_write=True)
     result: dict[str, Any] = {"sent_bytes": len(buffer), "saved": False, "verified": None, "diff": {}}
     with _operation_lock:
         hid_command(REPORT_ADMIN, 101, buffer, expect_response=False)
@@ -1575,7 +1583,7 @@ def register(app) -> None:
             if not isinstance(config, dict):
                 raise ValueError("Champ 'config' (objet) requis.")
             if body.get("dry_run"):
-                buf = _build_admin_config(config)
+                buf = _build_admin_config(config, for_write=True)
                 return jsonify({"ok": True, "dry_run": True, "bytes": len(buf), "hex": buf.hex()})
             result = _write_admin_config(
                 config,
