@@ -122,23 +122,34 @@ SCOREVIEW_WINDOW = scoreview_window()
 SCOREVIEW_DISABLED_OUTPUT = dict(SCOREVIEW_WINDOW)
 SCOREVIEW_DISABLED_OUTPUT["ScoreViewOutput"] = "0"
 
-B2S_GEOMETRY = {
-    "Enable": "1",
-    "B2SHideGrill": "1",
-    "B2SHideB2SBackglass": "0",
-    "B2SDualMode": "0",
-    "BackglassDMDOverlay": "0",
-    "BackglassDMDAutoPos": "0",
-    "B2SBackglassWidth": "1920",
-    "B2SBackglassHeight": "1080",
-    "B2SBackglassX": "3840",
-    "B2SBackglassY": "0",
-    "B2SDMDWidth": "1920",
-    "B2SDMDHeight": "1200",
-    "B2SDMDX": "5760",
-    "B2SDMDY": "0",
-    "B2SDMDRotation": "0",
-}
+def _b2s_geometry_from_screens() -> dict:
+    """Positions backglass/DMD B2S derivees des roles reels de screens.json
+    (au lieu de coords figees). Backglass -> role backglass ; DMD B2S -> role
+    fulldmd. Repli sur d'anciennes valeurs si un role manque."""
+    bg = role_geometry("backglass") or (3840, 0, 1920, 1080)
+    fd = role_geometry("fulldmd") or (5760, 0, 1920, 1200)
+    bgx, bgy, bgw, bgh = bg
+    fdx, fdy, fdw, fdh = fd
+    return {
+        "Enable": "1",
+        "B2SHideGrill": "1",
+        "B2SHideB2SBackglass": "0",
+        "B2SDualMode": "0",
+        "BackglassDMDOverlay": "0",
+        "BackglassDMDAutoPos": "0",
+        "B2SBackglassWidth": str(bgw),
+        "B2SBackglassHeight": str(bgh),
+        "B2SBackglassX": str(bgx),
+        "B2SBackglassY": str(bgy),
+        "B2SDMDWidth": str(fdw),
+        "B2SDMDHeight": str(fdh),
+        "B2SDMDX": str(fdx),
+        "B2SDMDY": str(fdy),
+        "B2SDMDRotation": "0",
+    }
+
+
+B2S_GEOMETRY = _b2s_geometry_from_screens()
 
 B2S_FULLDMD = {
     **B2S_GEOMETRY,
