@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if [[ -t 1 ]]; then
+  clear
+fi
+
+TITLE="PINCABOS - NETTOYAGE SÛR V1"
+BACKUP_ROOT="/opt/pincabos/backups/cleanup-safe-v1"
+SNAPSHOT_DIR="/opt/pincabos/install/.completed-final-20260620-020509"
+MODE="${1:---audit}"
+
+say() { printf '%s\n' "$*"; }
+die() { say "NOGO [!!] $*" >&2; exit 1; }
+
+case "$MODE" in
+  --audit|--apply) ;;
+  --rollback)
+    [[ $# -eq 2 ]] || die "Usage: $0 --rollback /opt/pincabos/backups/cleanup-safe-v1/<date>"
+    ;;
+  *) die "Usage: $0 [--audit|--apply|--rollback BACKUP]" ;;
+esac
+
+[[ ${EUID:-$(id -u)} -eq 0 ]] || die "Exécuter en root."
+[[ -f /opt/pincabos/config/version.json ]] || die "PinCabOS non détecté."
+
+host="$(hostname -s 2>/dev/null || hostname)"
+[[ "${host,,}" == "pincabos" ]] || die "Cab non reconnu: $host"
+
+if [[ "$MODE" == "--rollback" ]]; then
+  backup="${2%/}"
+  case "$backup" in
+    "$BACKUP_ROOT"/*) ;;
+    *) die "Backup hors du répertoire autorisé." ;;
+  esac
+  [[ -f "$backup/backup.tar.zst" ]] || die "backup.tar.zst absent."
+  [[ -f "$backup/audit.sha256" ]] || die "audit.sha256 absent."
+  (cd "$backup" && sha256sum -c audit.sha256)
+  tar --zstd -xpf "$backup/backup.tar.zst" -C /
+  say "GO [OK] Rollback restauré: $backup"
+  exit 0
+fi
+
+say "============================================================"
+say " $TITLE"
+say " Mode : $MODE"
+say " Cab  : $host"
+say "============================================================"
+
+always_remove=(
+  /root/.bash_history-11547.tmp
+  /root/.bash_history-88743.tmp
+  /root/.config/google-chrome/BrowserMetrics/BrowserMetrics-6A84B42A-104E78.pma
+  /root/.config/google-chrome/BrowserMetrics/BrowserMetrics-6A84B4EA-111592.pma
+  /root/.dbus/session-bus/b241d706f920480999696ada01f56f8a-0
+  /var/lib/pincabos/media-hunter/cache/test-vpinmediadb.json
+  /var/lib/pincabos/media-hunter/cache/vpinmediadb-vpinmdb.json
+  /var/lib/pincabos/media-recorder/status.json
+  /var/lib/pincabos/table-test/catalog-index.json
+  /etc/ca-certificates.conf.dpkg-old
+  /home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260705-200103
+  /home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260705-200258
+  /home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260816-164621
+  /home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260817-174108
+  /home/pinball/.config/vpinfe/vpinfe.ini.backup-screens-20260817-190053
+  /home/pinball/.local/share/VPinballX/10.8/VPinballX.ini.backup-screens-20260818-151937
+  /opt/pincabos/config/apt-installed-full-20260602-124326.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-124812.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-130856.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-131700.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-132116.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-132411.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-133110.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-133602.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-134411.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-134843.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-135151.manifest
+  /opt/pincabos/config/apt-installed-full-20260602-135413.manifest
+  /opt/pincabos/config/apt-manual-20260602-124326.manifest
+  /opt/pincabos/config/apt-manual-20260602-124812.manifest
+  /opt/pincabos/config/apt-manual-20260602-130856.manifest
+  /opt/pincabos/config/apt-manual-20260602-131700.manifest
+  /opt/pincabos/config/apt-manual-20260602-132116.manifest
+  /opt/pincabos/config/apt-manual-20260602-132411.manifest
+  /opt/pincabos/config/apt-manual-20260602-133110.manifest
+  /opt/pincabos/config/apt-manual-20260602-133602.manifest
+  /opt/pincabos/config/apt-manual-20260602-134411.manifest
+  /opt/pincabos/config/apt-manual-20260602-134843.manifest
+  /opt/pincabos/config/apt-manual-20260602-135151.manifest
+  /opt/pincabos/config/apt-manual-20260602-135413.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-124326.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-124812.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-130856.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-131700.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-132116.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-132411.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-133110.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-133602.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-134411.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-134843.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-135151.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-135413.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260602-140458.manifest
+  /opt/pincabos/config/apt-manual-after-pincabos-20260603-015626.manifest
+)
+
+old_pr_scripts=(
+  /root/pincab-continue-all-prs.sh
+  /root/pincab-continue-full-pr22-25.sh
+  /root/pincab-deploy-pr12-13-15-21-26-live.sh
+  /root/pincab-full-update-pr22-25.sh
+  /root/pincab-import-all-open-prs.sh
+  /root/pincab-import-pr27-28.sh
+  /root/pincab-push-main-v35d.sh
+  /root/pincab-resume-live-pr22-25.sh
+)
+
+dormant_patch_files=(
+  /opt/pincabos/web/static/pincabos-audio-volume-layout-pro-v1.css.disabled-20260710-101708
+  /opt/pincabos/runtime-patches/pincabos_browser_cache.py
+  /opt/pincabos/runtime-patches/pincabos_explorer_performance.py
+  /opt/pincabos/runtime-patches/pincabos_request_limits.py
+  /opt/pincabos/runtime-patches/pincabos_table_analysis_cache.py
+  /opt/pincabos/runtime-patches/pincabos_webapp_bootstrap.py
+  /usr/local/lib/python3.14/dist-packages/pincabos_browser_cache.pth.disabled-20260717-133320
+  /usr/local/lib/python3.14/dist-packages/pincabos_explorer_performance.pth.disabled-20260717-133320
+  /usr/local/lib/python3.14/dist-packages/pincabos_request_limits.pth.disabled-20260717-133320
+  /usr/local/lib/python3.14/dist-packages/zz_pincabos_table_analysis_cache.pth.disabled-20260717-133320
+  /usr/local/sbin/pincabos-autoresume-console.sh.disabled-final-20260610-213824
+)
+
+remove=("${always_remove[@]}")
+skipped=()
+
+reference_roots=(/etc/systemd/system /usr/lib/systemd/system /etc/cron.d /etc/cron.daily /etc/cron.hourly /etc/cron.weekly /etc/cron.monthly /var/spool/cron)
+for target in "${old_pr_scripts[@]}"; do
+  base="${target##*/}"
+  referenced=""
+  for root in "${reference_roots[@]}"; do
+    [[ -e "$root" ]] || continue
+    if grep -RIlF -- "$base" "$root" 2>/dev/null | head -n 1 | grep -q .; then
+      referenced="yes"
+      break
+    fi
+  done
+  if pgrep -af -- "$base" 2>/dev/null | grep -Fv -- "$0" | grep -q .; then
+    referenced="yes"
+  fi
+  if [[ -n "$referenced" ]]; then
+    skipped+=("$target (référencé)")
+  else
+    remove+=("$target")
+  fi
+done
+
+active_patch_hook=""
+while IFS= read -r hook; do
+  [[ -f "$hook" ]] || continue
+  if grep -Eq 'pincabos_(browser_cache|explorer_performance|request_limits|table_analysis_cache|webapp_bootstrap)|runtime-patches' "$hook"; then
+    active_patch_hook="$hook"
+    break
+  fi
+done < <(find /usr/local/lib /usr/lib -type f -path '*/dist-packages/*.pth' ! -name '*.disabled*' 2>/dev/null)
+
+if [[ -n "$active_patch_hook" ]]; then
+  for target in "${dormant_patch_files[@]}"; do
+    skipped+=("$target (hook actif: $active_patch_hook)")
+  done
+else
+  remove+=("${dormant_patch_files[@]}")
+fi
+
+if [[ -d "$SNAPSHOT_DIR" ]] && pgrep -af -- "$SNAPSHOT_DIR" 2>/dev/null | grep -Fv -- "$0" | grep -q .; then
+  skipped+=("$SNAPSHOT_DIR (processus actif)")
+else
+  remove+=("$SNAPSHOT_DIR")
+fi
+
+existing=()
+missing=()
+for target in "${remove[@]}"; do
+  case "$target" in
+    /root/*|/var/lib/pincabos/*|/etc/ca-certificates.conf.dpkg-old|/home/pinball/.config/vpinfe/*|/home/pinball/.local/share/VPinballX/10.8/*|/opt/pincabos/config/*|/opt/pincabos/install/.completed-final-20260620-020509|/opt/pincabos/runtime-patches/*|/opt/pincabos/web/static/*|/usr/local/lib/python3.14/dist-packages/*|/usr/local/sbin/*) ;;
+    *) die "Cible refusée: $target" ;;
+  esac
+  if [[ -e "$target" || -L "$target" ]]; then
+    existing+=("$target")
+  else
+    missing+=("$target")
+  fi
+done
+
+say
+say "Cibles présentes : ${#existing[@]}"
+for target in "${existing[@]}"; do say "  DELETE $target"; done
+say "Déjà absentes    : ${#missing[@]}"
+say "Conservées       : ${#skipped[@]}"
+for target in "${skipped[@]}"; do say "  KEEP   $target"; done
+
+say
+say "Marqueurs protégés sur le cab :"
+say "  KEEP /var/lib/pincabos/doctor-firstboot.done"
+say "  KEEP /var/lib/pincabos/firstboot-initramfs-refresh.done"
+say "  KEEP /var/lib/pincabos/firstboot-network-webapp.done"
+say "  KEEP /var/lib/pincabos/hardware-autoconfig.done"
+say "  KEEP /var/lib/pincabos/doctor-last.json"
+
+if [[ "$MODE" == "--audit" ]]; then
+  say
+  say "GO [OK] Audit terminé; aucune suppression."
+  exit 0
+fi
+
+if ((${#existing[@]} == 0)); then
+  say "GO [OK] Rien à supprimer."
+  exit 0
+fi
+
+stamp="$(date -u +%Y%m%d-%H%M%S)"
+backup="$BACKUP_ROOT/$stamp"
+mkdir -p "$backup"
+
+: > "$backup/existing.list"
+for target in "${existing[@]}"; do
+  printf '%s\n' "${target#/}" >> "$backup/existing.list"
+done
+printf '%s\n' "${skipped[@]}" > "$backup/skipped.list"
+
+tar --zstd -cpf "$backup/backup.tar.zst" -C / -T "$backup/existing.list"
+(cd "$backup" && sha256sum backup.tar.zst > audit.sha256)
+
+for target in "${existing[@]}"; do
+  if [[ -d "$target" && ! -L "$target" ]]; then
+    rm -rf -- "$target"
+  else
+    rm -f -- "$target"
+  fi
+done
+
+for target in "${existing[@]}"; do
+  [[ ! -e "$target" && ! -L "$target" ]] || die "Suppression incomplète: $target"
+done
+
+say
+say "GO [OK] Nettoyage terminé."
+say "GO [OK] Backup : $backup"
+say "Rollback      : $0 --rollback $backup"

@@ -369,3 +369,27 @@
 /root/pincabos-final-safety-*/
 /root/pincabos-merge-preview-*/
 /root/pincabos-merge-preview-*.txt
+
+# ============================================================
+# Etats runtime exclus après inventaire des modules 2026-08-31
+# ============================================================
+/root/.bash_history-*.tmp
+/root/.config/google-chrome/BrowserMetrics/
+/root/.dbus/session-bus/
+
+/var/lib/pincabos/doctor-firstboot.done
+/var/lib/pincabos/doctor-last.json
+/var/lib/pincabos/firstboot-initramfs-refresh.done
+/var/lib/pincabos/firstboot-network-webapp.done
+/var/lib/pincabos/hardware-autoconfig.done
+/var/lib/pincabos/media-hunter/cache/
+/var/lib/pincabos/media-recorder/status.json
+/var/lib/pincabos/table-test/catalog-index.json
+
+/opt/pincabos/install/.completed-final-*/
+/opt/pincabos/config/apt-installed-full-20*.manifest
+/opt/pincabos/config/apt-manual-20*.manifest
+/opt/pincabos/config/apt-manual-after-pincabos-20*.manifest
+
+**/*.backup-screens-*
+**/*.dpkg-old
