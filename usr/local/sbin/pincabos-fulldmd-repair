@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# PINCABOS_FULLDMD_REPAIR_V2
+# Restaure le slider DMD 1..100 px et le moteur B2SLegacy temps réel.
+# Aucun arrêt/restart de VPX, BGFX ou VPinFE.
+
+clear
+
+echo "================================================================"
+echo " PINFORGE-SAFE — FULLDMD REPAIR V2"
+echo " Slider 1..100 px + moteur DMD temps réel"
+echo "================================================================"
+
+if [[ ${EUID} -ne 0 ]]; then
+    echo "NOGO [X] Exécuter comme root."
+    exit 1
+fi
+
+for cmd in curl install stat sha256sum mktemp; do
+    command -v "$cmd" >/dev/null 2>&1 || {
+        echo "NOGO [X] Commande absente : $cmd"
+        exit 1
+    }
+done
+
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP="/opt/pincabos/backups/fulldmd-repair/${STAMP}"
+STATIC_TARGET="/opt/pincabos/web/static/pincabos-fulldmd-compact.js"
+STATIC_URL="https://raw.githubusercontent.com/KarotsSugarpie/PinCabOS/main/opt/pincabos/web/static/pincabos-fulldmd-compact.js"
+RUNTIME_URL="https://raw.githubusercontent.com/KarotsSugarpie/PinCabOS/main/usr/local/sbin/pincabos-b2s-dmd-runtime-repair"
+TMP_STATIC="$(mktemp /var/tmp/pincabos-fulldmd-slider.XXXXXX.js)"
+TMP_RUNTIME="$(mktemp /var/tmp/pincabos-fulldmd-runtime.XXXXXX.sh)"
+
+cleanup() {
+    rm -f -- "$TMP_STATIC" "$TMP_RUNTIME"
+}
+trap cleanup EXIT INT TERM
+
+mkdir -p "$BACKUP"
+
+if [[ -f "$STATIC_TARGET" ]]; then
+    cp -a -- "$STATIC_TARGET" "$BACKUP/pincabos-fulldmd-compact.js.before"
+    OWNER="$(stat -c %u "$STATIC_TARGET")"
+    GROUP="$(stat -c %g "$STATIC_TARGET")"
+    MODE="$(stat -c %a "$STATIC_TARGET")"
+else
+    OWNER="$(id -u pinball)"
+    GROUP="$(id -g pinball)"
+    MODE="644"
+fi
+
+curl -fL --retry 3 --connect-timeout 20 "$STATIC_URL" -o "$TMP_STATIC"
+
+grep -Fq 'id="pco-dmd4-step-range"' "$TMP_STATIC" || {
+    echo "NOGO [X] Slider 1..100 absent du fichier téléchargé."
+    exit 1
+}
+grep -Fq 'max="100"' "$TMP_STATIC" || {
+    echo "NOGO [X] Maximum 100 px absent du slider."
+    exit 1
+}
+grep -Fq '<span>100</span>' "$TMP_STATIC" || {
+    echo "NOGO [X] Graduations 10..100 absentes."
+    exit 1
+}
+
+NEW_STATIC="${STATIC_TARGET}.pincabos-new.$$"
+install -o "$OWNER" -g "$GROUP" -m "$MODE" "$TMP_STATIC" "$NEW_STATIC"
+mv -Tf -- "$NEW_STATIC" "$STATIC_TARGET"
+sha256sum "$STATIC_TARGET" > "$BACKUP/SHA256-SLIDER-AFTER.txt"
+
+echo "GO [OK] Slider DMD 1..100 px installé."
+echo "GO [OK] Graduations visibles : 10,20,30,40,50,60,70,80,90,100."
+echo "GO [OK] Précision réelle : 1 px."
+
+curl -fL --retry 3 --connect-timeout 20 "$RUNTIME_URL" -o "$TMP_RUNTIME"
+bash -n "$TMP_RUNTIME"
+chmod 0755 "$TMP_RUNTIME"
+
+echo
+echo "=== MOTEUR FULLDMD TEMPS RÉEL ==="
+bash "$TMP_RUNTIME"
+
+echo
+echo "================================================================"
+echo " GO — FULLDMD REPAIR V2 TERMINÉ"
+echo "================================================================"
+echo "Backup UI : $BACKUP"
+echo "Dans le navigateur : Ctrl+F5 sur /fulldmd/."
+echo "Si une table VPX était déjà ouverte, ferme puis relance seulement la table"
+echo "pour que le nouveau plugin B2SLegacy soit chargé en mémoire."
+echo "Attendu ensuite : Source = B2SLegacy-runtime."
