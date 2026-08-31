@@ -68,10 +68,28 @@
       }
       .pco-tools-page.is-order-editing .pco-tools-order-grip{display:flex}
       .pco-tools-page.is-order-editing .tool-card{cursor:default;border-style:dashed}
-      .pco-tools-page.is-order-editing .tool-card.pco-tools-order-dragging{opacity:.48}
+      .pco-tools-page.is-order-editing .tool-card.pco-tools-order-dragging{opacity:.55}
+      .pco-tools-page.is-order-editing .tool-card.pco-tools-order-drag-source{
+        position:fixed!important;left:-10000px!important;top:-10000px!important;
+        width:1px!important;height:1px!important;min-height:0!important;max-height:1px!important;
+        margin:0!important;padding:0!important;overflow:hidden!important;opacity:0!important;
+        pointer-events:none!important;
+      }
       .pco-tools-page.is-order-editing .pco-tools-card-list{min-height:54px}
       .pco-tools-page.is-order-editing .pco-tools-card-list.pco-tools-order-drop{
         outline:1px dashed rgba(255,151,32,.62);outline-offset:5px;border-radius:12px;
+      }
+      .pco-tools-order-placeholder{
+        position:relative;display:block;width:100%;min-height:54px;
+        border:2px dashed rgba(255,151,32,.86);border-radius:16px;
+        background:linear-gradient(90deg,rgba(255,151,32,.05),rgba(145,67,232,.12),rgba(255,151,32,.05));
+        box-shadow:inset 0 0 24px rgba(255,151,32,.07);
+        pointer-events:none;
+      }
+      .pco-tools-order-placeholder:after{
+        content:"Déposer ici";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        color:#ffb04b;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+        opacity:.78;
       }
       @media(max-width:900px){
         .pco-tools-order-toolbar{position:static;justify-content:flex-start;margin-top:14px}
@@ -101,6 +119,8 @@
     let dragList = null;
     let armed = null;
     let snapshot = null;
+    let placeholder = null;
+    let dragOriginNext = null;
 
     const cardsFor = list => [...list.querySelectorAll(":scope > .tool-card")];
 
@@ -146,6 +166,48 @@
       if (delta < 0) list.insertBefore(card, cards[target]);
       else list.insertBefore(cards[target], card);
       setStatus("Ordre modifié — clique Enregistrer pour le conserver.");
+    };
+
+    const insertionReference = (list, clientY) => {
+      const candidates = cardsFor(list).filter(card => card !== dragging);
+      for (const card of candidates) {
+        const rect = card.getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) return card;
+      }
+      return null;
+    };
+
+    const movePlaceholder = (list, clientY) => {
+      if (!placeholder || list !== dragList) return;
+      const reference = insertionReference(list, clientY);
+      if (reference) {
+        if (placeholder.nextSibling !== reference) list.insertBefore(placeholder, reference);
+      } else if (list.lastElementChild !== placeholder) {
+        list.append(placeholder);
+      }
+    };
+
+    const finishDrag = committed => {
+      const card = dragging;
+      const list = dragList;
+      if (!card || !list) return;
+
+      if (committed && placeholder?.parentElement === list) {
+        list.insertBefore(card, placeholder);
+      } else if (dragOriginNext && dragOriginNext.parentElement === list) {
+        list.insertBefore(card, dragOriginNext);
+      } else {
+        list.append(card);
+      }
+
+      placeholder?.remove();
+      placeholder = null;
+      card.classList.remove("pco-tools-order-dragging", "pco-tools-order-drag-source");
+      lists.forEach(value => value.classList.remove("pco-tools-order-drop"));
+      dragging = null;
+      dragList = null;
+      dragOriginNext = null;
+      armed = null;
     };
 
     const ensureGrip = card => {
@@ -197,18 +259,27 @@
             event.preventDefault();
             return;
           }
+
+          const rect = card.getBoundingClientRect();
           dragging = card;
           dragList = list;
+          dragOriginNext = card.nextSibling;
+
+          placeholder = document.createElement("div");
+          placeholder.className = "pco-tools-order-placeholder";
+          placeholder.style.height = `${Math.max(54, Math.round(rect.height))}px`;
+          list.insertBefore(placeholder, card.nextSibling);
+
           card.classList.add("pco-tools-order-dragging");
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData("text/plain", cardKey(card));
+
+          requestAnimationFrame(() => {
+            if (dragging === card) card.classList.add("pco-tools-order-drag-source");
+          });
         });
         card.addEventListener("dragend", () => {
-          card.classList.remove("pco-tools-order-dragging");
-          lists.forEach(value => value.classList.remove("pco-tools-order-drop"));
-          dragging = null;
-          dragList = null;
-          armed = null;
+          if (dragging === card) finishDrag(false);
         });
       });
 
@@ -217,17 +288,14 @@
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
         list.classList.add("pco-tools-order-drop");
-        const target = event.target.closest(".tool-card");
-        if (!target || target === dragging || target.parentElement !== list) return;
-        const rect = target.getBoundingClientRect();
-        const after = event.clientY > rect.top + rect.height / 2;
-        list.insertBefore(dragging, after ? target.nextSibling : target);
+        movePlaceholder(list, event.clientY);
       });
 
       list.addEventListener("drop", event => {
         if (!editing || !dragging || dragList !== list) return;
         event.preventDefault();
-        list.classList.remove("pco-tools-order-drop");
+        movePlaceholder(list, event.clientY);
+        finishDrag(true);
         setStatus("Ordre modifié — clique Enregistrer pour le conserver.");
       });
 
@@ -241,6 +309,7 @@
     });
 
     const setEditing = value => {
+      if (!value && dragging) finishDrag(false);
       editing = Boolean(value);
       page.classList.toggle("is-order-editing", editing);
       editButton.hidden = editing;
@@ -251,11 +320,9 @@
       }));
       if (editing) {
         snapshot = serialize();
-        setStatus("Glisse les cartes avec ⠿. Chaque carte reste dans sa section.");
+        setStatus("Glisse les cartes avec ⠿. Les cartes dégagent le chemin en temps réel.");
       } else {
         armed = null;
-        dragging = null;
-        dragList = null;
       }
     };
 
