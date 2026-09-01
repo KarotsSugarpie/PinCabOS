@@ -1,0 +1,28 @@
+name: PinCabOS Bootstrap Alpha 3.04
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/pincabos-bootstrap-alpha304.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    if: github.event.head_commit.message == 'chore(release): dispatch Alpha 3.04'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch corrected Alpha 3.04 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          gh workflow run pincabos-release-v4.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f pr_number=104 \
+            -f channel=beta
