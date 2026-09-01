@@ -1,0 +1,10 @@
+[Unit]
+Description=PinCabOS - maintenance kernel hebdomadaire
+
+[Timer]
+OnCalendar=Sun 04:30
+RandomizedDelaySec=45min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

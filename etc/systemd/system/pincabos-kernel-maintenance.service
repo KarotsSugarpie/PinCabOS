@@ -1,0 +1,11 @@
+[Unit]
+Description=PinCabOS - maintenance kernel (mise a jour + purge des anciens)
+Documentation=man:apt-get(8)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-kernel-maintenance
+Nice=10
+IOSchedulingClass=idle
