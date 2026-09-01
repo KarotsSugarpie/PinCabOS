@@ -74,6 +74,19 @@ if command -v dkms >/dev/null 2>&1 && dkms status 2>/dev/null | grep -q '^nvidia
     fi
 fi
 
+# PINCABOS_SYSTEM_MAINTENANCE_APT_V1
+# Meme passage hebdomadaire : les paquets systeme suivent aussi. Les mises a
+# jour de SECURITE passent deja seules (unattended-upgrades actif dans
+# l'image) ; ceci couvre le reste (Mesa, PAM, outils...) qui sinon derive
+# cabinet par cabinet. apt-get upgrade ne retire jamais de paquet, et les
+# metas kernel sont re-gelees plus bas comme avant.
+log "mise a jour des paquets systeme (apt-get upgrade)"
+if apt-get upgrade -y >/dev/null 2>&1; then
+    log "paquets systeme a jour"
+else
+    log "apt-get upgrade en echec — poursuite de la maintenance kernel"
+fi
+
 log "purge des kernels autres que $running et $newest"
 purged=0
 while read -r version; do
