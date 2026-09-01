@@ -501,6 +501,23 @@ def generate_dmdimage_from_grill(path: Path) -> bool:
             )
             if crop.returncode != 0 or not strip.is_file():
                 return False
+            # Letterbox au ratio de l'ecran FullDMD : B2S etire le DMDImage sur
+            # toute la fenetre, donc un bandeau tres large (ex. 2560x625) serait
+            # deforme verticalement (art ET DMD). Marges en quasi-noir :
+            # invisibles a l'oeil mais exclues de la recherche de zone sombre,
+            # l'AutoPos reste cale sur le bezel DMD de l'art.
+            role = _FULLDMD_ROLE
+            ratio = (role[3] / role[2]) if role else (9.0 / 16.0)
+            canvas_h = int(round(width * ratio))
+            if canvas_h > grill:
+                pad = subprocess.run(
+                    ["convert", str(strip), "-background", "rgb(46,48,52)",
+                     "-gravity", "center", "-extent", f"{width}x{canvas_h}",
+                     str(strip)],
+                    capture_output=True, timeout=120,
+                )
+                if pad.returncode != 0:
+                    return False
             strip64 = base64.b64encode(strip.read_bytes()).decode("ascii")
     except Exception:
         return False
