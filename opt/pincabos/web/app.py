@@ -3319,6 +3319,23 @@ def dof_detection_summary_card(summary, raw_devices, logs, file_rows):
 
 PINCABOS_DOF_API_KEY_FILE = Path("/opt/pincabos/config/dof/configtool-api-key.txt")
 
+# PINCABOS_BACKBOARD_MENU_REAPPLY_V1
+# Un import du DOF Config Tool ecrase directoutputconfigNN.ini : on re-applique
+# (detache) le contenu menu du backboard HD s'il est installe. L'outil sort
+# immediatement si le cab n'a pas de backboard ou si l'auto est desactive.
+def pincabos_backboard_menu_reapply():
+    import subprocess
+    try:
+        subprocess.Popen(
+            ["/opt/pincabos/tools/backboard-menu/pincabos-backboard-menu.sh", "apply"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception:
+        pass
+
+
 def pincabos_dof_get_saved_api_key():
     try:
         return PINCABOS_DOF_API_KEY_FILE.read_text(errors="replace").strip()
@@ -3696,6 +3713,8 @@ def dof_import_api_pincabos():
         proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=420)
 
         ok = proc.returncode == 0
+        if ok:
+            pincabos_backboard_menu_reapply()
         status = "Import DOF via API terminé" if ok else "Import DOF via API échoué"
         cls = "" if ok else "warn"
         safe_cmd = "/usr/local/sbin/pincabos-dof-online-api-import ****** " + force
@@ -3925,6 +3944,7 @@ def dof_import_config():
 </table>
 """
         log("Import terminé OK.")
+        pincabos_backboard_menu_reapply()
         return response_card("Import DOF terminé", "Configuration DOF importée vers le dossier VPX.", ok=True, extra=extra)
 
     except Exception as e:
