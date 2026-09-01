@@ -112,6 +112,8 @@ def run(cmd):
 pf = role_from_data("playfield")
 bg = role_from_data("backglass")
 fd = role_from_data("fulldmd")
+# PINCABOS_APPLY_TOPPER_V1 : cabinets a 4 ecrans
+tp = role_from_data("topper")
 
 pfw = mode_width(pf.get("mode"))
 bgw = mode_width(bg.get("mode"))
@@ -165,6 +167,22 @@ if fd.get("output") and fd.get("mode"):
         cmd += ["--rate", fd["rate"]]
     items.append(cmd)
 
+if tp.get("output") and tp.get("mode"):
+    # Pas d'ordre canonique pour le topper : uniquement la geometrie de son
+    # role (typiquement au-dessus du fronton, y negatif). Sans geometrie, on
+    # le place a droite de tout le reste plutot que d'inventer une position.
+    x = pfw + bgw + mode_width(fd.get("mode"))
+    cmd = [
+        "xrandr",
+        "--output", tp["output"],
+        "--mode", tp["mode"],
+        "--pos", tp.get("pos") or f"{x}x0",
+        "--rotate", "normal",
+    ]
+    if tp.get("rate"):
+        cmd += ["--rate", tp["rate"]]
+    items.append(cmd)
+
 if not items:
     print("DEBUG data roles/top-level:")
     print(json.dumps({
@@ -199,17 +217,23 @@ except Exception:
 for _ligne in _brut.splitlines():
     _m = re.match(r"^(\S+) connected.*?(\d+)x(\d+)\+(-?\d+)\+(-?\d+)", _ligne)
     if _m:
-        _geo[_m.group(1)] = (int(_m.group(2)), int(_m.group(4)))
+        _geo[_m.group(1)] = (int(_m.group(2)), int(_m.group(4)), int(_m.group(5)))
 
+# seuls les ecrans de la rangee principale (y=0) sont recales : un topper
+# au-dessus du fronton (y negatif) garde sa position de role.
 _ordre = sorted(
-    [r.get("output") for r in (pf, bg, fd) if r.get("output") and r.get("output") in _geo],
+    [
+        r.get("output")
+        for r in (pf, bg, fd, tp)
+        if r.get("output") and r.get("output") in _geo and _geo[r.get("output")][2] == 0
+    ],
     key=lambda s: _geo[s][1],
 )
 
 _x = 0
 _recale = []
 for _sortie in _ordre:
-    _largeur, _pos = _geo[_sortie]
+    _largeur, _pos, _y = _geo[_sortie]
     if _pos != _x:
         _recale += ["--output", _sortie, "--pos", f"{_x}x0"]
     _x += _largeur
