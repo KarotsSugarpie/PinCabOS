@@ -1,0 +1,2 @@
+# PinCabOS : reappliquer la topologie ecran au branchement/debranchement
+ACTION=="change", SUBSYSTEM=="drm", RUN+="/usr/bin/systemctl --no-block start pincabos-screen-hotplug.service"

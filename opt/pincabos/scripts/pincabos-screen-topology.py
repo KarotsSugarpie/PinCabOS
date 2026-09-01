@@ -20,7 +20,7 @@ STATE = RUNTIME / "state.json"
 VPINFE = Path("/home/pinball/.config/vpinfe/vpinfe.ini")
 VPX = Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini")
 
-ROLES = ("playfield", "backglass", "fulldmd")
+ROLES = ("playfield", "backglass", "fulldmd", "topper")
 
 
 def log(message):
@@ -200,6 +200,22 @@ def infer_roles(monitors):
         if item["name"] != playfield["name"]
     ]
 
+    # Un ecran ENTIEREMENT au-dessus du playfield est un topper : on le sort
+    # du jeu avant de choisir backglass/fulldmd, sinon le tri geometrique le
+    # prendrait pour le backglass.
+    above = [
+        item for item in remaining
+        if item["y"] + item["height"] <= playfield["y"]
+    ]
+    topper = min(
+        above,
+        key=lambda item: (item["y"], item["x"], item["name"]),
+    ) if above else None
+    remaining = [
+        item for item in remaining
+        if not topper or item["name"] != topper["name"]
+    ]
+
     right = [
         item for item in remaining
         if item["x"] >= playfield["x"] + playfield["width"]
@@ -235,10 +251,23 @@ def infer_roles(monitors):
         key=lambda item: (item["x"], item["y"], item["name"]),
     ) if pool else None
 
+    # Pas d'ecran au-dessus mais un 4e ecran restant (topper pose a droite) :
+    # l'ecran non attribue devient le topper.
+    if topper is None:
+        leftover = [
+            item for item in remaining
+            if not fulldmd or item["name"] != fulldmd["name"]
+        ]
+        topper = min(
+            leftover,
+            key=lambda item: (item["y"], item["x"], item["name"]),
+        ) if leftover else None
+
     return {
         "playfield": playfield,
         "backglass": backglass,
         "fulldmd": fulldmd,
+        "topper": topper,
     }
 
 
@@ -453,6 +482,13 @@ def apply_consumers(roles):
             "ScoreViewOutput": "1" if dmd else "0",
         })
 
+        # Cabinet a 4 ecrans : la fenetre Topper de VPX suit le role topper
+        # (le placeur one-shot la posera a sa geometrie, VPX ignorant les
+        # positions demandees comme pour les autres fenetres secondaires).
+        config = update_section(config, "Topper", {
+            "TopperOutput": "1" if roles["topper"]["available"] else "0",
+        })
+
         atomic_write(VPX, config)
 
 
@@ -573,6 +609,7 @@ def refresh(prepare=False):
     document["playfield"] = roles["playfield"]
     document["backglass"] = roles["backglass"]
     document["fulldmd"] = roles["fulldmd"]
+    document["topper"] = roles["topper"]
 
     selected_outputs = {
         roles[role].get("name", "")
@@ -618,12 +655,14 @@ def refresh(prepare=False):
         f"PINCABOS_PLAYFIELD_AVAILABLE='{int(roles['playfield']['available'])}'\n"
         f"PINCABOS_BACKGLASS_AVAILABLE='{int(roles['backglass']['available'])}'\n"
         f"PINCABOS_FULLDMD_AVAILABLE='{int(roles['fulldmd']['available'])}'\n"
+        f"PINCABOS_TOPPER_AVAILABLE='{int(roles['topper']['available'])}'\n"
     )
 
     for role, label in (
         ("playfield", "PLAYFIELD"),
         ("backglass", "BACKGLASS"),
         ("fulldmd", "FULLDMD"),
+        ("topper", "TOPPER"),
     ):
         item = roles[role]
 
