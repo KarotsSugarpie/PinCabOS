@@ -13,7 +13,6 @@ permissions:
 
 jobs:
   dispatch:
-    if: github.event.head_commit.message == 'chore(release): dispatch Alpha 3.04'
     runs-on: ubuntu-latest
     steps:
       - name: Dispatch corrected Alpha 3.04 release
@@ -21,6 +20,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -Eeuo pipefail
+
+          if gh release view alpha3.04-beta.20260901.1 \
+              --repo "$GITHUB_REPOSITORY" \
+              >/dev/null 2>&1
+          then
+            echo "Alpha 3.04 existe deja : aucun nouveau dispatch."
+            exit 0
+          fi
+
           gh workflow run pincabos-release-v4.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref main \
