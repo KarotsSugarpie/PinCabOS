@@ -20,7 +20,6 @@ import zlib
 from pathlib import Path
 
 
-DEFAULT_TARGET = (5760, 0, 1920, 1200)
 # PINCABOS_FULLDMD_SAFE_MARGIN_V3
 DEFAULT_SAFE_MARGIN_PX = 5
 
@@ -55,24 +54,39 @@ def x11_env() -> dict[str, str]:
 
 
 def target_geometry() -> tuple[int, int, int, int, str]:
+    """Ecran du role fulldmd. Ordre : geometrie publiee par la topologie
+    (display-aliases.env, derivee de screens.json), puis xrandr sur la sortie
+    du role. Aucun repli code en dur : mieux vaut echouer clairement que
+    d'ecrire un rectangle calibre pour l'ecran d'une autre machine."""
     aliases = parse_env(Path("/opt/pincabos/config/display-aliases.env"))
-    output = aliases.get("PINCABOS_FULLDMD_OUTPUT", "DP-3")
-    try:
-        data = subprocess.check_output(
-            ["xrandr", "--query"], text=True, errors="replace", env=x11_env(), timeout=5
+    output = aliases.get("PINCABOS_FULLDMD_OUTPUT", "")
+    if aliases.get("PINCABOS_FULLDMD_AVAILABLE") == "1":
+        match = re.match(
+            r"^(\d+)x(\d+)\+(-?\d+)\+(-?\d+)$",
+            aliases.get("PINCABOS_FULLDMD_GEOMETRY", ""),
         )
-        pattern = re.compile(
-            rf"^{re.escape(output)}\s+connected(?:\s+primary)?\s+(\d+)x(\d+)\+(-?\d+)\+(-?\d+)",
-            re.MULTILINE,
-        )
-        match = pattern.search(data)
         if match:
             width, height, x, y = map(int, match.groups())
-            return x, y, width, height, output
-    except Exception:
-        pass
-    x, y, width, height = DEFAULT_TARGET
-    return x, y, width, height, output
+            return x, y, width, height, output or "fulldmd"
+    if output:
+        try:
+            data = subprocess.check_output(
+                ["xrandr", "--query"], text=True, errors="replace", env=x11_env(), timeout=5
+            )
+            pattern = re.compile(
+                rf"^{re.escape(output)}\s+connected(?:\s+primary)?\s+(\d+)x(\d+)\+(-?\d+)\+(-?\d+)",
+                re.MULTILINE,
+            )
+            match = pattern.search(data)
+            if match:
+                width, height, x, y = map(int, match.groups())
+                return x, y, width, height, output
+        except Exception:
+            pass
+    raise SystemExit(
+        "fulldmd introuvable : ni display-aliases.env (role fulldmd), ni xrandr. "
+        "Verifier la configuration des ecrans (page Ecrans de la WebApp)."
+    )
 
 
 def decode_png(path: Path) -> tuple[int, int, bytearray]:
