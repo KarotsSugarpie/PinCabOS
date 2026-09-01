@@ -5279,6 +5279,7 @@ def fulldmd_page():
 <div class="grid fulldmd-calibration-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;">
   <div class="card">
     <h2>Calibration FullDMD</h2>
+    <p><a href="/fulldmd/style" style="font-weight:bold;">&#127912; Style d'affichage FullDMD par table (art du pack / grand DMD)</a></p>
     <p>Déplace et étire le rectangle pour représenter la zone visible du FullDMD.</p>
     <p>Config sauvegardée dans :</p>
     <p><code>/opt/pincabos/config/fulldmd-calibration.json</code></p>
@@ -5564,6 +5565,199 @@ async function saveDmdCal() {
     body = body.replace("__VPINFE_INI_SUMMARY__", esc(vpinfe_ini_summary))
 
     return page("FullDMD", body)
+
+
+# ---------------------------------------------------------------------------
+# Style d'affichage FullDMD par table : art du pack vs grand DMD seul.
+# Consomme par pincabos-native-fulldmd-policy.sh :
+#   - sidecar <table>.pincabos-fulldmd.json  {"style": "art"|"dmd"}
+#   - defaut global /opt/pincabos/config/fulldmd-style.conf ("art" ou "dmd")
+# "auto" = aucun fichier -> defaut intelligent de la policy (art si la table
+# fournit un DMDImage d'auteur, grand DMD si l'art ne serait qu'un panneau
+# grill auto-genere). Applique au prochain lancement de la table.
+# ---------------------------------------------------------------------------
+
+PINCABOS_FULLDMD_STYLE_GLOBAL = Path("/opt/pincabos/config/fulldmd-style.conf")
+
+
+def pincabos_fulldmd_style_tables():
+    """Tables candidates (un .vpx + un .directb2s) et leur style choisi."""
+    rows = []
+    root = Path("/home/pinball/Tables")
+    try:
+        dirs = sorted(
+            [d for d in root.iterdir() if d.is_dir()],
+            key=lambda d: d.name.lower(),
+        )
+    except OSError:
+        return rows
+    for d in dirs:
+        try:
+            vpx = sorted(d.glob("*.vpx"))
+            if not vpx:
+                continue
+            has_b2s = any(
+                p.suffix.lower() == ".directb2s"
+                for p in d.iterdir()
+                if p.is_file()
+            )
+        except OSError:
+            continue
+        if not has_b2s:
+            continue
+        sidecar = vpx[0].with_suffix(".pincabos-fulldmd.json")
+        style = "auto"
+        try:
+            value = str(
+                json.loads(sidecar.read_text(encoding="utf-8")).get("style", "")
+            ).lower()
+            if value in ("art", "dmd"):
+                style = value
+        except Exception:
+            pass
+        rows.append({"name": d.name, "style": style})
+    return rows
+
+
+@app.route("/fulldmd/style")
+def fulldmd_style_page():
+    global_style = "auto"
+    try:
+        value = PINCABOS_FULLDMD_STYLE_GLOBAL.read_text(encoding="utf-8").strip().lower()
+        if value in ("art", "dmd"):
+            global_style = value
+    except Exception:
+        pass
+
+    def options_html(current):
+        parts = []
+        for value, label in (
+            ("auto", "Auto"),
+            ("art", "Art du pack"),
+            ("dmd", "Grand DMD"),
+        ):
+            selected = " selected" if current == value else ""
+            parts.append(f'<option value="{value}"{selected}>{label}</option>')
+        return "".join(parts)
+
+    rows_html = []
+    for row in pincabos_fulldmd_style_tables():
+        rows_html.append(
+            "<tr>"
+            f"<td style=\"padding:6px 10px;\">{esc(row['name'])}</td>"
+            "<td style=\"padding:6px 10px;\">"
+            f"<select class=\"fdstyle-select\" data-table=\"{esc(row['name'])}\" "
+            "onchange=\"fdstyleSet(this, this.dataset.table)\" style=\"padding:6px;\">"
+            f"{options_html(row['style'])}"
+            "</select></td>"
+            "<td class=\"fdstyle-status\" style=\"padding:6px 10px;min-width:180px;opacity:.85;\"></td>"
+            "</tr>"
+        )
+    if not rows_html:
+        rows_html.append(
+            "<tr><td colspan=\"3\" style=\"padding:10px;\">"
+            "Aucune table avec directb2s trouvée.</td></tr>"
+        )
+
+    body = """
+<div class="card">
+  <h2>Style d'affichage FullDMD</h2>
+  <p>Pour chaque table B2S, choisis ce que l'écran FullDMD affiche :</p>
+  <ul>
+    <li><b>Art du pack</b> : l'art FullDMD du directb2s (image d'auteur, ou panneau
+        haut-parleurs généré depuis le grill) avec le DMD posé dedans.</li>
+    <li><b>Grand DMD</b> : uniquement le DMD, en grand (ratio 4:1, pleine largeur,
+        fond noir).</li>
+    <li><b>Auto</b> : art si la table fournit une vraie image FullDMD d'auteur,
+        grand DMD sinon.</li>
+  </ul>
+  <p style="opacity:.8;">Le choix s'applique au <b>prochain lancement</b> de la table.</p>
+
+  <h3>Défaut du cabinet</h3>
+  <p>
+    <select onchange="fdstyleSet(this, null)" style="padding:6px;">__GLOBAL_OPTIONS__</select>
+    <span id="fdstyle-global-status" style="margin-left:10px;opacity:.85;"></span>
+  </p>
+
+  <h3>Par table</h3>
+  <table style="border-collapse:collapse;width:100%;">
+    <tr>
+      <th style="text-align:left;padding:6px 10px;">Table</th>
+      <th style="text-align:left;padding:6px 10px;">Style</th>
+      <th></th>
+    </tr>
+    __ROWS__
+  </table>
+
+  <p style="margin-top:14px;"><a href="/fulldmd">&larr; Retour calibration FullDMD</a></p>
+</div>
+
+<script>
+async function fdstyleSet(sel, table) {
+  const status = table === null
+    ? document.getElementById('fdstyle-global-status')
+    : sel.closest('tr').querySelector('.fdstyle-status');
+  status.textContent = '...';
+  try {
+    const r = await fetch('/api/fulldmd/style/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table: table, style: sel.value })
+    });
+    const d = await r.json();
+    status.textContent = d.ok
+      ? 'Enregistré — appliqué au prochain lancement'
+      : ('Erreur : ' + (d.error || '?'));
+  } catch (e) {
+    status.textContent = 'Erreur réseau';
+  }
+}
+</script>
+"""
+    body = body.replace("__GLOBAL_OPTIONS__", options_html(global_style))
+    body = body.replace("__ROWS__", "\n    ".join(rows_html))
+    return page("Style FullDMD", body)
+
+
+@app.route("/api/fulldmd/style/set", methods=["POST"])
+def api_fulldmd_style_set():
+    data = request.get_json(silent=True) or {}
+    style = str(data.get("style", "")).lower()
+    if style not in ("auto", "art", "dmd"):
+        return jsonify({"ok": False, "error": "style invalide"}), 400
+
+    table = data.get("table")
+    if table is None:
+        try:
+            if style == "auto":
+                PINCABOS_FULLDMD_STYLE_GLOBAL.unlink(missing_ok=True)
+            else:
+                PINCABOS_FULLDMD_STYLE_GLOBAL.parent.mkdir(parents=True, exist_ok=True)
+                PINCABOS_FULLDMD_STYLE_GLOBAL.write_text(style + "\n", encoding="utf-8")
+        except OSError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+        return jsonify({"ok": True, "scope": "global", "style": style})
+
+    table = str(table)
+    if "/" in table or "\\" in table or table.startswith("."):
+        return jsonify({"ok": False, "error": "table invalide"}), 400
+    table_dir = Path("/home/pinball/Tables") / table
+    if not table_dir.is_dir():
+        return jsonify({"ok": False, "error": "table introuvable"}), 404
+    vpx = sorted(table_dir.glob("*.vpx"))
+    if not vpx:
+        return jsonify({"ok": False, "error": "vpx introuvable"}), 404
+
+    sidecar = vpx[0].with_suffix(".pincabos-fulldmd.json")
+    try:
+        if style == "auto":
+            sidecar.unlink(missing_ok=True)
+        else:
+            sidecar.write_text(json.dumps({"style": style}) + "\n", encoding="utf-8")
+            shutil.chown(sidecar, "pinball", "pinball")
+    except OSError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    return jsonify({"ok": True, "table": table, "style": style})
 
 
 @app.route("/api/fulldmd/status")
