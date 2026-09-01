@@ -5,6 +5,17 @@ pco_section "NETTOYAGE CONTRÔLÉ"
 
 obsolete_units=(
     pincabos-display-roles.service
+    pincabos-display-roles.path
+    pincabos-display-roles.timer
+    pincabos-display-role-app-sync.service
+    pincabos-display-role-app-sync.path
+    pincabos-display-role-app-sync.timer
+    pincabos-display-role-finalizer.service
+    pincabos-display-role-finalizer.path
+    pincabos-display-role-finalizer.timer
+    pincabos-display-role-normalizer.service
+    pincabos-display-role-normalizer.path
+    pincabos-display-role-normalizer.timer
     pincabos-screen-topology.service
     pincabos-screen-topology.timer
     pincabos-screen-topology.path
