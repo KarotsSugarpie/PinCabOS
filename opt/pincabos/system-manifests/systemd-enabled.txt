@@ -32,7 +32,6 @@ nvidia-powerd.service                     enabled enabled
 nvidia-resume.service                     enabled enabled
 nvidia-suspend.service                    enabled enabled
 open-iscsi.service                        enabled enabled
-pincabos-b2s-layer-guard.service          enabled enabled
 pincabos-backglass-bridge.service         enabled enabled
 pincabos-batch-import-worker.service      enabled enabled
 pincabos-console.service                  enabled enabled
@@ -43,7 +42,6 @@ pincabos-final-graphical-guard.service    enabled enabled
 pincabos-firstboot-online-go.service      enabled enabled
 pincabos-hybrid-pup-recovery.service      enabled enabled
 pincabos-hybrid-recover.service           enabled enabled
-pincabos-scoreview-router.service         enabled enabled
 pincabos-scoreview-x11-hq-preview.service enabled enabled
 pincabos-screen-topology-boot.service     enabled enabled
 pincabos-switch-graphical-vt.service      enabled enabled

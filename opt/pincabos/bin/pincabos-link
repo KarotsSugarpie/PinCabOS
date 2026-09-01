@@ -30,8 +30,6 @@ PAIR_PATTERN = re.compile(
 SERVICES = (
     "pincabos-webapp.service",
     "pincabos-vpinfe.service",
-    "pincabos-place-backbox.service",
-    "pincabos-scoreview-router.service",
     "pincabos-batch-import-worker.service",
     "pincabos-media-recorder-worker.service",
     "pincabos-dashboard-live.service",

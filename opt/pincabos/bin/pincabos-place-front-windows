@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+set -u
+
+# PINCABOS_PLACE_FRONT_WINDOWS_V1
+#
+# Placement UNIQUE des fenetres de fronton, en remplacement des boucles
+# permanentes place-backbox / b2s-layer-guard / scoreview-router.
+#
+# Pourquoi : VPX (build BGFX standalone) ignore les positions demandees pour
+# ses fenetres secondaires — verifie sur cab : la fenetre "Visual Pinball
+# Backglass" nait au centre du playfield et "Visual Pinball Score View" en
+# (0,0), quels que soient BackglassWndX/ScoreViewWndX/…Display dans les INI.
+# Les corriger par des boucles wmctrl permanentes (1 a 3 s, et 0,2 s en jeu)
+# etait la source des clignotements : plusieurs boucles aux objectifs
+# divergents se disputaient les memes fenetres.
+#
+# Ici : le lanceur nous demarre en tache de fond au lancement de la table.
+#   --place   : attendre l'apparition des fenetres (<= 30 s), les poser UNE
+#               FOIS sur l'ecran de leur role (screens.json via
+#               display-aliases.env), demonter UNE FOIS le rideau fullscreen
+#               "VPinFE DMD" qui enterrerait le Score View (le WM refuse tout
+#               re-empilement a travers la couche fullscreen), puis se
+#               terminer. Aucun processus ne tourne pendant le jeu.
+#   --restore : en fin de partie, remonter le rideau VPinFE et rendre le
+#               focus au playfield.
+
+ALIASES="/opt/pincabos/config/display-aliases.env"
+
+choose_authority() {
+    for candidate in /home/pinball/.Xauthority /run/lightdm/root/:0; do
+        [[ -r "$candidate" ]] && { printf '%s\n' "$candidate"; return 0; }
+    done
+    return 1
+}
+
+AUTHORITY="$(choose_authority || true)"
+[[ -n "$AUTHORITY" ]] || exit 0
+
+run_x() {
+    if [[ "$(id -u)" -eq 0 ]]; then
+        runuser -u pinball -- env HOME=/home/pinball DISPLAY=:0 \
+            XAUTHORITY="$AUTHORITY" XDG_RUNTIME_DIR=/run/user/1000 "$@"
+    else
+        env DISPLAY=:0 XAUTHORITY="$AUTHORITY" "$@"
+    fi
+}
+
+parse_geometry() {
+    # "LxH+X+Y" -> "X Y L H", vide si invalide
+    [[ "${1:-}" =~ ^([0-9]+)x([0-9]+)\+(-?[0-9]+)\+(-?[0-9]+)$ ]] || return 0
+    printf '%s %s %s %s\n' "${BASH_REMATCH[3]}" "${BASH_REMATCH[4]}" \
+        "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+}
+
+restore_frontend() {
+    local id
+    id="$(run_x xdotool search --name '^VPinFE DMD$' 2>/dev/null | head -1)"
+    if [[ -n "$id" ]]; then
+        run_x xdotool windowmap "$id" >/dev/null 2>&1
+        # le demontage/remontage fait perdre l'etat fullscreen : le rendre,
+        # sinon le rideau revient decale et ampute des decorations du WM.
+        run_x wmctrl -ir "$id" -b add,fullscreen >/dev/null 2>&1 || true
+    fi
+    id="$(run_x xdotool search --name '^VPinFE Table$' 2>/dev/null | head -1)"
+    if [[ -n "$id" ]]; then
+        run_x xdotool windowactivate "$id" >/dev/null 2>&1 \
+            || run_x wmctrl -ia "$id" >/dev/null 2>&1 || true
+    fi
+    exit 0
+}
+
+[[ "${1:-}" == "--restore" ]] && restore_frontend
+
+# ---------------------------------------------------------------------------
+# --place
+# ---------------------------------------------------------------------------
+BG_GEOM=""
+FD_GEOM=""
+TP_GEOM=""
+if [[ -f "$ALIASES" ]]; then
+    # shellcheck disable=SC1090
+    . "$ALIASES" 2>/dev/null || true
+    [[ "${PINCABOS_BACKGLASS_AVAILABLE:-0}" == "1" ]] && BG_GEOM="${PINCABOS_BACKGLASS_GEOMETRY:-}"
+    [[ "${PINCABOS_FULLDMD_AVAILABLE:-0}" == "1" ]] && FD_GEOM="${PINCABOS_FULLDMD_GEOMETRY:-}"
+    # Cabs a 4 ecrans : role topper (des que la topologie le publiera).
+    [[ "${PINCABOS_TOPPER_AVAILABLE:-0}" == "1" ]] && TP_GEOM="${PINCABOS_TOPPER_GEOMETRY:-}"
+fi
+
+read -r BG_X BG_Y BG_W BG_H <<< "$(parse_geometry "$BG_GEOM")" || true
+read -r FD_X FD_Y FD_W FD_H <<< "$(parse_geometry "$FD_GEOM")" || true
+read -r TP_X TP_Y TP_W TP_H <<< "$(parse_geometry "$TP_GEOM")" || true
+[[ -n "${BG_X:-}" || -n "${FD_X:-}" || -n "${TP_X:-}" ]] || exit 0
+
+placed_bg=0
+placed_sv=0
+placed_tp=0
+curtain_done=0
+seen_game=0
+
+for _ in $(seq 1 60); do
+    if pgrep -f 'VPinballX' >/dev/null 2>&1; then
+        seen_game=1
+    elif [[ "$seen_game" == "1" ]]; then
+        exit 0    # partie deja terminee
+    fi
+
+    listing="$(run_x wmctrl -lG 2>/dev/null || true)"
+
+    if [[ "$placed_bg" == "0" && -n "${BG_X:-}" ]]; then
+        id="$(awk '/Visual Pinball Backglass$/{print $1;exit}' <<< "$listing")"
+        if [[ -n "$id" ]]; then
+            run_x wmctrl -ir "$id" -b remove,maximized_vert,maximized_horz,fullscreen >/dev/null 2>&1 || true
+            run_x wmctrl -ir "$id" -e "0,$BG_X,$BG_Y,$BG_W,$BG_H" >/dev/null 2>&1 || true
+            placed_bg=1
+        fi
+    fi
+
+    if [[ "$placed_sv" == "0" && -n "${FD_X:-}" ]]; then
+        id="$(awk '/Visual Pinball Score View$/{print $1;exit}' <<< "$listing")"
+        if [[ -n "$id" ]]; then
+            run_x wmctrl -ir "$id" -b remove,maximized_vert,maximized_horz,fullscreen >/dev/null 2>&1 || true
+            run_x wmctrl -ir "$id" -e "0,$FD_X,$FD_Y,$FD_W,$FD_H" >/dev/null 2>&1 || true
+            run_x wmctrl -ir "$id" -b add,above >/dev/null 2>&1 || true
+            placed_sv=1
+        fi
+    fi
+
+    if [[ "$placed_tp" == "0" && -n "${TP_X:-}" ]]; then
+        id="$(awk '/Visual Pinball Topper$/{print $1;exit}' <<< "$listing")"
+        if [[ -n "$id" ]]; then
+            run_x wmctrl -ir "$id" -b remove,maximized_vert,maximized_horz,fullscreen >/dev/null 2>&1 || true
+            run_x wmctrl -ir "$id" -e "0,$TP_X,$TP_Y,$TP_W,$TP_H" >/dev/null 2>&1 || true
+            placed_tp=1
+        fi
+    fi
+
+    if [[ "$placed_sv" == "1" && "$curtain_done" == "0" ]]; then
+        id="$(awk '/VPinFE DMD$/{print $1;exit}' <<< "$listing")"
+        [[ -n "$id" ]] && run_x xdotool windowunmap "$id" >/dev/null 2>&1 || true
+        curtain_done=1
+    fi
+
+    bg_ok=$([[ "$placed_bg" == "1" || -z "${BG_X:-}" ]] && echo 1 || echo 0)
+    sv_ok=$([[ "$placed_sv" == "1" || -z "${FD_X:-}" ]] && echo 1 || echo 0)
+    if [[ "$bg_ok" == "1" && "$sv_ok" == "1" && ( "$curtain_done" == "1" || -z "${FD_X:-}" ) ]]; then
+        # le Topper est opportuniste : s'il n'est pas apparu, on ne bloque pas
+        exit 0
+    fi
+
+    sleep 0.5
+done
+
+exit 0

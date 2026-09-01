@@ -4,6 +4,9 @@
 pco_section "NETTOYAGE CONTRÔLÉ"
 
 obsolete_units=(
+    pincabos-place-backbox.service
+    pincabos-b2s-layer-guard.service
+    pincabos-scoreview-router.service
     pincabos-display-roles.service
     pincabos-screen-topology.service
     pincabos-screen-topology.timer

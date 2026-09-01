@@ -46,6 +46,9 @@
     "configuration_paths": [],
     "assets": [],
     "systemd_units_mentioned": [
+      "pincabos-scoreview-router.service",
+      "pincabos-b2s-layer-guard.service",
+      "pincabos-place-backbox.service",
       "pincabos-display-roles.service",
       "pincabos-screen-topology.path",
       "pincabos-screen-topology.service",

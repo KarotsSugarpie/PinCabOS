@@ -283,8 +283,8 @@ def main() -> int:
                 'ScoreViewDisplay': '',
                 'ScoreViewFullScreen': '0',
 
-                'ScoreViewWndX': '0',
-                'ScoreViewWndY': '0',
+                'ScoreViewWndX': str(fulldmd_x),
+                'ScoreViewWndY': str(fulldmd_y),
                 'ScoreViewWidth': str(fulldmd_width),
                 'ScoreViewHeight': str(fulldmd_height),
 
