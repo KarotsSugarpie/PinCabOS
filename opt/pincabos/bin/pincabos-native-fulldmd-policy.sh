@@ -422,9 +422,48 @@ def directb2s_info(path: Path | None) -> dict:
             flags=re.IGNORECASE,
         )
         info["grill"] = int(grill.group(1)) if grill else None
+        info["autogen"] = bool(
+            re.search(r"<DMDImage\b[^>]*grill_auto", text, flags=re.IGNORECASE)
+        )
         return info
 
     return info
+
+
+FULLDMD_STYLE_DEFAULT_FILE = Path("/opt/pincabos/config/fulldmd-style.conf")
+
+
+def fulldmd_style(vpx: Path, info: dict) -> str:
+    """Style d'affichage de l'ecran FullDMD pour une table B2S, au choix du
+    joueur :
+
+      - 'art' : l'art FullDMD du pack (DMDImage d'auteur, ou panneau grill
+                genere) avec le DMD pose dedans par l'AutoPos ;
+      - 'dmd' : grand DMD seul (4:1 pleine largeur, fond noir) — l'art est
+                masque.
+
+    Resolution : sidecar par table `<table>.pincabos-fulldmd.json`
+    ({"style": "art"|"dmd"}) > fichier global fulldmd-style.conf (contenu
+    'art' ou 'dmd') > defaut intelligent : 'art' si la table fournit un
+    DMDImage d'AUTEUR, 'dmd' si l'art ne serait qu'un panneau grill
+    auto-genere (les hauts-parleurs reduisent la surface utile du DMD).
+    Prevu pour etre pilote par l'interface web (ecriture du sidecar)."""
+    sidecar = vpx.with_suffix(".pincabos-fulldmd.json")
+    try:
+        value = str(json.loads(sidecar.read_text(encoding="utf-8")).get("style", "")).lower()
+        if value in ("art", "dmd"):
+            return value
+    except Exception:
+        pass
+    try:
+        value = FULLDMD_STYLE_DEFAULT_FILE.read_text(encoding="utf-8").strip().lower()
+        if value in ("art", "dmd"):
+            return value
+    except Exception:
+        pass
+    if info.get("has_dmdimage") and not info.get("autogen"):
+        return "art"
+    return "dmd"
 
 
 def generate_dmdimage_from_grill(path: Path) -> bool:
@@ -547,6 +586,61 @@ def generate_dmdimage_from_grill(path: Path) -> bool:
     return True
 
 
+def remove_autogen_dmdimage(path: Path) -> bool:
+    """Opere l'inverse de generate_dmdimage_from_grill : retire le <DMDImage>
+    marque grill_auto (et UNIQUEMENT lui — jamais une image d'auteur) du
+    directb2s. Utilise quand le style FullDMD 'dmd' est choisi apres qu'un
+    panneau grill a ete genere. Idempotent, echec silencieux (fichier intact)."""
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return False
+
+    encoding = None
+    for candidate in ("utf-8-sig", "utf-16", "utf-16-le", "utf-16-be", "latin-1"):
+        try:
+            text = raw.decode(candidate)
+        except Exception:
+            continue
+        if "<DirectB2SData" in text:
+            encoding = candidate
+            break
+    if not encoding:
+        return False
+
+    start = None
+    for match in re.finditer(r"<DMDImage\b", text, flags=re.IGNORECASE):
+        end_tag = text.find("/>", match.start())
+        if end_tag < 0:
+            continue
+        if "grill_auto" in text[match.start():end_tag + 2]:
+            start = match.start()
+            end = end_tag + 2
+            break
+    if start is None:
+        return False
+
+    # Retirer aussi le saut de ligne insere devant la balise.
+    lead = text.rfind("\n", 0, start)
+    if lead >= 0 and not text[lead + 1:start].strip():
+        start = lead
+        if start > 0 and text[start - 1] == "\r":
+            start -= 1
+
+    text = text[:start] + text[end:]
+    try:
+        path.write_bytes(text.encode(encoding))
+    except OSError:
+        return False
+
+    try:
+        account = pwd.getpwnam("pinball")
+        os.chown(path, account.pw_uid, account.pw_gid)
+    except (KeyError, PermissionError):
+        pass
+    return True
+
+
 def has_table_local_pup(table_dir: Path) -> bool:
     try:
         entries = list(table_dir.iterdir())
@@ -586,13 +680,29 @@ if TARGET_VPX and TARGET_VPX.is_file():
     pup = has_table_local_pup(TARGET_VPX.parent)
     b2s = find_directb2s(TARGET_VPX)
     info = directb2s_info(b2s)
+    # Choix du style FullDMD (art du pack vs grand DMD seul) AVANT toute
+    # generation : en style 'dmd' le directb2s n'est pas modifie.
+    style = fulldmd_style(TARGET_VPX, info)
     # FullDMD sans <DMDImage> mais avec grill : l'art FullDMD est le bandeau du
     # bas de la BackglassImage. On genere le <DMDImage> manquant (une fois,
     # backup .bak-grill2dmd) pour que B2S affiche cet art sur l'ecran FullDMD.
-    if b2s and info["type3"] and not info["has_dmdimage"] and (info["grill"] or 0) > 0:
+    if (
+        style == "art"
+        and b2s
+        and info["type3"]
+        and not info["has_dmdimage"]
+        and (info["grill"] or 0) > 0
+    ):
         if generate_dmdimage_from_grill(b2s):
             info = directb2s_info(b2s)
+    # Style 'dmd' apres generation d'un panneau grill : retirer ce DMDImage
+    # auto-genere (jamais un DMDImage d'auteur) pour retomber sur le rendu
+    # grand DMD sur fond noir. Symetrique de la generation ci-dessus.
+    if b2s and style == "dmd" and info.get("autogen"):
+        if remove_autogen_dmdimage(b2s):
+            info = directb2s_info(b2s)
     grill = info["grill"] or 0
+    force_dmd = info["type3"] and style == "dmd"
     # Le placement fin du DMD n'est PAS pilotable au pixel dans ce moteur : selon
     # le mode, le DMD est pose automatiquement (plein largeur, en haut si le
     # plugin ScoreView est off, centre s'il est on). On s'appuie donc sur ce
@@ -612,8 +722,11 @@ if TARGET_VPX and TARGET_VPX.is_file():
             remove_sections=("PinCabOS.ScoreViewWindow",),
         )
         mode = "PUP" if fronton_au_pack else "PUP_FRONTON_B2S"
-    elif info["type3"] and (info["has_dmdimage"] or grill > 0) and not (
-        info["has_dmdimage"] and grill == 0
+    elif (
+        info["type3"]
+        and not force_dmd
+        and (info["has_dmdimage"] or grill > 0)
+        and not (info["has_dmdimage"] and grill == 0)
     ):
         # Art FullDMD B2S disponible : soit une image DMD dediee (<DMDImage>),
         # soit le bandeau grill du bas de l'image backglass (GrillHeight>0, le
@@ -634,7 +747,7 @@ if TARGET_VPX and TARGET_VPX.is_file():
             remove_sections=("PinCabOS.ScoreViewWindow",),
         )
         mode = "B2S_FULLDMD"
-    elif info["type3"] and info["has_dmdimage"]:
+    elif info["type3"] and info["has_dmdimage"] and not force_dmd:
         # FullDMD B2S avec image mais GrillHeight=0 : l'auto-placement B2S
         # degenere (DMD minuscule en haut, cas T3 Siggis). On active le plugin
         # ScoreView, qui affiche le DMD plein largeur CENTRE sur le FullDMD
@@ -652,9 +765,10 @@ if TARGET_VPX and TARGET_VPX.is_file():
         )
         mode = "B2S_FULLDMD_CENTRE" if DMD_RECT else "B2S_FULLDMD"
     elif info["type3"]:
-        # DMDType=3 mais AUCUN art FullDMD (pas de <DMDImage> ET GrillHeight=0) :
-        # rien a montrer cote B2S -> on affiche le VRAI DMD live sur le FullDMD
-        # (4:1 centre), backglass B2S conserve.
+        # Grand DMD seul sur le FullDMD : soit AUCUN art disponible (pas de
+        # <DMDImage> et GrillHeight=0), soit style 'dmd' choisi (l'art du pack
+        # est masque au profit d'un DMD 4:1 pleine largeur). Backglass B2S
+        # conserve.
         overwrite = {"Plugin.ScoreView": {"Enable": "1"}}
         if real_fill:
             overwrite["ScoreView"] = SCOREVIEW_WINDOW
@@ -682,6 +796,7 @@ if TARGET_VPX and TARGET_VPX.is_file():
         mode = "REAL_DMD_FULLDMD" if real_fill else "STANDARD_NO_FULLDMD"
 
     print(f"MODE={mode}")
+    print(f"STYLE={style}")
     print(f"DMD_INFO=type3={info['type3']} dmdimage={info['has_dmdimage']} grill={info['grill']}")
     print(f"TABLE={TARGET_VPX}")
     print(f"INI={table_ini}")
