@@ -197,7 +197,33 @@ def screen_geometry():
     }
 
 
-SCREEN = screen_geometry()
+def screen_geometry_from_roles():
+    """Geometrie de l'ecran du role fulldmd, publiee par la topologie
+    (display-aliases.env, derivee de screens.json). Prioritaire sur
+    l'heuristique xrandr ci-dessus, qui cherchait "l'ecran 1920x1200 sinon le
+    plus a droite" — c'est-a-dire l'ecran du cab de developpement."""
+    try:
+        values = {}
+        with open("/opt/pincabos/config/display-aliases.env", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    values[key.strip()] = value.strip().strip("'\"")
+        if values.get("PINCABOS_FULLDMD_AVAILABLE") == "1":
+            match = re.match(
+                r"^(\d+)x(\d+)\+(-?\d+)\+(-?\d+)$",
+                values.get("PINCABOS_FULLDMD_GEOMETRY", ""),
+            )
+            if match:
+                w, h, x, y = map(int, match.groups())
+                return {"x": x, "y": y, "w": w, "h": h}
+    except Exception:
+        pass
+    return None
+
+
+SCREEN = screen_geometry_from_roles() or screen_geometry()
 
 
 def load_table_layout():
