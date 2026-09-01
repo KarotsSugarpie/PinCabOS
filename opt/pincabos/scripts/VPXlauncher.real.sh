@@ -9,12 +9,34 @@ PUP_FONTS="/opt/pincabos/bin/pincabos-pup-fonts-install.sh"
 SCOREVIEW="/opt/pincabos/bin/pincabos-hybrid-scoreview-enable-prelaunch.py"
 
 SPLIT_HELPER="/opt/pincabos/bin/pincabos-pup-scoreview-split.py"
-PUP_LAYER="/opt/pincabos/bin/pincabos-pup-scoreview-layer-watch.sh"
 
 RAW_MODE_POLICY="/opt/pincabos/bin/pincabos-score-mode-policy.py"
 RAW_OVERLAY_WATCH="/opt/pincabos/bin/pincabos-pup-rawscore-overlay-watch.sh"
 
 REAL="/opt/pincabos/scripts/VPXlauncher.pincabos-original.sh"
+
+# PINCABOS_PLACE_FRONT_WINDOWS_V1
+# VPX ignore les positions demandees pour ses fenetres Backglass/Score View :
+# un placeur ONE-SHOT les pose a leur ecran de role des leur apparition puis
+# se termine (aucune boucle pendant le jeu) ; en fin de partie on remonte le
+# rideau VPinFE et on rend le focus au playfield. Remplace les services
+# place-backbox / b2s-layer-guard / scoreview-router.
+PLACER="/opt/pincabos/bin/pincabos-place-front-windows"
+
+run_with_front_windows() {
+    if [[ -x "$PLACER" ]]; then
+        "$PLACER" --place >/dev/null 2>&1 &
+    fi
+    local rc=0
+    set +e
+    "$REAL" "$@"
+    rc=$?
+    set -e
+    if [[ -x "$PLACER" ]]; then
+        "$PLACER" --restore >/dev/null 2>&1 || true
+    fi
+    return "$rc"
+}
 
 MODE="${PINCABOS_GAME_CHOICE:-original}"
 MODE="${MODE,,}"
@@ -84,16 +106,13 @@ case "$MODE" in
 "PINCABOS [PUP SPLIT] active=$PINCABOS_PUP_SPLIT_ACTIVE reason=$PINCABOS_PUP_SPLIT_REASON" \
             >&2
 
-        if [[ -x "$PUP_LAYER" ]]; then
-
-    if [[ -x "$RAW_OVERLAY_WATCH" ]]; then
-      "$RAW_OVERLAY_WATCH" "$$" "${TABLE:-unknown}" >/dev/null 2>&1 &
-    fi
-
-            "$PUP_LAYER" \
-                "$$" \
-                "${TABLE:-unknown}" \
-                >/dev/null 2>&1 &
+        # Le placement (y compris le mode split) est fait UNE fois par le
+        # placeur one-shot pincabos-place-front-windows, qui herite des
+        # variables PINCABOS_PUP_SPLIT_* / PINCABOS_SCOREVIEW_* exportees
+        # ci-dessus. L'ancien layer-watch refaisait la meme pose 5 fois par
+        # seconde pendant toute la partie.
+        if [[ -x "$RAW_OVERLAY_WATCH" ]]; then
+            "$RAW_OVERLAY_WATCH" "$$" "${TABLE:-unknown}" >/dev/null 2>&1 &
         fi
 
         if [[ "${PINCABOS_DMD_PRELAUNCH_ONLY:-0}" == "1" ]]; then
@@ -107,7 +126,8 @@ case "$MODE" in
 "PINCABOS [PUP SPLIT] NOGO : namespace mount nécessite root" \
                     >&2
 
-                exec "$REAL" "$@"
+                run_with_front_windows "$@"
+                exit "$?"
             fi
 
             cleanup_split(){
@@ -120,6 +140,10 @@ case "$MODE" in
             }
 
             trap cleanup_split EXIT INT TERM
+
+            if [[ -x "$PLACER" ]]; then
+                "$PLACER" --place >/dev/null 2>&1 &
+            fi
 
             set +e
 
@@ -151,11 +175,15 @@ case "$MODE" in
 
             set -e
 
+            if [[ -x "$PLACER" ]]; then
+                "$PLACER" --restore >/dev/null 2>&1 || true
+            fi
+
             exit "$RC"
         fi
 
-        exec "$REAL" "$@"
-    [[ -x "$RAW_MODE_POLICY" ]] && "$RAW_MODE_POLICY" pup "$@" || true
+        run_with_front_windows "$@"
+        exit "$?"
         ;;
 
     *)
@@ -186,7 +214,7 @@ case "$MODE" in
             exit 0
         fi
 
-        exec "$REAL" "$@"
-    [[ -x "$RAW_MODE_POLICY" ]] && "$RAW_MODE_POLICY" legacy "$@" || true
+        run_with_front_windows "$@"
+        exit "$?"
         ;;
 esac

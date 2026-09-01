@@ -3097,7 +3097,6 @@ pincabos_target_prepare_canonical_unit() {
 
 MANAGED_GRAPHICAL_UNITS=(
   pincabos-dashboard-live.service
-  pincabos-scoreview-router.service
   pincabos-fulldmd-no-title.service
   pincabos-backglass-bridge.service
   pincabos-switch-graphical-vt.service
@@ -3144,26 +3143,14 @@ definitions = {
             "pincabos-screen-topology-boot.service",
         ],
     },
-    "pincabos-scoreview-router.service": {
-        "after": [
-            "display-manager.service",
-            "pincabos-screen-topology-boot.service",
-        ],
-        "wants": [
-            "display-manager.service",
-            "pincabos-screen-topology-boot.service",
-        ],
-    },
     "pincabos-fulldmd-no-title.service": {
         "after": [
             "display-manager.service",
             "pincabos-screen-topology-boot.service",
-            "pincabos-scoreview-router.service",
         ],
         "wants": [
             "display-manager.service",
             "pincabos-screen-topology-boot.service",
-            "pincabos-scoreview-router.service",
         ],
     },
     "pincabos-backglass-bridge.service": {
@@ -3530,8 +3517,7 @@ SYSTEMD_VERIFY_LOG="$(
 systemd-analyze --root="$TARGET" verify \
   pincabos-screen-topology-boot.service \
   pincabos-vpinfe.service \
-  pincabos-dashboard-live.service \
-  pincabos-scoreview-router.service \
+  pincabos-dashboard-live.service \\
   pincabos-fulldmd-no-title.service \
   pincabos-switch-graphical-vt.service \
   pincabos-backglass-bridge.service \

@@ -1,7 +1,7 @@
 [Unit]
 Description=PinCabOS DMD per-table runtime persistence
-After=display-manager.service pincabos-scoreview-router.service
-Wants=display-manager.service pincabos-scoreview-router.service
+After=display-manager.service
+Wants=display-manager.service
 
 [Service]
 Type=simple
