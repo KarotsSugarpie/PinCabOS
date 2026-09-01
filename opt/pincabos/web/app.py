@@ -2298,116 +2298,17 @@ def gpu_page():
   </div>
 
   <div class="card">
-    <style>
-      .pco-gpu-assign-grid {{
-        display: grid;
-        grid-template-columns: minmax(260px, 1.4fr) minmax(220px, 1fr);
-        gap: 10px 16px;
-        align-items: end;
-        margin: 12px 0 14px 0;
-      }}
-      .pco-gpu-assign-grid label {{
-        display: block;
-        font-weight: 800;
-        margin: 0 0 6px 0;
-      }}
-      .pco-gpu-assign-grid select {{
-        width: 100%;
-      }}
-      @media (max-width: 760px) {{
-        .pco-gpu-assign-grid {{
-          grid-template-columns: 1fr;
-        }}
-      }}
-    </style>
+    <!-- PINCABOS_GPU_SCREENS_RENVOI_V1 : l'assignation des ecrans n'existe
+         plus qu'a UN seul endroit. Cette page dupliquait la page Ecrans avec
+         son propre chemin d'ecriture de screens.json : deux interfaces
+         concurrentes pour la meme verite. -->
     <h2>Assignation écrans</h2>
-
-    <p>
-      Sélectionne manuellement quel écran est le
-      <strong>Playfield / Primary</strong>, le
-      <strong>Backglass / Secondary</strong> et le
-      <strong>FullDMD / Tertiary</strong>.
-    </p>
-
-    <p class="warn">
-      Si le playfield apparaît sur le FullDMD, corrige l’ordre ici,
-      corrige l’ordre ici puis applique : VPinFE et VPX sont configurés ensemble, et le frontend redémarre automatiquement si aucune table ne tourne.
-    </p>
-
-    <form action="/gpu/apply-screens" method="post" onsubmit="return confirm('Appliquer cette assignation écran à PinCabOS et VPinFE ?');">
-      <div class="pco-gpu-assign-grid">
-        <div>
-          <label>Playfield / Primary</label>
-          {role_select("playfield", roles.get("playfield", ""))}
-        </div>
-        <div>
-          <label>Résolution</label>
-          {pco_gpu_mode_select("playfield", roles.get("playfield", ""))}
-        </div>
-      </div>
-
-      <div class="pco-gpu-assign-grid">
-        <div>
-          <label>Backglass / Secondary</label>
-          {role_select("backglass", roles.get("backglass", ""))}
-        </div>
-        <div>
-          <label>Résolution</label>
-          {pco_gpu_mode_select("backglass", roles.get("backglass", ""))}
-        </div>
-      </div>
-
-      <div class="pco-gpu-assign-grid">
-        <div>
-          <label>FullDMD / Tertiary</label>
-          {role_select("fulldmd", roles.get("fulldmd", ""))}
-        </div>
-        <div>
-          <label>Résolution</label>
-          {pco_gpu_mode_select("fulldmd", roles.get("fulldmd", ""))}
-        </div>
-      </div>
-
-      <div style="margin-top:14px; padding:12px; border:1px solid rgba(255,255,255,.12); border-radius:12px;">
-        <h3 style="margin-top:0;">Options PinCab</h3>
-
-        <label style="display:flex; align-items:center; gap:8px; margin:8px 0;">
-          <input type="checkbox" name="cabinet_mode" value="1" {cabmode_checked}>
-          <strong>Cabinet Mode</strong>
-        </label>
-
-        <label>Playfield Orientation</label><br>
-        <select name="playfield_orientation" style="width:95%; padding:8px; margin:6px 0;">
-          <option value="landscape" {orientation_landscape_selected}>Landscape</option>
-          <option value="portrait" {orientation_portrait_selected}>Portrait</option>
-        </select><br>
-
-        <label>Playfield Rotation</label><br>
-        <select name="playfield_rotation" style="width:95%; padding:8px; margin:6px 0;">
-          <option value="0" {rotation_0_selected}>0</option>
-          <option value="90" {rotation_90_selected}>90</option>
-          <option value="180" {rotation_180_selected}>180</option>
-          <option value="270" {rotation_270_selected}>270</option>
-        </select>
-      </div>
-
-      <button class="button" type="submit" style="margin-top:12px;">Appliquer assignation écrans</button>
-    </form>
-
-    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      {vpinfe_buttons}
-    </div>
-
-    <div class="pco-wallpaper-inside-assignation">
-      {wallpaper_html}
-    </div>
-
+    <p>L'assignation des rôles (Playfield, Backglass, FullDMD, Topper), les
+    résolutions et l'application au système se font désormais sur une seule
+    page&nbsp;:</p>
+    <p><a class="button" href="/screen">Ouvrir la page Écrans</a></p>
   </div>
-</div>
 
-
-
-<div class="grid" style="margin-top:20px;">
   <div class="card">
     <h2>Configuration écran PinCabOS actuelle</h2>
     <p>Source : <code>/opt/pincabos/config/screens/screens.json</code></p>

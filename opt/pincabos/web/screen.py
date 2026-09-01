@@ -299,6 +299,67 @@ pre{{background:#08000d;color:#eee;border-radius:12px;padding:12px;overflow:auto
 </style></head><body>{body}</body></html>"""
 
 
+def pincabos_screen_hub_html() -> str:
+    """Etat de la topologie (display-aliases.env, genere depuis screens.json)
+    et liens vers les autres reglages d'affichage : la page Ecrans est le
+    point d'entree unique."""
+    values = {}
+    try:
+        with open("/opt/pincabos/config/display-aliases.env", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, val = line.partition("=")
+                    values[key.strip()] = val.strip().strip("'\"")
+    except OSError:
+        pass
+
+    rows = []
+    for role, label in (
+        ("PLAYFIELD", "Playfield"),
+        ("BACKGLASS", "Backglass"),
+        ("FULLDMD", "FullDMD"),
+        ("TOPPER", "Topper"),
+    ):
+        available = values.get(f"PINCABOS_{role}_AVAILABLE") == "1"
+        output = values.get(f"PINCABOS_{role}_OUTPUT", "")
+        geometry = values.get(f"PINCABOS_{role}_GEOMETRY", "")
+        if available:
+            state = f'<span class="ok">{esc(output)} — {esc(geometry)}</span>'
+        else:
+            state = '<span style="opacity:.55;">non attribué</span>'
+        rows.append(
+            f'<tr><td style="padding:3px 12px 3px 0;"><b>{label}</b></td>'
+            f'<td style="padding:3px 0;">{state}</td></tr>'
+        )
+
+    status = values.get("PINCABOS_SCREEN_TOPOLOGY_STATUS", "?")
+    count = values.get("PINCABOS_SCREEN_COUNT", "?")
+    reboot = ""
+    try:
+        import os as _os
+        if _os.path.exists("/run/pincabos-kernel-reboot-required"):
+            reboot = ('<p class="warn" style="margin:8px 0 0;">Un redémarrage '
+                      "est en attente (maintenance kernel).</p>")
+    except Exception:
+        pass
+
+    return (
+        '<div class="card" style="margin-bottom:16px;">'
+        "<h3 style=\"margin-top:0;\">Topologie active</h3>"
+        f"<p style=\"margin:4px 0 8px;\">État : <b>{esc(status)}</b> — "
+        f"{esc(count)} écran(s) détecté(s). Les rôles suivent les dalles "
+        "physiques (EDID)&nbsp;: rebrancher les câbles autrement ne change rien.</p>"
+        f'<table style="border-collapse:collapse;">{"".join(rows)}</table>'
+        f"{reboot}"
+        '<p style="margin:12px 0 0;">'
+        '<a class="button secondary" href="/fulldmd">Calibration FullDMD / DMD</a> '
+        '<a class="button secondary" href="/fulldmd/style">Style FullDMD par table</a> '
+        '<a class="button secondary" href="/gpu">GPU / pilote</a>'
+        "</p></div>"
+    )
+
+
 @screen_bp.route("/screen", methods=["GET"])
 def screen_page():
     raw = xrandr_query()
@@ -371,6 +432,7 @@ def screen_page():
 
     body = f"""
     <h1>Assignation écrans</h1>
+    {pincabos_screen_hub_html()}
     <p>Sélectionne manuellement le Playfield / Primary, Backglass / Secondary, FullDMD / Tertiary — et le Topper pour les cabinets à 4 écrans — avec une résolution supportée par chaque écran.</p>
 
     <form method="post" action="/screen/save">
