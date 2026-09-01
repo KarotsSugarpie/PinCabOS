@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-exec /usr/bin/python3 /opt/pincabos/update/pincabos_updates.py "$@"
+# -u : sortie non bufferisee. Quand stdout est redirige vers un fichier
+# (page web de mise a jour), Python bufferise par blocs de 8 Ko et le
+# log reste vide jusqu'a la fin — la fenetre de suivi restait noire.
+exec /usr/bin/python3 -u /opt/pincabos/update/pincabos_updates.py "$@"
