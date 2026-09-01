@@ -1,7 +1,7 @@
 {
   "schema": "pincabos.module-inventory/v1",
   "inventory": {
-    "repository": "KarotsSugarpie/PinCabOS",
+    "repository": "PinCabOS/PinCabOS",
     "commit": "235bc4f5fa6d7cd92f3adf1e79b1b73d30b5bdb3",
     "generated_at": "2026-08-31T01:53:45.672Z",
     "method": "static_source_inventory",

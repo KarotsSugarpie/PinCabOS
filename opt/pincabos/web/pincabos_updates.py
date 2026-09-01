@@ -46,7 +46,7 @@ def _now():
 def _config():
     d = _load_json(CONFIG, {})
     return {
-        "repository": d.get("repository", "KarotsSugarpie/PinCabOS"),
+        "repository": d.get("repository", "PinCabOS/PinCabOS"),
         "channel": d.get("channel", "beta"),
     }
 

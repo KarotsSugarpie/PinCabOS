@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 clear
 
-REPO="KarotsSugarpie/PinCabOS"
+REPO="PinCabOS/PinCabOS"
 VERSION="alpha2.40-beta.20260822.1"
 CHANNEL="beta"
 STAMP="$(date +%Y%m%d-%H%M%S)"
@@ -227,7 +227,7 @@ def main():
       'schema':4,
       'version':args.version,
       'channel':args.channel,
-      'repository':'KarotsSugarpie/PinCabOS',
+      'repository':'PinCabOS/PinCabOS',
       'archive':'pincabos-update.tar.zst',
       'archive_sha256':sha256(archive),
       'files':'files.list',

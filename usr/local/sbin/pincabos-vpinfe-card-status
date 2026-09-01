@@ -397,7 +397,7 @@ def github_release(local_tag):
 
     repo = str(
         config.get("repository")
-        or "KarotsSugarpie/PinCabOS"
+        or "PinCabOS/PinCabOS"
     )
 
     channel = str(

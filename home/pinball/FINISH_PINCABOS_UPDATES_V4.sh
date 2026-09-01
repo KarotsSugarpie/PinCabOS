@@ -4,7 +4,7 @@ set -Eeuo pipefail
 WORK="/home/pinball/pincabos-updates-v4-source-20260822-090111"
 SRC="$WORK/source"
 
-REPO="KarotsSugarpie/PinCabOS"
+REPO="PinCabOS/PinCabOS"
 BRANCH="feat/updates-v4-clean-20260822-090111"
 VERSION="alpha2.40-beta.20260822.1"
 CHANNEL="beta"

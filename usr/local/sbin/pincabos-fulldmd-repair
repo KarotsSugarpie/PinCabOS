@@ -27,8 +27,8 @@ done
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP="/opt/pincabos/backups/fulldmd-repair/${STAMP}"
 STATIC_TARGET="/opt/pincabos/web/static/pincabos-fulldmd-compact.js"
-STATIC_URL="https://raw.githubusercontent.com/KarotsSugarpie/PinCabOS/main/opt/pincabos/web/static/pincabos-fulldmd-compact.js"
-RUNTIME_URL="https://raw.githubusercontent.com/KarotsSugarpie/PinCabOS/main/usr/local/sbin/pincabos-b2s-dmd-runtime-repair"
+STATIC_URL="https://raw.githubusercontent.com/PinCabOS/PinCabOS/main/opt/pincabos/web/static/pincabos-fulldmd-compact.js"
+RUNTIME_URL="https://raw.githubusercontent.com/PinCabOS/PinCabOS/main/usr/local/sbin/pincabos-b2s-dmd-runtime-repair"
 TMP_STATIC="$(mktemp /var/tmp/pincabos-fulldmd-slider.XXXXXX.js)"
 TMP_RUNTIME="$(mktemp /var/tmp/pincabos-fulldmd-runtime.XXXXXX.sh)"
 

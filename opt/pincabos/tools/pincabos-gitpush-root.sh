@@ -6,7 +6,7 @@ export PAGER=cat
 export GIT_EDITOR=true
 
 GITDIR="/opt/pincabos/.git-rootfs"
-REMOTE_OK="https://github.com/KarotsSugarpie/PinCabOS.git"
+REMOTE_OK="https://github.com/PinCabOS/PinCabOS.git"
 LOCK="/run/lock/pincabos-gitpush.lock"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 

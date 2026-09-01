@@ -1,6 +1,6 @@
 [Unit]
 Description=PinCabOS - surveille la bibliotheque de tables
-Documentation=https://github.com/KarotsSugarpie/PinCabOS
+Documentation=https://github.com/PinCabOS/PinCabOS
 ConditionPathExists=/usr/local/sbin/pincabos-sample-tables
 
 [Path]

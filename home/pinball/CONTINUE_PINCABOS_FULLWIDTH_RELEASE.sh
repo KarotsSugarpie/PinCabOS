@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO="KarotsSugarpie/PinCabOS"
+REPO="PinCabOS/PinCabOS"
 WORK="/home/pinball/pincabos-fullwidth-auto-release-20260822-093232"
 SRC="$WORK/source"
 BRANCH="feat/fullwidth-updates-auto-release-20260822-093232"
