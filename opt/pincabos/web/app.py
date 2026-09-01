@@ -5184,37 +5184,19 @@ def save_fulldmd_to_configs(data):
         "note": "PinCabOS FullDMD visible area calibration"
     }, function_name)
 
-    # VPinFE officiel: modifier uniquement [Displays].
-    vpinfe_ini = pincabos_vpinfe_ini_path()
-    pincabos_backup_config_file(vpinfe_ini, function_name)
-
-    vpinfe_lines = pincabos_read_ini_lines(vpinfe_ini)
-    vpinfe_lines = pincabos_set_ini_key_plain(vpinfe_lines, "Displays", "dmdscreenid", screen_id)
-    vpinfe_lines = pincabos_set_ini_key_plain(vpinfe_lines, "Displays", "dmdwindowoverride", geometry)
-    vpinfe_lines = pincabos_set_ini_key_plain(vpinfe_lines, "Displays", "fulldmdscreenid", screen_id)
-    vpinfe_lines = pincabos_set_ini_key_plain(vpinfe_lines, "Displays", "fulldmdx", str(x))
-    vpinfe_lines = pincabos_set_ini_key_plain(vpinfe_lines, "Displays", "fulldmdy", str(y))
-    vpinfe_lines = pincabos_set_ini_key_plain(vpinfe_lines, "Displays", "fulldmdwidth", str(w))
-    vpinfe_lines = pincabos_set_ini_key_plain(vpinfe_lines, "Displays", "fulldmdheight", str(h))
-    pincabos_write_ini_lines(vpinfe_ini, vpinfe_lines)
-
-    # VPinballX.ini: modifier uniquement [Displays].
-    vpx_ini = pincabos_vpx_ini_path()
-    pincabos_backup_config_file(vpx_ini, function_name)
-
-    vpx_lines = pincabos_read_ini_lines(vpx_ini)
-    vpx_lines = pincabos_set_ini_key_plain(vpx_lines, "Displays", "dmdscreenid", screen_id)
-    vpx_lines = pincabos_set_ini_key_plain(vpx_lines, "Displays", "dmdwindowoverride", geometry)
-    vpx_lines = pincabos_set_ini_key_plain(vpx_lines, "Displays", "fulldmdscreenid", screen_id)
-    vpx_lines = pincabos_set_ini_key_plain(vpx_lines, "Displays", "fulldmdx", str(x))
-    vpx_lines = pincabos_set_ini_key_plain(vpx_lines, "Displays", "fulldmdy", str(y))
-    vpx_lines = pincabos_set_ini_key_plain(vpx_lines, "Displays", "fulldmdwidth", str(w))
-    vpx_lines = pincabos_set_ini_key_plain(vpx_lines, "Displays", "fulldmdheight", str(h))
-    pincabos_write_ini_lines(vpx_ini, vpx_lines)
-
     subprocess.run(["/bin/chown", "-R", "pinball:pinball", "/opt/pincabos/config"], timeout=5)
-    subprocess.run(["/bin/chown", "pinball:pinball", str(vpinfe_ini)], timeout=5)
-    subprocess.run(["/bin/chown", "pinball:pinball", str(vpx_ini)], timeout=5)
+
+    # Un seul ecrivain pour les INI : la topologie ecran rederive
+    # [Displays] / [PinCabOs.*] des deux INI depuis screens.json + cette
+    # calibration (le shim sync-dmd-calibrations invoque la topologie).
+    try:
+        subprocess.run(
+            ["/usr/bin/sudo", str(pco_script("sync_dmd_calibrations"))],
+            timeout=20,
+            check=False,
+        )
+    except Exception:
+        pass
 
 
 

@@ -19,6 +19,8 @@ STATE = RUNTIME / "state.json"
 
 VPINFE = Path("/home/pinball/.config/vpinfe/vpinfe.ini")
 VPX = Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini")
+CAL_FULLDMD = ROOT / "config/fulldmd-calibration.json"
+CAL_DMD = ROOT / "config/dmd-calibration.json"
 
 ROLES = ("playfield", "backglass", "fulldmd", "topper")
 
@@ -389,6 +391,70 @@ def update_global(text, key, value):
     return output
 
 
+# PINCABOS_TOPOLOGY_CALIBRATIONS_V1
+# La topologie est l'UNIQUE ecrivain des sections d'affichage des deux INI.
+# Les rectangles calibres par l'utilisateur (zone visible du FullDMD, fenetre
+# DMD) restent stockes dans les JSON de calibration — la topologie les relit
+# et les ecrit avec les identifiants de roles, en une seule passe atomique.
+# Avant, trois ecrivains (topologie, sync-dmd-calibrations, WebApp) posaient
+# chacun leur morceau dans les memes sections, a des moments differents.
+def load_calibration(path):
+    """Rectangle calibre {x, y, width, height}, ou None si absent/invalide."""
+    data = load_json(path, {})
+    try:
+        x = int(data.get("x"))
+        y = int(data.get("y"))
+        width = int(data.get("width"))
+        height = int(data.get("height"))
+    except (TypeError, ValueError):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return {"x": x, "y": y, "width": width, "height": height}
+
+
+def calibration_sections(cal_full, cal_dmd, stamp):
+    """Cles derivees des calibrations pour [Displays] / [PinCabOs.*]."""
+    displays = {}
+    fulldmd = {}
+    dmd = {}
+    screens = {}
+    if cal_full:
+        x, y, w, h = cal_full["x"], cal_full["y"], cal_full["width"], cal_full["height"]
+        x11 = f"{w}x{h}+{x}+{y}"
+        displays.update({
+            "fulldmdx": str(x), "fulldmdy": str(y),
+            "fulldmdwidth": str(w), "fulldmdheight": str(h),
+            "dmdwindowoverride": f"{x},{y},{w},{h}",
+        })
+        fulldmd.update({
+            "x": str(x), "y": str(y), "width": str(w), "height": str(h),
+            "geometry": x11, "updated_at": stamp,
+        })
+        screens.update({
+            "fulldmd_x": str(x), "fulldmd_y": str(y),
+            "fulldmd_width": str(w), "fulldmd_height": str(h),
+            "fulldmd_geometry": x11,
+        })
+    if cal_dmd:
+        x, y, w, h = cal_dmd["x"], cal_dmd["y"], cal_dmd["width"], cal_dmd["height"]
+        x11 = f"{w}x{h}+{x}+{y}"
+        displays.update({
+            "dmdx": str(x), "dmdy": str(y),
+            "dmdwidth": str(w), "dmdheight": str(h),
+        })
+        dmd.update({
+            "x": str(x), "y": str(y), "width": str(w), "height": str(h),
+            "geometry": x11, "updated_at": stamp,
+        })
+        screens.update({
+            "dmd_x": str(x), "dmd_y": str(y),
+            "dmd_width": str(w), "dmd_height": str(h),
+            "dmd_geometry": x11,
+        })
+    return displays, fulldmd, dmd, screens
+
+
 def apply_consumers(roles):
     """Prépare les prochains démarrages, sans redémarrer aucun service."""
 
@@ -417,6 +483,12 @@ def apply_consumers(roles):
 
     full_enabled = "1" if roles["fulldmd"]["available"] else "0"
 
+    cal_full = load_calibration(CAL_FULLDMD)
+    cal_dmd = load_calibration(CAL_DMD)
+    displays_cal, fulldmd_cal, dmd_cal, screens_cal = calibration_sections(
+        cal_full, cal_dmd, now()
+    )
+
     if VPINFE.exists():
         config = VPINFE.read_text(encoding="utf-8")
 
@@ -425,21 +497,25 @@ def apply_consumers(roles):
             "bgscreenid": bg_id,
             "dmdscreenid": dmd_id,
             "fulldmdscreenid": dmd_id,
+            **displays_cal,
         })
 
         config = update_section(config, "PinCabOs.FullDMD", {
             "enabled": full_enabled,
             "screen_id": dmd_id,
+            **fulldmd_cal,
         })
 
         config = update_section(config, "PinCabOs.Screens", {
             "fulldmd_id": dmd_id,
             "dmd_id": dmd_id,
+            **screens_cal,
         })
 
         config = update_section(config, "PinCabOs.DMD", {
             "enabled": full_enabled,
             "screen_id": dmd_id,
+            **dmd_cal,
         })
 
         atomic_write(VPINFE, config)
@@ -487,6 +563,31 @@ def apply_consumers(roles):
         # positions demandees comme pour les autres fenetres secondaires).
         config = update_section(config, "Topper", {
             "TopperOutput": "1" if roles["topper"]["available"] else "0",
+        })
+
+        # Les memes sections que VPinFE : le moteur VPX les ignore, mais la
+        # WebApp (resume de la page FullDMD) et les outils les lisent.
+        config = update_section(config, "Displays", {
+            "tablescreenid": str(playfield["screen_id"]),
+            "bgscreenid": bg_id,
+            "dmdscreenid": dmd_id,
+            "fulldmdscreenid": dmd_id,
+            **displays_cal,
+        })
+        config = update_section(config, "PinCabOs.FullDMD", {
+            "enabled": full_enabled,
+            "screen_id": dmd_id,
+            **fulldmd_cal,
+        })
+        config = update_section(config, "PinCabOs.Screens", {
+            "fulldmd_id": dmd_id,
+            "dmd_id": dmd_id,
+            **screens_cal,
+        })
+        config = update_section(config, "PinCabOs.DMD", {
+            "enabled": full_enabled,
+            "screen_id": dmd_id,
+            **dmd_cal,
         })
 
         atomic_write(VPX, config)
