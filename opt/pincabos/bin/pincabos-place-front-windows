@@ -91,6 +91,24 @@ read -r FD_X FD_Y FD_W FD_H <<< "$(parse_geometry "$FD_GEOM")" || true
 read -r TP_X TP_Y TP_W TP_H <<< "$(parse_geometry "$TP_GEOM")" || true
 [[ -n "${BG_X:-}" || -n "${FD_X:-}" || -n "${TP_X:-}" ]] || exit 0
 
+# Mode « split » PuP (variables exportees par le lanceur via
+# pincabos-pup-scoreview-split.py) : le Score View n'occupe qu'un sous-
+# rectangle de l'ecran FullDMD, et la fenetre Topper de VPX sert de calque
+# plein ecran au pack SUR le FullDMD (sans etat above, sous le Score View).
+# C'etait le travail de pincabos-pup-scoreview-layer-watch.sh — qui le
+# refaisait 5 fois par seconde pendant toute la partie, raise compris, sans
+# meme comparer l'etat. Une seule pose suffit.
+SPLIT="${PINCABOS_PUP_SPLIT_ACTIVE:-0}"
+SV_X="${FD_X:-}"; SV_Y="${FD_Y:-}"; SV_W="${FD_W:-}"; SV_H="${FD_H:-}"
+if [[ "$SPLIT" == "1" && -n "${FD_X:-}" ]]; then
+    SV_X=$((FD_X + ${PINCABOS_SCOREVIEW_REL_X:-0}))
+    SV_Y=$((FD_Y + ${PINCABOS_SCOREVIEW_REL_Y:-0}))
+    SV_W="${PINCABOS_SCOREVIEW_W:-640}"
+    SV_H="${PINCABOS_SCOREVIEW_H:-160}"
+    # le calque du pack prend l'ecran FullDMD entier
+    TP_X="$FD_X"; TP_Y="$FD_Y"; TP_W="$FD_W"; TP_H="$FD_H"
+fi
+
 placed_bg=0
 placed_sv=0
 placed_tp=0
@@ -115,12 +133,13 @@ for _ in $(seq 1 60); do
         fi
     fi
 
-    if [[ "$placed_sv" == "0" && -n "${FD_X:-}" ]]; then
+    if [[ "$placed_sv" == "0" && -n "${SV_X:-}" ]]; then
         id="$(awk '/Visual Pinball Score View$/{print $1;exit}' <<< "$listing")"
         if [[ -n "$id" ]]; then
             run_x wmctrl -ir "$id" -b remove,maximized_vert,maximized_horz,fullscreen >/dev/null 2>&1 || true
-            run_x wmctrl -ir "$id" -e "0,$FD_X,$FD_Y,$FD_W,$FD_H" >/dev/null 2>&1 || true
+            run_x wmctrl -ir "$id" -e "0,$SV_X,$SV_Y,$SV_W,$SV_H" >/dev/null 2>&1 || true
             run_x wmctrl -ir "$id" -b add,above >/dev/null 2>&1 || true
+            run_x wmctrl -ir "$id" -b add,skip_taskbar,skip_pager >/dev/null 2>&1 || true
             placed_sv=1
         fi
     fi
@@ -130,6 +149,11 @@ for _ in $(seq 1 60); do
         if [[ -n "$id" ]]; then
             run_x wmctrl -ir "$id" -b remove,maximized_vert,maximized_horz,fullscreen >/dev/null 2>&1 || true
             run_x wmctrl -ir "$id" -e "0,$TP_X,$TP_Y,$TP_W,$TP_H" >/dev/null 2>&1 || true
+            if [[ "$SPLIT" == "1" ]]; then
+                # calque du pack : jamais au-dessus du Score View
+                run_x wmctrl -ir "$id" -b remove,above >/dev/null 2>&1 || true
+            fi
+            run_x wmctrl -ir "$id" -b add,skip_taskbar,skip_pager >/dev/null 2>&1 || true
             placed_tp=1
         fi
     fi

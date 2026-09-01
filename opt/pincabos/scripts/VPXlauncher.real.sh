@@ -9,7 +9,6 @@ PUP_FONTS="/opt/pincabos/bin/pincabos-pup-fonts-install.sh"
 SCOREVIEW="/opt/pincabos/bin/pincabos-hybrid-scoreview-enable-prelaunch.py"
 
 SPLIT_HELPER="/opt/pincabos/bin/pincabos-pup-scoreview-split.py"
-PUP_LAYER="/opt/pincabos/bin/pincabos-pup-scoreview-layer-watch.sh"
 
 RAW_MODE_POLICY="/opt/pincabos/bin/pincabos-score-mode-policy.py"
 RAW_OVERLAY_WATCH="/opt/pincabos/bin/pincabos-pup-rawscore-overlay-watch.sh"
@@ -107,16 +106,13 @@ case "$MODE" in
 "PINCABOS [PUP SPLIT] active=$PINCABOS_PUP_SPLIT_ACTIVE reason=$PINCABOS_PUP_SPLIT_REASON" \
             >&2
 
-        if [[ -x "$PUP_LAYER" ]]; then
-
-    if [[ -x "$RAW_OVERLAY_WATCH" ]]; then
-      "$RAW_OVERLAY_WATCH" "$$" "${TABLE:-unknown}" >/dev/null 2>&1 &
-    fi
-
-            "$PUP_LAYER" \
-                "$$" \
-                "${TABLE:-unknown}" \
-                >/dev/null 2>&1 &
+        # Le placement (y compris le mode split) est fait UNE fois par le
+        # placeur one-shot pincabos-place-front-windows, qui herite des
+        # variables PINCABOS_PUP_SPLIT_* / PINCABOS_SCOREVIEW_* exportees
+        # ci-dessus. L'ancien layer-watch refaisait la meme pose 5 fois par
+        # seconde pendant toute la partie.
+        if [[ -x "$RAW_OVERLAY_WATCH" ]]; then
+            "$RAW_OVERLAY_WATCH" "$$" "${TABLE:-unknown}" >/dev/null 2>&1 &
         fi
 
         if [[ "${PINCABOS_DMD_PRELAUNCH_ONLY:-0}" == "1" ]]; then
