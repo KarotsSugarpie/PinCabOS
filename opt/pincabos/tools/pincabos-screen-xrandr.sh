@@ -56,6 +56,25 @@ def mode_height(mode):
     m = re.match(r"^(\d+)x(\d+)$", str(mode or ""))
     return int(m.group(2)) if m else 0
 
+# PINCABOS_APPLY_ROLE_POSITIONS_V1
+# La position de chaque sortie vient de la GEOMETRIE du role (objets de
+# premier niveau de screens.json, la source de verite), plus jamais d'un
+# ordre canonique playfield->backglass->fulldmd : cet ordre correspondait au
+# cablage du cab de developpement et PERMUTAIT physiquement les ecrans de
+# tout cabinet range differemment (ex. playfield->fulldmd->backglass) a
+# chaque application.
+def role_position(role, output):
+    top = data.get(role)
+    if not isinstance(top, dict):
+        return ""
+    name = str(top.get("output") or top.get("name") or "")
+    if output and name and name != output:
+        return ""
+    m = re.match(r"^\d+x\d+\+(-?\d+)\+(-?\d+)$", str(top.get("geometry") or ""))
+    if m:
+        return f"{m.group(1)}x{m.group(2)}"
+    return ""
+
 def role_from_data(role):
     roles = data.get("roles") if isinstance(data.get("roles"), dict) else {}
     r = roles.get(role)
@@ -67,6 +86,7 @@ def role_from_data(role):
             "output": out,
             "mode": mode,
             "rate": rate,
+            "pos": role_position(role, out),
         }
 
     top = data.get(role)
@@ -80,9 +100,10 @@ def role_from_data(role):
             "output": out,
             "mode": mode,
             "rate": rate,
+            "pos": role_position(role, out),
         }
 
-    return {"output": "", "mode": "", "rate": ""}
+    return {"output": "", "mode": "", "rate": "", "pos": ""}
 
 def run(cmd):
     print("+", " ".join(cmd), flush=True)
@@ -110,7 +131,7 @@ if pf.get("output") and pf.get("mode"):
         "xrandr",
         "--output", pf["output"],
         "--mode", pf["mode"],
-        "--pos", "0x0",
+        "--pos", pf.get("pos") or "0x0",
         "--rotate", rotate,
         "--primary",
     ]
@@ -124,7 +145,7 @@ if bg.get("output") and bg.get("mode"):
         "xrandr",
         "--output", bg["output"],
         "--mode", bg["mode"],
-        "--pos", f"{x}x0",
+        "--pos", bg.get("pos") or f"{x}x0",
         "--rotate", "normal",
     ]
     if bg.get("rate"):
@@ -137,7 +158,7 @@ if fd.get("output") and fd.get("mode"):
         "xrandr",
         "--output", fd["output"],
         "--mode", fd["mode"],
-        "--pos", f"{x}x0",
+        "--pos", fd.get("pos") or f"{x}x0",
         "--rotate", "normal",
     ]
     if fd.get("rate"):
@@ -157,16 +178,19 @@ if not items:
 for cmd in items:
     run(cmd)
 
-# PINCABOS_LAYOUT_NO_OVERLAP_V1
+# PINCABOS_LAYOUT_NO_OVERLAP_V2
 # Les positions ci-dessus derivent de la largeur du MODE configure. Un role
 # laisse sur "Auto / inchange" donne une largeur nulle, et l'ecran suivant se
 # retrouve pose sur le precedent : X accepte sans broncher deux zones qui se
 # recouvrent, l'affichage devient incoherent, et rien ne le signale.
 # On relit donc les largeurs REELLEMENT appliquees et on recale de gauche a
-# droite. Sans effet quand la disposition est deja juste.
+# droite — dans l'ordre des POSITIONS APPLIQUEES. La V1 recalait dans
+# l'ordre canonique playfield->backglass->fulldmd : sur un cabinet range
+# autrement (ex. playfield->fulldmd->backglass), elle PERMUTAIT physiquement
+# les deux ecrans de fronton juste apres qu'ils aient ete poses au bon
+# endroit.
 import subprocess as _sp
 
-_ordre = [r.get("output") for r in (pf, bg, fd) if r.get("output")]
 _geo = {}
 try:
     _brut = _sp.run(["xrandr", "--query"], text=True, capture_output=True).stdout
@@ -177,11 +201,14 @@ for _ligne in _brut.splitlines():
     if _m:
         _geo[_m.group(1)] = (int(_m.group(2)), int(_m.group(4)))
 
+_ordre = sorted(
+    [r.get("output") for r in (pf, bg, fd) if r.get("output") and r.get("output") in _geo],
+    key=lambda s: _geo[s][1],
+)
+
 _x = 0
 _recale = []
 for _sortie in _ordre:
-    if _sortie not in _geo:
-        continue
     _largeur, _pos = _geo[_sortie]
     if _pos != _x:
         _recale += ["--output", _sortie, "--pos", f"{_x}x0"]
@@ -193,6 +220,18 @@ if _recale:
 
 print("GO: xrandr layout appliqué")
 PY
+
+            # La topologie doit revoir le monde APRES un changement de
+            # layout : un repositionnement xrandr n'emet aucun evenement drm
+            # (le hotplug ne le voit pas) et, sans resynchronisation,
+            # screens.json / display-aliases gardent les anciennes geometries
+            # — le placement des fenetres de jeu part alors au mauvais ecran
+            # jusqu'au prochain redemarrage.
+            if [ -x /usr/local/libexec/pincabos/pincabos-screen-topology-preflight.sh ]; then
+              flock -w 15 /run/pincabos-screen-topology.lock \
+                /usr/local/libexec/pincabos/pincabos-screen-topology-preflight.sh \
+                >/dev/null 2>&1 || true
+            fi
             return 0
           fi
         fi
