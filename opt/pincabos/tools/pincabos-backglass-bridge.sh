@@ -85,22 +85,64 @@ find_matching_config() {
 
 geometry_for_output() {
   local output="$1"
-  local geometry
 
-  geometry="$(
-    xrandr --query 2>/dev/null |
-    awk -v output="$output" '
-      $1 == output && $2 == "connected" {
-        for (i = 3; i <= NF; i++) {
-          if ($i ~ /^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$/) {
-            print $i
-            exit
-          }
+  xrandr --query 2>/dev/null |
+  awk -v output="$output" '
+    $1 == output && $2 == "connected" {
+      for (i = 3; i <= NF; i++) {
+        if ($i ~ /^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$/) {
+          print $i
+          exit
         }
       }
-    '
-  )"
+    }
+  '
+}
 
+# PINCABOS_BACKGLASS_ROLE_FROM_SCREENS_V1
+# Geometrie d'un role d'ecran (backglass/fulldmd) depuis display-aliases.env,
+# lui-meme genere depuis screens.json (source de verite du cab). Vide si absent.
+role_geometry() {
+  local role="$1"
+  local env_file="/opt/pincabos/config/display-aliases.env"
+
+  [[ -f "$env_file" ]] || return 0
+  (
+    # shellcheck disable=SC1090
+    . "$env_file" 2>/dev/null || exit 0
+    case "$role" in
+      backglass)
+        [[ "${PINCABOS_BACKGLASS_AVAILABLE:-0}" == "1" ]] &&
+          printf '%s\n' "${PINCABOS_BACKGLASS_GEOMETRY:-}"
+        ;;
+      fulldmd)
+        [[ "${PINCABOS_FULLDMD_AVAILABLE:-0}" == "1" ]] &&
+          printf '%s\n' "${PINCABOS_FULLDMD_GEOMETRY:-}"
+        ;;
+    esac
+  ) || true
+}
+
+# Resolution de la geometrie cible du backglass :
+#   1. DisplayOutput peut nommer un ROLE (backglass/fulldmd) -> screens.json ;
+#   2. sinon, la sortie X11 nommee, SEULEMENT si elle existe sur CE cab (le
+#      nom ecrit dans la table vient de la machine de l'auteur, ex. DP-1) ;
+#   3. sinon, le role backglass reel de ce cab ;
+#   4. en dernier recours, l'ancien repli historique.
+resolve_backglass_geometry() {
+  local output="$1"
+  local geometry=""
+
+  case "${output,,}" in
+    backglass|fulldmd)
+      geometry="$(role_geometry "${output,,}")"
+      ;;
+    *)
+      geometry="$(geometry_for_output "$output")"
+      ;;
+  esac
+
+  [[ -n "$geometry" ]] || geometry="$(role_geometry backglass)"
   echo "${geometry:-1920x1080+3840+0}"
 }
 
@@ -178,7 +220,7 @@ start_for_config() {
     return 1
   }
 
-  geometry="$(geometry_for_output "$output")"
+  geometry="$(resolve_backglass_geometry "$output")"
 
   if [[ "$geometry" =~ ^([0-9]+)x([0-9]+)\+([0-9]+)\+([0-9]+)$ ]]; then
     width="${BASH_REMATCH[1]}"
