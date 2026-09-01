@@ -1761,24 +1761,6 @@ chown -R pinball:pinball \
   "$TARGET/opt/pincabos/state" 2>/dev/null || true
 
 echo
-echo "=== Disable competing legacy display services ==="
-
-for unit in \
-  pincabos-display-roles.service \
-  pincabos-display-role-app-sync.service \
-  pincabos-display-role-finalizer.service \
-  pincabos-display-role-normalizer.service \
-  pincabos-screen-topology.service
-do
-  rm -f \
-    "$TARGET/etc/systemd/system/graphical.target.wants/$unit" \
-    "$TARGET/etc/systemd/system/multi-user.target.wants/$unit" \
-    "$TARGET/etc/systemd/system/default.target.wants/$unit" || true
-
-  ln -sfn /dev/null "$TARGET/etc/systemd/system/$unit"
-done
-
-echo
 echo "=== Install first-boot universal GPU configuration ==="
 
 cat > "$TARGET/usr/local/sbin/pincabos-firstboot-hardware-autoconfig" <<'HARDWARE_AUTOCONFIG'
@@ -3008,47 +2990,6 @@ mkdir -p \
   "$TARGET/etc/systemd/system/default.target.wants" \
   "$TARGET/etc/systemd/system/timers.target.wants" \
   "$TARGET/etc/systemd/system/paths.target.wants"
-
-echo
-echo "=== Mask all obsolete display and topology units ==="
-
-for legacy_unit in \
-  pincabos-display-roles.service \
-  pincabos-display-role-app-sync.service \
-  pincabos-display-role-finalizer.service \
-  pincabos-display-role-normalizer.service \
-  pincabos-screen-topology.service \
-  pincabos-display-roles.path \
-  pincabos-display-roles.timer \
-  pincabos-display-role-app-sync.path \
-  pincabos-display-role-app-sync.timer \
-  pincabos-display-role-finalizer.path \
-  pincabos-display-role-finalizer.timer \
-  pincabos-display-role-normalizer.path \
-  pincabos-display-role-normalizer.timer \
-  pincabos-screen-topology.path \
-  pincabos-screen-topology.timer
-do
-  find "$TARGET/etc/systemd/system" \
-    -mindepth 2 \
-    -maxdepth 3 \
-    -type l \
-    -name "$legacy_unit" \
-    -delete 2>/dev/null || true
-
-  rm -rf \
-    "$TARGET/etc/systemd/system/$legacy_unit.d" \
-    2>/dev/null || true
-
-  rm -f \
-    "$TARGET/etc/systemd/system/$legacy_unit" \
-    2>/dev/null || true
-
-  ln -s /dev/null \
-    "$TARGET/etc/systemd/system/$legacy_unit"
-
-  echo "Masked obsolete unit: $legacy_unit"
-done
 
 pincabos_target_find_unit() {
   local unit="$1"
@@ -5930,7 +5871,8 @@ PCO_KEEP_PATHS=(
   # Display identity of THIS machine. The payload deliberately wipes it so a
   # fresh install redetects its own screens; on an update that would throw away
   # the user's own configuration. screens.json is the source of truth here:
-  # pincabos-display-roles.py resyncs vpinfe.ini and VPinballX.ini from it, so
+  # the topology engine and the launch policies resync vpinfe.ini and
+  # VPinballX.ini from it, so
   # losing it is enough to have backglass and fulldmd swap places at next boot.
   "opt/pincabos/config/screens"
   "opt/pincabos/config/display-aliases.env"

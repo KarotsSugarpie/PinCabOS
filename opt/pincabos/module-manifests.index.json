@@ -4,10 +4,10 @@
   "commit": "235bc4f5fa6d7cd92f3adf1e79b1b73d30b5bdb3",
   "generated_at": "2026-08-31T01:53:45.672Z",
   "summary": {
-    "python_modules": 98,
+    "python_modules": 94,
     "doctor_modules": 10,
     "installer_shell_modules": 5,
-    "total": 114,
+    "total": 110,
     "locking_enabled": false,
     "maintenance_shell_modules": 1
   },
@@ -25,13 +25,6 @@
       "manifest": "etc/python3.14/sitecustomize.json",
       "scope": "system",
       "kind": "python_library"
-    },
-    {
-      "module": "pincabos-display-roles",
-      "source": "opt/pincabos/bin/pincabos-display-roles.py",
-      "manifest": "opt/pincabos/bin/pincabos-display-roles.json",
-      "scope": "runtime_bin",
-      "kind": "executable"
     },
     {
       "module": "pincabos-fulldmd-autoarrange",
@@ -207,27 +200,6 @@
       "manifest": "opt/pincabos/runtime-patches/pincabos_webapp_bootstrap.json",
       "scope": "runtime_patch",
       "kind": "python_library"
-    },
-    {
-      "module": "pincabos-display-role-app-sync",
-      "source": "opt/pincabos/scripts/pincabos-display-role-app-sync.py",
-      "manifest": "opt/pincabos/scripts/pincabos-display-role-app-sync.json",
-      "scope": "runtime_script",
-      "kind": "executable"
-    },
-    {
-      "module": "pincabos-display-role-finalizer",
-      "source": "opt/pincabos/scripts/pincabos-display-role-finalizer.py",
-      "manifest": "opt/pincabos/scripts/pincabos-display-role-finalizer.json",
-      "scope": "runtime_script",
-      "kind": "executable"
-    },
-    {
-      "module": "pincabos-display-role-normalizer",
-      "source": "opt/pincabos/scripts/pincabos-display-role-normalizer.py",
-      "manifest": "opt/pincabos/scripts/pincabos-display-role-normalizer.json",
-      "scope": "runtime_script",
-      "kind": "executable"
     },
     {
       "module": "pincabos-screen-topology",
