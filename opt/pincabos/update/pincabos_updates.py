@@ -224,6 +224,16 @@ def allowed(rel):
     forbidden=('opt/pincabos/web/.venv/','opt/pincabos/web/backups/','opt/pincabos/build/','opt/pincabos/backups/','opt/pincabos/logs/')
     return not rel.startswith(forbidden) and '__pycache__' not in Path(rel).parts and not rel.endswith(('.pyc','.pyo'))
 
+# PINCABOS_UPDATER_LEGACY_ALIAS_V1
+# Le depot a ete transfere de KarotsSugarpie/PinCabOS vers PinCabOS/PinCabOS.
+# Les deux noms designent le meme depot (GitHub redirige) : la validation
+# doit les traiter comme equivalents, sinon un cabinet configure avec un nom
+# refuse les releases publiees sous l'autre — c'est l'oeuf-et-poule qui a
+# bloque le parc sur la 3.06 juste apres le transfert (resolu par une
+# release-pont 3.07 aux metadata a l'ancien nom).
+def canonical_repo(name):
+    return 'PinCabOS/PinCabOS' if str(name) == 'KarotsSugarpie/PinCabOS' else str(name)
+
 def release():
     repo, channel=config()
     data=api_json(f'https://api.github.com/repos/{repo}/releases?per_page=30')
@@ -238,7 +248,7 @@ def release():
         except Exception:
             continue
         if int(meta.get('schema',0)) < 4: continue
-        if meta.get('repository') != repo: continue
+        if canonical_repo(meta.get('repository')) != canonical_repo(repo): continue
         if meta.get('version') != r.get('tag_name'): continue
         if channel!='dev' and meta.get('channel') != channel: continue
         meta['_release']=r; meta['_assets']=assets
