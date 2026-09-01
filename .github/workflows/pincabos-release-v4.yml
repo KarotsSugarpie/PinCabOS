@@ -61,9 +61,9 @@ jobs:
         run: |
           set -Eeuo pipefail
 
-          # Alpha 2.x uses the PR number as its monotonically increasing
-          # release number. A lower-numbered PR may be merged after a newer
-          # PR, so merge time must never decide the version.
+          # The PR number remains the monotonic release counter, but the
+          # displayed Alpha generation rolls over every 100 PRs:
+          # #99 -> Alpha 2.99, #100 -> Alpha 3.00, #104 -> Alpha 3.04.
           highest="$(
             gh pr list \
               --repo "$GITHUB_REPOSITORY" \
@@ -97,9 +97,12 @@ jobs:
             exit 1
           fi
 
-          display="Alpha 2.${pr}"
+          major=$((2 + 10#$pr / 100))
+          minor=$((10#$pr % 100))
+          minor_fmt="$(printf '%02d' "$minor")"
+          display="Alpha ${major}.${minor_fmt}"
           date_tag="$(date -u +%Y%m%d)"
-          tag="alpha2.${pr}-${channel}.${date_tag}.1"
+          tag="alpha${major}.${minor_fmt}-${channel}.${date_tag}.1"
 
           echo "publish=true" >> "$GITHUB_OUTPUT"
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
