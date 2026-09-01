@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO="KarotsSugarpie/PinCabOS"
+REPO="PinCabOS/PinCabOS"
 PRNUM="42"
 DISPLAY="Alpha 2.42"
 TAG="alpha2.42-beta.20260822.1"
@@ -367,7 +367,7 @@ assert data["schema"] == 4
 assert data["version"] == tag
 assert data["display_version"] == display
 assert data["channel"] == "beta"
-assert data["repository"] == "KarotsSugarpie/PinCabOS"
+assert data["repository"] == "PinCabOS/PinCabOS"
 
 count = int(
     data.get(

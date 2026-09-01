@@ -1,7 +1,7 @@
 {
   "schema": "pincabos.module-inventory/v1",
   "inventory": {
-    "repository": "KarotsSugarpie/PinCabOS",
+    "repository": "PinCabOS/PinCabOS",
     "method": "static_source_inventory",
     "limitations": [
       "Inventory only: no repair lock is enabled.",

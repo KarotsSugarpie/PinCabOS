@@ -164,7 +164,7 @@ PATCHER="/opt/pincabos/scripts/pincabos_b2s_dmd_runtime_patch.py"
 if [[ ! -f "$PATCHER" ]]; then
     PATCHER="$BUILD/pincabos_b2s_dmd_runtime_patch.py"
     curl -fL --retry 3 --connect-timeout 20 \
-        "https://raw.githubusercontent.com/KarotsSugarpie/PinCabOS/main/opt/pincabos/scripts/pincabos_b2s_dmd_runtime_patch.py" \
+        "https://raw.githubusercontent.com/PinCabOS/PinCabOS/main/opt/pincabos/scripts/pincabos_b2s_dmd_runtime_patch.py" \
         -o "$PATCHER"
 fi
 python3 -S "$PATCHER" "$SRC"

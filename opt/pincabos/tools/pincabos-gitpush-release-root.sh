@@ -6,7 +6,7 @@ export PAGER=cat
 export GIT_EDITOR=true
 
 GITDIR="/opt/pincabos/.git-rootfs"
-REPO="KarotsSugarpie/PinCabOS"
+REPO="PinCabOS/PinCabOS"
 STATE="/opt/pincabos/config/gitpush-release-sequence.json"
 CALLER="${SUDO_USER:-pinball}"
 CHANNEL="beta"

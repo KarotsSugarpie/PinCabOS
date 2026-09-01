@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO="KarotsSugarpie/PinCabOS"
+REPO="PinCabOS/PinCabOS"
 STAMP="20260822-093232"
 WORK="/home/pinball/pincabos-fullwidth-auto-release-20260822-093232"
 SRC="$WORK/source"
@@ -988,7 +988,7 @@ def main():
         "version": args.version,
         "display_version": args.display_version,
         "channel": args.channel,
-        "repository": "KarotsSugarpie/PinCabOS",
+        "repository": "PinCabOS/PinCabOS",
         "archive": "pincabos-update.tar.zst",
         "archive_sha256": sha256(archive),
         "files": "files.list",

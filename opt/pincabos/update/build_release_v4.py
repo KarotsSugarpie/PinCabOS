@@ -403,7 +403,7 @@ def main():
         "channel":
             args.channel,
         "repository":
-            "KarotsSugarpie/PinCabOS",
+            "PinCabOS/PinCabOS",
         "archive":
             "pincabos-update.tar.zst",
         "archive_sha256":

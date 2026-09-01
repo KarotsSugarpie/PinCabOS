@@ -1,6 +1,6 @@
 [Unit]
 Description=PinCabOS - tables de demonstration (presence conditionnelle)
-Documentation=https://github.com/KarotsSugarpie/PinCabOS
+Documentation=https://github.com/PinCabOS/PinCabOS
 After=local-fs.target
 Before=pincabos-vpinfe.service
 ConditionPathExists=/usr/local/sbin/pincabos-sample-tables

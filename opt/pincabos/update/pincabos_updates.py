@@ -102,7 +102,7 @@ def save_json(path, data):
 
 def config():
     d=load_json(CONFIG,{})
-    return d.get('repository','KarotsSugarpie/PinCabOS'), d.get('channel','beta')
+    return d.get('repository','PinCabOS/PinCabOS'), d.get('channel','beta')
 
 def display_version_from_tag(tag):
     value=str(tag or '').strip()
