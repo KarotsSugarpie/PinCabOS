@@ -5,6 +5,7 @@ set -Eeuo pipefail
 
 FULLDMD_POLICY="/opt/pincabos/bin/pincabos-native-fulldmd-policy.sh"
 B2S_POLICY="/opt/pincabos/bin/pincabos-native-b2s-scoreview-prelaunch.sh"
+PUP_FONTS="/opt/pincabos/bin/pincabos-pup-fonts-install.sh"
 SCOREVIEW="/opt/pincabos/bin/pincabos-hybrid-scoreview-enable-prelaunch.py"
 
 SPLIT_HELPER="/opt/pincabos/bin/pincabos-pup-scoreview-split.py"
@@ -32,6 +33,10 @@ case "$MODE" in
     pup|puppack|pup-pack)
 
         echo "PINCABOS [DMD ROUTER] MODE=PUP" >&2
+
+        if [[ -x "$PUP_FONTS" ]]; then
+            "$PUP_FONTS" "$@" || true
+        fi
 
         if [[ -x "$FULLDMD_POLICY" ]]; then
             "$FULLDMD_POLICY" "$@" || true
@@ -163,6 +168,10 @@ case "$MODE" in
                 legacy \
                 "$TABLE" \
                 >/dev/null 2>&1 || true
+        fi
+
+        if [[ -x "$PUP_FONTS" ]]; then
+            "$PUP_FONTS" "$@" || true
         fi
 
         if [[ -x "$FULLDMD_POLICY" ]]; then
