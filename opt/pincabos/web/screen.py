@@ -139,7 +139,7 @@ def write_from_form(form) -> dict:
     data = load_cfg()
     roles = {}
 
-    for role in ("playfield", "backglass", "fulldmd"):
+    for role in ("playfield", "backglass", "fulldmd", "topper"):
         output = form.get(f"{role}_output", "").strip()
         mode, rate = parse_mode_rate(form.get(f"{role}_mode", "").strip())
         roles[role] = {
@@ -371,7 +371,7 @@ def screen_page():
 
     body = f"""
     <h1>Assignation écrans</h1>
-    <p>Sélectionne manuellement le Playfield / Primary, Backglass / Secondary et FullDMD / Tertiary, avec une résolution supportée par chaque écran.</p>
+    <p>Sélectionne manuellement le Playfield / Primary, Backglass / Secondary, FullDMD / Tertiary — et le Topper pour les cabinets à 4 écrans — avec une résolution supportée par chaque écran.</p>
 
     <form method="post" action="/screen/save">
       <div class="grid">
@@ -405,6 +405,7 @@ def screen_page():
         {role_card("playfield", "Playfield / Primary")}
         {role_card("backglass", "Backglass / Secondary")}
         {role_card("fulldmd", "FullDMD / Tertiary")}
+        {role_card("topper", "Topper / Quaternary (optionnel)")}
       </div>
 
       <div class="card">

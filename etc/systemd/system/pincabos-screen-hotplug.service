@@ -1,0 +1,10 @@
+[Unit]
+Description=PinCabOS - reapplication de la topologie apres evenement ecran (hotplug)
+After=display-manager.service
+ConditionPathExists=/opt/pincabos/config/screens
+StartLimitIntervalSec=30
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/pincabos/pincabos-screen-hotplug

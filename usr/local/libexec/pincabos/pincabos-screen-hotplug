@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -u
+
+# PINCABOS_SCREEN_HOTPLUG_V1
+#
+# Reaction aux evenements de branchement/debranchement d'ecran (udev, sous-
+# systeme drm). Avant, RIEN n'ecoutait ces evenements : brancher un ecran a
+# chaud ou allumer un moniteur apres le boot laissait la topologie dans son
+# etat precedent — d'ou les « ca marche apres reboot mais pas a chaud ».
+#
+# Une passe, sous le meme verrou que le boot :
+#   1. reappliquer la disposition sauvegardee (screens.json) via xrandr, pour
+#      les ecrans connus qui reapparaissent (ordre d'allumage, re-branchement) ;
+#   2. relancer le moteur de topologie (roles EDID + fichiers applicatifs).
+# Un ecran totalement inconnu reste a affecter dans la page Ecrans : on ne
+# reaffecte jamais un role au hasard.
+
+LOCK="/run/pincabos-screen-topology.lock"
+APPLY="/opt/pincabos/tools/pincabos-screen-xrandr.sh"
+PREFLIGHT="/usr/local/libexec/pincabos/pincabos-screen-topology-preflight.sh"
+
+# Laisser le noyau et X finir de stabiliser la detection (les evenements drm
+# arrivent en rafale au branchement).
+sleep 3
+
+exec 9>"$LOCK"
+flock -w 30 9 || exit 0
+
+if [[ -x "$APPLY" ]]; then
+    "$APPLY" apply >/dev/null 2>&1 || true
+fi
+
+# Restauration directe depuis les roles de screens.json : une sortie connue
+# (liee a un role) qui est connectee mais eteinte est rallumee a sa geometrie
+# de role. Couvre le cas reel « ecran rallume / rebranche apres le boot »,
+# y compris quand l'applicateur ci-dessus n'a rien retabli.
+python3 - <<'PY' 2>/dev/null | while read -r output mode pos; do
+import json, re
+try:
+    data = json.load(open("/opt/pincabos/config/screens/screens.json"))
+except Exception:
+    raise SystemExit(0)
+for role in ("playfield", "backglass", "fulldmd", "topper"):
+    item = data.get(role) or {}
+    if not item.get("available"):
+        continue
+    name = item.get("name") or ""
+    match = re.match(r"^(\d+x\d+)\+(-?\d+)\+(-?\d+)$", str(item.get("geometry") or ""))
+    if name and match:
+        print(name, match.group(1), f"{match.group(2)}x{match.group(3)}")
+PY
+    [[ -n "$output" ]] || continue
+    for auth in /home/pinball/.Xauthority /run/lightdm/root/:0; do
+        [[ -r "$auth" ]] || continue
+        # la sortie est-elle connectee mais sans geometrie active ?
+        state="$(env DISPLAY=:0 XAUTHORITY="$auth" xrandr --query 2>/dev/null | grep "^$output ")"
+        if [[ "$state" == "$output connected"* && ! "$state" =~ [0-9]+x[0-9]+\+ ]]; then
+            env DISPLAY=:0 XAUTHORITY="$auth" \
+                xrandr --output "$output" --mode "$mode" --pos "$pos" >/dev/null 2>&1 || true
+            logger -t pincabos-screen-hotplug "sortie $output rallumee ($mode @$pos)" 2>/dev/null || true
+        fi
+        break
+    done
+done
+
+if [[ -x "$PREFLIGHT" ]]; then
+    "$PREFLIGHT" >/dev/null 2>&1 || true
+fi
+
+logger -t pincabos-screen-hotplug "topologie reappliquee apres evenement ecran" 2>/dev/null || true
+exit 0
