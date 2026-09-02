@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+VPINFE_UNIT="pincabos-vpinfe.service"
+STATE_FILE="/run/pincabos-lobby-av-vpinfe.state"
+
+fail() {
+    echo "ERROR"
+    exit 1
+}
+
+enter_av() {
+    if [[ -e "$STATE_FILE" ]]; then
+        echo "READY"
+        return 0
+    fi
+
+    if systemctl is-active --quiet "$VPINFE_UNIT"; then
+        printf '%s\n' "ACTIVE" >"$STATE_FILE"
+        if ! systemctl stop "$VPINFE_UNIT"; then
+            rm -f "$STATE_FILE"
+            fail
+        fi
+    else
+        printf '%s\n' "INACTIVE" >"$STATE_FILE"
+    fi
+
+    echo "READY"
+}
+
+leave_av() {
+    local previous=""
+    [[ -r "$STATE_FILE" ]] && previous="$(cat "$STATE_FILE" 2>/dev/null || true)"
+
+    if [[ "$previous" == "ACTIVE" ]]; then
+        systemctl start "$VPINFE_UNIT" >/dev/null 2>&1 || true
+    fi
+
+    rm -f "$STATE_FILE"
+    echo "RESTORED"
+}
+
+[[ "$(id -u)" -eq 0 ]] || fail
+command -v systemctl >/dev/null 2>&1 || fail
+
+case "${1:-}" in
+    enter)
+        [[ "$#" -eq 1 ]] || fail
+        enter_av
+        ;;
+    leave)
+        [[ "$#" -eq 1 ]] || fail
+        leave_av
+        ;;
+    *)
+        fail
+        ;;
+esac
