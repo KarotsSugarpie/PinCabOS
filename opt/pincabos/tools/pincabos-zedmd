@@ -38,15 +38,19 @@ import shutil
 import subprocess
 import sys
 import tempfile
+# PINCABOS_PATHS_CONSUMER_V1
+import sys as _pco_sys
+_pco_sys.path.insert(0, "/opt/pincabos/tools")
+from pincabos_paths import PATHS
 
 CONFIG = "/opt/pincabos/config/zedmd.json"
 VPX_INI_CANDIDATES = (
-    "/home/pinball/.pincabos/vpx/VPinballX.ini",
-    "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+    PATHS.vpx_ini,
+    PATHS.vpx_legacy_pref + "/VPinballX.ini",
 )
-VPINFE_INI = "/home/pinball/.config/vpinfe/vpinfe.ini"
-CABINET_XML = "/home/pinball/.pincabos/vpx/directoutputconfig/cabinet.xml"
-VPINFE_DMDUTIL_DIR = "/home/pinball/vpinfe/_internal/third-party/libdmdutil"
+VPINFE_INI = PATHS.vpinfe_ini
+CABINET_XML = PATHS.cabinet_xml
+VPINFE_DMDUTIL_DIR = PATHS.vpinfe_dmdutil
 PIN2DMD_VID, PIN2DMD_PID = "0314", "e457"   # src/PIN2DMD.cpp de libdmdutil
 PIN2DMD_UDEV_RULE = "/etc/udev/rules.d/99-pincabos-pin2dmd.rules"
 MODES = ("off", "usb", "wifi", "pin2dmd")

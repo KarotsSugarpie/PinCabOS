@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -u
+
+# PINCABOS_PATHS_CONSUMER_V1
+. /opt/pincabos/tools/pincabos-paths.shset -u
 
 # PINCABOS_SCREEN_HOTPLUG_V1
 #
@@ -50,7 +52,7 @@ for role in ("playfield", "backglass", "fulldmd", "topper"):
         print(name, match.group(1), f"{match.group(2)}x{match.group(3)}")
 PY
     [[ -n "$output" ]] || continue
-    for auth in /home/pinball/.Xauthority /run/lightdm/root/:0; do
+    for auth in "$PCO_XAUTHORITY" /run/lightdm/root/:0; do
         [[ -r "$auth" ]] || continue
         # la sortie est-elle connectee mais sans geometrie active ?
         state="$(env DISPLAY=:0 XAUTHORITY="$auth" xrandr --query 2>/dev/null | grep "^$output ")"

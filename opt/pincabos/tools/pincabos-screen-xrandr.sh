@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+
+# PINCABOS_PATHS_CONSUMER_V1
+. /opt/pincabos/tools/pincabos-paths.shset -euo pipefail
 
 ACTION="${1:-query}"
 CFG="/opt/pincabos/config/screens/screens.json"
@@ -14,9 +16,9 @@ find_env_and_run() {
   local auths=()
   [ -n "${XAUTHORITY:-}" ] && auths+=("$XAUTHORITY")
   auths+=(
-    "/home/pinball/.Xauthority"
-    "/run/user/1000/gdm/Xauthority"
-    "/run/user/1000/.mutter-Xwaylandauth.*"
+    "$PCO_XAUTHORITY"
+    "$PCO_RUNTIME_DIR/gdm/Xauthority"
+    "$PCO_RUNTIME_DIR/.mutter-Xwaylandauth.*"
     "/run/lightdm/root/:0"
     "/var/run/lightdm/root/:0"
   )

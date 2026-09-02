@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
 
-TABLES_ROOT="/home/pinball/Tables"
-GLOBAL_INI="/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+# PINCABOS_PATHS_CONSUMER_V1
+. /opt/pincabos/tools/pincabos-paths.shset -Eeuo pipefail
+
+TABLES_ROOT="$PCO_TABLES"
+GLOBAL_INI="$PCO_VPX_INI"
+# premier lancement : les preferences sont encore dans le dossier versionne
+[ -f "$GLOBAL_INI" ] || GLOBAL_INI="$PCO_VPX_LEGACY_PREF/VPinballX.ini"
 
 TARGET_VPX=""
 for arg in "$@"; do

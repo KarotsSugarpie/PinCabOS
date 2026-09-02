@@ -9,6 +9,10 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+# PINCABOS_PATHS_CONSUMER_V1
+import sys as _pco_sys
+_pco_sys.path.insert(0, "/opt/pincabos/tools")
+from pincabos_paths import PATHS
 
 ROOT = Path("/opt/pincabos")
 SCREENS = ROOT / "config/screens/screens.json"
@@ -17,8 +21,10 @@ ALIASES = ROOT / "config/display-aliases.env"
 RUNTIME = Path("/run/pincabos-screen-topology")
 STATE = RUNTIME / "state.json"
 
-VPINFE = Path("/home/pinball/.config/vpinfe/vpinfe.ini")
-VPX = Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini")
+VPINFE = Path(PATHS.vpinfe_ini)
+# Avant le premier lancement, les preferences VPX sont encore dans le dossier
+# versionne (le launcher les migre vers -PrefPath) : on suit le fichier present.
+VPX = Path(PATHS.vpx_ini) if Path(PATHS.vpx_ini).exists() else Path(PATHS.vpx_legacy_pref) / "VPinballX.ini"
 CAL_FULLDMD = ROOT / "config/fulldmd-calibration.json"
 CAL_DMD = ROOT / "config/dmd-calibration.json"
 
@@ -90,7 +96,7 @@ def xrandr_as_pinball(*args):
         "/usr/sbin/runuser", "-u", "pinball", "--",
         "/usr/bin/env",
         "DISPLAY=:0",
-        "XAUTHORITY=/home/pinball/.Xauthority",
+        f"XAUTHORITY={PATHS.xauthority}",
         "/usr/bin/xrandr",
         *args,
     ]
