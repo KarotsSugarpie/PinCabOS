@@ -1,33 +1,30 @@
 "use strict";
 
 /*
- * PINCABOS_LOBBY_AV_BROWSER_GUARD_V2
+ * PINCABOS_LOBBY_AV_BROWSER_GUARD_V3
  *
- * The cabinet Chromium instance is the media endpoint. This guard is loaded
- * only in the dedicated Lobby A/V profile and never on pincabos.cc.
+ * Cabinet-only WebRTC guard for the dedicated PinCabOS Lobby A/V Chromium.
  *
- * Chromium rejects a BUNDLE description when the same payload type is
- * described with different fmtp parameters in different media sections.
- * The cabinet reproduced this with VP8/PT 96 and x-google-start-bitrate.
- * Those x-google bitrate fields are optional encoder hints, so remove them
- * before Chromium validates local or remote SDP.
- *
- * Important: LiveKit may call setLocalDescription() with no argument. In that
- * mode Chromium generates the offer/answer internally, which bypassed the V1
- * wrapper. V2 mirrors the browser's automatic offer/answer choice, normalizes
- * the generated SDP, and then calls the native setLocalDescription().
+ * V3 keeps the SDP protections from V2 and adds an explicit local camera
+ * preview sourced from the exact MediaStream returned to LiveKit. The local
+ * tile therefore does not depend on a published/subscribed WebRTC track in
+ * order to show the cabinet operator their own camera.
  */
 (() => {
   const marker = "[PinCabOS Lobby A/V]";
   const guardState = {
-    version: "2.0.0",
+    version: "3.0.0",
     normalizedDescriptions: 0,
     generatedLocalDescriptions: 0,
+    localPreviewMounts: 0,
   };
   window.__PINCABOS_LOBBY_AV_GUARD__ = guardState;
 
   function normalizeSdp(sdp) {
-    if (typeof sdp !== "string" || !/x-google-(?:start|min|max)-bitrate/i.test(sdp)) {
+    if (
+      typeof sdp !== "string" ||
+      !/x-google-(?:start|min|max)-bitrate/i.test(sdp)
+    ) {
       return sdp;
     }
 
@@ -110,13 +107,6 @@
         return nativeSetLocalDescription.call(this, wrapDescription(description));
       }
 
-      /*
-       * Browser/WebRTC automatic mode:
-       * - have-remote-offer / have-local-pranswer => generate an answer
-       * - otherwise => generate an offer
-       *
-       * Generate explicitly so the SDP can be normalized before native SLD.
-       */
       const shouldAnswer =
         this.signalingState === "have-remote-offer" ||
         this.signalingState === "have-local-pranswer";
@@ -138,9 +128,120 @@
     installPeerConnectionGuard(window.webkitRTCPeerConnection);
   }
 
+  let localPreviewStream = null;
+  let localPreviewVideo = null;
+  let localPreviewObserver = null;
+
+  function localPreviewTrack() {
+    if (!localPreviewStream) {
+      return null;
+    }
+    return localPreviewStream.getVideoTracks()[0] || null;
+  }
+
+  function localPreviewActive() {
+    const track = localPreviewTrack();
+    return Boolean(
+      track &&
+        track.readyState === "live" &&
+        track.enabled !== false &&
+        track.muted !== true,
+    );
+  }
+
+  function clearLocalPreview() {
+    if (localPreviewVideo) {
+      try {
+        localPreviewVideo.pause();
+      } catch (_error) {}
+      localPreviewVideo.srcObject = null;
+      localPreviewVideo.remove();
+    }
+    localPreviewVideo = null;
+    localPreviewStream = null;
+  }
+
+  function mountLocalPreview() {
+    if (!localPreviewActive()) {
+      return;
+    }
+
+    const media = document.querySelector("#local .media");
+    if (!media) {
+      return;
+    }
+
+    if (!localPreviewVideo) {
+      localPreviewVideo = document.createElement("video");
+      localPreviewVideo.dataset.pincabosLocalPreview = "1";
+      localPreviewVideo.autoplay = true;
+      localPreviewVideo.muted = true;
+      localPreviewVideo.playsInline = true;
+      localPreviewVideo.setAttribute("aria-label", "Caméra locale PinCabOS");
+    }
+
+    if (localPreviewVideo.srcObject !== localPreviewStream) {
+      localPreviewVideo.srcObject = localPreviewStream;
+    }
+
+    if (
+      localPreviewVideo.parentElement !== media ||
+      media.childNodes.length !== 1
+    ) {
+      media.replaceChildren(localPreviewVideo);
+      guardState.localPreviewMounts += 1;
+    }
+
+    localPreviewVideo.play().catch(() => {});
+  }
+
+  function watchLocalPreview() {
+    if (localPreviewObserver) {
+      return;
+    }
+
+    const media = document.querySelector("#local .media");
+    if (!media) {
+      window.setTimeout(watchLocalPreview, 50);
+      return;
+    }
+
+    localPreviewObserver = new MutationObserver(() => {
+      if (localPreviewActive()) {
+        queueMicrotask(mountLocalPreview);
+      }
+    });
+    localPreviewObserver.observe(media, { childList: true, subtree: false });
+  }
+
+  function installLocalPreview(stream) {
+    const track = stream && stream.getVideoTracks
+      ? stream.getVideoTracks()[0]
+      : null;
+    if (!track) {
+      return;
+    }
+
+    localPreviewStream = stream;
+    track.addEventListener("ended", clearLocalPreview, { once: true });
+    track.addEventListener("unmute", mountLocalPreview);
+    track.addEventListener("mute", () => {
+      window.setTimeout(() => {
+        if (!localPreviewActive() && localPreviewVideo) {
+          localPreviewVideo.remove();
+        }
+      }, 0);
+    });
+
+    watchLocalPreview();
+    mountLocalPreview();
+    window.setTimeout(mountLocalPreview, 100);
+    window.setTimeout(mountLocalPreview, 500);
+  }
+
   /*
-   * Keep the real cabinet webcam lightweight. Preserve deviceId/facingMode
-   * chosen by LiveKit, but cap capture to 640x360 @ 15 fps.
+   * Keep the real cabinet webcam lightweight and use that exact capture as
+   * the local preview. No second camera capture is opened.
    */
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     const nativeGetUserMedia =
@@ -166,7 +267,10 @@
         },
       };
 
-      return nativeGetUserMedia(guarded);
+      return nativeGetUserMedia(guarded).then((stream) => {
+        installLocalPreview(stream);
+        return stream;
+      });
     };
   }
 
