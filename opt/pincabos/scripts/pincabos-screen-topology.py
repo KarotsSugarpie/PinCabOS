@@ -10,8 +10,14 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 # PINCABOS_PATHS_CONSUMER_V1
+# pincabos_paths vit dans /opt/pincabos/tools ; hors cabinet (tests, CI), on
+# le trouve a cote, dans le depot.
+import os as _pco_os
 import sys as _pco_sys
-_pco_sys.path.insert(0, "/opt/pincabos/tools")
+for _pco_dir in ("/opt/pincabos/tools",
+                 _pco_os.path.join(_pco_os.path.dirname(_pco_os.path.abspath(__file__)), "..", "tools")):
+    if _pco_dir not in _pco_sys.path:
+        _pco_sys.path.insert(0, _pco_dir)
 from pincabos_paths import PATHS
 
 ROOT = Path("/opt/pincabos")
