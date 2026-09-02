@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# PINCABOS_LAUNCHERS_SYNC_V1
+# La chaine de lancement vit dans /opt/pincabos/tools/launchers (livree par
+# les mises a jour, quel que soit l'age de l'updater installe) ;
+# /opt/pincabos/launchers — le chemin que vpinfe.ini, le doctor, tabletest
+# et la WebApp connaissent — est un lien vers elle.
+#
+# Les cabinets installes depuis une ISO ont a la place un vrai dossier,
+# jamais mis a jour (ce prefixe n'a jamais ete dans le perimetre des
+# releases) : au premier passage on l'archive et on pose le lien. Lance en
+# ExecStartPre de pincabos-vpinfe.service, avant tout ce qui lance une table.
+set -u
+CANON=/opt/pincabos/tools/launchers
+LINK=/opt/pincabos/launchers
+
+[ -d "$CANON" ] || exit 0
+
+if [ -L "$LINK" ]; then
+    if [ "$(readlink -f "$LINK")" != "$(readlink -f "$CANON")" ]; then
+        ln -sfn "$CANON" "$LINK" && echo "launchers : lien corrige -> $CANON"
+    fi
+    exit 0
+fi
+
+if [ -d "$LINK" ]; then
+    backup="${LINK}.iso-$(date +%Y%m%d-%H%M%S)"
+    if mv -- "$LINK" "$backup" && ln -s "$CANON" "$LINK"; then
+        echo "launchers : dossier de l'ISO archive dans $backup, lien pose -> $CANON"
+    else
+        echo "launchers : AVERTISSEMENT — impossible de remplacer $LINK par un lien" >&2
+    fi
+    exit 0
+fi
+
+ln -s "$CANON" "$LINK" && echo "launchers : lien pose -> $CANON"
+exit 0
