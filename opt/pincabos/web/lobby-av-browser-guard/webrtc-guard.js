@@ -1,22 +1,33 @@
 "use strict";
 
 /*
- * PINCABOS_LOBBY_AV_BROWSER_GUARD_V1
+ * PINCABOS_LOBBY_AV_BROWSER_GUARD_V2
  *
  * The cabinet Chromium instance is the media endpoint. This guard is loaded
  * only in the dedicated Lobby A/V profile and never on pincabos.cc.
  *
- * Chromium rejects a BUNDLE answer when the same payload type is described
- * with different fmtp parameters in different media sections. The observed
- * failure on the cabinet is VP8/PT 96 with x-google-start-bitrate present in
- * one section and absent in another. The hint is optional, so remove only
- * that hint before Chromium validates the SDP.
+ * Chromium rejects a BUNDLE description when the same payload type is
+ * described with different fmtp parameters in different media sections.
+ * The cabinet reproduced this with VP8/PT 96 and x-google-start-bitrate.
+ * Those x-google bitrate fields are optional encoder hints, so remove them
+ * before Chromium validates local or remote SDP.
+ *
+ * Important: LiveKit may call setLocalDescription() with no argument. In that
+ * mode Chromium generates the offer/answer internally, which bypassed the V1
+ * wrapper. V2 mirrors the browser's automatic offer/answer choice, normalizes
+ * the generated SDP, and then calls the native setLocalDescription().
  */
 (() => {
   const marker = "[PinCabOS Lobby A/V]";
+  const guardState = {
+    version: "2.0.0",
+    normalizedDescriptions: 0,
+    generatedLocalDescriptions: 0,
+  };
+  window.__PINCABOS_LOBBY_AV_GUARD__ = guardState;
 
   function normalizeSdp(sdp) {
-    if (typeof sdp !== "string" || !sdp.includes("x-google-start-bitrate")) {
+    if (typeof sdp !== "string" || !/x-google-(?:start|min|max)-bitrate/i.test(sdp)) {
       return sdp;
     }
 
@@ -29,7 +40,7 @@
           .filter(Boolean)
           .filter(
             (value) =>
-              !/^x-google-start-bitrate\s*=/i.test(value),
+              !/^x-google-(?:start|min|max)-bitrate\s*=/i.test(value),
           );
 
         if (!parameters.length) {
@@ -50,22 +61,81 @@
       return description;
     }
 
-    console.info(`${marker} SDP VP8 normalisé pour BUNDLE Chromium.`);
+    guardState.normalizedDescriptions += 1;
+    console.info(`${marker} SDP normalisé pour BUNDLE Chromium.`);
     return { type: description.type, sdp };
   }
 
-  if (window.RTCPeerConnection) {
-    const pc = window.RTCPeerConnection.prototype;
+  const patchedPrototypes = new WeakSet();
 
+  function installPeerConnectionGuard(PeerConnection) {
+    if (!PeerConnection || !PeerConnection.prototype) {
+      return;
+    }
+
+    const pc = PeerConnection.prototype;
+    if (patchedPrototypes.has(pc)) {
+      return;
+    }
+    patchedPrototypes.add(pc);
+
+    const nativeCreateOffer = pc.createOffer;
+    const nativeCreateAnswer = pc.createAnswer;
     const nativeSetRemoteDescription = pc.setRemoteDescription;
+    const nativeSetLocalDescription = pc.setLocalDescription;
+
+    if (
+      typeof nativeCreateOffer !== "function" ||
+      typeof nativeCreateAnswer !== "function" ||
+      typeof nativeSetRemoteDescription !== "function" ||
+      typeof nativeSetLocalDescription !== "function"
+    ) {
+      return;
+    }
+
+    pc.createOffer = function (options) {
+      return nativeCreateOffer.call(this, options).then(wrapDescription);
+    };
+
+    pc.createAnswer = function (options) {
+      return nativeCreateAnswer.call(this, options).then(wrapDescription);
+    };
+
     pc.setRemoteDescription = function (description) {
       return nativeSetRemoteDescription.call(this, wrapDescription(description));
     };
 
-    const nativeSetLocalDescription = pc.setLocalDescription;
     pc.setLocalDescription = function (description) {
-      return nativeSetLocalDescription.call(this, wrapDescription(description));
+      if (description !== undefined && description !== null) {
+        return nativeSetLocalDescription.call(this, wrapDescription(description));
+      }
+
+      /*
+       * Browser/WebRTC automatic mode:
+       * - have-remote-offer / have-local-pranswer => generate an answer
+       * - otherwise => generate an offer
+       *
+       * Generate explicitly so the SDP can be normalized before native SLD.
+       */
+      const shouldAnswer =
+        this.signalingState === "have-remote-offer" ||
+        this.signalingState === "have-local-pranswer";
+      const generator = shouldAnswer ? nativeCreateAnswer : nativeCreateOffer;
+
+      guardState.generatedLocalDescriptions += 1;
+      return generator
+        .call(this)
+        .then(wrapDescription)
+        .then((generated) => nativeSetLocalDescription.call(this, generated));
     };
+  }
+
+  installPeerConnectionGuard(window.RTCPeerConnection);
+  if (
+    window.webkitRTCPeerConnection &&
+    window.webkitRTCPeerConnection !== window.RTCPeerConnection
+  ) {
+    installPeerConnectionGuard(window.webkitRTCPeerConnection);
   }
 
   /*
