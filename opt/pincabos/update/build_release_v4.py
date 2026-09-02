@@ -310,6 +310,20 @@ def main():
 
         "usr/local/sbin/"
         "build-update.sh",
+
+        # Launchers morts (voir opt/pincabos/launchers/README.md) : un jumeau
+        # a une lettre pres du vrai launcher, et l'ancien lanceur du frontend.
+        "opt/pincabos/bin/"
+        "pincabos-hybrid-launch.sh",
+
+        "opt/pincabos/bin/"
+        "pincabos-hybrid-chooser.py",
+
+        "opt/pincabos/bin/"
+        "pincabos-hybrid-chooser.json",
+
+        "opt/pincabos/scripts/"
+        "VPinFE.sh",
     ]
 
     removals = sorted(
