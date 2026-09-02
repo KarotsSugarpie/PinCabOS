@@ -540,7 +540,19 @@ write_global_paths_config() {
 
   mkdir -p /opt/pincabos/config /opt/pincabos/config/vpinfe "$(dirname "$VPX_INI")" "$TABLES_DIR" "$ROMS_DIR" "$VPX_DIR"
 
+  # PINCABOS_PATHS_V1 : schema 2 — les valeurs par defaut vivent dans
+  # /opt/pincabos/lib/pincabos_paths.py ; ce fichier ne porte que les
+  # surcharges (aucune a l'installation).
   cat >/opt/pincabos/config/pincabos-paths.json <<EOF_PATHS
+{
+  "schema": "pincabos.paths/2",
+  "comment": "Surcharges des chemins PinCabOS. Defauts dans /opt/pincabos/lib/pincabos_paths.py ; n'ecrire ici que ce qui differe.",
+  "user": "pinball",
+  "paths": {
+    "tables": "$TABLES_DIR"
+  }
+}
+EOF_PATHS
 {
   "created_by": "Karots Sugarpie",
   "paths": {

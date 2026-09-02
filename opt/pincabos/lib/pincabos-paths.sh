@@ -1,0 +1,29 @@
+# PinCabOS — chemins et identite machine pour les scripts shell.
+# PINCABOS_PATHS_V1
+#
+#   . /opt/pincabos/lib/pincabos-paths.sh
+#   "$PCO_VPX_BIN" -PrefPath "$PCO_VPX_PREF" …
+#
+# Les valeurs viennent de /opt/pincabos/lib/pincabos_paths.py (source de
+# verite, surcharge possible par /opt/pincabos/config/pincabos-paths.json).
+# Idempotent : un second `source` ne recalcule rien.
+if [ "${PCO_PATHS_LOADED:-0}" != "1" ]; then
+    if _pco_exports="$(/usr/bin/python3 /opt/pincabos/lib/pincabos_paths.py --shell 2>/dev/null)"; then
+        eval "$_pco_exports"
+    else
+        # Python indisponible ou module absent : valeurs de secours = la realite
+        # d'un cabinet livre, pour ne jamais laisser un script sans chemin.
+        export PCO_USER=pinball PCO_UID=1000 PCO_GID=1000 PCO_HOME=/home/pinball
+        export PCO_DISPLAY=:0 PCO_XAUTHORITY=/home/pinball/.Xauthority
+        export PCO_RUNTIME_DIR=/run/user/1000 PCO_DBUS_ADDRESS=unix:path=/run/user/1000/bus
+        export PCO_ROOT=/opt/pincabos PCO_CONFIG=/opt/pincabos/config
+        export PCO_ALIASES_ENV=/opt/pincabos/config/display-aliases.env
+        export PCO_TABLES=/home/pinball/Tables
+        export PCO_VPX_LINK=/home/pinball/vpx PCO_VPX_BIN=/home/pinball/vpx/VPinballX_BGFX
+        export PCO_VPX_PREF=/home/pinball/.pincabos/vpx PCO_VPX_INI=/home/pinball/.pincabos/vpx/VPinballX.ini
+        export PCO_VPX_LEGACY_PREF=/home/pinball/.local/share/VPinballX/10.8
+        export PCO_VPINFE_DIR=/home/pinball/vpinfe PCO_VPINFE_INI=/home/pinball/.config/vpinfe/vpinfe.ini
+        export PCO_PATHS_LOADED=1
+    fi
+    unset _pco_exports
+fi

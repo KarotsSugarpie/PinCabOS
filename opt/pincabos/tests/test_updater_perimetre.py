@@ -30,6 +30,7 @@ class PerimetreAutorise(unittest.TestCase):
             "usr/local/sbin/pincabos-kernel-maintenance",
             "usr/local/libexec/pincabos/pincabos-screen-hotplug",
             "usr/local/sbin/getpcos",
+            "opt/pincabos/lib/pincabos_paths.py",
             "home/pinball/.config/vpinfe/themes/PinCabOS/theme.js",
         ):
             self.assertTrue(up.allowed(rel), rel)
