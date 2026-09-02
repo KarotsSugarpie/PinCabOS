@@ -831,6 +831,24 @@ def tools_hub_html():
           </a>
 
 
+          <!-- PINCABOS_TOOLS_ZEDMD_CARD_V1 -->
+          <a class="tool-card" href="/dmd/zedmd">
+            <div class="pco-tool-art">
+              <img src="/static/pincabos-assets/PCOSFullDMDConfigurator.png?v=zedmd1"
+                   alt="ZeDMD" loading="lazy">
+            </div>
+            <div class="pco-tool-body">
+              <strong>ZeDMD (DMD LED)</strong>
+              <span class="pco-tool-description">
+                Brancher un ZeDMD en USB ou en Wi-Fi et l'activer pour VPX et le menu VPinFE, avec test d'affichage.
+              </span>
+              <div class="pco-tool-footer">
+                <span>Ouvrir ZeDMD</span>
+                <span class="pco-tool-open">→</span>
+              </div>
+            </div>
+          </a>
+
         <a class="tool-card" href="/audio-ssf">
           <div class="pco-tool-art">
             <img src="/static/pincabos-assets/PCOSAudioSSF.png?v=toolsart1"

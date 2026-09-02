@@ -5183,6 +5183,7 @@ def fulldmd_page():
   <div class="card">
     <h2>Calibration FullDMD</h2>
     <p><a href="/fulldmd/style" style="font-weight:bold;">&#127912; Style d'affichage FullDMD par table (art du pack / grand DMD)</a></p>
+    <p><a href="/dmd/zedmd" style="font-weight:bold;">&#128225; ZeDMD (DMD LED reel) — USB ou Wi-Fi, pour VPX et VPinFE</a></p>
     <p>Déplace et étire le rectangle pour représenter la zone visible du FullDMD.</p>
     <p>Config sauvegardée dans :</p>
     <p><code>/opt/pincabos/config/fulldmd-calibration.json</code></p>
@@ -17175,6 +17176,17 @@ except Exception as _pco_ah_error:
     except Exception:
         pass
 # === PINCABOS_ABOUT_HELP_REFACTOR_V1_REGISTER END ===
+
+# PINCABOS_ZEDMD_REGISTER BEGIN
+try:
+    from pincabos_zedmd import register as _pincabos_zedmd_register
+    _pincabos_zedmd_register(app, page, esc)
+except Exception as _pincabos_zedmd_error:
+    try:
+        app.logger.exception("PinCabOS ZeDMD registration failed: %s", _pincabos_zedmd_error)
+    except Exception:
+        pass
+# PINCABOS_ZEDMD_REGISTER END
 
 # PINCABOS_DUDESCAB_CONFIG_PAGE_V3_REGISTER BEGIN
 try:
