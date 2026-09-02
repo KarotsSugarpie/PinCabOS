@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 # PINCABOS_PATHS_CONSUMER_V1
-. /opt/pincabos/lib/pincabos-paths.sh
+. /opt/pincabos/tools/pincabos-paths.sh
 # PINCABOS_HYBRID_LAUNCH_CORE_V3_2_1
 # PINCABOS_DIRECT_LAUNCH_MODES_V2
 

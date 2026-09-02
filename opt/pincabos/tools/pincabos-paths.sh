@@ -1,14 +1,14 @@
 # PinCabOS — chemins et identite machine pour les scripts shell.
 # PINCABOS_PATHS_V1
 #
-#   . /opt/pincabos/lib/pincabos-paths.sh
+#   . /opt/pincabos/tools/pincabos-paths.sh
 #   "$PCO_VPX_BIN" -PrefPath "$PCO_VPX_PREF" …
 #
-# Les valeurs viennent de /opt/pincabos/lib/pincabos_paths.py (source de
+# Les valeurs viennent de /opt/pincabos/tools/pincabos_paths.py (source de
 # verite, surcharge possible par /opt/pincabos/config/pincabos-paths.json).
 # Idempotent : un second `source` ne recalcule rien.
 if [ "${PCO_PATHS_LOADED:-0}" != "1" ]; then
-    if _pco_exports="$(/usr/bin/python3 /opt/pincabos/lib/pincabos_paths.py --shell 2>/dev/null)"; then
+    if _pco_exports="$(/usr/bin/python3 /opt/pincabos/tools/pincabos_paths.py --shell 2>/dev/null)"; then
         eval "$_pco_exports"
     else
         # Python indisponible ou module absent : valeurs de secours = la realite

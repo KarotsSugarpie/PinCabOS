@@ -25,7 +25,7 @@
 #   BOOT_VIDEO_HOLD_MAX_SECONDS=90   (duree max de l'image finale)
 set -u
 # PINCABOS_PATHS_CONSUMER_V1
-. /opt/pincabos/lib/pincabos-paths.sh
+. /opt/pincabos/tools/pincabos-paths.sh
 
 BOOT_VIDEO_ENABLED=1
 BOOT_VIDEO_FILE=/opt/pincabos/media/boot-video.mp4

@@ -30,7 +30,8 @@ class PerimetreAutorise(unittest.TestCase):
             "usr/local/sbin/pincabos-kernel-maintenance",
             "usr/local/libexec/pincabos/pincabos-screen-hotplug",
             "usr/local/sbin/getpcos",
-            "opt/pincabos/lib/pincabos_paths.py",
+            "opt/pincabos/tools/pincabos_paths.py",
+            "opt/pincabos/tools/pincabos-paths.sh",
             "home/pinball/.config/vpinfe/themes/PinCabOS/theme.js",
         ):
             self.assertTrue(up.allowed(rel), rel)
@@ -78,6 +79,8 @@ class PerimetreAutorise(unittest.TestCase):
         self.assertFalse(up.allowed("opt/pincabos/web/.venv/lib/x.py"))
         self.assertFalse(up.allowed("opt/pincabos/web/__pycache__/app.cpython-312.pyc"))
         self.assertFalse(up.allowed("opt/pincabos/logs/x.log"))
+        # nouveau prefixe = piege du parc (voir PINCABOS_UPDATE_SCOPE_PREFIX_TRAP)
+        self.assertFalse(up.allowed("opt/pincabos/lib/pincabos_paths.py"))
 
 
 if __name__ == "__main__":

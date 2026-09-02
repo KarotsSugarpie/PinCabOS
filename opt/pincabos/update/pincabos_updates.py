@@ -173,10 +173,18 @@ def sha256(path):
 
 def allowed(rel):
     # PINCABOS_UPDATE_SCOPE_V2
+    # PINCABOS_UPDATE_SCOPE_PREFIX_TRAP
+    # ⚠️ Ne JAMAIS ajouter ici un nouveau prefixe utilise par la release qui
+    # l'introduit : le cabinet valide chaque chemin avec l'allowed() de sa
+    # version INSTALLEE avant d'appliquer quoi que ce soit — updater compris.
+    # Un fichier sous un prefixe inconnu fait refuser TOUTE la mise a jour
+    # ("Path refused") et fige le parc. Alpha 3.25/3.26 ont ainsi ete
+    # inapplicables (opt/pincabos/lib/). Un nouveau prefixe se livre en deux
+    # temps : d'abord l'allowed() seul, puis les fichiers, une release plus tard.
     if not rel or rel.startswith('/') or '..' in Path(rel).parts: return False
     prefixes=(
       'opt/pincabos/web/','opt/pincabos/bin/','opt/pincabos/script/','opt/pincabos/scripts/',
-      'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/lib/','opt/pincabos/media/audio-voix/',
+      'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/media/audio-voix/',
       'opt/pincabos/installer-gui/',
       'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
       'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',

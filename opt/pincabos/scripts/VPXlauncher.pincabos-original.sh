@@ -5,7 +5,7 @@
 
 set -Eeuo pipefail
 # PINCABOS_PATHS_CONSUMER_V1
-. /opt/pincabos/lib/pincabos-paths.sh
+. /opt/pincabos/tools/pincabos-paths.sh
 
 PINBALL_USER="$PCO_USER"
 PINBALL_HOME="$PCO_HOME"
