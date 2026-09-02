@@ -17,9 +17,28 @@ DETECTOR = Path(
     "/opt/pincabos/launchers/pincabos-detect-table-modes.py"
 )
 
-RUNTIME_ROOT = Path(
-    "/run/pincabos-pup-scoreview-split"
-)
+# PINCABOS_PUP_SPLIT_RUNTIME_V1
+# /run appartient a root et ce script tourne en pinball : sans le repertoire
+# cree par tmpfiles.d (etc/tmpfiles.d/pincabos-pup-scoreview-split.conf), le
+# mkdir echouait en PermissionError a chaque table PuP et le split restait
+# silencieusement inactif. Repli : XDG_RUNTIME_DIR, puis /tmp.
+def _runtime_root() -> Path:
+    candidates = [Path("/run/pincabos-pup-scoreview-split")]
+    xdg = os.environ.get("XDG_RUNTIME_DIR")
+    if xdg:
+        candidates.append(Path(xdg) / "pincabos-pup-scoreview-split")
+    candidates.append(Path("/tmp") / f"pincabos-pup-scoreview-split-{os.getuid()}")
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            if os.access(candidate, os.W_OK):
+                return candidate
+        except OSError:
+            continue
+    return candidates[-1]
+
+
+RUNTIME_ROOT = _runtime_root()
 
 
 def q(value: object) -> str:
@@ -303,6 +322,18 @@ def trigger_uses_screen(
 
 
 def make_split(table: Path) -> dict[str, str]:
+    # PINCABOS_PUP_SPLIT_ROOT_GATE_V1
+    # Le montage en namespace qui applique le split exige root ; la chaine de
+    # lancement tourne en pinball. Tant qu'un helper privilegie n'existe pas,
+    # le split est declare inactif ICI, avant que la politique DMD/FullDMD et
+    # le placeur ne lisent la reponse — sinon ils appliquent la geometrie
+    # split a des ecrans PuP qui n'ont pas ete remappes.
+    if os.geteuid() != 0:
+        return {
+            "active": "0",
+            "reason": "requiert root (namespace mount)",
+        }
+
 
     info = detect(table)
 
@@ -420,10 +451,13 @@ def make_split(table: Path) -> dict[str, str]:
         exist_ok=True,
     )
 
-    os.chmod(
-        RUNTIME_ROOT,
-        0o755,
-    )
+    try:
+        os.chmod(
+            RUNTIME_ROOT,
+            0o755,
+        )
+    except OSError:
+        pass
 
     digest = hashlib.sha1(
         str(table).encode()

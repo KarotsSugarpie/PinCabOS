@@ -146,6 +146,41 @@ find_table_argument() {
 
 # PINCABOS_DIRECT_PUP_ROOT_V1
 #
+# PINCABOS_PUPVIDEOS_ALIAS_V1
+# Le plugin PuP de VPX ne lit que le dossier "pupvideos" a cote de la table
+# ("No global PUP folder configured; per-table 'pupvideos' used when
+# present"). Un pack range sous un autre nom (Terminator 2 : "pinupvideo")
+# etait detecte, propose au chooser, puis ignore par VPX : aucune fenetre
+# PuP, et l'ecran du menu qui transparait sur le backglass. On pose un lien
+# "pupvideos" vers le dossier reel. Le masquage du mode Original resout les
+# liens (realpath) et connait deja ces noms.
+ensure_pupvideos_alias() {
+    local table="$1" directory root name
+    directory="$(dirname -- "$table")"
+    # PINCABOS_PUPVIDEOS_ALIAS_V2
+    # Terminator 2 avait a la fois "pinupvideo/t2_l8" (501 fichiers) et un
+    # "pupvideos/" VIDE, cree par le squelette d'import : VPX ne voyait que le
+    # dossier vide. Un pupvideos vide est retire (rmdir echoue s'il ne l'est
+    # pas) pour laisser la place au lien.
+    if [[ -d "$directory/pupvideos" && ! -L "$directory/pupvideos" ]]; then
+        if [[ -z "$(ls -A -- "$directory/pupvideos" 2>/dev/null)" ]]; then
+            rmdir -- "$directory/pupvideos" 2>/dev/null || return 0
+        else
+            return 0
+        fi
+    fi
+    [[ -L "$directory/pupvideos" ]] && return 0
+    root="$(find_local_pup_root "$table" || true)"
+    [[ -n "$root" && -d "$root" ]] || return 0
+    name="${root##*/}"
+    [[ "${name,,}" == "pupvideos" ]] && return 0
+    if ln -s -- "$name" "$directory/pupvideos" 2>/dev/null; then
+        log "PUP [=] Lien pupvideos -> $name pose (le plugin PuP de VPX ne lit que 'pupvideos')."
+    else
+        log "AVERTISSEMENT [!] Impossible de poser le lien pupvideos -> $name."
+    fi
+}
+
 # Ce finder NE choisit PAS le mode de jeu.
 # Il sert seulement au bouton Legacy afin de masquer un
 # éventuel dossier PuP local pendant l'exécution Original.
@@ -418,6 +453,8 @@ case "$SELECTED_MODE" in
         # vidéos, B2S éventuel, FullDMD, etc.
         #
         mode_helper show >> "$LOG" 2>&1 || true
+
+        ensure_pupvideos_alias "$TABLE"
 
         # PINCABOS_PUPPACK_GUARD_V1
         #

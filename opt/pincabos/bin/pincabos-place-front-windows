@@ -158,6 +158,19 @@ for _ in $(seq 1 60); do
         fi
     fi
 
+    # PINCABOS_TOPPER_ABSENT_UNMAP_V1
+    # Pas de role topper sur ce cabinet (et pas de split) : la fenetre Topper
+    # qu'un pack PuP fait ouvrir (ecran 0 "Topper" de screens.pup) nait en 0,0
+    # sur le playfield, derriere le Player. Elle n'a pas d'ecran ici : on la
+    # retire, une fois.
+    if [[ "$placed_tp" == "0" && -z "${TP_X:-}" ]]; then
+        id="$(awk '/Visual Pinball Topper$/{print $1;exit}' <<< "$listing")"
+        if [[ -n "$id" ]]; then
+            run_x xdotool windowunmap "$id" >/dev/null 2>&1 || true
+            placed_tp=1
+        fi
+    fi
+
     if [[ "$placed_sv" == "1" && "$curtain_done" == "0" ]]; then
         id="$(awk '/VPinFE DMD$/{print $1;exit}' <<< "$listing")"
         [[ -n "$id" ]] && run_x xdotool windowunmap "$id" >/dev/null 2>&1 || true
