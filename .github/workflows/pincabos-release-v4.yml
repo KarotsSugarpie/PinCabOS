@@ -247,6 +247,39 @@ jobs:
           echo "=== FILE COUNT ==="
           wc -l files.list
 
+      - name: Perimetre compatible avec la release precedente
+        # Le cabinet valide chaque chemin avec l'allowed() de sa version
+        # INSTALLEE avant d'appliquer quoi que ce soit : un chemin que la
+        # release precedente refusait fige tout le parc (Alpha 3.25/3.26).
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          prev="$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || true)"
+          if [ -z "$prev" ]; then echo "aucune release precedente : rien a comparer"; exit 0; fi
+          git fetch --quiet --depth 1 origin "refs/tags/$prev:refs/tags/$prev" 2>/dev/null || git fetch --quiet --tags origin
+          git show "$prev:opt/pincabos/update/pincabos_updates.py" > /tmp/updater_prev.py
+          python3 - "$prev" <<'PY'
+          import importlib.machinery, importlib.util, sys
+          prev = sys.argv[1]
+          l = importlib.machinery.SourceFileLoader("prev", "/tmp/updater_prev.py")
+          s = importlib.util.spec_from_loader("prev", l); m = importlib.util.module_from_spec(s); l.exec_module(m)
+          refus = []
+          for name in ("dist/files.list", "dist/remove.list"):
+              for rel in open(name, encoding="utf-8").read().split("\n"):
+                  rel = rel.strip()
+                  if rel and not m.allowed(rel):
+                      refus.append(rel)
+          if refus:
+              print(f"NOGO [!!] {len(refus)} chemin(s) refuses par l'updater de {prev} — le parc ne pourrait pas appliquer cette release :")
+              for r in refus[:20]: print("   ", r)
+              print("Livrer un nouveau prefixe en deux temps : PENDING_PREFIXES d'abord (voir pincabos_updates.py).")
+              sys.exit(1)
+          print(f"GO [OK] files.list et remove.list acceptees par l'updater de {prev}")
+          PY
+
       - name: Publish GitHub Release
         if: steps.version.outputs.publish == 'true'
         env:
