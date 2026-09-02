@@ -179,7 +179,7 @@ def register(app, page, esc):
   </div>
 </div>
 """
-        return page("ZeDMD", body)
+        return page("FullDMD / DMD — ZeDMD", body)
 
     @app.route("/dmd/zedmd")
     def zedmd_page():

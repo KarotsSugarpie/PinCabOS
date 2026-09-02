@@ -821,7 +821,7 @@ def tools_hub_html():
             <div class="pco-tool-body">
               <strong>FullDMD / DMD</strong>
               <span class="pco-tool-description">
-                Calibrer le FullDMD, ajuster le cadre DMD, AutoArrange et gérer les layouts de tables.
+                Calibrer le FullDMD, ajuster le cadre DMD, brancher un ZeDMD (USB / Wi-Fi), AutoArrange et layouts de tables.
               </span>
               <div class="pco-tool-footer">
                 <span>Ouvrir FullDMD / DMD</span>
@@ -830,24 +830,6 @@ def tools_hub_html():
             </div>
           </a>
 
-
-          <!-- PINCABOS_TOOLS_ZEDMD_CARD_V1 -->
-          <a class="tool-card" href="/dmd/zedmd">
-            <div class="pco-tool-art">
-              <img src="/static/pincabos-assets/PCOSFullDMDConfigurator.png?v=zedmd1"
-                   alt="ZeDMD" loading="lazy">
-            </div>
-            <div class="pco-tool-body">
-              <strong>ZeDMD (DMD LED)</strong>
-              <span class="pco-tool-description">
-                Brancher un ZeDMD en USB ou en Wi-Fi et l'activer pour VPX et le menu VPinFE, avec test d'affichage.
-              </span>
-              <div class="pco-tool-footer">
-                <span>Ouvrir ZeDMD</span>
-                <span class="pco-tool-open">→</span>
-              </div>
-            </div>
-          </a>
 
         <a class="tool-card" href="/audio-ssf">
           <div class="pco-tool-art">
