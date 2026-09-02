@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PinCabOS Link Lobby state bridge and dedicated Backglass A/V window."""
+"""Dedicated PinCabOS Link Backglass A/V window authorized by Lobby state."""
 
 from __future__ import annotations
 
@@ -117,9 +117,8 @@ button.primary{border-color:#ff984f;background:#d85d08}button.good{border-color:
 .guest-1{grid-column:1;grid-row:1}.guest-2{grid-column:2;grid-row:1}.guest-3{grid-column:3;grid-row:1}.lobby{grid-column:1;grid-row:2}.local{grid-column:2;grid-row:2}.b2s{grid-column:3;grid-row:2}
 .lobby-content{height:100%;overflow:auto;padding:48px 13px 13px}.lobby-name{color:var(--orange);font-weight:950;font-size:1.08rem}.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin-top:10px;font-size:.88rem}.kv span:nth-child(odd){color:var(--muted)}
 .members{display:grid;gap:5px;margin-top:10px}.member{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:7px;background:#1a1e2b;font-size:.82rem}.ready{color:var(--green)}.not-ready{color:#ffbc72}
-.join{display:grid;gap:8px;width:min(310px,90%)}.join input{height:44px;padding:0 12px;border:1px solid #555d76;border-radius:9px;background:#090b12;color:#fff;text-transform:uppercase;text-align:center;letter-spacing:.16em;font-weight:900}
+.empty-room{display:grid;place-items:center;height:100%;padding:20px;color:var(--muted);text-align:center;font-weight:800}
 .b2s img{width:100%;height:100%;object-fit:contain;background:#000}.b2s-note{position:absolute;left:9px;right:9px;bottom:8px;z-index:3;padding:5px 7px;border-radius:7px;background:rgba(0,0,0,.7);color:var(--muted);font-size:.72rem}
-.score{display:flex;gap:6px}.score input{width:130px;min-height:38px;padding:0 9px;border:1px solid #4a5168;border-radius:8px;background:#090b12;color:#fff}
 @media(max-width:1050px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))}.guest-1{grid-column:1;grid-row:1}.guest-2{grid-column:2;grid-row:1}.guest-3{grid-column:1;grid-row:2}.lobby{grid-column:2;grid-row:2}.local{grid-column:1;grid-row:3}.b2s{grid-column:2;grid-row:3}}
 </style>
 </head>
@@ -129,8 +128,6 @@ button.primary{border-color:#ff984f;background:#d85d08}button.good{border-color:
     <div><div class="brand"><span class="pin">Pin</span>Cab<span class="os">OS</span> Lobby A/V</div><div id="status" class="status">Synchronisation avec pincabos.cc...</div></div>
     <div class="actions">
       <button id="connect" class="primary" type="button" disabled>REJOINDRE L'APPEL</button>
-      <button id="ready" type="button" disabled>READY</button>
-      <button id="start" class="good" type="button" disabled>START — 10 SEC</button>
       <button id="mic" type="button" disabled>MICRO OFF</button>
       <button id="cam" type="button" disabled>CAMÉRA OFF</button>
       <button id="hangup" class="danger" type="button" disabled>RACCROCHER</button>
@@ -141,13 +138,12 @@ button.primary{border-color:#ff984f;background:#d85d08}button.good{border-color:
     <article id="guest1" class="zone guest-1"><div class="zone-title"><span>INVITÉ 1</span><span>EN ATTENTE</span></div><div class="media">SLOT DISTANT</div></article>
     <article id="guest2" class="zone guest-2"><div class="zone-title"><span>INVITÉ 2</span><span>EN ATTENTE</span></div><div class="media">SLOT DISTANT</div></article>
     <article id="guest3" class="zone guest-3"><div class="zone-title"><span>INVITÉ 3</span><span>EN ATTENTE</span></div><div class="media">SLOT DISTANT</div></article>
-    <article class="zone lobby"><div class="zone-title"><span>LOBBY / GAME</span><span id="roomState">HORS LIGNE</span></div><div id="lobby" class="lobby-content"><div class="join"><strong>Rejoindre une room</strong><input id="joinCode" maxlength="6" placeholder="ABC123"><button id="join" class="primary" type="button">REJOINDRE</button></div></div></article>
+    <article class="zone lobby"><div class="zone-title"><span>LOBBY A/V</span><span id="roomState">HORS LIGNE</span></div><div id="lobby" class="lobby-content"><div class="empty-room">Rejoignez d'abord une room sur pincabos.cc.</div></div></article>
     <article id="local" class="zone local"><div class="zone-title"><span>JOUEUR LOCAL</span><span id="localMedia">MIC OFF · CAM OFF</span></div><div class="media">CAMÉRA DÉSACTIVÉE</div></article>
     <article class="zone b2s"><div class="zone-title"><span>B2S LOCAL</span><span>LECTURE SEULE</span></div><img id="b2s" alt="Aperçu Backglass local"><div class="b2s-note">Miroir local uniquement — VPX/BGFX/VPinFE intacts</div></article>
   </section>
   <footer class="bar">
-    <div id="sync" class="status">Room, joueurs, READY, table, décompte et scores proviennent de pincabos.cc.</div>
-    <div class="score"><input id="score" type="number" min="0" max="999999999999" placeholder="Mon score"><button id="sendScore" type="button" disabled>ENVOYER SCORE</button></div>
+    <div id="sync" class="status">La room pincabos.cc est consultée en lecture seule pour autoriser et ordonner les participants A/V.</div>
   </footer>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@__LIVEKIT_VERSION__/dist/livekit-client.umd.min.js"></script>
@@ -155,8 +151,9 @@ button.primary{border-color:#ff984f;background:#d85d08}button.good{border-color:
 (() => {
 "use strict";
 const CSRF="__CSRF__";
-const state={room:null,av:null,lk:null,mic:false,cam:false,serverOffset:0};
+const state={room:null,av:null,lk:null,mic:false,cam:false};
 const $=id=>document.getElementById(id);
+const html=value=>String(value??"").replace(/[&<>"']/g,character=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[character]);
 
 async function api(path,options){
   const supplied=options||{},method=String(supplied.method||"GET").toUpperCase(),headers=Object.assign({"Accept":"application/json"},supplied.headers||{});
@@ -196,31 +193,21 @@ function renderMedia(){
   attachParticipant(local,state.room.me,true);
   state.room.members.filter(member=>Number(member.user_id)!==Number(state.room.me.user_id)).sort((a,b)=>a.slot-b.slot).slice(0,3).forEach((member,index)=>attachParticipant(guests[index],member,false));
 }
-function countdown(){
-  if(!state.room||state.room.status!=="countdown"||!state.room.start_at)return "";
-  const remaining=(state.room.start_at*1000)-(Date.now()+state.serverOffset);
-  return remaining<=0?"GO!":Math.max(0,remaining/1000).toFixed(1)+" s";
-}
 function renderLobby(){
   const room=state.room,host=$("lobby");
   if(!room){
-    host.innerHTML='<div class="join"><strong>Rejoindre une room</strong><input id="joinCode" maxlength="6" placeholder="ABC123"><button id="join" class="primary" type="button">REJOINDRE</button></div>';
-    $("join").onclick=joinRoom;$("roomState").textContent="HORS LIGNE";$("connect").disabled=true;$("ready").disabled=true;$("start").disabled=true;$("sendScore").disabled=true;renderMedia();return;
+    host.innerHTML='<div class="empty-room">Rejoignez d\'abord une room sur pincabos.cc.</div>';
+    $("roomState").textContent="HORS LIGNE";$("connect").disabled=true;renderMedia();return;
   }
-  const members=room.members.map(member=>'<div class="member"><span>S'+member.slot+' · '+member.display_name+' · '+member.cab_name+'</span><strong class="'+(member.ready?'ready':'not-ready')+'">'+(member.ready?'READY':'NOT READY')+(room.status==='playing'?' · '+Number(member.score).toLocaleString():'')+'</strong></div>').join('');
-  host.innerHTML='<div class="lobby-name">'+room.name+' · '+room.code+'</div><div class="kv"><span>Table</span><strong>'+room.table_name+'</strong><span>VPS-ID</span><strong>'+(room.table_vps_id||'—')+'</strong><span>État</span><strong>'+room.status.toUpperCase()+'</strong><span>Décompte</span><strong id="countdown">'+countdown()+'</strong></div><div class="members">'+members+'</div>';
-  $("roomState").textContent=room.status.toUpperCase();$("connect").disabled=!!state.lk;$("ready").disabled=room.status!=="open";$("ready").textContent=room.me&&room.me.ready?"NOT READY":"READY";
-  const allReady=room.members.length>=2&&room.members.every(member=>member.ready);$("start").disabled=!room.is_host||room.status!=="open"||!allReady;$("sendScore").disabled=room.status!=="playing";
+  const members=room.members.map(member=>'<div class="member"><span>S'+Number(member.slot)+' · '+html(member.display_name)+' · '+html(member.cab_name)+'</span><strong>'+(Number(member.user_id)===Number(room.me&&room.me.user_id)?'LOCAL':'DISTANT')+'</strong></div>').join('');
+  host.innerHTML='<div class="lobby-name">'+html(room.name)+' · '+html(room.code)+'</div><div class="kv"><span>Participants A/V</span><strong>'+Number(room.member_count)+' / '+Number(room.max_players)+'</strong></div><div class="members">'+members+'</div>';
+  $("roomState").textContent="AUTORISÉ";$("connect").disabled=!!state.lk;
   renderMedia();
 }
 async function loadState(){
-  try{const data=await api("/pincabos-link/api/lobby");state.room=data.room;if(state.room&&state.room.server_time)state.serverOffset=state.room.server_time*1000-Date.now();$("status").textContent=state.room?"Synchronisé · "+state.room.code:"Aucune room active";renderLobby();}
+  try{const data=await api("/pincabos-link/api/lobby");state.room=data.room;$("status").textContent=state.room?"Autorisé · "+state.room.code:"Aucune room active";renderLobby();}
   catch(error){$("status").textContent="Synchronisation : "+error.code;}
 }
-async function joinRoom(){const input=$("joinCode"),code=String(input&&input.value||"").trim().toUpperCase();if(!code)return;try{await api("/pincabos-link/api/lobby/join",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});await loadState();}catch(error){$("status").textContent="JOIN : "+error.code;}}
-async function toggleReady(){if(!state.room||!state.room.me)return;try{await api("/pincabos-link/api/lobby/ready",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ready:!state.room.me.ready})});await loadState();}catch(error){$("status").textContent="READY : "+error.code;}}
-async function startGame(){try{await api("/pincabos-link/api/lobby/start",{method:"POST",body:"{}",headers:{"Content-Type":"application/json"}});await loadState();}catch(error){$("status").textContent="START : "+error.code;}}
-async function sendScore(){const score=Math.floor(Number($("score").value));if(!Number.isFinite(score)||score<0)return;try{await api("/pincabos-link/api/lobby/score",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({score})});await loadState();}catch(error){$("status").textContent="SCORE : "+error.code;}}
 function speakers(values){document.querySelectorAll(".zone.speaking").forEach(zone=>zone.classList.remove("speaking"));(values||[]).forEach(p=>{const zone=document.querySelector('.zone[data-identity="'+p.identity+'"]');if(zone)zone.classList.add("speaking");});}
 async function connect(){
   if(!state.room||state.lk)return;
@@ -239,9 +226,9 @@ async function toggleCam(){if(!state.lk)return;try{state.cam=!state.cam;await st
 async function closeWindow(){await hangup();fetch("/pincabos-link/api/lobby/window",{method:"POST",headers:{"Content-Type":"application/json","X-PinCabOS-Link-CSRF":CSRF},body:JSON.stringify({action:"close"})}).catch(()=>{});}
 function refreshB2s(){const image=$("b2s");image.src="/pincabos-link/api/lobby/b2s-preview?t="+Date.now();}
 
-$("connect").onclick=connect;$("ready").onclick=toggleReady;$("start").onclick=startGame;$("mic").onclick=toggleMic;$("cam").onclick=toggleCam;$("hangup").onclick=hangup;$("close").onclick=closeWindow;$("sendScore").onclick=sendScore;
+$("connect").onclick=connect;$("mic").onclick=toggleMic;$("cam").onclick=toggleCam;$("hangup").onclick=hangup;$("close").onclick=closeWindow;
 document.addEventListener("keydown",event=>{if(event.repeat)return;if(event.key==="Enter"&&!state.lk)connect();else if(event.key==="Escape")hangup();else if(event.key.toLowerCase()==="m")toggleMic();else if(event.key.toLowerCase()==="v")toggleCam();});
-setInterval(()=>{const element=$("countdown");if(element)element.textContent=countdown();},100);setInterval(loadState,2000);setInterval(refreshB2s,500);loadState();refreshB2s();
+setInterval(loadState,2000);setInterval(refreshB2s,500);loadState();refreshB2s();
 })();
 </script>
 </body>
@@ -268,56 +255,6 @@ def lobby_av_page() -> Response:
 @lobby_av_blueprint.get("/pincabos-link/api/lobby")
 def lobby_state():
     payload, status = _bridge("lobby-state")
-    return jsonify(payload), status
-
-
-@lobby_av_blueprint.post("/pincabos-link/api/lobby/join")
-def lobby_join():
-    if not _require_csrf():
-        return jsonify({"ok": False, "error": "invalid_csrf"}), 403
-    data = request.get_json(silent=True) or {}
-    payload, status = _bridge("lobby-join", str(data.get("code") or ""))
-    return jsonify(payload), status
-
-
-@lobby_av_blueprint.post("/pincabos-link/api/lobby/ready")
-def lobby_ready():
-    if not _require_csrf():
-        return jsonify({"ok": False, "error": "invalid_csrf"}), 403
-    data = request.get_json(silent=True) or {}
-    ready = data.get("ready")
-    if not isinstance(ready, bool):
-        return jsonify({"ok": False, "error": "invalid_ready"}), 400
-    payload, status = _bridge("lobby-ready", "1" if ready else "0")
-    return jsonify(payload), status
-
-
-@lobby_av_blueprint.post("/pincabos-link/api/lobby/start")
-def lobby_start():
-    if not _require_csrf():
-        return jsonify({"ok": False, "error": "invalid_csrf"}), 403
-    payload, status = _bridge("lobby-start")
-    return jsonify(payload), status
-
-
-@lobby_av_blueprint.post("/pincabos-link/api/lobby/score")
-def lobby_score():
-    if not _require_csrf():
-        return jsonify({"ok": False, "error": "invalid_csrf"}), 403
-    data = request.get_json(silent=True) or {}
-    try:
-        score = int(data.get("score"))
-    except (TypeError, ValueError):
-        return jsonify({"ok": False, "error": "invalid_score"}), 400
-    payload, status = _bridge("lobby-score", str(score))
-    return jsonify(payload), status
-
-
-@lobby_av_blueprint.post("/pincabos-link/api/lobby/leave")
-def lobby_leave():
-    if not _require_csrf():
-        return jsonify({"ok": False, "error": "invalid_csrf"}), 403
-    payload, status = _bridge("lobby-leave")
     return jsonify(payload), status
 
 

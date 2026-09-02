@@ -229,9 +229,9 @@ Les sources PinCabOS Link contiennent maintenant :
 
 - `pincaboslink_lobby_av.py`, fenêtre Backglass dédiée 6 zones;
 - joueur local toujours bas-centre et invités ordonnés par slot après exclusion du local;
-- zone Lobby/Game synchronisée toutes les 2 secondes depuis pincabos.cc;
+- lecture seule de la room active toutes les 2 secondes, uniquement pour autoriser et ordonner les participants A/V;
 - miroir JPEG B2S local en lecture seule;
-- commandes cabinet JOIN, READY, START, SCORE et LEAVE dans `pincabos-account-bridge`;
+- commandes cabinet limitées à `lobby-state` et `lobby-av-token`; aucune commande de jeu ou de modification du Lobby;
 - helper séparé `pincabos-lobby-av-backglass` utilisant l'écran `backglass` de `screens.json`;
 - LiveKit client `2.22.2`, caméra et micro OFF jusqu'au clic explicite;
 - contrôles clavier temporaires Enter/Esc/M/V;

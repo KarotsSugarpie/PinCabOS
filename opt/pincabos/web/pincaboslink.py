@@ -300,17 +300,13 @@ def _main_body(
     <div class="card pco-mirror-wide pco-lobby-card">
       <div class="pco-row">
         <div>
-          <h2 style="margin-bottom:4px">Lobby PinCabOS synchronisé</h2>
-          <div class="pco-muted">Room, joueurs, READY, table, compte à rebours et scores depuis pincabos.cc.</div>
+          <h2 style="margin-bottom:4px">Chat audio / vidéo du Lobby</h2>
+          <div class="pco-muted">La room active de pincabos.cc autorise les participants de l'appel A/V.</div>
         </div>
         <span id="pco-lobby-status" class="pco-badge warn">CHARGEMENT</span>
       </div>
       <div id="pco-lobby-summary" class="pco-lobby-summary pco-loading">Lecture du Lobby...</div>
       <div class="pco-lobby-controls">
-        <input id="pco-lobby-code" class="pco-link-input" style="max-width:190px" maxlength="6" placeholder="CODE ROOM" aria-label="Code de room">
-        <button id="pco-lobby-join" class="button secondary" type="button">REJOINDRE</button>
-        <button id="pco-lobby-ready" class="button secondary" type="button" disabled>READY</button>
-        <button id="pco-lobby-start" class="button secondary" type="button" disabled>START — 10 SEC</button>
         <button id="pco-lobby-av" class="button" type="button" disabled>OUVRIR LOBBY AUDIO / VIDÉO</button>
       </div>
       <div id="pco-lobby-message" class="pco-statusline"></div>
@@ -476,23 +472,19 @@ def _main_body(
     const room=state.lobby;
     const host=document.getElementById("pco-lobby-summary");
     const badge=document.getElementById("pco-lobby-status");
-    const ready=document.getElementById("pco-lobby-ready");
-    const start=document.getElementById("pco-lobby-start");
     const av=document.getElementById("pco-lobby-av");
     if(!room){
       badge.textContent="AUCUNE ROOM";badge.className="pco-badge warn";
       host.className="pco-lobby-summary pco-muted";
-      host.textContent="Créez une room sur pincabos.cc ou entrez son code ici.";
-      ready.disabled=true;start.disabled=true;av.disabled=true;return;
+      host.textContent="Rejoignez d'abord une room depuis le Lobby pincabos.cc.";
+      av.disabled=true;return;
     }
-    badge.textContent=String(room.status||"open").toUpperCase();badge.className="pco-badge "+(room.status==="playing"?"ok":"warn");
-    const title=el("div","pco-row");title.append(el("strong","",room.name+" · "+room.code),el("span","pco-muted",room.table_name));
+    badge.textContent="ROOM ACTIVE";badge.className="pco-badge ok";
+    const title=el("div","pco-row");title.append(el("strong","",room.name+" · "+room.code),el("span","pco-muted",room.member_count+" / "+room.max_players+" participants"));
     const members=el("div","pco-lobby-members");
-    (room.members||[]).forEach(member=>{const row=el("div","pco-lobby-member");row.append(el("span","","S"+member.slot+" · "+member.display_name+" · "+member.cab_name),el("strong",member.ready?"pco-badge ok":"pco-badge warn",member.ready?"READY":"NOT READY"));members.appendChild(row);});
+    (room.members||[]).forEach(member=>{const row=el("div","pco-lobby-member");row.append(el("span","","S"+member.slot+" · "+member.display_name+" · "+member.cab_name),el("strong","pco-badge ok","AUTORISÉ A/V"));members.appendChild(row);});
     host.className="pco-lobby-summary";host.replaceChildren(title,members);
-    ready.disabled=room.status!=="open";ready.textContent=room.me&&room.me.ready?"NOT READY":"READY";
-    const allReady=(room.members||[]).length>=2&&(room.members||[]).every(member=>member.ready);
-    start.disabled=!room.is_host||room.status!=="open"||!allReady;av.disabled=false;
+    av.disabled=false;
   }
 
   async function loadLobby(){
@@ -578,20 +570,6 @@ def _main_body(
     }finally{button.disabled=false;}
   });
 
-  document.getElementById("pco-lobby-join").addEventListener("click",async()=>{
-    const code=document.getElementById("pco-lobby-code").value.trim().toUpperCase();if(!code)return;
-    try{await api("/pincabos-link/api/lobby/join",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});await loadLobby();}
-    catch(e){document.getElementById("pco-lobby-message").textContent="JOIN : "+e.code;}
-  });
-  document.getElementById("pco-lobby-ready").addEventListener("click",async()=>{
-    if(!state.lobby||!state.lobby.me)return;
-    try{await api("/pincabos-link/api/lobby/ready",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ready:!state.lobby.me.ready})});await loadLobby();}
-    catch(e){document.getElementById("pco-lobby-message").textContent="READY : "+e.code;}
-  });
-  document.getElementById("pco-lobby-start").addEventListener("click",async()=>{
-    try{await api("/pincabos-link/api/lobby/start",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});await loadLobby();}
-    catch(e){document.getElementById("pco-lobby-message").textContent="START : "+e.code;}
-  });
   document.getElementById("pco-lobby-av").addEventListener("click",async()=>{
     try{const data=await api("/pincabos-link/api/lobby/window",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"open"})});document.getElementById("pco-lobby-message").textContent="Fenêtre A/V Backglass : "+data.window;}
     catch(e){document.getElementById("pco-lobby-message").textContent="Fenêtre A/V : "+e.code;}
