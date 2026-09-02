@@ -6,6 +6,9 @@ MARKER="/run/pincabos-lobby-av-backglass.active"
 SCREENS="/opt/pincabos/config/screens/screens.json"
 LOG="/opt/pincabos/logs/pincabos-lobby-av-backglass.log"
 URL="http://127.0.0.1/pincabos-link/lobby-av"
+EXTENSION="/opt/pincabos/web/lobby-av-browser-guard"
+RUNTIME="/usr/local/sbin/pincabos-lobby-av-runtime"
+WATCHDOG_PID="/run/pincabos-lobby-av-watchdog.pid"
 
 die() {
     echo "ERROR"
@@ -40,6 +43,39 @@ print(x, y, width, height)
 PY
 }
 
+runtime_enter() {
+    [[ -r "$RUNTIME" ]] || return 1
+    [[ "$(bash "$RUNTIME" enter 2>/dev/null)" == "READY" ]]
+}
+
+runtime_leave() {
+    [[ -r "$RUNTIME" ]] || return 0
+    bash "$RUNTIME" leave >/dev/null 2>&1 || true
+}
+
+watch_window() {
+    while pgrep -f -- "--user-data-dir=${PROFILE}" >/dev/null 2>&1; do
+        sleep 1
+    done
+    rm -f "$MARKER"
+    runtime_leave
+    rm -f "$WATCHDOG_PID"
+}
+
+start_watchdog() {
+    local old_pid=""
+
+    if [[ -r "$WATCHDOG_PID" ]]; then
+        old_pid="$(cat "$WATCHDOG_PID" 2>/dev/null || true)"
+        if [[ "$old_pid" =~ ^[0-9]+$ ]] && kill -0 "$old_pid" 2>/dev/null; then
+            return 0
+        fi
+    fi
+
+    watch_window >/dev/null 2>&1 &
+    printf '%s\n' "$!" >"$WATCHDOG_PID"
+}
+
 close_window() {
     pkill -TERM -f -- "--user-data-dir=${PROFILE}" 2>/dev/null || true
     for attempt in {1..20}; do
@@ -50,18 +86,28 @@ close_window() {
     done
     pkill -KILL -f -- "--user-data-dir=${PROFILE}" 2>/dev/null || true
     rm -f "$MARKER"
+    runtime_leave
     echo "CLOSED"
 }
 
 open_window() {
+    if ! runtime_enter; then
+        die
+    fi
+
     if pgrep -f -- "--user-data-dir=${PROFILE}" >/dev/null 2>&1; then
         touch "$MARKER"
         chmod 0644 "$MARKER" || true
+        start_watchdog
         echo "OPEN"
         return 0
     fi
 
-    read -r SCREEN_X SCREEN_Y SCREEN_W SCREEN_H < <(geometry) || die
+    if ! read -r SCREEN_X SCREEN_Y SCREEN_W SCREEN_H < <(geometry); then
+        runtime_leave
+        die
+    fi
+
     CHROME_BIN="$(
         command -v google-chrome \
         || command -v google-chrome-stable \
@@ -69,7 +115,14 @@ open_window() {
         || command -v chromium \
         || true
     )"
-    [[ -n "$CHROME_BIN" ]] || die
+    if [[ -z "$CHROME_BIN" ]]; then
+        runtime_leave
+        die
+    fi
+    if [[ ! -r "$EXTENSION/manifest.json" || ! -r "$EXTENSION/webrtc-guard.js" ]]; then
+        runtime_leave
+        die
+    fi
 
     install -d -o pinball -g pinball -m 0700 "$PROFILE"
     install -d -o pinball -g pinball -m 0755 "$(dirname "$LOG")"
@@ -87,6 +140,7 @@ open_window() {
         --window-position="$SCREEN_X,$SCREEN_Y" \
         --window-size="$SCREEN_W,$SCREEN_H" \
         --user-data-dir="$PROFILE" \
+        --load-extension="$EXTENSION" \
         --autoplay-policy=no-user-gesture-required \
         --use-fake-ui-for-media-stream \
         --no-first-run \
@@ -110,6 +164,7 @@ open_window() {
 
     for attempt in {1..40}; do
         if pgrep -f -- "--user-data-dir=${PROFILE}" >/dev/null 2>&1; then
+            start_watchdog
             echo "OPEN"
             return 0
         fi
@@ -117,6 +172,7 @@ open_window() {
     done
 
     rm -f "$MARKER"
+    runtime_leave
     die
 }
 
