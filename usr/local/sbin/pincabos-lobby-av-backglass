@@ -6,6 +6,7 @@ MARKER="/run/pincabos-lobby-av-backglass.active"
 SCREENS="/opt/pincabos/config/screens/screens.json"
 LOG="/opt/pincabos/logs/pincabos-lobby-av-backglass.log"
 URL="http://127.0.0.1/pincabos-link/lobby-av"
+EXTENSION="/opt/pincabos/web/lobby-av-browser-guard"
 
 die() {
     echo "ERROR"
@@ -70,6 +71,8 @@ open_window() {
         || true
     )"
     [[ -n "$CHROME_BIN" ]] || die
+    [[ -r "$EXTENSION/manifest.json" ]] || die
+    [[ -r "$EXTENSION/webrtc-guard.js" ]] || die
 
     install -d -o pinball -g pinball -m 0700 "$PROFILE"
     install -d -o pinball -g pinball -m 0755 "$(dirname "$LOG")"
@@ -87,6 +90,7 @@ open_window() {
         --window-position="$SCREEN_X,$SCREEN_Y" \
         --window-size="$SCREEN_W,$SCREEN_H" \
         --user-data-dir="$PROFILE" \
+        --load-extension="$EXTENSION" \
         --autoplay-policy=no-user-gesture-required \
         --use-fake-ui-for-media-stream \
         --no-first-run \
