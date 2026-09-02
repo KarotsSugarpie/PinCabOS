@@ -182,6 +182,36 @@ for _ in $(seq 1 60); do
     bg_ok=$([[ "$placed_bg" == "1" || -z "${BG_X:-}" ]] && echo 1 || echo 0)
     sv_ok=$([[ "$placed_sv" == "1" || -z "${FD_X:-}" ]] && echo 1 || echo 0)
     if [[ "$bg_ok" == "1" && "$sv_ok" == "1" && ( "$curtain_done" == "1" || -z "${FD_X:-}" ) ]]; then
+        # PINCABOS_PUP_SPLIT_LIVE_V2
+        # Split PuP dont le rectangle ne vient pas du pack (calibration ou
+        # defaut) : maintenant que le rideau vpinfe est leve et que le pack
+        # peut s'afficher, on lit le cadre DMD sur l'ecran FullDMD reel
+        # (ScoreView retire le temps de la prise) et on repose le ScoreView
+        # dedans. Le helper met le resultat en cache : la partie suivante
+        # part directement au bon endroit. Avant : la prise se faisait sous
+        # le rideau, et ne voyait que lui.
+        if [[ "$SPLIT" == "1" && "$placed_sv" == "1" && -n "${PINCABOS_PUP_SPLIT_PACK:-}" \
+              && -x /opt/pincabos/bin/pincabos-pup-scoreview-split.py ]]; then
+            case "${PINCABOS_PUP_SPLIT_REASON:-}" in
+                *calibration*|*defaut*)
+                    sleep 6
+                    listing="$(run_x wmctrl -lG 2>/dev/null || true)"
+                    sv="$(awk '/Visual Pinball Score View$/{print $1;exit}' <<< "$listing")"
+                    if [[ -n "$sv" ]]; then
+                        run_x xdotool windowunmap "$sv" >/dev/null 2>&1 || true
+                        sleep 1
+                        zone="$(run_x /opt/pincabos/bin/pincabos-pup-scoreview-split.py zone "$PINCABOS_PUP_SPLIT_PACK" 2>/dev/null || true)"
+                        run_x xdotool windowmap "$sv" >/dev/null 2>&1 || true
+                        read -r zx zy zw zh zsrc <<< "$zone" || true
+                        if [[ -n "${zw:-}" && "$zw" -gt 0 && "$zh" -gt 0 ]]; then
+                            run_x wmctrl -ir "$sv" -b remove,maximized_vert,maximized_horz,fullscreen >/dev/null 2>&1 || true
+                            run_x wmctrl -ir "$sv" -e "0,$((FD_X + zx)),$((FD_Y + zy)),$zw,$zh" >/dev/null 2>&1 || true
+                            run_x wmctrl -ir "$sv" -b add,above >/dev/null 2>&1 || true
+                        fi
+                    fi
+                    ;;
+            esac
+        fi
         # le Topper est opportuniste : s'il n'est pas apparu, on ne bloque pas
         exit 0
     fi
