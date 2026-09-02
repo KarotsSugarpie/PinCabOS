@@ -33,12 +33,24 @@ options_montage() {  # $1 = type de systeme de fichiers
         ntfs|ntfs3)
             # NTFS ignore les permissions Unix : sans uid/gid tout appartient
             # a root et le frontend ne peut rien ecrire.
-            printf 'uid=%s,gid=%s,umask=0022,windows_names,nofail' "$PINBALL_UID" "$PINBALL_GID" ;;
+            # PINCABOS_INTERNAL_DISK_NTFS_FORCE_V1
+            # 'force' : ntfs3 refuse un volume marque sale (coupure de courant,
+            # Windows en Fast Startup) et la bibliotheque disparait au boot
+            # suivant, tables comprises. Un pincab s'eteint souvent a
+            # l'interrupteur : on monte quand meme, ntfs3 signale dans dmesg
+            # que chkdsk est recommande.
+            printf 'uid=%s,gid=%s,umask=0022,windows_names,force,nofail' "$PINBALL_UID" "$PINBALL_GID" ;;
         exfat|vfat)
             printf 'uid=%s,gid=%s,umask=0022,nofail' "$PINBALL_UID" "$PINBALL_GID" ;;
         *)
             printf 'defaults,nofail' ;;
     esac
+}
+
+montage_diagnostic() {  # $1 = type : repete la raison donnee par le noyau
+    local motif="$1"
+    [ "$motif" = "ntfs3" ] && motif="ntfs"
+    dmesg 2>/dev/null | grep -i "$motif" | tail -n 2 | sed 's/^/  noyau : /' >&2 || true
 }
 
 cmd_list() {
@@ -154,7 +166,7 @@ sys.exit(0 if any(d.get("uuid") == voulu for d in candidats) else 1)
 
     if [ -z "$monte" ]; then
         mount -t "$fstype" -o "$(options_montage "$fstype")" "$dev" "$POINT" \
-            || { echo "Montage impossible ($fstype)." >&2; exit 3; }
+            || { echo "Montage impossible ($fstype)." >&2; montage_diagnostic "$fstype"; exit 3; }
     fi
 
     python3 - "$POINT" <<'PY'
@@ -263,7 +275,7 @@ cmd_adopt() {
     local opts; opts="$(options_montage "$fstype")"
     mkdir -p "$POINT"
     mountpoint -q "$POINT" || mount -t "$fstype" -o "$opts" "$dev" "$POINT" \
-        || { echo "Montage impossible ($fstype)." >&2; exit 3; }
+        || { echo "Montage impossible ($fstype)." >&2; montage_diagnostic "$fstype"; exit 3; }
     echo "disque monte sur $POINT ($fstype, $opts)"
 
     local source="$POINT"
