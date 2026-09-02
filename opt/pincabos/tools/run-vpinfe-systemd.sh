@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 # PINCABOS_PATHS_CONSUMER_V1
-. /opt/pincabos/lib/pincabos-paths.sh
+. /opt/pincabos/tools/pincabos-paths.sh
 
 exec /usr/sbin/runuser -u "$PCO_USER" -- /usr/bin/env -u LD_PRELOAD \
   HOME="$PCO_HOME" \

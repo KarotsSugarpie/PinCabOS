@@ -8,7 +8,7 @@ import unittest
 
 from _charge import charger, RACINE
 
-pp = charger("opt/pincabos/lib/pincabos_paths.py", "pco_paths")
+pp = charger("opt/pincabos/tools/pincabos_paths.py", "pco_paths")
 
 
 class Defauts(unittest.TestCase):
@@ -78,7 +78,7 @@ class Exports(unittest.TestCase):
         self.assertTrue(out.endswith("export PCO_PATHS_LOADED=1\n"))
 
     def test_cli(self):
-        script = os.path.join(RACINE, "opt/pincabos/lib/pincabos_paths.py")
+        script = os.path.join(RACINE, "opt/pincabos/tools/pincabos_paths.py")
         out = subprocess.run([sys.executable, script, "get", "vpx_pref"], capture_output=True, text=True)
         self.assertEqual(out.stdout.strip(), "/home/pinball/.pincabos/vpx")
         bad = subprocess.run([sys.executable, script, "get", "inconnue"], capture_output=True, text=True)

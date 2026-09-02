@@ -16,12 +16,12 @@ que pour les cles encore vraies : ses autres valeurs decrivaient des
 emplacements qui n'existent pas (/opt/pincabos/apps/vpinball…).
 
 Python :
-    import sys; sys.path.insert(0, "/opt/pincabos/lib")
+    import sys; sys.path.insert(0, "/opt/pincabos/tools")
     from pincabos_paths import PATHS
     PATHS.tables, PATHS.vpx_ini, PATHS.uid …
 
 Shell :
-    . /opt/pincabos/lib/pincabos-paths.sh      # exporte PCO_TABLES, PCO_VPX_INI, PCO_UID …
+    . /opt/pincabos/tools/pincabos-paths.sh      # exporte PCO_TABLES, PCO_VPX_INI, PCO_UID …
 
 CLI :
     pincabos_paths.py --shell | --json | get <cle>

@@ -1,6 +1,6 @@
 {
   "schema": "pincabos.paths/2",
-  "comment": "Surcharges des chemins PinCabOS. Les valeurs par defaut (la realite d'un cabinet livre) sont dans /opt/pincabos/lib/pincabos_paths.py ; n'ecrire ici QUE ce qui differe. Cles : voir `pincabos_paths.py --json`.",
+  "comment": "Surcharges des chemins PinCabOS. Les valeurs par defaut (la realite d'un cabinet livre) sont dans /opt/pincabos/tools/pincabos_paths.py ; n'ecrire ici QUE ce qui differe. Cles : voir `pincabos_paths.py --json`.",
   "user": "pinball",
   "paths": {}
 }
