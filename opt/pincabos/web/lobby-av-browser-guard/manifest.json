@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "PinCabOS Lobby A/V Media Guard",
+  "version": "1.0.0",
+  "description": "Cabinet-only WebRTC guard for PinCabOS Lobby A/V.",
+  "content_scripts": [
+    {
+      "matches": ["http://127.0.0.1/pincabos-link/lobby-av*"],
+      "js": ["webrtc-guard.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}
