@@ -160,11 +160,14 @@
       "subprocess",
       "typing"
     ],
-    "local_modules": [],
+    "local_modules": [
+      "pincaboslink_lobby_av"
+    ],
     "repository_files": [
       "usr/local/sbin/pincabos",
       "usr/local/sbin/pincabos-account-bridge",
       "usr/local/sbin/pincabos-chat-backglass",
+      "usr/local/sbin/pincabos-lobby-av-backglass",
       "usr/local/sbin/pincabos-link-web-pair"
     ],
     "runtime_paths": [
@@ -179,6 +182,7 @@
       "/usr/bin/env",
       "/usr/local/sbin/pincabos-account-bridge",
       "/usr/local/sbin/pincabos-chat-backglass",
+      "/usr/local/sbin/pincabos-lobby-av-backglass",
       "/usr/local/sbin/pincabos-link-web-pair",
       "sudo",
       "systemctl"

@@ -222,3 +222,19 @@ Cabinet 2 écrans : stratégie DMD documentée, mais source DMD seule/crop gén�
 ---
 
 **État de fin de journée : réseau/SFU/TLS/Lobby validés; cabinet Chat texte revenu canonique; baseline serveur figée 31/31 et manifestée dans le dépôt privé; intégration JWT + fenêtre Lobby A/V + média WAN restent à faire.**
+
+## Reprise source synchronisée — 2026-09-02
+
+Les sources PinCabOS Link contiennent maintenant :
+
+- `pincaboslink_lobby_av.py`, fenêtre Backglass dédiée 6 zones;
+- joueur local toujours bas-centre et invités ordonnés par slot après exclusion du local;
+- zone Lobby/Game synchronisée toutes les 2 secondes depuis pincabos.cc;
+- miroir JPEG B2S local en lecture seule;
+- commandes cabinet JOIN, READY, START, SCORE et LEAVE dans `pincabos-account-bridge`;
+- helper séparé `pincabos-lobby-av-backglass` utilisant l'écran `backglass` de `screens.json`;
+- LiveKit client `2.22.2`, caméra et micro OFF jusqu'au clic explicite;
+- contrôles clavier temporaires Enter/Esc/M/V;
+- aucun changement à VPX, BGFX ou VPinFE.
+
+Validation source effectuée : compilation Python, syntaxe JavaScript, `bash -n`, JSON et contrat JWT. Restent à prouver sur cabinet réel : permission C270/micro, média WAN ICE/TURN, affichage B2S vivant, test 2/4 participants et fermeture/restauration Backglass.

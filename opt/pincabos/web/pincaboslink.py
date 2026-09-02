@@ -21,6 +21,7 @@ HEARTBEAT_TIMER = "pincabos-link-heartbeat.timer"
 PAIR_HELPER = "/usr/local/sbin/pincabos-link-web-pair"
 ACCOUNT_BRIDGE = "/usr/local/sbin/pincabos-account-bridge"
 BACKGLASS_HELPER = "/usr/local/sbin/pincabos-chat-backglass"
+LOBBY_AV_HELPER = "/usr/local/sbin/pincabos-lobby-av-backglass"
 PAIR_PATTERN = re.compile(r"^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{12}$")
 CSRF_TOKEN = secrets.token_urlsafe(32)
 
@@ -163,6 +164,26 @@ def _display_action(action: str) -> str:
     return (result.stdout or "").strip()
 
 
+def _lobby_av_display_action(action: str) -> str:
+    sudo = shutil.which("sudo")
+    if not sudo:
+        return "ERROR"
+
+    try:
+        result = subprocess.run(
+            [sudo, "-n", LOBBY_AV_HELPER, action],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=30,
+        )
+    except Exception:
+        return "ERROR"
+
+    return (result.stdout or "").strip()
+
+
 def _main_body(
     active: str,
     enabled: str,
@@ -223,6 +244,11 @@ def _main_body(
 .pco-chat-form textarea{min-height:64px;resize:vertical}
 .pco-statusline{margin-top:8px;min-height:1.2em;opacity:.76}
 .pco-loading{opacity:.72;padding:16px 0}
+.pco-lobby-card{border-color:rgba(169,112,255,.48)}
+.pco-lobby-summary{display:grid;gap:10px;margin-top:10px}
+.pco-lobby-members{display:grid;gap:6px}
+.pco-lobby-member{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.05)}
+.pco-lobby-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
 @media(max-width:850px){.pco-mirror-grid,.pco-link-form,.pco-chat-form{grid-template-columns:1fr}.pco-mirror-wide{grid-column:auto}.pco-link-join{width:100%}}
 </style>
 
@@ -271,6 +297,25 @@ def _main_body(
       <div id="pco-account-friends" class="pco-loading">Chargement...</div>
     </div>
 
+    <div class="card pco-mirror-wide pco-lobby-card">
+      <div class="pco-row">
+        <div>
+          <h2 style="margin-bottom:4px">Lobby PinCabOS synchronisé</h2>
+          <div class="pco-muted">Room, joueurs, READY, table, compte à rebours et scores depuis pincabos.cc.</div>
+        </div>
+        <span id="pco-lobby-status" class="pco-badge warn">CHARGEMENT</span>
+      </div>
+      <div id="pco-lobby-summary" class="pco-lobby-summary pco-loading">Lecture du Lobby...</div>
+      <div class="pco-lobby-controls">
+        <input id="pco-lobby-code" class="pco-link-input" style="max-width:190px" maxlength="6" placeholder="CODE ROOM" aria-label="Code de room">
+        <button id="pco-lobby-join" class="button secondary" type="button">REJOINDRE</button>
+        <button id="pco-lobby-ready" class="button secondary" type="button" disabled>READY</button>
+        <button id="pco-lobby-start" class="button secondary" type="button" disabled>START — 10 SEC</button>
+        <button id="pco-lobby-av" class="button" type="button" disabled>OUVRIR LOBBY AUDIO / VIDÉO</button>
+      </div>
+      <div id="pco-lobby-message" class="pco-statusline"></div>
+    </div>
+
     <div class="card pco-mirror-wide">
       <div class="pco-chat-head">
         <div>
@@ -297,7 +342,7 @@ def _main_body(
 (() => {
   "use strict";
   const CSRF = "__CSRF_JS__";
-  const state = {ctx:null, friendId:null, lastId:0, chatTimer:null, accountTimer:null};
+  const state = {ctx:null,lobby:null,friendId:null,lastId:0,chatTimer:null,accountTimer:null,lobbyTimer:null};
 
   function el(tag, cls, text){
     const n=document.createElement(tag);
@@ -427,6 +472,34 @@ def _main_body(
     renderBackglassButton();
   }
 
+  function renderLobby(){
+    const room=state.lobby;
+    const host=document.getElementById("pco-lobby-summary");
+    const badge=document.getElementById("pco-lobby-status");
+    const ready=document.getElementById("pco-lobby-ready");
+    const start=document.getElementById("pco-lobby-start");
+    const av=document.getElementById("pco-lobby-av");
+    if(!room){
+      badge.textContent="AUCUNE ROOM";badge.className="pco-badge warn";
+      host.className="pco-lobby-summary pco-muted";
+      host.textContent="Créez une room sur pincabos.cc ou entrez son code ici.";
+      ready.disabled=true;start.disabled=true;av.disabled=true;return;
+    }
+    badge.textContent=String(room.status||"open").toUpperCase();badge.className="pco-badge "+(room.status==="playing"?"ok":"warn");
+    const title=el("div","pco-row");title.append(el("strong","",room.name+" · "+room.code),el("span","pco-muted",room.table_name));
+    const members=el("div","pco-lobby-members");
+    (room.members||[]).forEach(member=>{const row=el("div","pco-lobby-member");row.append(el("span","","S"+member.slot+" · "+member.display_name+" · "+member.cab_name),el("strong",member.ready?"pco-badge ok":"pco-badge warn",member.ready?"READY":"NOT READY"));members.appendChild(row);});
+    host.className="pco-lobby-summary";host.replaceChildren(title,members);
+    ready.disabled=room.status!=="open";ready.textContent=room.me&&room.me.ready?"NOT READY":"READY";
+    const allReady=(room.members||[]).length>=2&&(room.members||[]).every(member=>member.ready);
+    start.disabled=!room.is_host||room.status!=="open"||!allReady;av.disabled=false;
+  }
+
+  async function loadLobby(){
+    try{const data=await api("/pincabos-link/api/lobby");state.lobby=data.room||null;renderLobby();document.getElementById("pco-lobby-message").textContent="";}
+    catch(e){document.getElementById("pco-lobby-message").textContent="Lobby : "+e.code;}
+  }
+
   async function loadContext(){
     try{
       state.ctx=await api("/pincabos-link/api/context");
@@ -505,10 +578,31 @@ def _main_body(
     }finally{button.disabled=false;}
   });
 
+  document.getElementById("pco-lobby-join").addEventListener("click",async()=>{
+    const code=document.getElementById("pco-lobby-code").value.trim().toUpperCase();if(!code)return;
+    try{await api("/pincabos-link/api/lobby/join",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code})});await loadLobby();}
+    catch(e){document.getElementById("pco-lobby-message").textContent="JOIN : "+e.code;}
+  });
+  document.getElementById("pco-lobby-ready").addEventListener("click",async()=>{
+    if(!state.lobby||!state.lobby.me)return;
+    try{await api("/pincabos-link/api/lobby/ready",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ready:!state.lobby.me.ready})});await loadLobby();}
+    catch(e){document.getElementById("pco-lobby-message").textContent="READY : "+e.code;}
+  });
+  document.getElementById("pco-lobby-start").addEventListener("click",async()=>{
+    try{await api("/pincabos-link/api/lobby/start",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});await loadLobby();}
+    catch(e){document.getElementById("pco-lobby-message").textContent="START : "+e.code;}
+  });
+  document.getElementById("pco-lobby-av").addEventListener("click",async()=>{
+    try{const data=await api("/pincabos-link/api/lobby/window",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"open"})});document.getElementById("pco-lobby-message").textContent="Fenêtre A/V Backglass : "+data.window;}
+    catch(e){document.getElementById("pco-lobby-message").textContent="Fenêtre A/V : "+e.code;}
+  });
+
   loadContext();
+  loadLobby();
   api("/pincabos-link/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).catch(()=>{});
   state.accountTimer=setInterval(loadContext,15000);
   state.chatTimer=setInterval(pollChat,4000);
+  state.lobbyTimer=setInterval(loadLobby,2000);
   setInterval(()=>api("/pincabos-link/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).catch(()=>{}),30000);
 })();
 </script>
@@ -787,3 +881,11 @@ def register_pincaboslink(
     _page_renderer = page_renderer
     if pincaboslink_blueprint.name not in app.blueprints:
         app.register_blueprint(pincaboslink_blueprint)
+    from pincaboslink_lobby_av import register_pincaboslink_lobby_av
+    register_pincaboslink_lobby_av(
+        app,
+        _bridge_json,
+        _csrf_ok,
+        CSRF_TOKEN,
+        _lobby_av_display_action,
+    )

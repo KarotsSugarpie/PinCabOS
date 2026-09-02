@@ -1,0 +1,47 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "module": {
+    "id": "pincaboslink_lobby_av",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincaboslink_lobby_av.py",
+    "manifest_file": "opt/pincabos/web/pincaboslink_lobby_av.json",
+    "language": "python",
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincaboslink.py"
+    ],
+    "registration_functions": [
+      "register_pincaboslink_lobby_av"
+    ]
+  },
+  "requires": {
+    "local_modules": [
+      "pincaboslink"
+    ],
+    "repository_files": [
+      "usr/local/sbin/pincabos-account-bridge",
+      "usr/local/sbin/pincabos-lobby-av-backglass",
+      "etc/sudoers.d/pincabos-account-mirror"
+    ],
+    "runtime_paths": [
+      "/opt/pincabos/config/screens/screens.json",
+      "/run/pincabos-dashboard-live"
+    ],
+    "external_client": {
+      "name": "livekit-client",
+      "version": "2.22.2",
+      "source": "https://cdn.jsdelivr.net/npm/livekit-client@2.22.2/dist/livekit-client.umd.min.js"
+    }
+  },
+  "safety": {
+    "camera_default": false,
+    "microphone_default": false,
+    "vpx_modified": false,
+    "bgfx_modified": false,
+    "vpinfe_modified": false,
+    "incoming_cabinet_ports_required": false
+  }
+}

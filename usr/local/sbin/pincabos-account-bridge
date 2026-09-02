@@ -227,6 +227,59 @@ def command_backglass_set(value: str) -> None:
     )
 
 
+def command_lobby_state() -> None:
+    request_json("GET", "/api/device/lobby/state")
+
+
+def command_lobby_join(code: str) -> None:
+    normalized = "".join(
+        character
+        for character in str(code or "").strip().upper()
+        if character not in " -\t\r\n"
+    )
+    alphabet = set("23456789ABCDEFGHJKLMNPQRSTUVWXYZ")
+    if len(normalized) != 6 or any(value not in alphabet for value in normalized):
+        emit({"ok": False, "error": "invalid_room_code"}, 2)
+    request_json(
+        "POST",
+        "/api/device/lobby/join",
+        {"code": normalized},
+    )
+
+
+def command_lobby_ready(value: str) -> None:
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "on"}:
+        ready = True
+    elif normalized in {"0", "false", "off"}:
+        ready = False
+    else:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+    request_json("POST", "/api/device/lobby/ready", {"ready": ready})
+
+
+def command_lobby_start() -> None:
+    request_json("POST", "/api/device/lobby/start", {})
+
+
+def command_lobby_score(value: str) -> None:
+    try:
+        score = int(value)
+    except ValueError:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+    if score < 0 or score > 999999999999:
+        emit({"ok": False, "error": "invalid_argument"}, 2)
+    request_json("POST", "/api/device/lobby/score", {"score": score})
+
+
+def command_lobby_leave() -> None:
+    request_json("POST", "/api/device/lobby/leave", {})
+
+
+def command_lobby_av_token() -> None:
+    request_json("POST", "/api/device/lobby/av-token", {})
+
+
 def command_avatar(user_id: str) -> None:
     try:
         target = int(user_id)
@@ -301,6 +354,20 @@ def main() -> None:
         command_backglass_get()
     elif command == "backglass-set" and len(args) == 2:
         command_backglass_set(args[1])
+    elif command == "lobby-state" and len(args) == 1:
+        command_lobby_state()
+    elif command == "lobby-join" and len(args) == 2:
+        command_lobby_join(args[1])
+    elif command == "lobby-ready" and len(args) == 2:
+        command_lobby_ready(args[1])
+    elif command == "lobby-start" and len(args) == 1:
+        command_lobby_start()
+    elif command == "lobby-score" and len(args) == 2:
+        command_lobby_score(args[1])
+    elif command == "lobby-leave" and len(args) == 1:
+        command_lobby_leave()
+    elif command == "lobby-av-token" and len(args) == 1:
+        command_lobby_av_token()
     elif command == "avatar" and len(args) == 2:
         command_avatar(args[1])
     else:
