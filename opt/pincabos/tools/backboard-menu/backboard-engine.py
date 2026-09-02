@@ -21,8 +21,20 @@ sinon prefixe. En cas d'events multiples pour un nom, preference VPX (E2xxx).
 """
 import sys, csv, re, os, glob, json, unicodedata
 
-# marqueur de debut de notre injection dans la ligne pinupmenu (n'apparait que via nous)
-INJECT_MARK = "/E2000 WHITE ABL0 ABT0 ABW232"
+# Sentinelle de debut de notre injection dans la ligne pinupmenu : un effet
+# inerte (E1999 n'est emis par personne, Black = rien), en syntaxe DOF
+# standard. L'ancienne version reconnaissait l'injection au PREMIER effet du
+# code aerao (E2000...) : des que la feuille aerao change d'ordre, le code est
+# reinjecte a chaque demarrage et la ligne grossit sans fin.
+INJECT_MARK = "/E1999 Black"
+LEGACY_MARKS = ("/E2000 WHITE ABL0 ABT0 ABW232",)
+
+
+def _mark_index(line):
+    """Position de notre injection dans la ligne (sentinelle ou ancien marqueur), -1 sinon."""
+    positions = [line.find(m) for m in (INJECT_MARK,) + LEGACY_MARKS]
+    positions = [p for p in positions if p >= 0]
+    return min(positions) if positions else -1
 
 
 def norm(s):
@@ -117,9 +129,10 @@ def cmd_inject(ini, codefile):
     if i < 0:
         sys.exit("ligne pinupmenu introuvable dans [Config DOF] de " + ini)
     ln = lines[i].rstrip("\r")
-    if INJECT_MARK in ln:                 # retire l'injection precedente
-        ln = ln[:ln.index(INJECT_MARK)]
-    lines[i] = ln + "/" + code
+    k = _mark_index(ln)
+    if k >= 0:                            # retire l'injection precedente (ancienne ou nouvelle)
+        ln = ln[:k]
+    lines[i] = ln + INJECT_MARK + "/" + code
     open(ini, "w", encoding="utf-8").write("\n".join(lines))
     print("inject: code aerao (%d chars) applique a la ligne pinupmenu" % len(code))
 
@@ -131,8 +144,9 @@ def cmd_uninject(ini):
         print("uninject: ligne pinupmenu absente")
         return
     ln = lines[i].rstrip("\r")
-    if INJECT_MARK in ln:
-        lines[i] = ln[:ln.index(INJECT_MARK)]
+    k = _mark_index(ln)
+    if k >= 0:
+        lines[i] = ln[:k]
         open(ini, "w", encoding="utf-8").write("\n".join(lines))
         print("uninject: code aerao retire de la ligne pinupmenu")
     else:
@@ -248,7 +262,7 @@ def cmd_matrix_ini(cfgdir):
 def cmd_status(ini, mapf, tables):
     lines = open(ini, encoding="utf-8", errors="replace").read().split("\n")
     i = _find_pinupmenu_idx(lines)
-    injected = i >= 0 and INJECT_MARK in lines[i]
+    injected = i >= 0 and _mark_index(lines[i]) >= 0
     print("matrix ini      : %s" % ini)
     print("code aerao inject: %s" % ("OUI" if injected else "NON"))
     m = json.load(open(mapf, encoding="utf-8")) if os.path.exists(mapf) else {}

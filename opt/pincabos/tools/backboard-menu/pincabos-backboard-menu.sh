@@ -37,8 +37,10 @@ UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0 Safari/537.3
 SERVICE="pincabos-vpinfe.service"
 DISABLED_FLAG="$STATE_DIR/disabled"
 AUTOSETUP_FLAG="/run/pincabos-backboard-menu.autosetup"
-# marqueur du code injecte (doit rester aligne avec INJECT_MARK du moteur)
-INJECT_MARK="E2000 WHITE ABL0 ABT0 ABW232"
+# sentinelle du code injecte (alignee sur INJECT_MARK du moteur) ; l'ancien
+# marqueur est encore reconnu pour ne pas reinjecter sur une install existante
+INJECT_MARK="E1999 Black"
+LEGACY_MARK="E2000 WHITE ABL0 ABT0 ABW232"
 
 log(){ echo "[backboard-menu] $*"; }
 die(){ echo "[backboard-menu] ERREUR: $*" >&2; exit 1; }
@@ -158,7 +160,7 @@ cmd_auto(){
     # mapping des tables nouvellement installees, avant que vpinfe lise les .info
     ini=$(matrix_ini "$cfgdir" 2>/dev/null) || exit 0
     [ -n "$ini" ] && [ -f "$ini" ] || exit 0
-    grep -qF "$INJECT_MARK" "$ini" 2>/dev/null || inject "$ini" || true
+    grep -qF "$INJECT_MARK" "$ini" 2>/dev/null || grep -qF "$LEGACY_MARK" "$ini" 2>/dev/null || inject "$ini" || true
     maptables --fill-only >/dev/null 2>&1 || true
     fix_owner "$cfgdir"
     exit 0
