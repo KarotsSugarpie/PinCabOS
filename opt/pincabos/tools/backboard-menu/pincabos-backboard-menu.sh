@@ -26,11 +26,13 @@
 # manuelle de FrontendDOFEvent n'est jamais ecrasee ("map --overwrite" pour forcer).
 #
 set -euo pipefail
+# PINCABOS_PATHS_CONSUMER_V1
+. /opt/pincabos/tools/pincabos-paths.sh
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENGINE="$SELF_DIR/backboard-engine.py"
 
-STATE_DIR="/home/pinball/.pincabos/backboard"
-TABLES_DIR="/home/pinball/Tables"
+STATE_DIR="${PCO_HOME}/.pincabos/backboard"
+TABLES_DIR="$PCO_TABLES"
 AERAO="https://www.aerao.net/pinupmenugif"
 SHEET_CSV="https://docs.google.com/spreadsheets/d/1PVf0FaC0g2aR5zbGekggJGZkZ1V4F_BX4cy-gSG823U/export?format=csv"
 UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36"
@@ -47,7 +49,7 @@ die(){ echo "[backboard-menu] ERREUR: $*" >&2; exit 1; }
 
 detect_cfgdir(){
   local d
-  d=$(ls -d /home/pinball/.local/share/VPinballX/*/directoutputconfig 2>/dev/null | sort -V | tail -1)
+  d=$(ls -d "$PCO_DOF_CONFIG" "${PCO_HOME}"/.local/share/VPinballX/*/directoutputconfig 2>/dev/null | sort -V | tail -1)
   [ -n "$d" ] || die "dossier directoutputconfig introuvable (VPinballX non installe ?)"
   echo "$d"
 }
@@ -87,8 +89,8 @@ inject(){ python3 "$ENGINE" inject "$1" "$STATE_DIR/aerao_code.txt"; }
 maptables(){ python3 "$ENGINE" map "$STATE_DIR/aerao_map.json" "$TABLES_DIR" "$@"; }
 
 fix_owner(){ # les modes automatiques tournent en root : rendre l'etat a pinball
-  chown -R pinball:pinball "$STATE_DIR" 2>/dev/null || true
-  [ -n "${1:-}" ] && chown pinball:pinball "$1/pinupmenu.gif" 2>/dev/null || true
+  chown -R "$PCO_USER:$PCO_USER" "$STATE_DIR" 2>/dev/null || true
+  [ -n "${1:-}" ] && chown "$PCO_USER:$PCO_USER" "$1/pinupmenu.gif" 2>/dev/null || true
 }
 
 assets_ready(){ # $1=cfgdir
@@ -151,7 +153,7 @@ cmd_status(){
 cmd_auto(){
   [ -f "$DISABLED_FLAG" ] && exit 0
   local cfgdir ini
-  cfgdir=$(ls -d /home/pinball/.local/share/VPinballX/*/directoutputconfig 2>/dev/null | sort -V | tail -1) || true
+  cfgdir=$(ls -d "$PCO_DOF_CONFIG" "${PCO_HOME}"/.local/share/VPinballX/*/directoutputconfig 2>/dev/null | sort -V | tail -1) || true
   [ -n "${cfgdir:-}" ] || exit 0
   python3 "$ENGINE" detect "$cfgdir" >/dev/null 2>&1 || exit 0
 

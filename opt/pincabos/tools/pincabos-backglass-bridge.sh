@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
 
-TABLES_ROOT="/home/pinball/Tables"
+# PINCABOS_PATHS_CONSUMER_V1
+. /opt/pincabos/tools/pincabos-paths.shset -Eeuo pipefail
+
+TABLES_ROOT="$PCO_TABLES"
 PINBALL_UID="$(id -u)"
 RUNTIME="/run/user/$PINBALL_UID/pincabos-backglass-bridge"
 
@@ -11,7 +13,7 @@ CHROME="$(command -v google-chrome || command -v google-chrome-stable || command
   exit 1
 }
 
-export HOME="/home/pinball"
+export HOME="$PCO_HOME"
 export USER="pinball"
 export LOGNAME="pinball"
 export DISPLAY=":0"
