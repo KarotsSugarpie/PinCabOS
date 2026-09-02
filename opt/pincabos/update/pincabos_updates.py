@@ -176,7 +176,7 @@ def allowed(rel):
     if not rel or rel.startswith('/') or '..' in Path(rel).parts: return False
     prefixes=(
       'opt/pincabos/web/','opt/pincabos/bin/','opt/pincabos/script/','opt/pincabos/scripts/',
-      'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/media/audio-voix/',
+      'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/lib/','opt/pincabos/media/audio-voix/',
       'opt/pincabos/installer-gui/',
       'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
       'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',
