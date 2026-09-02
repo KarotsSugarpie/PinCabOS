@@ -141,6 +141,7 @@ open_window() {
         --window-size="$SCREEN_W,$SCREEN_H" \
         --user-data-dir="$PROFILE" \
         --load-extension="$EXTENSION" \
+        --force-fieldtrials=WebRTC-SdpBundlePayloadTypeCollisionCheck/Disabled/ \
         --autoplay-policy=no-user-gesture-required \
         --use-fake-ui-for-media-stream \
         --no-first-run \
