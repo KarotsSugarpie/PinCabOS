@@ -1,0 +1,74 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "PinCabOS/PinCabOS",
+    "commit": "376944e1a4fea29df52ab5970ace0d1b509ffc9c",
+    "generated_at": "2026-08-30T20:49:33.476Z",
+    "method": "static_source_inventory",
+    "limitations": [
+      "Inventory only: no repair lock is enabled.",
+      "Referenced paths are not automatically owned by this module.",
+      "Dynamic paths and runtime-generated files require manual ownership review."
+    ]
+  },
+  "module": {
+    "id": "pincabos-hybrid-chooser",
+    "scope": "runtime_bin",
+    "kind": "executable",
+    "source_file": "opt/pincabos/bin/pincabos-hybrid-chooser.py",
+    "manifest_file": "opt/pincabos/bin/pincabos-hybrid-chooser.json",
+    "language": "python",
+    "git_blob_sha": "b6d6ef17da7c9159052d2ade2fa0c6a0a152d2a7",
+    "size_bytes": 4581,
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/bin/pincabos-hybrid-launch.sh"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": []
+  },
+  "exposes": {
+    "functions": [
+      {
+        "name": "render",
+        "line": 59,
+        "top_level": true
+      }
+    ],
+    "classes": [],
+    "routes": []
+  },
+  "requires": {
+    "python_imports": [
+      "json",
+      "os",
+      "pathlib",
+      "pygame",
+      "sys",
+      "time"
+    ],
+    "local_modules": [],
+    "repository_files": [],
+    "runtime_paths": [
+      "/usr/bin/env"
+    ],
+    "configuration_paths": [],
+    "assets": [],
+    "systemd_units_mentioned": [],
+    "commands": [
+      "/usr/bin/env"
+    ],
+    "environment_variables": []
+  },
+  "repair_policy": {
+    "lock_enabled": false,
+    "repair_enabled": false,
+    "inventory_only": true,
+    "ownership_status": "pending_manual_review",
+    "source_file_candidate_owner": "opt/pincabos/bin/pincabos-hybrid-chooser.py",
+    "required_files_are_dependencies_not_ownership_claims": true
+  }
+}

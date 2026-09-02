@@ -32,7 +32,7 @@ VPinballX_BGFX -PrefPath /home/pinball/.pincabos/vpx -play <table.vpx>
 `pincabos-launch-hybrid.sh`. Il reste parce que la WebApp, le doctor,
 `tabletest` et `iso.sh` le citent ; ne rien y ajouter.
 
-## Ce qui a été retiré, et pourquoi
+## Ce qui a été archivé (`DEV/archive/launchers/`), et pourquoi
 
 - `opt/pincabos/bin/pincabos-hybrid-launch.sh` — ancien launcher hybride
   (V12), remplacé par `launchers/pincabos-launch-core.sh`. Plus référencé
