@@ -5183,7 +5183,28 @@ def fulldmd_page():
   <div class="card">
     <h2>Calibration FullDMD</h2>
     <p><a href="/fulldmd/style" style="font-weight:bold;">&#127912; Style d'affichage FullDMD par table (art du pack / grand DMD)</a></p>
-    <p><a href="/dmd/zedmd" style="font-weight:bold;">&#128225; ZeDMD (DMD LED reel) — USB ou Wi-Fi, pour VPX et VPinFE</a></p>
+    <!-- PINCABOS_FULLDMD_ZEDMD_BLOCK_V1 : le ZeDMD vit ici, avec le reste du DMD -->
+    <div style="margin:10px 0 14px;padding:10px 12px;border:1px solid #5f2a91;border-radius:10px;">
+      <p style="margin:0 0 6px;"><b>&#128225; DMD LED reel (ZeDMD)</b> — <span id="zedmdSummary" style="opacity:.9;">lecture de l'etat…</span></p>
+      <p style="margin:0;"><a class="button" href="/dmd/zedmd">Configurer le ZeDMD (USB / Wi-Fi, VPX et VPinFE)</a></p>
+    </div>
+    <script>
+    (async () => {
+      const el = document.getElementById('zedmdSummary');
+      try {
+        const d = await (await fetch('/api/zedmd/status')).json();
+        const c = d.config || {};
+        if (c.mode === 'off' || !c.mode) { el.textContent = 'desactive'; return; }
+        const lien = c.mode === 'pin2dmd' ? 'PIN2DMD (USB)'
+          : c.mode === 'wifi' ? ('ZeDMD Wi-Fi ' + (c.wifi_addr || '?'))
+          : ('ZeDMD USB ' + (c.device || 'auto'));
+        const cible = c.targets === 'both' ? 'menu VPinFE + jeu' : 'en jeu seulement';
+        const vpx = (d.vpx && d.vpx.zedmd) ? 'VPX actif' : 'VPX inactif';
+        const fe = (d.vpinfe && d.vpinfe.enabled) ? 'VPinFE actif' : 'VPinFE inactif';
+        el.textContent = lien + ' · ' + cible + ' · ' + vpx + ' · ' + fe;
+      } catch (e) { el.textContent = 'etat indisponible'; }
+    })();
+    </script>
     <p>Déplace et étire le rectangle pour représenter la zone visible du FullDMD.</p>
     <p>Config sauvegardée dans :</p>
     <p><code>/opt/pincabos/config/fulldmd-calibration.json</code></p>

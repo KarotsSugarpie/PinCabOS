@@ -108,6 +108,18 @@ def register(app, page, esc):
             if fe else "vpinfe.ini introuvable"
         )
         warnings = "".join(f'<p class="warn">⚠️ {esc(w)}</p>' for w in st.get("warnings", []) if w)
+        p2 = st.get("pin2dmd") or {}
+        p2_devs = p2.get("devices") or []
+        if p2_devs:
+            p2_line = " · ".join(
+                f"<b>{esc(d.get('product') or 'PIN2DMD')}</b> (<code>{esc(d.get('node') or '?')}</code>, "
+                f"acces pinball : {'✅ ok' if d.get('writable') else '⛔ refuse'})"
+                for d in p2_devs
+            )
+        else:
+            p2_line = "aucun PIN2DMD branche (USB 0314:e457)"
+        p2_line += f" · regle udev : {'✅ presente' if p2.get('udev_rule') else '⛔ absente'}"
+        p2_line += f" · VPX : <b>{yesno(vpx.get('pin2dmd'))}</b>"
         rows = "".join(
             f"<tr><td style='padding:4px 8px'><code>{esc(p['device'])}</code></td>"
             f"<td style='padding:4px 8px'>{'✅ candidat' if p.get('candidate') else '⛔'}</td>"
@@ -121,12 +133,14 @@ def register(app, page, esc):
 {notice}
 <div class="grid" style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:start;">
   <div class="card">
-    <h2>ZeDMD — configuration</h2>
+    <h2>DMD LED reel — configuration</h2>
+    <p class="pco-mini">ZeDMD (USB ou Wi-Fi) ou PIN2DMD (USB). Le FullDMD a l'ecran reste actif independamment.</p>
     <form method="post" action="/dmd/zedmd/apply">
       <p><b>Mode</b><br>
         <label><input type="radio" name="mode" value="off"{checked('mode','off')}> Desactive</label> &nbsp;
-        <label><input type="radio" name="mode" value="usb"{checked('mode','usb')}> USB (port serie)</label> &nbsp;
-        <label><input type="radio" name="mode" value="wifi"{checked('mode','wifi')}> Wi-Fi (reseau)</label>
+        <label><input type="radio" name="mode" value="usb"{checked('mode','usb')}> ZeDMD USB (port serie)</label> &nbsp;
+        <label><input type="radio" name="mode" value="wifi"{checked('mode','wifi')}> ZeDMD Wi-Fi (reseau)</label> &nbsp;
+        <label><input type="radio" name="mode" value="pin2dmd"{checked('mode','pin2dmd')}> PIN2DMD (USB)</label>
       </p>
       <p><b>Port USB</b><br>
         <select name="device" style="width:100%;padding:6px;">{''.join(port_options)}</select><br>
@@ -141,7 +155,7 @@ def register(app, page, esc):
       <p><b>Ou l'utiliser</b><br>
         <label><input type="radio" name="targets" value="game"{' checked' if targets=='game' else ''}> En jeu seulement (VPX)</label><br>
         <label><input type="radio" name="targets" value="both"{' checked' if targets=='both' else ''}> Au menu VPinFE et en jeu</label><br>
-        <span class="pco-mini">Un port USB ne se partage pas : si VPinFE tient le ZeDMD au menu, VPX doit le reprendre au lancement de chaque table. En <b>Wi-Fi</b>, aucune contrainte — c'est le mode recommande pour « menu + jeu ». En USB avec le menu, un port explicite est obligatoire (VPinFE ne sait pas chercher le ZeDMD tout seul).</span>
+        <span class="pco-mini">Un port USB ne se partage pas : si VPinFE tient le ZeDMD au menu, VPX doit le reprendre au lancement de chaque table. En <b>Wi-Fi</b>, aucune contrainte — c'est le mode recommande pour « menu + jeu ». En USB avec le menu, un port explicite est obligatoire (VPinFE ne sait pas chercher le ZeDMD tout seul). <b>PIN2DMD : en jeu seulement</b> — la bibliotheque libdmdutil embarquee dans VPinFE n'a pas sa prise en charge.</span>
       </p>
       <p>
         <button class="button" type="submit">Enregistrer et appliquer</button>
@@ -149,8 +163,8 @@ def register(app, page, esc):
       </p>
     </form>
     <form method="post" action="/dmd/zedmd/test" style="margin-top:8px;">
-      <button class="button secondary" type="submit"{'' if st.get('test_available') and mode != 'off' else ' disabled'}>Tester : afficher une mire 4 s sur le ZeDMD</button>
-      <span class="pco-mini"> (en USB, VPinFE doit ne pas tenir le port pendant le test : mettre « en jeu seulement » ou tester avant d'activer le menu)</span>
+      <button class="button secondary" type="submit"{'' if st.get('test_available') else ' disabled'}>Tester : afficher une mire 4 s sur le ZeDMD</button>
+      <span class="pco-mini"> (ZeDMD seulement ; en USB, VPinFE doit ne pas tenir le port pendant le test : mettre « en jeu seulement » ou tester avant d'activer le menu. PIN2DMD : lancer une table pour verifier)</span>
     </form>
   </div>
 
@@ -160,6 +174,7 @@ def register(app, page, esc):
       {warnings}
       <p><b>VPX</b> (<code>{esc(vpx.get('ini',''))}</code>)<br>{vpx_line}</p>
       <p><b>VPinFE</b> (<code>{esc(fe.get('ini',''))}</code>)<br>{fe_line}</p>
+      <p><b>PIN2DMD</b><br>{p2_line}</p>
       <p class="pco-mini">Source de verite : <code>/opt/pincabos/config/zedmd.json</code>. Les sections <code>[Plugin.DMDUtil]</code> (VPX) et <code>[libdmdutil]</code> (VPinFE) sont regenerees a chaque application ; VPX relit son INI a chaque table, VPinFE est redemarre si sa configuration change.</p>
     </div>
     <div class="card">
@@ -172,14 +187,14 @@ def register(app, page, esc):
     </div>
     <div class="card">
       <h2>Rappels</h2>
-      <p class="pco-mini">• PIN2DMD : pris en charge par VPX (en jeu) uniquement, pas par le menu VPinFE.<br>
+      <p class="pco-mini">• PIN2DMD : pris en charge par VPX (en jeu) uniquement — VPinFE n'a pas cette prise en charge dans sa bibliotheque. Acces USB donne par la regle udev livree (rebrancher le PIN2DMD apres une mise a jour qui l'installe).<br>
       • Le FullDMD (ecran) reste actif independamment du ZeDMD.<br>
       • Retour : <a href="/fulldmd">FullDMD / DMD</a> · <a href="/tools">Outils</a></p>
     </div>
   </div>
 </div>
 """
-        return page("ZeDMD", body)
+        return page("FullDMD / DMD — DMD LED reel (ZeDMD / PIN2DMD)", body)
 
     @app.route("/dmd/zedmd")
     def zedmd_page():
@@ -188,7 +203,7 @@ def register(app, page, esc):
     @app.route("/dmd/zedmd/apply", methods=["POST"])
     def zedmd_apply():
         mode = (request.form.get("mode") or "off").strip().lower()
-        if mode not in ("off", "usb", "wifi"):
+        if mode not in ("off", "usb", "wifi", "pin2dmd"):
             mode = "off"
         try:
             brightness = int(request.form.get("brightness") or -1)
@@ -196,7 +211,7 @@ def register(app, page, esc):
             brightness = -1
         targets = (request.form.get("targets") or "").strip().lower()
         if targets not in ("game", "both"):
-            targets = "game" if mode == "usb" else "both"
+            targets = "game" if mode in ("usb", "pin2dmd") else "both"
         cfg = {
             "mode": mode,
             "device": (request.form.get("device") or "").strip(),
