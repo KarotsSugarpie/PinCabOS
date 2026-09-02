@@ -24,6 +24,8 @@
 #   BOOT_VIDEO_MAX_SECONDS=60   BOOT_VIDEO_VOLUME=100
 #   BOOT_VIDEO_HOLD_MAX_SECONDS=90   (duree max de l'image finale)
 set -u
+# PINCABOS_PATHS_CONSUMER_V1
+. /opt/pincabos/lib/pincabos-paths.sh
 
 BOOT_VIDEO_ENABLED=1
 BOOT_VIDEO_FILE=/opt/pincabos/media/boot-video.mp4
@@ -42,12 +44,12 @@ SELF=/opt/pincabos/bin/pincabos-boot-video.sh
 
 # environnement de session identique a run-vpinfe-systemd.sh (X + audio)
 as_pinball() {
-  /usr/sbin/runuser -u pinball -- /usr/bin/env \
-    HOME=/home/pinball \
-    DISPLAY=:0 \
-    XAUTHORITY=/home/pinball/.Xauthority \
-    XDG_RUNTIME_DIR=/run/user/1000 \
-    DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+  /usr/sbin/runuser -u "$PCO_USER" -- /usr/bin/env \
+    HOME="$PCO_HOME" \
+    DISPLAY="$PCO_DISPLAY" \
+    XAUTHORITY="$PCO_XAUTHORITY" \
+    XDG_RUNTIME_DIR="$PCO_RUNTIME_DIR" \
+    DBUS_SESSION_BUS_ADDRESS="$PCO_DBUS_ADDRESS" \
     "$@"
 }
 
@@ -55,7 +57,7 @@ as_pinball() {
 SW="" SH="" SX=0 SY=0
 load_playfield_geometry() {
   local f geo=""
-  for f in /run/pincabos/display-aliases.env /opt/pincabos/config/display-aliases.env; do
+  for f in /run/pincabos/display-aliases.env "$PCO_ALIASES_ENV"; do
     if [ -f "$f" ]; then
       # shellcheck disable=SC1090
       . "$f" 2>/dev/null || true

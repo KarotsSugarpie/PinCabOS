@@ -4,25 +4,27 @@
 # DudesCab + UMX : HIDRAW
 
 set -Eeuo pipefail
+# PINCABOS_PATHS_CONSUMER_V1
+. /opt/pincabos/lib/pincabos-paths.sh
 
-PINBALL_USER="pinball"
-PINBALL_HOME="/home/pinball"
+PINBALL_USER="$PCO_USER"
+PINBALL_HOME="$PCO_HOME"
 
 # PINCABOS_VPX_STABLE_SYMLINK_V1
 # /home/pinball/vpx pointe vers le dossier moteur versionné. Auto-répare :
 # si le lien manque ou est cassé, cible le dossier VPinballX_BGFX-* le plus récent.
-VPX_HOME_LINK="/home/pinball/vpx"
+VPX_HOME_LINK="$PCO_VPX_LINK"
 if [[ ! -e "${VPX_HOME_LINK}/VPinballX_BGFX" ]]; then
-  _newest="$(ls -dt /home/pinball/VPinballX_BGFX-*-linux-x64 2>/dev/null | head -1 || true)"
+  _newest="$(ls -dt "$PINBALL_HOME"/VPinballX_BGFX-*-linux-x64 2>/dev/null | head -1 || true)"
   if [[ -n "${_newest}" ]]; then
     ln -sfn "${_newest}" "${VPX_HOME_LINK}"
-    chown -h pinball:pinball "${VPX_HOME_LINK}" 2>/dev/null || true
+    chown -h "$PINBALL_USER:$PINBALL_USER" "${VPX_HOME_LINK}" 2>/dev/null || true
   fi
 fi
 
-VPX_MAIN="/home/pinball/vpx/VPinballX_BGFX"
-VPX_ALT="/home/pinball/vpx/VPinballX_BGFX.pincabos-original-paced2"
-DOF_DIR="/home/pinball/vpx/plugins/dof"
+VPX_MAIN="$PCO_VPX_BIN"
+VPX_ALT="${PCO_VPX_LINK}/VPinballX_BGFX.pincabos-original-paced2"
+DOF_DIR="${PCO_VPX_PLUGINS}/dof"
 OVERLAY="/opt/pincabos/overlays/libdof-ledwiz-hidraw-stable"
 DOF_LOCAL="/opt/pincabos/overlays/libdof-ledwiz-hidraw-stable/libdof.so.0.4.7"
 # PINCABOS_HIDAPI_SONAME_V1
@@ -31,7 +33,7 @@ DOF_LOCAL="/opt/pincabos/overlays/libdof-ledwiz-hidraw-stable/libdof.so.0.4.7"
 # premiere montee de version apt, et avec lui tous les lancements de table.
 HIDUSB="/usr/lib/x86_64-linux-gnu/libhidapi-libusb.so.0"
 
-DEFAULT_TABLE="/home/pinball/Tables/Attack from Mars (Bally 1995)/Attack from Mars (Midway 1995).vpx"
+DEFAULT_TABLE="${PCO_TABLES}/Attack from Mars (Bally 1995)/Attack from Mars (Midway 1995).vpx"
 
 die() {
   echo "ERREUR: $*" >&2
@@ -78,10 +80,10 @@ fi
 # PinCabOS/VPinFE continueraient de lire 10.8/ (désynchronisation silencieuse).
 # Parade : chemin canonique stable + option officielle -PrefPath du standalone.
 # Un symlink de compatibilité conserve l ancien chemin pour tous les lecteurs.
-VPX_PREF_DIR="/home/pinball/.pincabos/vpx"
-VPX_LEGACY_PREF="/home/pinball/.local/share/VPinballX/10.8"
+VPX_PREF_DIR="$PCO_VPX_PREF"
+VPX_LEGACY_PREF="$PCO_VPX_LEGACY_PREF"
 if [[ ! -e "${VPX_PREF_DIR}" ]]; then
-  mkdir -p /home/pinball/.pincabos
+  mkdir -p "$(dirname "${VPX_PREF_DIR}")"
   if [[ -d "${VPX_LEGACY_PREF}" && ! -L "${VPX_LEGACY_PREF}" ]]; then
     mv "${VPX_LEGACY_PREF}" "${VPX_PREF_DIR}"
   else
@@ -92,8 +94,8 @@ if [[ ! -e "${VPX_LEGACY_PREF}" ]]; then
   mkdir -p "$(dirname "${VPX_LEGACY_PREF}")"
   ln -sn "${VPX_PREF_DIR}" "${VPX_LEGACY_PREF}"
 fi
-chown -h pinball:pinball "${VPX_LEGACY_PREF}" 2>/dev/null || true
-chown pinball:pinball /home/pinball/.pincabos "${VPX_PREF_DIR}" 2>/dev/null || true
+chown -h "$PINBALL_USER:$PINBALL_USER" "${VPX_LEGACY_PREF}" 2>/dev/null || true
+chown "$PINBALL_USER:$PINBALL_USER" "$(dirname "${VPX_PREF_DIR}")" "${VPX_PREF_DIR}" 2>/dev/null || true
 
 [[ -x "$VPX" ]] || die "VPX absent: $VPX"
 [[ -f "$TABLE" ]] || die "Table absente: $TABLE"
@@ -107,8 +109,8 @@ ENV_ARGS=(
   LOGNAME="$PINBALL_USER"
   DISPLAY="${DISPLAY:-:0}"
   XAUTHORITY="$PINBALL_HOME/.Xauthority"
-  XDG_RUNTIME_DIR="/run/user/1000"
-  DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1000/bus"
+  XDG_RUNTIME_DIR="$PCO_RUNTIME_DIR"
+  DBUS_SESSION_BUS_ADDRESS="$PCO_DBUS_ADDRESS"
   XDG_DATA_HOME="$PINBALL_HOME/.local/share"
   XDG_CONFIG_HOME="$PINBALL_HOME/.config"
   XDG_CACHE_HOME="$PINBALL_HOME/.cache"

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# PINCABOS_PATHS_CONSUMER_V1
+. /opt/pincabos/lib/pincabos-paths.sh
 # PINCABOS_HYBRID_LAUNCH_CORE_V3_2_1
 # PINCABOS_DIRECT_LAUNCH_MODES_V2
 
@@ -13,7 +15,7 @@ ASSET="${LAUNCHER_DIR}/assets/PCOSGamesChoices.png"
 MODE_HELPER="${PINCABOS_MODE_HELPER:-/usr/local/sbin/pincabos-hybrid-pup-mode}"
 PUPPACK_TOOL="${PINCABOS_PUPPACK_TOOL:-/opt/pincabos/bin/pincabos-puppack-option}"
 REAL_LAUNCHER="${PINCABOS_REAL_LAUNCHER:-/opt/pincabos/scripts/VPXlauncher.real.sh}"
-PINBALL_UID="$(id -u pinball 2>/dev/null || echo 1000)"
+PINBALL_UID="$PCO_UID"
 CALLER_UID="$(id -u)"
 SHARED_RUNTIME_DIR="/run/pincabos-hybrid-launcher"
 USER_RUNTIME_BASE="${XDG_RUNTIME_DIR:-/run/user/${CALLER_UID}}"
@@ -224,19 +226,19 @@ run_chooser() {
     rm -f "$result"
 
     if [[ "$EUID" -eq 0 ]]; then
-        runuser -u pinball -- env \
-            HOME=/home/pinball \
-            USER=pinball \
-            LOGNAME=pinball \
+        runuser -u "$PCO_USER" -- env \
+            HOME="$PCO_HOME" \
+            USER="$PCO_USER" \
+            LOGNAME="$PCO_USER" \
             DISPLAY=:0 \
-            XAUTHORITY=/home/pinball/.Xauthority \
+            XAUTHORITY="$PCO_XAUTHORITY" \
             XDG_RUNTIME_DIR="/run/user/${PINBALL_UID}" \
             SDL_VIDEO_X11_WMCLASS=PinCabOSHybridChooser \
             "${command[@]}"
     else
         env \
             DISPLAY="${DISPLAY:-:0}" \
-            XAUTHORITY="${XAUTHORITY:-/home/pinball/.Xauthority}" \
+            XAUTHORITY="${XAUTHORITY:-$PCO_XAUTHORITY}" \
             XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/${PINBALL_UID}}" \
             SDL_VIDEO_X11_WMCLASS=PinCabOSHybridChooser \
             "${command[@]}"
