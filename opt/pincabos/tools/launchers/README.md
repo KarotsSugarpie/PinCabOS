@@ -1,5 +1,12 @@
 # Lancement d'une table — la chaîne, et rien d'autre
 
+> **Où vit ce code** : ici, dans `opt/pincabos/tools/launchers/` (livré par les
+> mises à jour). `/opt/pincabos/launchers` est un **lien** vers ce dossier —
+> posé par `pincabos-launchers-sync` au démarrage de vpinfe, qui archive le
+> dossier réel hérité de l'ISO la première fois. Ce préfixe n'avait jamais
+> fait partie du périmètre des releases : les cabinets tournaient avec la
+> chaîne de leur ISO.
+
 Un seul chemin d'exécution, du frontend au binaire VPX. Chaque maillon a un
 rôle précis ; il n'existe **aucun autre launcher** dans le dépôt.
 
