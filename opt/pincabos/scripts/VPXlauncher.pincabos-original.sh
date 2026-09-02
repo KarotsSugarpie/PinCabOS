@@ -25,7 +25,11 @@ VPX_ALT="/home/pinball/vpx/VPinballX_BGFX.pincabos-original-paced2"
 DOF_DIR="/home/pinball/vpx/plugins/dof"
 OVERLAY="/opt/pincabos/overlays/libdof-ledwiz-hidraw-stable"
 DOF_LOCAL="/opt/pincabos/overlays/libdof-ledwiz-hidraw-stable/libdof.so.0.4.7"
-HIDUSB="/usr/lib/x86_64-linux-gnu/libhidapi-libusb.so.0.15.0"
+# PINCABOS_HIDAPI_SONAME_V1
+# Le lien de soname (.so.0) est garanti par le paquet libhidapi-libusb0 quelle
+# que soit sa version ; le nom de fichier versionne (.so.0.15.0) disparait a la
+# premiere montee de version apt, et avec lui tous les lancements de table.
+HIDUSB="/usr/lib/x86_64-linux-gnu/libhidapi-libusb.so.0"
 
 DEFAULT_TABLE="/home/pinball/Tables/Attack from Mars (Bally 1995)/Attack from Mars (Midway 1995).vpx"
 

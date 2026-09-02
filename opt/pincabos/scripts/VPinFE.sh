@@ -5,7 +5,11 @@ PINBALL_USER="pinball"
 PINBALL_HOME="/home/pinball"
 VFE_BIN="/home/pinball/vpinfe/vpinfe"
 DOF_BUNDLE="/opt/pincabos/overlays/vpinfe-dof-ledwiz-hidraw-stable"
-HIDUSB="/usr/lib/x86_64-linux-gnu/libhidapi-libusb.so.0.15.0"
+# PINCABOS_HIDAPI_SONAME_V1
+# Le lien de soname (.so.0) est garanti par le paquet libhidapi-libusb0 quelle
+# que soit sa version ; le nom de fichier versionne (.so.0.15.0) disparait a la
+# premiere montee de version apt, et avec lui tous les lancements de table.
+HIDUSB="/usr/lib/x86_64-linux-gnu/libhidapi-libusb.so.0"
 
 [[ -x "$VFE_BIN" ]] || {
   echo "ERREUR: VPinFE absent." >&2
