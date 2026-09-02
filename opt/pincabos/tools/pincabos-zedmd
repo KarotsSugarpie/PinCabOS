@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""PinCabOS — prise en charge du ZeDMD (USB ou Wi-Fi) pour VPX et VPinFE.
+"""PinCabOS — DMD LED reel : ZeDMD (USB ou Wi-Fi) et PIN2DMD, pour VPX et VPinFE.
 
-PINCABOS_ZEDMD_V1
+PINCABOS_ZEDMD_V1 (le nom de l'outil est historique ; il couvre aussi le PIN2DMD)
 
 Source de verite : /opt/pincabos/config/zedmd.json
-    {"mode": "off|usb|wifi", "device": "", "wifi_addr": "", "brightness": -1,
+    {"mode": "off|usb|wifi|pin2dmd", "device": "", "wifi_addr": "", "brightness": -1,
      "targets": "game|both"}
+
+PIN2DMD : USB brut via libusb (0314:e457, produit PIN2DMD / XL / HD), pris en
+charge par le plugin DMDUtil de VPX (en jeu). La lib libdmdutil embarquee dans
+VPinFE (0.11, liee en dur au bridge) n'a pas le code PIN2DMD : pas de menu.
+L'acces USB en tant que pinball exige la regle udev livree
+(etc/udev/rules.d/99-pincabos-pin2dmd.rules).
 
 Ce script est l'UNIQUE ecrivain des sections [Plugin.DMDUtil] de VPinballX.ini
 et [libdmdutil] de vpinfe.ini : la page web ne fait que modifier le JSON puis
@@ -41,6 +47,9 @@ VPX_INI_CANDIDATES = (
 VPINFE_INI = "/home/pinball/.config/vpinfe/vpinfe.ini"
 CABINET_XML = "/home/pinball/.pincabos/vpx/directoutputconfig/cabinet.xml"
 VPINFE_DMDUTIL_DIR = "/home/pinball/vpinfe/_internal/third-party/libdmdutil"
+PIN2DMD_VID, PIN2DMD_PID = "0314", "e457"   # src/PIN2DMD.cpp de libdmdutil
+PIN2DMD_UDEV_RULE = "/etc/udev/rules.d/99-pincabos-pin2dmd.rules"
+MODES = ("off", "usb", "wifi", "pin2dmd")
 
 DEFAULTS = {"mode": "off", "device": "", "wifi_addr": "", "brightness": -1, "targets": ""}
 
@@ -65,10 +74,10 @@ def load_config():
             data.update({k: loaded.get(k, v) for k, v in DEFAULTS.items()})
     except (OSError, ValueError):
         pass
-    if data["mode"] not in ("off", "usb", "wifi"):
+    if data["mode"] not in MODES:
         data["mode"] = "off"
     if data["targets"] not in ("game", "both"):
-        data["targets"] = "game" if data["mode"] == "usb" else "both"
+        data["targets"] = "game" if data["mode"] in ("usb", "pin2dmd") else "both"
     try:
         data["brightness"] = int(data["brightness"])
     except (TypeError, ValueError):
@@ -243,6 +252,36 @@ def detect():
     return found
 
 
+def _sys_read(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def detect_pin2dmd():
+    """PIN2DMD branches (USB brut, pas de port serie) + etat de l'acces pinball."""
+    devices = []
+    for d in glob.glob("/sys/bus/usb/devices/*"):
+        if _sys_read(d + "/idVendor").lower() != PIN2DMD_VID:
+            continue
+        if _sys_read(d + "/idProduct").lower() != PIN2DMD_PID:
+            continue
+        try:
+            node = "/dev/bus/usb/%03d/%03d" % (int(_sys_read(d + "/busnum")), int(_sys_read(d + "/devnum")))
+        except ValueError:
+            node = ""
+        writable = bool(node) and os.access(node, os.W_OK)
+        devices.append({
+            "product": _sys_read(d + "/product") or "PIN2DMD",
+            "serial": _sys_read(d + "/serial"),
+            "node": node,
+            "writable": writable,
+        })
+    return {"devices": devices, "udev_rule": os.path.isfile(PIN2DMD_UDEV_RULE)}
+
+
 def _by_id_link(dev):
     """Chemin stable /dev/serial/by-id/… (ne change pas avec l'ordre d'enumeration)."""
     real = os.path.realpath(dev)
@@ -255,7 +294,9 @@ def _by_id_link(dev):
 # --- apply -------------------------------------------------------------------
 def desired_vpx_values(cfg, current):
     mode = cfg["mode"]
-    other_consumers = any(_truthy(current.get(k)) for k in ("pixelcade", "pin2dmd", "dmdserver"))
+    # consommateurs du plugin que cet outil ne gere pas (Pixelcade, DMDServer) :
+    # s'ils sont actifs, Enable reste a 1 meme quand notre DMD est desactive
+    other_consumers = any(_truthy(current.get(k)) for k in ("pixelcade", "dmdserver"))
     if mode == "off":
         return {
             "Enable": "1" if other_consumers else "0",
@@ -263,9 +304,20 @@ def desired_vpx_values(cfg, current):
             "ZeDMDWiFiEnabled": "0",
             "ZeDMDDevice": "",
             "ZeDMDWiFiAddr": "",
+            "PIN2DMD": "0",
+        }
+    if mode == "pin2dmd":
+        return {
+            "Enable": "1",
+            "PIN2DMD": "1",
+            "ZeDMD": "0",
+            "ZeDMDWiFiEnabled": "0",
+            "ZeDMDDevice": "",
+            "ZeDMDWiFiAddr": "",
         }
     values = {
         "Enable": "1",
+        "PIN2DMD": "0",
         "ZeDMD": "1",
         "ZeDMDWiFiEnabled": "1" if mode == "wifi" else "0",
         "ZeDMDDevice": cfg["device"] if mode == "usb" else "",
@@ -276,7 +328,8 @@ def desired_vpx_values(cfg, current):
 
 
 def desired_vpinfe_values(cfg):
-    menu = cfg["mode"] != "off" and cfg["targets"] == "both"
+    # PIN2DMD : jamais au menu, la lib de VPinFE n'en a pas le code
+    menu = cfg["mode"] in ("usb", "wifi") and cfg["targets"] == "both"
     if not menu:
         return {"enabled": "false", "zedmddevice": "", "zedmdwifiaddr": ""}
     return {
@@ -295,6 +348,9 @@ def validate(cfg):
     if cfg["mode"] == "usb" and cfg["targets"] == "both" and not cfg["device"]:
         errors.append("en USB avec le menu VPinFE, un port explicite est obligatoire "
                       "(VPinFE ne sait pas chercher le ZeDMD tout seul)")
+    if cfg["mode"] == "pin2dmd" and cfg["targets"] == "both":
+        errors.append("PIN2DMD : en jeu seulement — la bibliotheque libdmdutil embarquee "
+                      "dans VPinFE n'a pas la prise en charge PIN2DMD")
     return errors
 
 
@@ -346,6 +402,7 @@ def status():
             "ini": vpx,
             "enable": _truthy(s.get("enable")),
             "zedmd": _truthy(s.get("zedmd")),
+            "pin2dmd": _truthy(s.get("pin2dmd")),
             "wifi": _truthy(s.get("zedmdwifienabled")),
             "device": s.get("zedmddevice", ""),
             "wifi_addr": s.get("zedmdwifiaddr", ""),
@@ -360,7 +417,12 @@ def status():
             "device": s.get("zedmddevice", ""),
             "wifi_addr": s.get("zedmdwifiaddr", ""),
         }
-    out["test_available"] = os.path.isfile(os.path.join(VPINFE_DMDUTIL_DIR, "libdmdutil_wrapper.py"))
+    out["pin2dmd"] = detect_pin2dmd()
+    # le test passe par le bridge VPinFE : ZeDMD seulement
+    out["test_available"] = (
+        cfg["mode"] in ("usb", "wifi")
+        and os.path.isfile(os.path.join(VPINFE_DMDUTIL_DIR, "libdmdutil_wrapper.py"))
+    )
     return out
 
 
@@ -368,7 +430,11 @@ def status():
 def test(seconds):
     cfg = load_config()
     if cfg["mode"] == "off":
-        print("ERREUR: ZeDMD desactive dans la configuration")
+        print("ERREUR: DMD LED desactive dans la configuration")
+        return 2
+    if cfg["mode"] == "pin2dmd":
+        print("ERREUR: test indisponible pour le PIN2DMD (le bridge de VPinFE n'a pas PIN2DMD) — "
+              "lancer une table pour verifier")
         return 2
     errors = validate(cfg)
     if errors:

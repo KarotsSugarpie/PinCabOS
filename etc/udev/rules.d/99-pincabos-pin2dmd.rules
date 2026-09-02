@@ -1,0 +1,5 @@
+# PinCabOS - PIN2DMD (DMD LED, USB brut via libusb)
+# Identifiants d'apres src/PIN2DMD.cpp de libdmdutil : 0314:e457 (PIN2DMD / XL / HD).
+# Sans cette regle, le noeud /dev/bus/usb/... appartient a root et le plugin
+# DMDUtil de VPX (qui tourne en pinball) ne peut pas ouvrir l'ecran.
+SUBSYSTEM=="usb", ATTR{idVendor}=="0314", ATTR{idProduct}=="e457", MODE="0660", GROUP="plugdev", TAG+="uaccess"

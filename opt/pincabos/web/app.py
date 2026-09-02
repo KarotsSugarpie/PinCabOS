@@ -5195,7 +5195,9 @@ def fulldmd_page():
         const d = await (await fetch('/api/zedmd/status')).json();
         const c = d.config || {};
         if (c.mode === 'off' || !c.mode) { el.textContent = 'desactive'; return; }
-        const lien = c.mode === 'wifi' ? ('Wi-Fi ' + (c.wifi_addr || '?')) : ('USB ' + (c.device || 'auto'));
+        const lien = c.mode === 'pin2dmd' ? 'PIN2DMD (USB)'
+          : c.mode === 'wifi' ? ('ZeDMD Wi-Fi ' + (c.wifi_addr || '?'))
+          : ('ZeDMD USB ' + (c.device || 'auto'));
         const cible = c.targets === 'both' ? 'menu VPinFE + jeu' : 'en jeu seulement';
         const vpx = (d.vpx && d.vpx.zedmd) ? 'VPX actif' : 'VPX inactif';
         const fe = (d.vpinfe && d.vpinfe.enabled) ? 'VPinFE actif' : 'VPinFE inactif';
