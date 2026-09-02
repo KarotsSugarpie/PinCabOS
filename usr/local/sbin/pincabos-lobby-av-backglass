@@ -44,13 +44,13 @@ PY
 }
 
 runtime_enter() {
-    [[ -x "$RUNTIME" ]] || return 1
-    [[ "$("$RUNTIME" enter 2>/dev/null)" == "READY" ]]
+    [[ -r "$RUNTIME" ]] || return 1
+    [[ "$(bash "$RUNTIME" enter 2>/dev/null)" == "READY" ]]
 }
 
 runtime_leave() {
-    [[ -x "$RUNTIME" ]] || return 0
-    "$RUNTIME" leave >/dev/null 2>&1 || true
+    [[ -r "$RUNTIME" ]] || return 0
+    bash "$RUNTIME" leave >/dev/null 2>&1 || true
 }
 
 watch_window() {
