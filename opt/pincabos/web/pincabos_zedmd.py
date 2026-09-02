@@ -17,12 +17,11 @@ CONFIG = "/opt/pincabos/config/zedmd.json"
 
 
 def _run(*args, timeout=30, privileged=False):
-    # set / apply ecrivent dans /opt/pincabos/config (root) : passage par sudo
-    # (regle etc/sudoers.d/pincabos-zedmd). detect / status / test restent en pinball
-    # — le port serie est accessible via le groupe dialout.
+    # /opt/pincabos/config appartient au groupe pinball en ecriture (tmpfiles
+    # 'z', decision du 02/09) : set / apply n'ont plus besoin de sudo — les INI
+    # sont a pinball, le port serie accessible via dialout. Le parametre
+    # `privileged` est conserve pour la signature, sans effet.
     cmd = [TOOL, *args]
-    if privileged:
-        cmd = ["/usr/bin/sudo", "-n", *cmd]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
@@ -49,7 +48,7 @@ def _detect():
 
 
 def _save_config(cfg):
-    rc, out = _run("set", json.dumps(cfg, ensure_ascii=False), privileged=True)
+    rc, out = _run("set", json.dumps(cfg, ensure_ascii=False), privileged=False)
     if rc != 0:
         raise OSError(out.strip() or f"rc={rc}")
 
@@ -223,7 +222,7 @@ def register(app, page, esc):
             _save_config(cfg)
         except OSError as exc:
             return _page(_status(), _detect(), f'<div class="card"><p class="warn">Impossible d\'enregistrer la configuration : {esc(str(exc))}</p></div>')
-        rc, out = _run("apply", privileged=True)
+        rc, out = _run("apply", privileged=False)
         restarted = ""
         if rc == 0 and "RESTART_VPINFE=1" in out:
             ok, msg = _restart_vpinfe()

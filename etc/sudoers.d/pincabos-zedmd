@@ -1,3 +1,0 @@
-# PinCabOS - ZeDMD : la WebApp (pinball) enregistre la configuration et
-# regenere les sections INI via l'outil dedie (config dans /opt/pincabos/config).
-pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-zedmd set *, /opt/pincabos/tools/pincabos-zedmd apply

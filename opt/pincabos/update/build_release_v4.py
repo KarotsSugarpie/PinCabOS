@@ -330,6 +330,11 @@ def main():
 
         "opt/pincabos/scripts/"
         "VPinFE.sh",
+
+        # /opt/pincabos/config est ecrit par pinball sans sudo depuis la
+        # decision du 02/09 : premiere regle sudoers retiree.
+        "etc/sudoers.d/"
+        "pincabos-zedmd",
     ]
 
     removals = sorted(
