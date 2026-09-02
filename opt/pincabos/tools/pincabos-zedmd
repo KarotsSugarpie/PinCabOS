@@ -1,0 +1,461 @@
+#!/usr/bin/env python3
+"""PinCabOS — prise en charge du ZeDMD (USB ou Wi-Fi) pour VPX et VPinFE.
+
+PINCABOS_ZEDMD_V1
+
+Source de verite : /opt/pincabos/config/zedmd.json
+    {"mode": "off|usb|wifi", "device": "", "wifi_addr": "", "brightness": -1,
+     "targets": "game|both"}
+
+Ce script est l'UNIQUE ecrivain des sections [Plugin.DMDUtil] de VPinballX.ini
+et [libdmdutil] de vpinfe.ini : la page web ne fait que modifier le JSON puis
+appeler `apply`.
+
+  detect            Ports serie USB presents, classes (candidat ZeDMD / occupe / inconnu)
+  status            Etat JSON (config + ce que lisent VPX et VPinFE)
+  set '<json>'      Enregistre la configuration (appele via sudo par la page web)
+  apply             Config -> les deux INI (imprime RESTART_VPINFE=1 si vpinfe.ini a change)
+  test [secondes]   Affiche une mire sur le ZeDMD via le bridge libdmdutil de VPinFE
+
+Regles :
+  - VPX (plugin DMDUtil) sait chercher lui-meme le ZeDMD USB : device vide = auto.
+  - VPinFE exige un chemin de port explicite en USB.
+  - Un port USB ne se partage pas : "menu + jeu" en USB signifie que VPinFE tient
+    le port au menu ; le Wi-Fi n'a pas cette limite. Par defaut : USB -> jeu
+    seulement, Wi-Fi -> menu + jeu.
+"""
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+CONFIG = "/opt/pincabos/config/zedmd.json"
+VPX_INI_CANDIDATES = (
+    "/home/pinball/.pincabos/vpx/VPinballX.ini",
+    "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+)
+VPINFE_INI = "/home/pinball/.config/vpinfe/vpinfe.ini"
+CABINET_XML = "/home/pinball/.pincabos/vpx/directoutputconfig/cabinet.xml"
+VPINFE_DMDUTIL_DIR = "/home/pinball/vpinfe/_internal/third-party/libdmdutil"
+
+DEFAULTS = {"mode": "off", "device": "", "wifi_addr": "", "brightness": -1, "targets": ""}
+
+# VID USB -> famille. Le ZeDMD est un ESP32 : soit port natif Espressif, soit
+# pont serie CP210x / CH340 (VID partages avec d'autres cartes, donc "possible").
+VID_FAMILY = {
+    "303a": ("esp32", "ESP32 natif (Espressif) — ZeDMD probable"),
+    "10c4": ("bridge", "pont serie CP210x — ZeDMD possible (ou autre carte ESP)"),
+    "1a86": ("bridge", "pont serie CH340 — ZeDMD possible (ou autre carte ESP)"),
+    "16c0": ("teensy", "Teensy — controleur LED / DOF, pas un ZeDMD"),
+    "2e8a": ("pico", "Raspberry Pico / DudesCab — pas un ZeDMD"),
+    "0314": ("pin2dmd", "PIN2DMD — pas un ZeDMD"),
+}
+
+
+def load_config():
+    data = dict(DEFAULTS)
+    try:
+        with open(CONFIG, encoding="utf-8") as f:
+            loaded = json.load(f) or {}
+        if isinstance(loaded, dict):
+            data.update({k: loaded.get(k, v) for k, v in DEFAULTS.items()})
+    except (OSError, ValueError):
+        pass
+    if data["mode"] not in ("off", "usb", "wifi"):
+        data["mode"] = "off"
+    if data["targets"] not in ("game", "both"):
+        data["targets"] = "game" if data["mode"] == "usb" else "both"
+    try:
+        data["brightness"] = int(data["brightness"])
+    except (TypeError, ValueError):
+        data["brightness"] = -1
+    if not 0 <= data["brightness"] <= 15:
+        data["brightness"] = -1
+    data["device"] = str(data["device"] or "").strip()
+    data["wifi_addr"] = str(data["wifi_addr"] or "").strip()
+    return data
+
+
+def save_config(data):
+    os.makedirs(os.path.dirname(CONFIG), exist_ok=True)
+    tmp = CONFIG + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    os.replace(tmp, CONFIG)
+    _chown_pinball(CONFIG)
+
+
+def _chown_pinball(path):
+    if os.geteuid() == 0:
+        try:
+            shutil.chown(path, "pinball", "pinball")
+        except (OSError, LookupError):
+            pass
+
+
+# --- INI ---------------------------------------------------------------------
+_SECTION_RE = re.compile(r"^\s*\[(.+?)\]\s*$")
+
+
+def read_section(text, section):
+    """Cles (minuscules) -> valeurs de la section demandee."""
+    values = {}
+    inside = False
+    for line in text.split("\n"):
+        m = _SECTION_RE.match(line)
+        if m:
+            inside = m.group(1).strip().lower() == section.lower()
+            continue
+        if not inside or not line.strip() or line.lstrip().startswith((";", "#")):
+            continue
+        if "=" in line:
+            k, v = line.split("=", 1)
+            values[k.strip().lower()] = v.strip()
+    return values
+
+
+def update_section(text, section, values):
+    """Met a jour les cles d'une section en conservant le format du fichier ;
+    cles absentes ajoutees en fin de section, section absente creee."""
+    lines = text.split("\n")
+    start = None
+    end = len(lines)
+    for i, line in enumerate(lines):
+        m = _SECTION_RE.match(line)
+        if not m:
+            continue
+        if start is not None:
+            end = i
+            break
+        if m.group(1).strip().lower() == section.lower():
+            start = i
+    if start is None:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.append(f"[{section}]")
+        for k, v in values.items():
+            lines.append(f"{k} = {v}")
+        lines.append("")
+        return "\n".join(lines)
+    remaining = dict(values)
+    for i in range(start + 1, end):
+        line = lines[i]
+        if not line.strip() or line.lstrip().startswith((";", "#")) or "=" not in line:
+            continue
+        key = line.split("=", 1)[0].strip()
+        for want in list(remaining):
+            if key.lower() == want.lower():
+                lines[i] = f"{key} = {remaining.pop(want)}"
+    insert_at = end
+    while insert_at > start + 1 and not lines[insert_at - 1].strip():
+        insert_at -= 1
+    for k, v in remaining.items():
+        lines.insert(insert_at, f"{k} = {v}")
+        insert_at += 1
+    return "\n".join(lines)
+
+
+def write_atomic(path, text):
+    directory = os.path.dirname(path)
+    fd, tmp = tempfile.mkstemp(prefix=".zedmd-", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        try:
+            st = os.stat(path)
+            os.chmod(tmp, st.st_mode & 0o7777)
+            if os.geteuid() == 0:
+                os.chown(tmp, st.st_uid, st.st_gid)
+        except OSError:
+            pass
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def vpx_ini_path():
+    for p in VPX_INI_CANDIDATES:
+        if os.path.isfile(p):
+            return p
+    return None
+
+
+def _truthy(v):
+    return str(v or "").strip().lower() in ("1", "true", "yes", "on")
+
+
+# --- detection ---------------------------------------------------------------
+def udev_props(dev):
+    props = {}
+    try:
+        out = subprocess.run(
+            ["udevadm", "info", "--query=property", "--name", dev],
+            capture_output=True, text=True, timeout=5,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return props
+    for line in out.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            props[k] = v
+    return props
+
+
+def dof_ports():
+    """Ports serie declares dans cabinet.xml (Teensy/Wemos DOF) : a ne pas prendre."""
+    ports = set()
+    try:
+        with open(CABINET_XML, encoding="utf-8", errors="replace") as f:
+            ports.update(re.findall(r"<ComPortName>\s*(/dev/\S+?)\s*</ComPortName>", f.read()))
+    except OSError:
+        pass
+    return ports
+
+
+def detect():
+    used = dof_ports()
+    found = []
+    for dev in sorted(glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*")):
+        p = udev_props(dev)
+        vid = p.get("ID_VENDOR_ID", "").lower()
+        family, label = VID_FAMILY.get(vid, ("unknown", "carte serie inconnue"))
+        candidate = family in ("esp32", "bridge") and dev not in used
+        found.append({
+            "device": dev,
+            "vendor_id": vid,
+            "product_id": p.get("ID_MODEL_ID", "").lower(),
+            "model": p.get("ID_MODEL", "") or p.get("ID_MODEL_FROM_DATABASE", ""),
+            "serial": p.get("ID_SERIAL_SHORT", ""),
+            "family": family,
+            "label": label + (" — declare dans cabinet.xml (DOF)" if dev in used else ""),
+            "candidate": candidate,
+            "by_id": _by_id_link(dev),
+        })
+    return found
+
+
+def _by_id_link(dev):
+    """Chemin stable /dev/serial/by-id/… (ne change pas avec l'ordre d'enumeration)."""
+    real = os.path.realpath(dev)
+    for link in glob.glob("/dev/serial/by-id/*"):
+        if os.path.realpath(link) == real:
+            return link
+    return ""
+
+
+# --- apply -------------------------------------------------------------------
+def desired_vpx_values(cfg, current):
+    mode = cfg["mode"]
+    other_consumers = any(_truthy(current.get(k)) for k in ("pixelcade", "pin2dmd", "dmdserver"))
+    if mode == "off":
+        return {
+            "Enable": "1" if other_consumers else "0",
+            "ZeDMD": "0",
+            "ZeDMDWiFiEnabled": "0",
+            "ZeDMDDevice": "",
+            "ZeDMDWiFiAddr": "",
+        }
+    values = {
+        "Enable": "1",
+        "ZeDMD": "1",
+        "ZeDMDWiFiEnabled": "1" if mode == "wifi" else "0",
+        "ZeDMDDevice": cfg["device"] if mode == "usb" else "",
+        "ZeDMDWiFiAddr": cfg["wifi_addr"] if mode == "wifi" else "",
+        "ZeDMDBrightness": str(cfg["brightness"]) if cfg["brightness"] >= 0 else "",
+    }
+    return values
+
+
+def desired_vpinfe_values(cfg):
+    menu = cfg["mode"] != "off" and cfg["targets"] == "both"
+    if not menu:
+        return {"enabled": "false", "zedmddevice": "", "zedmdwifiaddr": ""}
+    return {
+        "enabled": "true",
+        "zedmddevice": cfg["device"] if cfg["mode"] == "usb" else "",
+        "zedmdwifiaddr": cfg["wifi_addr"] if cfg["mode"] == "wifi" else "",
+    }
+
+
+def validate(cfg):
+    errors = []
+    if cfg["mode"] == "wifi" and not re.match(r"^[A-Za-z0-9.\-]+$", cfg["wifi_addr"] or ""):
+        errors.append("adresse Wi-Fi du ZeDMD manquante ou invalide")
+    if cfg["mode"] == "usb" and cfg["device"] and not cfg["device"].startswith("/dev/"):
+        errors.append("le port USB doit etre un chemin /dev/…")
+    if cfg["mode"] == "usb" and cfg["targets"] == "both" and not cfg["device"]:
+        errors.append("en USB avec le menu VPinFE, un port explicite est obligatoire "
+                      "(VPinFE ne sait pas chercher le ZeDMD tout seul)")
+    return errors
+
+
+def apply(cfg):
+    errors = validate(cfg)
+    if errors:
+        for e in errors:
+            print("ERREUR: " + e)
+        return 2
+    vpx = vpx_ini_path()
+    if vpx:
+        with open(vpx, encoding="utf-8", errors="replace") as f:
+            text = f.read()
+        current = read_section(text, "Plugin.DMDUtil")
+        new = update_section(text, "Plugin.DMDUtil", desired_vpx_values(cfg, current))
+        if new != text:
+            write_atomic(vpx, new)
+            print(f"VPX      : [Plugin.DMDUtil] mis a jour ({vpx})")
+        else:
+            print("VPX      : deja conforme")
+    else:
+        print("VPX      : VPinballX.ini introuvable (rien ecrit)")
+    restart = 0
+    if os.path.isfile(VPINFE_INI):
+        with open(VPINFE_INI, encoding="utf-8", errors="replace") as f:
+            text = f.read()
+        new = update_section(text, "libdmdutil", desired_vpinfe_values(cfg))
+        if new != text:
+            write_atomic(VPINFE_INI, new)
+            restart = 1
+            print("VPinFE   : [libdmdutil] mis a jour (redemarrage du frontend requis)")
+        else:
+            print("VPinFE   : deja conforme")
+    else:
+        print("VPinFE   : vpinfe.ini introuvable (rien ecrit)")
+    print(f"RESTART_VPINFE={restart}")
+    return 0
+
+
+# --- status ------------------------------------------------------------------
+def status():
+    cfg = load_config()
+    out = {"config": cfg, "vpx": {}, "vpinfe": {}, "warnings": validate(cfg)}
+    vpx = vpx_ini_path()
+    if vpx:
+        with open(vpx, encoding="utf-8", errors="replace") as f:
+            s = read_section(f.read(), "Plugin.DMDUtil")
+        out["vpx"] = {
+            "ini": vpx,
+            "enable": _truthy(s.get("enable")),
+            "zedmd": _truthy(s.get("zedmd")),
+            "wifi": _truthy(s.get("zedmdwifienabled")),
+            "device": s.get("zedmddevice", ""),
+            "wifi_addr": s.get("zedmdwifiaddr", ""),
+            "brightness": s.get("zedmdbrightness", ""),
+        }
+    if os.path.isfile(VPINFE_INI):
+        with open(VPINFE_INI, encoding="utf-8", errors="replace") as f:
+            s = read_section(f.read(), "libdmdutil")
+        out["vpinfe"] = {
+            "ini": VPINFE_INI,
+            "enabled": _truthy(s.get("enabled")),
+            "device": s.get("zedmddevice", ""),
+            "wifi_addr": s.get("zedmdwifiaddr", ""),
+        }
+    out["test_available"] = os.path.isfile(os.path.join(VPINFE_DMDUTIL_DIR, "libdmdutil_wrapper.py"))
+    return out
+
+
+# --- test --------------------------------------------------------------------
+def test(seconds):
+    cfg = load_config()
+    if cfg["mode"] == "off":
+        print("ERREUR: ZeDMD desactive dans la configuration")
+        return 2
+    errors = validate(cfg)
+    if errors:
+        for e in errors:
+            print("ERREUR: " + e)
+        return 2
+    if cfg["mode"] == "usb" and not cfg["device"]:
+        cands = [d for d in detect() if d["candidate"]]
+        if len(cands) != 1:
+            print("ERREUR: en USB 'auto', le test a besoin d'un port explicite "
+                  f"({len(cands)} candidat(s) detecte(s))")
+            return 2
+        cfg["device"] = cands[0]["device"]
+        print(f"port retenu pour le test : {cfg['device']}")
+    sys.path.insert(0, VPINFE_DMDUTIL_DIR)
+    os.environ["LD_LIBRARY_PATH"] = VPINFE_DMDUTIL_DIR + ":" + os.environ.get("LD_LIBRARY_PATH", "")
+    try:
+        from libdmdutil_wrapper import DMDController  # noqa: E402
+        from media import make_test_pattern  # noqa: E402
+    except Exception as exc:  # bridge absent ou dependance manquante
+        print(f"ERREUR: bridge libdmdutil de VPinFE indisponible ({exc})")
+        return 3
+    dmd = DMDController(
+        host=cfg["wifi_addr"] if cfg["mode"] == "wifi" else None,
+        device=cfg["device"] if cfg["mode"] == "usb" else None,
+        brightness=cfg["brightness"],
+    )
+    try:
+        info = dmd.load()
+        print(f"connecte : {info.width}x{info.height} (HD={info.has_hd_display})")
+        import time
+        deadline = time.time() + max(1, seconds)
+        frame = 0
+        while time.time() < deadline:
+            dmd.send_rgb_frame(make_test_pattern(info.width, info.height, frame))
+            frame += 1
+            time.sleep(0.1)
+        dmd.clear()
+        print("mire envoyee, ecran efface")
+        return 0
+    except Exception as exc:
+        print(f"ERREUR: {exc}")
+        return 1
+    finally:
+        try:
+            dmd.unload()
+        except Exception:
+            pass
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else "status"
+    if cmd == "detect":
+        print(json.dumps(detect(), indent=2, ensure_ascii=False))
+        return 0
+    if cmd == "status":
+        print(json.dumps(status(), indent=2, ensure_ascii=False))
+        return 0
+    if cmd == "apply":
+        return apply(load_config())
+    if cmd == "set":
+        # La WebApp tourne en pinball et /opt/pincabos/config appartient a root :
+        # c'est ce script (via sudo) qui ecrit la configuration, puis la rend a pinball.
+        try:
+            incoming = json.loads(argv[2]) if len(argv) > 2 else json.load(sys.stdin)
+        except ValueError as exc:
+            print(f"ERREUR: JSON invalide ({exc})")
+            return 2
+        if not isinstance(incoming, dict):
+            print("ERREUR: objet JSON attendu")
+            return 2
+        cfg = dict(DEFAULTS)
+        cfg.update({k: incoming.get(k, v) for k, v in DEFAULTS.items()})
+        save_config(cfg)
+        cfg = load_config()  # normalisation (mode, targets, luminosite)
+        save_config(cfg)
+        print("configuration enregistree : " + json.dumps(cfg, ensure_ascii=False))
+        return 0
+    if cmd == "test":
+        try:
+            seconds = float(argv[2]) if len(argv) > 2 else 4.0
+        except ValueError:
+            seconds = 4.0
+        return test(seconds)
+    print(__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
