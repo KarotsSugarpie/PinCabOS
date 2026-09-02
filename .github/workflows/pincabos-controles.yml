@@ -46,6 +46,12 @@ jobs:
           done < <(git ls-files 'usr/local/sbin/*' 'usr/local/bin/*' 'usr/local/libexec/*' 'opt/pincabos/tools/*')
           exit $erreurs
 
+      - name: Tests unitaires des moteurs
+        # Les moteurs purs (topologie ecrans, perimetre de l'updater, backboard,
+        # ecrivain INI du DMD LED) sont ceux dont les regressions ont atteint
+        # les testeurs. Ils se testent sans materiel : ici, a chaque PR.
+        run: python3 -m unittest discover -s opt/pincabos/tests -p 'test_*.py' -v
+
       - name: Syntaxe Bash
         run: |
           erreurs=0
