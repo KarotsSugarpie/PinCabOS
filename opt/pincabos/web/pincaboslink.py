@@ -248,7 +248,11 @@ def _main_body(
 .pco-lobby-summary{display:grid;gap:10px;margin-top:10px}
 .pco-lobby-members{display:grid;gap:6px}
 .pco-lobby-member{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.05)}
+/* PINCABOS_LINK_AV_WEBAPP_CONTROLS_V1 */
 .pco-lobby-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.pco-lobby-controls .button{min-height:42px;font-weight:900}
+.pco-lobby-controls .is-on{border-color:#43d17b;background:rgba(24,94,51,.75);color:#d4ffe1}
+.pco-lobby-controls .danger{border-color:#8d3945;background:rgba(91,24,35,.78);color:#ffd5db}
 @media(max-width:850px){.pco-mirror-grid,.pco-link-form,.pco-chat-form{grid-template-columns:1fr}.pco-mirror-wide{grid-column:auto}.pco-link-join{width:100%}}
 </style>
 
@@ -307,7 +311,12 @@ def _main_body(
       </div>
       <div id="pco-lobby-summary" class="pco-lobby-summary pco-loading">Lecture du Lobby...</div>
       <div class="pco-lobby-controls">
-        <button id="pco-lobby-av" class="button" type="button" disabled>OUVRIR LOBBY AUDIO / VIDÉO</button>
+        <button id="pco-lobby-av" class="button" type="button" disabled>OUVRIR LOBBY A/V</button>
+        <button id="pco-lobby-join" class="button secondary" type="button" disabled>REJOINDRE L'APPEL</button>
+        <button id="pco-lobby-cam" class="button secondary" type="button" disabled>CAMÉRA OFF</button>
+        <button id="pco-lobby-mic" class="button secondary" type="button" disabled>MICRO OFF</button>
+        <button id="pco-lobby-hangup" class="button danger" type="button" disabled>RACCROCHER</button>
+        <button id="pco-lobby-close" class="button danger" type="button" disabled>FERMER LA FENÊTRE</button>
       </div>
       <div id="pco-lobby-message" class="pco-statusline"></div>
     </div>
@@ -338,7 +347,7 @@ def _main_body(
 (() => {
   "use strict";
   const CSRF = "__CSRF_JS__";
-  const state = {ctx:null,lobby:null,friendId:null,lastId:0,chatTimer:null,accountTimer:null,lobbyTimer:null};
+  const state = {ctx:null,lobby:null,avControl:null,avPending:false,friendId:null,lastId:0,chatTimer:null,accountTimer:null,lobbyTimer:null,avTimer:null};
 
   function el(tag, cls, text){
     const n=document.createElement(tag);
@@ -477,7 +486,7 @@ def _main_body(
       badge.textContent="AUCUNE ROOM";badge.className="pco-badge warn";
       host.className="pco-lobby-summary pco-muted";
       host.textContent="Rejoignez d'abord une room depuis le Lobby pincabos.cc.";
-      av.disabled=true;return;
+      av.disabled=true;renderAvControls();return;
     }
     badge.textContent="ROOM ACTIVE";badge.className="pco-badge ok";
     const title=el("div","pco-row");title.append(el("strong","",room.name+" · "+room.code),el("span","pco-muted",room.member_count+" / "+room.max_players+" participants"));
@@ -485,11 +494,60 @@ def _main_body(
     (room.members||[]).forEach(member=>{const row=el("div","pco-lobby-member");row.append(el("span","","S"+member.slot+" · "+member.display_name+" · "+member.cab_name),el("strong","pco-badge ok","AUTORISÉ A/V"));members.appendChild(row);});
     host.className="pco-lobby-summary";host.replaceChildren(title,members);
     av.disabled=false;
+    renderAvControls();
+  }
+
+  function renderAvControls(){
+    const control=state.avControl||{};
+    const room=!!state.lobby;
+    const windowOpen=control.window==="OPEN";
+    const connected=!!control.connected;
+    const camera=!!control.camera;
+    const microphone=!!control.microphone;
+    const pending=!!state.avPending;
+    const open=document.getElementById("pco-lobby-av");
+    const join=document.getElementById("pco-lobby-join");
+    const cam=document.getElementById("pco-lobby-cam");
+    const mic=document.getElementById("pco-lobby-mic");
+    const hangup=document.getElementById("pco-lobby-hangup");
+    const close=document.getElementById("pco-lobby-close");
+    open.disabled=!room||windowOpen;
+    open.textContent=windowOpen?"FENÊTRE A/V OUVERTE":"OUVRIR LOBBY A/V";
+    join.disabled=!room||!windowOpen||connected||pending;
+    cam.disabled=!connected||pending;
+    cam.textContent=camera?"CAMÉRA ON":"CAMÉRA OFF";
+    cam.className="button secondary"+(camera?" is-on":"");
+    mic.disabled=!connected||pending;
+    mic.textContent=microphone?"MICRO ON":"MICRO OFF";
+    mic.className="button secondary"+(microphone?" is-on":"");
+    hangup.disabled=!connected||pending;
+    close.disabled=!windowOpen||pending;
+    if(control.status)document.getElementById("pco-lobby-message").textContent=control.status;
   }
 
   async function loadLobby(){
-    try{const data=await api("/pincabos-link/api/lobby");state.lobby=data.room||null;renderLobby();document.getElementById("pco-lobby-message").textContent="";}
+    try{const data=await api("/pincabos-link/api/lobby");state.lobby=data.room||null;renderLobby();}
     catch(e){document.getElementById("pco-lobby-message").textContent="Lobby : "+e.code;}
+  }
+
+  async function loadAvControl(){
+    try{
+      const data=await api("/pincabos-link/api/lobby/control");
+      state.avControl=data.control||null;
+      state.avPending=Array.isArray(data.commands)&&data.commands.length>0;
+      renderAvControls();
+    }catch(e){
+      document.getElementById("pco-lobby-message").textContent="Contrôles A/V : "+e.code;
+    }
+  }
+
+  async function sendAvControl(action){
+    const message=document.getElementById("pco-lobby-message");
+    try{
+      await api("/pincabos-link/api/lobby/control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action})});
+      message.textContent="Commande A/V envoyée : "+action;
+      await loadAvControl();
+    }catch(e){message.textContent="Commande A/V : "+e.code;}
   }
 
   async function loadContext(){
@@ -571,16 +629,24 @@ def _main_body(
   });
 
   document.getElementById("pco-lobby-av").addEventListener("click",async()=>{
-    try{const data=await api("/pincabos-link/api/lobby/window",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"open"})});document.getElementById("pco-lobby-message").textContent="Fenêtre A/V Backglass : "+data.window;}
+    try{const data=await api("/pincabos-link/api/lobby/window",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"open"})});document.getElementById("pco-lobby-message").textContent="Fenêtre A/V Backglass : "+data.window;await loadAvControl();}
     catch(e){document.getElementById("pco-lobby-message").textContent="Fenêtre A/V : "+e.code;}
   });
 
+  document.getElementById("pco-lobby-join").addEventListener("click",()=>sendAvControl("join"));
+  document.getElementById("pco-lobby-cam").addEventListener("click",()=>sendAvControl("camera"));
+  document.getElementById("pco-lobby-mic").addEventListener("click",()=>sendAvControl("microphone"));
+  document.getElementById("pco-lobby-hangup").addEventListener("click",()=>sendAvControl("hangup"));
+  document.getElementById("pco-lobby-close").addEventListener("click",()=>sendAvControl("close"));
+
   loadContext();
   loadLobby();
+  loadAvControl();
   api("/pincabos-link/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).catch(()=>{});
   state.accountTimer=setInterval(loadContext,15000);
   state.chatTimer=setInterval(pollChat,4000);
   state.lobbyTimer=setInterval(loadLobby,2000);
+  state.avTimer=setInterval(loadAvControl,1000);
   setInterval(()=>api("/pincabos-link/api/presence",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).catch(()=>{}),30000);
 })();
 </script>

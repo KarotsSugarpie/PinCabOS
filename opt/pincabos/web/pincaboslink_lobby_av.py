@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 from pathlib import Path
 from typing import Callable, Optional
@@ -11,7 +12,7 @@ from typing import Callable, Optional
 from flask import Blueprint, Response, jsonify, request, send_file
 
 
-PINFORGE_MODULE = "PINCABOS_LINK_LOBBY_AV_V1"
+PINFORGE_MODULE = "PINCABOS_LINK_LOBBY_AV_V2_REMOTE_CONTROLS"
 LIVEKIT_CLIENT_VERSION = "2.22.2"
 SCREENS_FILE = Path("/opt/pincabos/config/screens/screens.json")
 LIVE_CAPTURE_DIR = Path("/run/pincabos-dashboard-live")
@@ -21,6 +22,93 @@ _bridge_json: Optional[Callable] = None
 _csrf_ok: Optional[Callable[[], bool]] = None
 _display_action: Optional[Callable[[str], str]] = None
 _csrf_token = ""
+_control_lock = threading.RLock()
+_control = {
+    "sequence": 0,
+    "commands": [],
+    "window": "CLOSED",
+    "connected": False,
+    "microphone": False,
+    "camera": False,
+    "status": "Fenêtre A/V fermée",
+    "updated_at": 0.0,
+}
+
+
+def _control_snapshot(after: int = 0) -> dict:
+    with _control_lock:
+        commands = [
+            dict(command)
+            for command in _control["commands"]
+            if int(command["sequence"]) > after
+        ]
+        return {
+            "sequence": int(_control["sequence"]),
+            "commands": commands,
+            "control": {
+                key: _control[key]
+                for key in (
+                    "window",
+                    "connected",
+                    "microphone",
+                    "camera",
+                    "status",
+                    "updated_at",
+                )
+            },
+        }
+
+
+def _control_reset(window: str, status: str) -> None:
+    with _control_lock:
+        _control["commands"] = []
+        _control["window"] = window
+        _control["connected"] = False
+        _control["microphone"] = False
+        _control["camera"] = False
+        _control["status"] = status[:240]
+        _control["updated_at"] = time.time()
+
+
+def _control_queue(action: str) -> int:
+    now = time.time()
+    with _control_lock:
+        _control["sequence"] = int(_control["sequence"]) + 1
+        sequence = int(_control["sequence"])
+        _control["commands"] = [
+            command
+            for command in _control["commands"]
+            if now - float(command.get("created_at", 0)) < 120
+        ][-31:]
+        _control["commands"].append(
+            {
+                "sequence": sequence,
+                "action": action,
+                "created_at": now,
+            }
+        )
+        _control["updated_at"] = now
+        return sequence
+
+
+def _control_update(values: dict) -> None:
+    with _control_lock:
+        acknowledgement = values.get("ack_sequence")
+        if isinstance(acknowledgement, int) and acknowledgement >= 0:
+            _control["commands"] = [
+                command
+                for command in _control["commands"]
+                if int(command["sequence"]) > acknowledgement
+            ]
+        for key in ("connected", "microphone", "camera"):
+            if isinstance(values.get(key), bool):
+                _control[key] = values[key]
+        window = values.get("window")
+        if window in {"OPEN", "CLOSED"}:
+            _control["window"] = window
+        if isinstance(values.get("status"), str):
+            _control["status"] = values["status"][:240]
+        _control["updated_at"] = time.time()
 
 
 def _bridge(*args: str):
@@ -151,7 +239,7 @@ button.primary{border-color:#ff984f;background:#d85d08}button.good{border-color:
 (() => {
 "use strict";
 const CSRF="__CSRF__";
-const state={room:null,av:null,lk:null,mic:false,cam:false};
+const state={room:null,av:null,lk:null,mic:false,cam:false,controlSequence:0,controlBusy:false};
 const $=id=>document.getElementById(id);
 const html=value=>String(value??"").replace(/[&<>"']/g,character=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[character]);
 
@@ -209,26 +297,48 @@ async function loadState(){
   catch(error){$("status").textContent="Synchronisation : "+error.code;}
 }
 function speakers(values){document.querySelectorAll(".zone.speaking").forEach(zone=>zone.classList.remove("speaking"));(values||[]).forEach(p=>{const zone=document.querySelector('.zone[data-identity="'+p.identity+'"]');if(zone)zone.classList.add("speaking");});}
+async function publishControl(status){
+  const payload={window:"OPEN",connected:!!state.lk,microphone:state.mic,camera:state.cam,status:String(status||$("status").textContent||""),ack_sequence:state.controlSequence};
+  try{await api("/pincabos-link/api/lobby/control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({state:payload})});}catch(_error){}
+}
 async function connect(){
   if(!state.room||state.lk)return;
   if(!window.LivekitClient){$("status").textContent="SDK LiveKit indisponible";return;}
   try{
     const data=await api("/pincabos-link/api/lobby/av-token",{method:"POST",body:"{}",headers:{"Content-Type":"application/json"}}),LK=window.LivekitClient;
     state.av=data.av;state.lk=new LK.Room({adaptiveStream:true,dynacast:true});
-    state.lk.on(LK.RoomEvent.ParticipantConnected,renderMedia).on(LK.RoomEvent.ParticipantDisconnected,renderMedia).on(LK.RoomEvent.TrackSubscribed,renderMedia).on(LK.RoomEvent.TrackUnsubscribed,renderMedia).on(LK.RoomEvent.LocalTrackPublished,renderMedia).on(LK.RoomEvent.LocalTrackUnpublished,renderMedia).on(LK.RoomEvent.ActiveSpeakersChanged,speakers).on(LK.RoomEvent.Disconnected,()=>{$("status").textContent="Appel terminé";});
+    state.lk.on(LK.RoomEvent.ParticipantConnected,renderMedia).on(LK.RoomEvent.ParticipantDisconnected,renderMedia).on(LK.RoomEvent.TrackSubscribed,renderMedia).on(LK.RoomEvent.TrackUnsubscribed,renderMedia).on(LK.RoomEvent.LocalTrackPublished,renderMedia).on(LK.RoomEvent.LocalTrackUnpublished,renderMedia).on(LK.RoomEvent.ActiveSpeakersChanged,speakers).on(LK.RoomEvent.Disconnected,()=>{state.lk=null;state.mic=false;state.cam=false;$("status").textContent="Appel terminé";publishControl("Appel terminé");});
     await state.lk.connect(data.av.url,data.av.token,{autoSubscribe:true});try{await state.lk.startAudio();}catch(_error){}
-    $("mic").disabled=false;$("cam").disabled=false;$("hangup").disabled=false;$("connect").disabled=true;$("status").textContent="Appel connecté · micro et caméra OFF";renderMedia();
-  }catch(error){state.lk=null;$("status").textContent="A/V : "+error.code;}
+    $("mic").disabled=false;$("cam").disabled=false;$("hangup").disabled=false;$("connect").disabled=true;$("status").textContent="Appel connecté · micro et caméra OFF";renderMedia();await publishControl("Appel connecté · micro et caméra OFF");
+  }catch(error){state.lk=null;$("status").textContent="A/V : "+error.code;await publishControl("A/V : "+error.code);}
 }
-async function hangup(){if(state.lk){await state.lk.disconnect();state.lk=null;}state.av=null;state.mic=false;state.cam=false;$("mic").textContent="MICRO OFF";$("cam").textContent="CAMÉRA OFF";$("mic").disabled=true;$("cam").disabled=true;$("hangup").disabled=true;renderLobby();}
-async function toggleMic(){if(!state.lk)return;try{state.mic=!state.mic;await state.lk.localParticipant.setMicrophoneEnabled(state.mic);$("mic").textContent=state.mic?"MICRO ON":"MICRO OFF";$("localMedia").textContent=(state.mic?"MIC ON":"MIC OFF")+" · "+(state.cam?"CAM ON":"CAM OFF");}catch(error){state.mic=false;$("mic").textContent="MICRO OFF";$("status").textContent="Micro : "+error.message;}}
-async function toggleCam(){if(!state.lk)return;try{state.cam=!state.cam;await state.lk.localParticipant.setCameraEnabled(state.cam);$("cam").textContent=state.cam?"CAMÉRA ON":"CAMÉRA OFF";$("localMedia").textContent=(state.mic?"MIC ON":"MIC OFF")+" · "+(state.cam?"CAM ON":"CAM OFF");renderMedia();}catch(error){state.cam=false;$("cam").textContent="CAMÉRA OFF";$("status").textContent="Caméra : "+error.message;}}
-async function closeWindow(){await hangup();fetch("/pincabos-link/api/lobby/window",{method:"POST",headers:{"Content-Type":"application/json","X-PinCabOS-Link-CSRF":CSRF},body:JSON.stringify({action:"close"})}).catch(()=>{});}
+async function hangup(){if(state.lk){await state.lk.disconnect();state.lk=null;}state.av=null;state.mic=false;state.cam=false;$("mic").textContent="MICRO OFF";$("cam").textContent="CAMÉRA OFF";$("mic").disabled=true;$("cam").disabled=true;$("hangup").disabled=true;renderLobby();await publishControl("Appel terminé");}
+async function toggleMic(){if(!state.lk)return;try{state.mic=!state.mic;await state.lk.localParticipant.setMicrophoneEnabled(state.mic);$("mic").textContent=state.mic?"MICRO ON":"MICRO OFF";$("localMedia").textContent=(state.mic?"MIC ON":"MIC OFF")+" · "+(state.cam?"CAM ON":"CAM OFF");await publishControl(state.mic?"Micro activé":"Micro désactivé");}catch(error){state.mic=false;$("mic").textContent="MICRO OFF";$("status").textContent="Micro : "+error.message;await publishControl("Micro : "+error.message);}}
+async function toggleCam(){if(!state.lk)return;try{state.cam=!state.cam;await state.lk.localParticipant.setCameraEnabled(state.cam);$("cam").textContent=state.cam?"CAMÉRA ON":"CAMÉRA OFF";$("localMedia").textContent=(state.mic?"MIC ON":"MIC OFF")+" · "+(state.cam?"CAM ON":"CAM OFF");renderMedia();await publishControl(state.cam?"Caméra activée":"Caméra désactivée");}catch(error){state.cam=false;$("cam").textContent="CAMÉRA OFF";$("status").textContent="Caméra : "+error.message;await publishControl("Caméra : "+error.message);}}
+async function closeWindow(){await hangup();await publishControl("Fenêtre A/V fermée");fetch("/pincabos-link/api/lobby/window",{method:"POST",headers:{"Content-Type":"application/json","X-PinCabOS-Link-CSRF":CSRF},body:JSON.stringify({action:"close"})}).catch(()=>{});}
+async function pollControl(){
+  if(state.controlBusy)return;
+  state.controlBusy=true;
+  try{
+    const data=await api("/pincabos-link/api/lobby/control?after="+encodeURIComponent(state.controlSequence));
+    for(const command of (data.commands||[])){
+      const sequence=Number(command.sequence)||0;
+      if(sequence<=state.controlSequence)continue;
+      state.controlSequence=sequence;
+      if(command.action==="join")await connect();
+      else if(command.action==="microphone")await toggleMic();
+      else if(command.action==="camera")await toggleCam();
+      else if(command.action==="hangup")await hangup();
+      else if(command.action==="close")await closeWindow();
+      if(command.action!=="close")await publishControl($("status").textContent);
+    }
+  }catch(_error){}finally{state.controlBusy=false;}
+}
 function refreshB2s(){const image=$("b2s");image.src="/pincabos-link/api/lobby/b2s-preview?t="+Date.now();}
 
 $("connect").onclick=connect;$("mic").onclick=toggleMic;$("cam").onclick=toggleCam;$("hangup").onclick=hangup;$("close").onclick=closeWindow;
 document.addEventListener("keydown",event=>{if(event.repeat)return;if(event.key==="Enter"&&!state.lk)connect();else if(event.key==="Escape")hangup();else if(event.key.toLowerCase()==="m")toggleMic();else if(event.key.toLowerCase()==="v")toggleCam();});
-setInterval(loadState,2000);setInterval(refreshB2s,500);loadState();refreshB2s();
+setInterval(loadState,2000);setInterval(refreshB2s,500);setInterval(pollControl,500);loadState();refreshB2s();publishControl("Fenêtre A/V ouverte");pollControl();
 })();
 </script>
 </body>
@@ -281,8 +391,51 @@ def lobby_window():
     action = str(data.get("action") or "")
     if action not in {"open", "close"}:
         return jsonify({"ok": False, "error": "invalid_action"}), 400
+    if action == "open":
+        _control_reset("OPEN", "Ouverture de la fenêtre A/V")
     result = _display_action(action)
+    if action == "close" or result == "CLOSED":
+        _control_reset("CLOSED", "Fenêtre A/V fermée")
+    elif result == "OPEN":
+        _control_update({"window": "OPEN", "status": "Fenêtre A/V ouverte"})
     return jsonify({"ok": result in {"OPEN", "CLOSED"}, "window": result})
+
+
+@lobby_av_blueprint.route(
+    "/pincabos-link/api/lobby/control",
+    methods=["GET", "POST"],
+)
+def lobby_control():
+    if request.method == "GET":
+        try:
+            after = max(0, int(request.args.get("after", "0")))
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "invalid_after"}), 400
+        return jsonify({"ok": True, **_control_snapshot(after)})
+
+    if not _require_csrf():
+        return jsonify({"ok": False, "error": "invalid_csrf"}), 403
+
+    data = request.get_json(silent=True) or {}
+    state_values = data.get("state")
+    action = str(data.get("action") or "")
+
+    if isinstance(state_values, dict):
+        _control_update(state_values)
+
+    sequence = None
+    if action:
+        if action not in {"join", "microphone", "camera", "hangup", "close"}:
+            return jsonify({"ok": False, "error": "invalid_action"}), 400
+        sequence = _control_queue(action)
+
+    if not action and not isinstance(state_values, dict):
+        return jsonify({"ok": False, "error": "invalid_payload"}), 400
+
+    payload = {"ok": True, **_control_snapshot(0)}
+    if sequence is not None:
+        payload["queued_sequence"] = sequence
+    return jsonify(payload)
 
 
 @lobby_av_blueprint.get("/pincabos-link/api/lobby/b2s-preview")

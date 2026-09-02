@@ -88,6 +88,7 @@ open_window() {
         --window-size="$SCREEN_W,$SCREEN_H" \
         --user-data-dir="$PROFILE" \
         --autoplay-policy=no-user-gesture-required \
+        --use-fake-ui-for-media-stream \
         --no-first-run \
         --noerrdialogs \
         --disable-infobars \
