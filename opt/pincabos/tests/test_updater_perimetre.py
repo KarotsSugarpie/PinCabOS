@@ -83,5 +83,18 @@ class PerimetreAutorise(unittest.TestCase):
         self.assertFalse(up.allowed("opt/pincabos/lib/pincabos_paths.py"))
 
 
+class PrefixesEnAttente(unittest.TestCase):
+    def test_le_client_accepte_le_constructeur_n_embarque_pas(self):
+        rel = "opt/pincabos/launchers/pincabos-launch-core.sh"
+        self.assertIn("opt/pincabos/launchers/", up.PENDING_PREFIXES)
+        self.assertTrue(up.allowed(rel))
+        self.assertFalse(up.allowed_for_build(rel))
+
+    def test_le_reste_du_perimetre_est_inchange_pour_le_constructeur(self):
+        self.assertTrue(up.allowed_for_build("opt/pincabos/tools/pincabos_paths.py"))
+        self.assertFalse(up.allowed_for_build("etc/fstab"))
+        self.assertFalse(up.allowed("opt/pincabos/launchers/__pycache__/x.pyc"))
+
+
 if __name__ == "__main__":
     unittest.main()

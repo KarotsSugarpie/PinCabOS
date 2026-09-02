@@ -46,7 +46,13 @@ def load_engine(repo: Path):
         mod
     )
 
+    # Le constructeur n'embarque pas les prefixes EN ATTENTE (voir
+    # PINCABOS_UPDATE_PENDING_PREFIXES_V1 dans pincabos_updates.py).
     allowed = getattr(
+        mod,
+        "allowed_for_build",
+        None
+    ) or getattr(
         mod,
         "allowed",
         None

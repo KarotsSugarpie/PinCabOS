@@ -171,6 +171,25 @@ def sha256(path):
         for b in iter(lambda:f.read(1024*1024),b''): h.update(b)
     return h.hexdigest()
 
+# PINCABOS_UPDATE_PENDING_PREFIXES_V1
+# Un nouveau prefixe se livre en DEUX releases (voir PINCABOS_UPDATE_SCOPE_PREFIX_TRAP) :
+#   release N   : le prefixe est ici, EN ATTENTE — le client installe l'accepte
+#                 desormais, mais le constructeur ne l'embarque pas encore ;
+#   release N+1 : le prefixe passe dans les prefixes livres (allowed) — le
+#                 parc entier connait deja le nouveau perimetre.
+# opt/pincabos/launchers/ n'a JAMAIS ete livre : les cabinets tournent avec la
+# chaine de lancement de leur ISO (le lien pupvideos de #124, les chemins de
+# #126 ne les ont jamais atteints).
+PENDING_PREFIXES = (
+    'opt/pincabos/launchers/',
+)
+
+def allowed_for_build(rel):
+    """Perimetre que le CONSTRUCTEUR embarque : allowed() moins les prefixes en attente."""
+    if str(rel).startswith(PENDING_PREFIXES):
+        return False
+    return allowed(rel)
+
 def allowed(rel):
     # PINCABOS_UPDATE_SCOPE_V2
     # PINCABOS_UPDATE_SCOPE_PREFIX_TRAP
@@ -228,6 +247,7 @@ def allowed(rel):
             return re.sub(r'^\d+[-_]', '', reste).startswith('pincab')
 
     if rel.startswith('home/pinball/.config/vpinfe/themes/PinCabOS/'): return True
+    if rel.startswith(PENDING_PREFIXES) and '__pycache__' not in Path(rel).parts and not rel.endswith(('.pyc','.pyo')): return True
     if not rel.startswith(prefixes): return False
     forbidden=('opt/pincabos/web/.venv/','opt/pincabos/web/backups/','opt/pincabos/build/','opt/pincabos/backups/','opt/pincabos/logs/')
     return not rel.startswith(forbidden) and '__pycache__' not in Path(rel).parts and not rel.endswith(('.pyc','.pyo'))
