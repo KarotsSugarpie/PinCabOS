@@ -16,7 +16,7 @@ que pour les cles encore vraies : ses autres valeurs decrivaient des
 emplacements qui n'existent pas (/opt/pincabos/apps/vpinball…).
 
 Python :
-    import sys; sys.path.insert(0, "/opt/pincabos/lib")
+    import sys; sys.path.insert(0, "/opt/pincabos/tools")
     from pincabos_paths import PATHS
     PATHS.tables, PATHS.vpx_ini, PATHS.uid …
 
