@@ -1,0 +1,82 @@
+name: Multiplayer foundation guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "feat/multiplayer-*"
+
+permissions:
+  contents: read
+
+jobs:
+  boundary-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Refuse protected VPX and VPinFE paths on multiplayer branches
+        if: startsWith(github.head_ref || github.ref_name, 'feat/multiplayer-')
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          changed="$(git diff --name-only "$base" "${{ github.sha }}")"
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -E '^(opt/pincabos/apps/(vpinball|vpinfe)/|home/pinball/(vpinfe/|\.vpinball/|\.local/share/VPinballX/))'; then
+            echo "NOGO: une branche multijoueur ne peut pas modifier VPX BGFX ou VPinFE."
+            exit 1
+          fi
+      - name: Run cabinet foundation tests
+        run: |
+          PYTHONPATH=opt/pincabos/multiplayer \
+            python3 -m unittest discover -s opt/pincabos/multiplayer/tests -v
+      - name: Test the isolated VPX MultiPlayers runtime
+        run: |
+          PYTHONPATH=opt/pincabos/apps/VPX_MultiPlayers \
+            python3 -m unittest discover \
+              -s opt/pincabos/apps/VPX_MultiPlayers/tests -v
+          python3 -m py_compile \
+            opt/pincabos/apps/VPX_MultiPlayers/pincabos_multiplayer/*.py \
+            opt/pincabos/web/pincaboslink_multiplayer.py \
+            opt/pincabos/web/pincaboslink.py
+          bash -n \
+            opt/pincabos/apps/VPX_MultiPlayers/install.sh \
+            opt/pincabos/apps/VPX_MultiPlayers/uninstall.sh
+      - name: Prove Publy ships the isolated LAB runtime
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          include_block="$(
+            sed -n \
+              '/cat > "\$INCLUDE_LIST" <<'\''LISTEOF'\''/,/^LISTEOF$/p' \
+              opt/pincabos/tools/publy.sh
+          )"
+          if ! grep -Fxq \
+            'opt/pincabos/apps/VPX_MultiPlayers' \
+            <<<"$include_block"; then
+            echo "NOGO: Publy omet le runtime VPX_MultiPlayers."
+            exit 1
+          fi
+
+      - name: Prove the LAB cannot launch private VPX or VPinFE paths
+        run: |
+          if grep -RInE '/home/pinball/(vpinfe|\.vpinball|\.local/share/VPinballX)|/opt/pincabos/apps/vpinball' \
+            opt/pincabos/apps/VPX_MultiPlayers/pincabos_multiplayer \
+            opt/pincabos/apps/VPX_MultiPlayers/bin \
+            opt/pincabos/web/pincaboslink_multiplayer.py; then
+            echo "NOGO: le code LAB référence un chemin VPX privé ou VPinFE."
+            exit 1
+          fi
+      - name: Prove forbidden runtime hooks are absent
+        run: |
+          if grep -RInE 'subprocess|os\.system|Popen|VPinFE|VPinballX_GL|vpinball_gl|VPinball_GL' \
+            opt/pincabos/multiplayer/pincabos_sync; then
+            echo "NOGO: hook d'exécution ou référence moteur interdite."
+            exit 1
+          fi

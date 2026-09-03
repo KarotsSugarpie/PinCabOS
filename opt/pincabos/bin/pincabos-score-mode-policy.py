@@ -3,6 +3,17 @@
 from pathlib import Path
 import sys
 
+# PINCABOS_FRONTON_SANS_FULLDMD_V1 : sur un cabinet sans ecran FullDMD (deux
+# ecrans, cas Francois), ne jamais inventer une fenetre Score View ni une
+# geometrie DMD de repli. Reponse partagee : opt/pincabos/tools/pincabos_fronton.py
+sys.path.insert(0, "/opt/pincabos/tools")
+try:
+    import pincabos_fronton as _fronton
+except ImportError:  # mise a jour partielle : comportement historique
+    _fronton = None
+# Sans ecran FullDMD, le retour au mode Legacy ne recree pas de fenetre Score View.
+SCOREVIEW_LEGACY = "0" if _fronton is not None and _fronton.fulldmd_disponible() is False else "1"
+
 
 def find_table(args):
 
@@ -239,7 +250,7 @@ else:
         text,
         "ScoreView",
         {
-            "ScoreViewOutput": "1",
+            "ScoreViewOutput": SCOREVIEW_LEGACY,
         },
     )
 

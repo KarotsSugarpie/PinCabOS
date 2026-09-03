@@ -248,10 +248,11 @@ def _main_body(
 .pco-lobby-summary{display:grid;gap:10px;margin-top:10px}
 .pco-lobby-members{display:grid;gap:6px}
 .pco-lobby-member{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-radius:8px;background:rgba(255,255,255,.05)}
-/* PINCABOS_LINK_AV_WEBAPP_CONTROLS_V1 */
+/* PINCABOS_LINK_AV_WEBAPP_CONTROLS_V2_STATE_COLORS */
 .pco-lobby-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
 .pco-lobby-controls .button{min-height:42px;font-weight:900}
-.pco-lobby-controls .is-on{border-color:#43d17b;background:rgba(24,94,51,.75);color:#d4ffe1}
+.pco-lobby-controls .is-on,.pco-lobby-controls .is-connected{border-color:#35e778!important;background:rgba(15,117,57,.92)!important;color:#e2ffea!important;box-shadow:0 0 12px rgba(53,231,120,.22);opacity:1!important}
+.pco-lobby-controls .is-off,.pco-lobby-controls .is-disconnected{border-color:#ff4658!important;background:rgba(122,24,37,.94)!important;color:#ffe3e6!important;box-shadow:0 0 10px rgba(255,70,88,.18);opacity:1!important}
 .pco-lobby-controls .danger{border-color:#8d3945;background:rgba(91,24,35,.78);color:#ffd5db}
 @media(max-width:850px){.pco-mirror-grid,.pco-link-form,.pco-chat-form{grid-template-columns:1fr}.pco-mirror-wide{grid-column:auto}.pco-link-join{width:100%}}
 </style>
@@ -319,6 +320,16 @@ def _main_body(
         <button id="pco-lobby-close" class="button danger" type="button" disabled>FERMER LA FENÊTRE</button>
       </div>
       <div id="pco-lobby-message" class="pco-statusline"></div>
+    </div>
+
+    <div class="card pco-mirror-wide">
+      <div class="pco-row">
+        <div>
+          <h2 style="margin-bottom:4px">VPX MultiPlayers — LAB</h2>
+          <div class="pco-muted">Moteur VPX séparé, code de room et contrôles de test cab-à-cab.</div>
+        </div>
+        <a class="button" href="/pincabos-link/multiplayer">OUVRIR LE LAB</a>
+      </div>
     </div>
 
     <div class="card pco-mirror-wide">
@@ -512,14 +523,17 @@ def _main_body(
     const hangup=document.getElementById("pco-lobby-hangup");
     const close=document.getElementById("pco-lobby-close");
     open.disabled=!room||windowOpen;
-    open.textContent=windowOpen?"FENÊTRE A/V OUVERTE":"OUVRIR LOBBY A/V";
+    open.textContent=windowOpen?"FENÊTRE A/V OUVERTE":"FENÊTRE A/V FERMÉE";
+    open.className="button "+(windowOpen?"is-connected":"is-disconnected");
     join.disabled=!room||!windowOpen||connected||pending;
+    join.textContent=connected?"CONNECTÉ":"DÉCONNECTÉ · REJOINDRE";
+    join.className="button "+(connected?"is-connected":"is-disconnected");
     cam.disabled=!connected||pending;
     cam.textContent=camera?"CAMÉRA ON":"CAMÉRA OFF";
-    cam.className="button secondary"+(camera?" is-on":"");
+    cam.className="button "+(camera?"is-connected":"is-disconnected");
     mic.disabled=!connected||pending;
     mic.textContent=microphone?"MICRO ON":"MICRO OFF";
-    mic.className="button secondary"+(microphone?" is-on":"");
+    mic.className="button "+(microphone?"is-connected":"is-disconnected");
     hangup.disabled=!connected||pending;
     close.disabled=!windowOpen||pending;
     if(control.status)document.getElementById("pco-lobby-message").textContent=control.status;
@@ -932,4 +946,11 @@ def register_pincaboslink(
         _csrf_ok,
         CSRF_TOKEN,
         _lobby_av_display_action,
+    )
+    from pincaboslink_multiplayer import register_pincaboslink_multiplayer
+    register_pincaboslink_multiplayer(
+        app,
+        page_renderer,
+        _csrf_ok,
+        CSRF_TOKEN,
     )

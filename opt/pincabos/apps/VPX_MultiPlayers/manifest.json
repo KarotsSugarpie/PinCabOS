@@ -1,0 +1,34 @@
+{
+  "schema": "pincabos.multiplayer-runtime/v1",
+  "component_id": "VPX_MultiPlayers",
+  "version": "0.1.0-lab",
+  "protocol_version": "pcos-sync-control/1",
+  "install_root": "/opt/pincabos/apps/VPX_MultiPlayers",
+  "engine": {
+    "bundled": false,
+    "copy_required": true,
+    "directory": "engine",
+    "launch_arguments": ["-PrefPath", "config/vpx", "-play", "tables-test/<table>.vpx"]
+  },
+  "isolation": {
+    "HOME": "home",
+    "XDG_CONFIG_HOME": "config",
+    "XDG_DATA_HOME": "data",
+    "XDG_CACHE_HOME": "cache",
+    "PrefPath": "config/vpx"
+  },
+  "server": {
+    "authority": "https://pincabos.cc",
+    "identity_source": "/var/lib/pincabos-link/device.json",
+    "room_code_length": 6,
+    "data_plane": "cabinet-to-cabinet",
+    "transport": "pending-poc"
+  },
+  "safety": {
+    "private_vpx_modified": false,
+    "vpinfe_used": false,
+    "arbitrary_remote_commands": false,
+    "tables_must_be_inside": "tables-test"
+  }
+}
+

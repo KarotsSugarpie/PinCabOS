@@ -180,6 +180,9 @@ def sha256(path):
 # opt/pincabos/launchers/ n'a JAMAIS ete livre : les cabinets tournent avec la
 # chaine de lancement de leur ISO (le lien pupvideos de #124, les chemins de
 # #126 ne les ont jamais atteints).
+# Depuis PINCABOS_UPDATER_SELF_UPDATE_V1 (3.44), les cabinets a jour installent
+# d'abord l'updater de la release : le passage en deux temps ne protege plus que
+# les cabinets encore en 3.43 ou moins.
 PENDING_PREFIXES = (
     'opt/pincabos/launchers/',
 )
@@ -204,7 +207,7 @@ def allowed(rel):
     prefixes=(
       'opt/pincabos/web/','opt/pincabos/bin/','opt/pincabos/script/','opt/pincabos/scripts/',
       'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/media/audio-voix/',
-      'opt/pincabos/installer-gui/',
+      'opt/pincabos/installer-gui/','opt/pincabos/apps/VPX_MultiPlayers/',
       'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
       'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',
     )
@@ -259,6 +262,60 @@ def allowed(rel):
 # refuse les releases publiees sous l'autre — c'est l'oeuf-et-poule qui a
 # bloque le parc sur la 3.06 juste apres le transfert (resolu par une
 # release-pont 3.07 aux metadata a l'ancien nom).
+# PINCABOS_UPDATER_SELF_UPDATE_V1
+# L'updater contenu dans la release s'installe AVANT la validation des chemins,
+# puis se relance : c'est SA table allowed() qui juge la release, plus celle de
+# la version installee. Fin du piege de prefixe pour les cabinets en retard de
+# plusieurs releases (3.30 -> 3.39 refusait opt/pincabos/apps/ malgre le pont
+# 3.38) : ils sautent directement a la derniere. Conditions : archive deja
+# verifiee (SHA256 de release.json), chemin de l'updater dans le perimetre
+# courant, fichier compilable ; une seule relance (variable d'environnement).
+UPDATER_REL = 'opt/pincabos/update/pincabos_updates.py'
+REEXEC_ENV = 'PINCABOS_UPDATER_REEXEC'
+
+def updater_candidate(archive, work):
+    """L'updater embarque dans l'archive (extrait seul dans work), ou None."""
+    try:
+        subprocess.run(['tar', '--zstd', '-xf', str(archive), '-C', str(work), UPDATER_REL],
+                       check=True, capture_output=True)
+    except (subprocess.CalledProcessError, OSError):
+        return None
+    candidate = Path(work) / UPDATER_REL
+    return candidate if candidate.is_file() else None
+
+def updater_differs(candidate, current):
+    return sha256(candidate) != sha256(current)
+
+def install_updater(candidate, current, backup):
+    """Remplace l'updater en place, atomiquement, apres verification syntaxique ;
+    l'ancien est copie dans backup. SyntaxError : rien n'est touche."""
+    candidate, current, backup = Path(candidate), Path(current), Path(backup)
+    source = candidate.read_bytes()
+    compile(source, str(current), 'exec')
+    backup.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(current, backup)
+    temporary = current.with_name(current.name + '.new')
+    temporary.write_bytes(source)
+    shutil.copymode(current, temporary)
+    os.replace(temporary, current)
+
+def self_update_then_reexec(archive, work, version):
+    """Si la release embarque un updater different de celui qui tourne :
+    l'installe et relance la meme commande avec lui (ne revient pas)."""
+    current = Path(__file__).resolve()
+    candidate = updater_candidate(archive, work)
+    if not candidate or not allowed(UPDATER_REL) or not updater_differs(candidate, current):
+        return
+    if os.environ.get(REEXEC_ENV):
+        print('INFO [--] updater deja relance : on poursuit avec celui en place.')
+        return
+    install_updater(candidate, current, CACHE / f'pincabos_updates.py.avant-{version}')
+    print(f'GO [OK] Updater mis a jour depuis {version} ; relance de la mise a jour.')
+    shutil.rmtree(work, ignore_errors=True)
+    os.environ[REEXEC_ENV] = '1'
+    sys.stdout.flush(); sys.stderr.flush()
+    os.execv(sys.executable, [sys.executable, '-u', str(current), *sys.argv[1:]])
+
 def canonical_repo(name):
     return 'PinCabOS/PinCabOS' if str(name) == 'KarotsSugarpie/PinCabOS' else str(name)
 
@@ -434,6 +491,9 @@ def do_update():
             raise UpdateError(
                 'Archive SHA256 mismatch.'
             )
+
+        # PINCABOS_UPDATER_SELF_UPDATE_V1 : l'updater de la release juge la release
+        self_update_then_reexec(archive, work, m['version'])
 
         rows = validate_list(
             files

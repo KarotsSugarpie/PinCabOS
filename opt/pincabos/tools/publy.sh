@@ -455,6 +455,7 @@ pco_check "Outils requis disponibles"
 cat > "$INCLUDE_LIST" <<'LISTEOF'
 opt/pincabos/web
 opt/pincabos/apps/frontend/vpinfe
+opt/pincabos/apps/VPX_MultiPlayers
 opt/pincabos/apps/vpinball
 opt/pincabos/apps/dof
 opt/pincabos/bin

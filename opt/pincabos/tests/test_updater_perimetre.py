@@ -90,6 +90,16 @@ class PrefixesEnAttente(unittest.TestCase):
         self.assertTrue(up.allowed(rel))
         self.assertFalse(up.allowed_for_build(rel))
 
+    def test_runtime_multijoueur_est_livre_apres_le_pont(self):
+        rel = "opt/pincabos/apps/VPX_MultiPlayers/install.sh"
+        self.assertNotIn(
+            "opt/pincabos/apps/VPX_MultiPlayers/",
+            up.PENDING_PREFIXES,
+        )
+        self.assertTrue(up.allowed(rel))
+        self.assertTrue(up.allowed_for_build(rel))
+        self.assertFalse(up.allowed("opt/pincabos/apps/AutreApp/install.sh"))
+
     def test_le_reste_du_perimetre_est_inchange_pour_le_constructeur(self):
         self.assertTrue(up.allowed_for_build("opt/pincabos/tools/pincabos_paths.py"))
         self.assertFalse(up.allowed_for_build("etc/fstab"))

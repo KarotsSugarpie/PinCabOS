@@ -94,3 +94,31 @@ class Exports(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Consommateurs(unittest.TestCase):
+    """Regression 3.25 : `. /opt/pincabos/tools/pincabos-paths.shset -Eeuo pipefail`
+    (retour a la ligne perdu au portage). Le source echouait en silence, les
+    PCO_* restaient vides : pont backglass en boucle sur `find ''`, hotplug HS."""
+
+    def test_chaque_source_est_seul_sur_sa_ligne(self):
+        import re
+        motif = re.compile(r"pincabos-paths\.sh[^\s\"'\)\]]")
+        fautifs = []
+        for dossier in ("opt", "usr", "etc"):
+            for racine, _, fichiers in os.walk(os.path.join(RACINE, dossier)):
+                if racine.startswith(os.path.join(RACINE, "opt", "pincabos", "tests")):
+                    continue
+                for nom in fichiers:
+                    chemin = os.path.join(racine, nom)
+                    try:
+                        with open(chemin, "rb") as f:
+                            if b"\0" in f.read(4096):
+                                continue  # binaire
+                        with open(chemin, encoding="utf-8", errors="ignore") as f:
+                            for num, ligne in enumerate(f, 1):
+                                if "pincabos-paths.sh" in ligne and motif.search(ligne):
+                                    fautifs.append(f"{os.path.relpath(chemin, RACINE)}:{num}: {ligne.strip()}")
+                    except OSError:
+                        continue
+        self.assertEqual(fautifs, [])

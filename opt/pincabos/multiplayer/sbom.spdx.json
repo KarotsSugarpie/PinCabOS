@@ -1,0 +1,23 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "name": "pincabos-sync-cabinet-foundation-0.1.0-dev",
+  "documentNamespace": "https://pincabos.cc/spdx/pincabos-sync-cabinet-foundation-0.1.0-dev",
+  "creationInfo": {
+    "created": "2026-09-03T00:00:00Z",
+    "creators": ["Organization: PinCabOS"]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-PinCabOS-Sync-Cabinet",
+      "name": "pincabos-sync-cabinet-foundation",
+      "versionInfo": "0.1.0-dev",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ]
+}
