@@ -182,6 +182,7 @@ def sha256(path):
 # #126 ne les ont jamais atteints).
 PENDING_PREFIXES = (
     'opt/pincabos/launchers/',
+    'opt/pincabos/apps/VPX_MultiPlayers/',
 )
 
 def allowed_for_build(rel):
