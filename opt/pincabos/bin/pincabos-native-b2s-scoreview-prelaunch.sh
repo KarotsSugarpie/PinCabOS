@@ -350,14 +350,8 @@ def main() -> int:
 
                 'B2SDMDRotation': '0',
             },
-            {
-                'ScoreViewDMDAutoPos': '1',
-                'ScoreViewDMDX': '0',
-                'ScoreViewDMDY': '0',
-                'ScoreViewDMDW': '640',
-                'ScoreViewDMDH': '160',
-            },
         )
+        # position du DMD live : VPX (AutoPos) — PINCABOS_DMD_PLACEMENT_PAR_VPX_V1
 
     # ---------------------------------------------------------
     # Rien à écrire

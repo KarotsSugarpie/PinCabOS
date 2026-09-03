@@ -77,7 +77,8 @@ def politique_sans_fulldmd(dmd_materiel_present: bool) -> dict[str, dict[str, st
       sur le playfield ou le backglass ;
     - pas de fenetre DMD B2S separee ni de DMD PinMAME flottant ;
     - le DMD live est dessine SUR le backglass (BackglassDMDOverlay), sauf si
-      un DMD materiel s'en charge deja.
+      un DMD materiel s'en charge deja ; sa position dans l'art est trouvee
+      par VPX (AutoPos), jamais ecrite ici (PINCABOS_DMD_PLACEMENT_PAR_VPX_V1).
     """
     return {
         "ScoreView": {"ScoreViewOutput": "0"},
@@ -86,8 +87,8 @@ def politique_sans_fulldmd(dmd_materiel_present: bool) -> dict[str, dict[str, st
             "B2SHideB2SDMD": "1",
             "B2SHideDMD": "1",
             "ScoreViewDMDOverlay": "0",
+            # position dans l'art du backglass : VPX (BackglassDMDAutoPos, defaut 1)
             "BackglassDMDOverlay": "0" if dmd_materiel_present else "1",
-            "BackglassDMDAutoPos": "1",
         },
     }
 
