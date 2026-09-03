@@ -182,7 +182,6 @@ def sha256(path):
 # #126 ne les ont jamais atteints).
 PENDING_PREFIXES = (
     'opt/pincabos/launchers/',
-    'opt/pincabos/apps/VPX_MultiPlayers/',
 )
 
 def allowed_for_build(rel):
@@ -205,7 +204,7 @@ def allowed(rel):
     prefixes=(
       'opt/pincabos/web/','opt/pincabos/bin/','opt/pincabos/script/','opt/pincabos/scripts/',
       'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/media/audio-voix/',
-      'opt/pincabos/installer-gui/',
+      'opt/pincabos/installer-gui/','opt/pincabos/apps/VPX_MultiPlayers/',
       'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
       'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',
     )
