@@ -63,5 +63,32 @@ class Politique(unittest.TestCase):
         self.assertEqual(base["ScoreView"]["ScoreViewOutput"], "1")
 
 
+class PlacementDmdParVpx(unittest.TestCase):
+    """PINCABOS_DMD_PLACEMENT_PAR_VPX_V1 : VPX (plugin B2S, DMDOverlay AutoPos)
+    trouve seul le cadre DMD dans l'art du directb2s. Aucun helper de lancement
+    ne doit ecrire de coordonnees DMD (ScoreViewDMDX/Y/W/H) ni forcer AutoPos=0
+    en Original ; seul le split PuP positionne (et restaure) le sien."""
+
+    def test_aucun_helper_n_ecrit_de_coordonnees_dmd(self):
+        import re
+        from _charge import RACINE
+        motif = re.compile(r"""["']ScoreViewDMD[XYWH]["']\s*:|["']ScoreViewDMDAutoPos["']\s*:\s*["']0["']""")
+        fautifs = []
+        for dossier in ("opt/pincabos/bin", "opt/pincabos/scripts", "opt/pincabos/tools"):
+            for racine, _, fichiers in os.walk(os.path.join(RACINE, dossier)):
+                for nom in fichiers:
+                    if nom == "pincabos-pup-scoreview-split.py":
+                        continue
+                    chemin = os.path.join(racine, nom)
+                    try:
+                        with open(chemin, encoding="utf-8", errors="ignore") as f:
+                            for num, ligne in enumerate(f, 1):
+                                if motif.search(ligne):
+                                    fautifs.append(f"{os.path.relpath(chemin, RACINE)}:{num}: {ligne.strip()}")
+                    except OSError:
+                        continue
+        self.assertEqual(fautifs, [])
+
+
 if __name__ == "__main__":
     unittest.main()
