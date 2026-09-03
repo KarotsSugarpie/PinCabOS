@@ -10,7 +10,6 @@ SCOREVIEW="/opt/pincabos/bin/pincabos-hybrid-scoreview-enable-prelaunch.py"
 
 SPLIT_HELPER="/opt/pincabos/bin/pincabos-pup-scoreview-split.py"
 
-RAW_MODE_POLICY="/opt/pincabos/bin/pincabos-score-mode-policy.py"
 
 REAL="/opt/pincabos/scripts/VPXlauncher.pincabos-original.sh"
 
