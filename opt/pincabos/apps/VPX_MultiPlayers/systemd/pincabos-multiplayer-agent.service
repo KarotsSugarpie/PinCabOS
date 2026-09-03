@@ -1,0 +1,30 @@
+[Unit]
+Description=PinCabOS VPX MultiPlayers LAB agent
+Documentation=https://github.com/PinCabOs/PinCabOS
+After=network-online.target pincabos-link-heartbeat.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/pincabos/apps/VPX_MultiPlayers
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/pincabos/apps/VPX_MultiPlayers/bin/pincabos-multiplayer-agent watch --interval 2
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=/var/lib/pincabos-link
+ReadWritePaths=/opt/pincabos/apps/VPX_MultiPlayers/home
+ReadWritePaths=/opt/pincabos/apps/VPX_MultiPlayers/config
+ReadWritePaths=/opt/pincabos/apps/VPX_MultiPlayers/data
+ReadWritePaths=/opt/pincabos/apps/VPX_MultiPlayers/cache
+ReadWritePaths=/opt/pincabos/apps/VPX_MultiPlayers/sessions
+ReadWritePaths=/opt/pincabos/apps/VPX_MultiPlayers/logs
+ReadWritePaths=/opt/pincabos/apps/VPX_MultiPlayers/tables-test
+
+[Install]
+WantedBy=multi-user.target
