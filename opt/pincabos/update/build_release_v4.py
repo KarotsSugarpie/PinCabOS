@@ -335,6 +335,10 @@ def main():
         # decision du 02/09 : premiere regle sudoers retiree.
         "etc/sudoers.d/"
         "pincabos-zedmd",
+
+        # plugin d'essai "rawview" (Karots : "ce n'etait que des tests")
+        "opt/pincabos/bin/"
+        "pincabos-pup-rawscore-overlay-watch.sh",
     ]
 
     removals = sorted(
