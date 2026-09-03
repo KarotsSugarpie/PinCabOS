@@ -13,6 +13,12 @@ SPLIT_HELPER="/opt/pincabos/bin/pincabos-pup-scoreview-split.py"
 
 REAL="/opt/pincabos/scripts/VPXlauncher.pincabos-original.sh"
 
+# PINCABOS_VULKAN_SEGFAULT_FALLBACK_V1
+# VPX plante (signal 11, libnvidia-glcore) au pre-rendu de certaines grosses
+# tables avec le backend Vulkan et tourne en OpenGL : apres un tel plantage AU
+# DEMARRAGE, la table est basculee en OpenGL dans son ini et relancee une fois.
+BACKEND_FALLBACK="/opt/pincabos/bin/pincabos-table-backend-fallback"
+
 # PINCABOS_PLACE_FRONT_WINDOWS_V1
 # VPX ignore les positions demandees pour ses fenetres Backglass/Score View :
 # un placeur ONE-SHOT les pose a leur ecran de role des leur apparition puis
@@ -32,6 +38,15 @@ run_with_front_windows() {
     set -e
     if [[ -x "$PLACER" ]]; then
         "$PLACER" --restore >/dev/null 2>&1 || true
+    fi
+    # PINCABOS_VULKAN_SEGFAULT_FALLBACK_V1 : 139 = tue par le signal 11
+    if [[ "$rc" -eq 139 && -n "${TABLE:-}" && "${PINCABOS_BACKEND_RETRY:-0}" != "1" && -x "$BACKEND_FALLBACK" ]]; then
+        if "$BACKEND_FALLBACK" "$TABLE"; then
+            echo "PINCABOS [BACKEND] VPX a plante au demarrage : table basculee en OpenGL, relance." >&2
+            export PINCABOS_BACKEND_RETRY=1
+            run_with_front_windows "$@"
+            return "$?"
+        fi
     fi
     return "$rc"
 }
