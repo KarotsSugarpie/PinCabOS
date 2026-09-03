@@ -566,8 +566,11 @@ def apply_consumers(roles):
             "BackglassOutput": "1" if backglass else "0",
         })
 
+        # PINCABOS_FRONTON_SANS_FULLDMD_V1 : `dmd` retombe sur le backglass pour
+        # les identifiants VPinFE, mais la fenetre Score View n'existe que si un
+        # ecran FullDMD est reellement la (deux ecrans : aucune fenetre).
         config = update_section(config, "ScoreView", {
-            "ScoreViewOutput": "1" if dmd else "0",
+            "ScoreViewOutput": "1" if roles["fulldmd"]["available"] else "0",
         })
 
         # Cabinet a 4 ecrans : la fenetre Topper de VPX suit le role topper

@@ -14,6 +14,15 @@ TABLES_ROOT = Path('/home/pinball/Tables').resolve()
 BACKUP_ROOT = Path('/var/lib/pincabos/native-b2s-prelaunch-backups')
 SCREEN_CONFIG = Path('/opt/pincabos/config/screens/screens.json')
 
+# PINCABOS_FRONTON_SANS_FULLDMD_V1 : sur un cabinet sans ecran FullDMD (deux
+# ecrans, cas Francois), ne jamais inventer une fenetre Score View ni une
+# geometrie DMD de repli. Reponse partagee : opt/pincabos/tools/pincabos_fronton.py
+sys.path.insert(0, "/opt/pincabos/tools")
+try:
+    import pincabos_fronton as _fronton
+except ImportError:  # mise a jour partielle : comportement historique
+    _fronton = None
+
 
 def screen_geometry(
     role: str,
@@ -215,14 +224,19 @@ def main() -> int:
         )
     )
 
+    # PINCABOS_FRONTON_SANS_FULLDMD_V1 : le role fulldmd absent (deux ecrans)
+    # n'est PAS un repli sur d'anciennes coordonnees (+5760) : aucune fenetre
+    # Score View, DMD B2S masque, DMD live sur le backglass sauf DMD materiel.
+    fulldmd_present = _fronton.fulldmd_disponible() if _fronton is not None else None
+    if fulldmd_present is None:
+        fulldmd_present = True  # screens.json illisible : comportement historique
     fulldmd_x, fulldmd_y, fulldmd_width, fulldmd_height = (
-        screen_geometry(
-            'fulldmd',
-            5760,
-            0,
-            1920,
-            1200,
-        )
+        screen_geometry('fulldmd', 5760, 0, 1920, 1200)
+        if fulldmd_present else (0, 0, 0, 0)
+    )
+    sans_fulldmd = (
+        {} if fulldmd_present
+        else _fronton.politique_sans_fulldmd(_fronton.dmd_materiel())
     )
 
     ini = table.with_suffix('.ini')
@@ -257,16 +271,22 @@ def main() -> int:
             'B2SBackglassX': str(backglass_x),
             'B2SBackglassY': str(backglass_y),
 
-            'B2SDMDWidth': str(fulldmd_width),
-            'B2SDMDHeight': str(fulldmd_height),
-            'B2SDMDX': str(fulldmd_x),
-            'B2SDMDY': str(fulldmd_y),
+            **({
+                'B2SDMDWidth': str(fulldmd_width),
+                'B2SDMDHeight': str(fulldmd_height),
+                'B2SDMDX': str(fulldmd_x),
+                'B2SDMDY': str(fulldmd_y),
+            } if fulldmd_present else {}),
 
             'B2SDMDRotation': '0',
         },
     )
 
-    native_fulldmd = is_native_fulldmd(table)
+    for section, values in sans_fulldmd.items():
+        text = patch_section(text, section, values)
+
+    # un directb2s FullDMD natif sans ecran FullDMD se traite comme un B2S simple
+    native_fulldmd = is_native_fulldmd(table) and fulldmd_present
 
     # ---------------------------------------------------------
     # Seulement pour les directB2S FullDMD natifs type 3/4 :

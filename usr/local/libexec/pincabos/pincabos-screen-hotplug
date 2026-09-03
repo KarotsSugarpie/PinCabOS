@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # PINCABOS_PATHS_CONSUMER_V1
-. /opt/pincabos/tools/pincabos-paths.shset -u
+. /opt/pincabos/tools/pincabos-paths.sh
+set -u
 
 # PINCABOS_SCREEN_HOTPLUG_V1
 #
