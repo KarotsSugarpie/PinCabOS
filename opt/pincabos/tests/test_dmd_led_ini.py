@@ -86,6 +86,51 @@ class Validation(unittest.TestCase):
         self.assertTrue(z.validate(cfg(mode="pin2dmd", targets="both")))
         self.assertTrue(z.validate(cfg(mode="usb", device="ttyUSB0")))
 
+    def test_erreur_ou_avertissement(self):
+        """PINCABOS_ZEDMD_APPLY_TOLERANT_V1 : seul le menu VPinFE est degradable."""
+        self.assertEqual(z.problemes(cfg(mode="wifi"))[0], ["adresse Wi-Fi du ZeDMD manquante ou invalide"])
+        self.assertTrue(z.problemes(cfg(mode="usb", device="ttyUSB0"))[0])
+        e, a = z.problemes(cfg(mode="usb", targets="both"))
+        self.assertEqual(e, []); self.assertEqual(len(a), 1)
+        e, a = z.problemes(cfg(mode="pin2dmd", targets="both"))
+        self.assertEqual(e, []); self.assertEqual(len(a), 1)
+        self.assertEqual(z.problemes(cfg(mode="usb", device="/dev/ttyUSB0", targets="both")), ([], []))
+
+
+class ApplyDegrade(unittest.TestCase):
+    """USB port auto + menu, ou PIN2DMD + menu : VPX recoit le DMD, VPinFE non,
+    la configuration enregistree passe en « jeu seulement » (cas Francois)."""
+
+    def setUp(self):
+        d = tempfile.mkdtemp()
+        self.vpx = os.path.join(d, "VPinballX.ini"); open(self.vpx, "w").write(VPX_INI)
+        self.fe = os.path.join(d, "vpinfe.ini"); open(self.fe, "w").write("[libdmdutil]\nenabled = false\nzedmddevice =\n")
+        self.saved = {}
+        self._orig = (z.vpx_ini_path, z.VPINFE_INI, z.save_config)
+        z.vpx_ini_path = lambda: self.vpx
+        z.VPINFE_INI = self.fe
+        z.save_config = lambda c: self.saved.update(c)
+
+    def tearDown(self):
+        z.vpx_ini_path, z.VPINFE_INI, z.save_config = self._orig
+
+    def test_usb_port_auto_avec_menu(self):
+        self.assertEqual(z.apply(cfg(mode="usb", targets="both")), 0)
+        vpx = z.read_section(open(self.vpx).read(), "Plugin.DMDUtil")
+        self.assertEqual((vpx["enable"], vpx["zedmd"]), ("1", "1"))
+        self.assertEqual(z.read_section(open(self.fe).read(), "libdmdutil")["enabled"], "false")
+        self.assertEqual(self.saved.get("targets"), "game")
+
+    def test_pin2dmd_avec_menu(self):
+        self.assertEqual(z.apply(cfg(mode="pin2dmd", targets="both")), 0)
+        vpx = z.read_section(open(self.vpx).read(), "Plugin.DMDUtil")
+        self.assertEqual((vpx["enable"], vpx["pin2dmd"]), ("1", "1"))
+        self.assertEqual(self.saved.get("targets"), "game")
+
+    def test_wifi_sans_adresse_reste_refuse(self):
+        self.assertEqual(z.apply(cfg(mode="wifi", targets="both")), 2)
+        self.assertEqual(z.read_section(open(self.vpx).read(), "Plugin.DMDUtil")["enable"], "")
+
     def test_accepte(self):
         self.assertEqual(z.validate(cfg(mode="usb")), [])
         self.assertEqual(z.validate(cfg(mode="wifi", wifi_addr="zedmd.local", targets="both")), [])
