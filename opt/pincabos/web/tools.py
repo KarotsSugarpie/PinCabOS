@@ -676,6 +676,19 @@ def tools_hub_html():
           </div>
         </a>
 
+        <!-- PINCABOS_VPS_V1 -->
+        <a class="tool-card" href="/tables/vps">
+          <div class="pco-tool-art">
+            <img src="/static/pincabos-assets/PCOSVPinFETablePage.png?v=vps1"
+                 alt="Identification VPS et diagnostic des tables" loading="lazy">
+          </div>
+          <div class="pco-tool-body">
+            <strong>Tables : fiche VPS et diagnostic</strong>
+            <span class="pco-tool-description">Chaque table rattachée à sa fiche Virtual Pinball Spreadsheet : ROM attendue, pack PuP complet et bien nommé, B2S, POV, couleurs alternatives, avant même de lancer.</span>
+            <div class="pco-tool-footer"><span>Voir ce qui manque</span><span class="pco-tool-open">→</span></div>
+          </div>
+        </a>
+
         <!-- PINCABOS_SAMPLE_TABLES_UI_V1 -->
         <a class="tool-card" href="/tools/vpinfe/sample-tables">
           <div class="pco-tool-art">

@@ -17209,6 +17209,17 @@ except Exception as _pincabos_zedmd_error:
         pass
 # PINCABOS_ZEDMD_REGISTER END
 
+# PINCABOS_VPS_REGISTER BEGIN
+try:
+    from pincabos_webapp_vps import register as _pincabos_vps_register
+    _pincabos_vps_register(app, page, esc)
+except Exception as _pincabos_vps_error:
+    try:
+        app.logger.exception("PinCabOS VPS registration failed: %s", _pincabos_vps_error)
+    except Exception:
+        pass
+# PINCABOS_VPS_REGISTER END
+
 # PINCABOS_DUDESCAB_CONFIG_PAGE_V3_REGISTER BEGIN
 try:
     from pincabos_dudescab_config import register as _pincabos_dudescab_config_register

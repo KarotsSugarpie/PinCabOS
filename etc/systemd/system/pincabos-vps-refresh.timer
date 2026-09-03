@@ -1,0 +1,11 @@
+[Unit]
+Description=PinCabOS - base VPS rafraichie chaque semaine
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=7d
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
