@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""pincabos-table-backend-fallback : apres un plantage de VPX AU DEMARRAGE
+(signal 11 pendant le pre-rendu), bascule la table en OpenGL, une seule fois.
+
+PINCABOS_VULKAN_SEGFAULT_FALLBACK_V1
+
+Constat (03/09/2026) : Medieval Madness et Last Action Hero (tables de 400+ Mo)
+plantent dans libnvidia-glcore 595.84 avec le backend Vulkan, toujours au meme
+endroit (« Performing prerendering of static parts »), et tournent parfaitement
+en OpenGL. Le joueur voyait un retour brutal au menu sans explication.
+
+Usage : pincabos-table-backend-fallback <table.vpx>
+  rc 0 : la table vient d'etre basculee en OpenGL -> le lanceur la relance ;
+  rc 1 : rien a faire (backend deja choisi, ou le plantage n'etait pas au
+         demarrage : on ne masque pas un bug de jeu).
+
+Ecrit dans l'ini de la table :
+  [Player]          GfxBackend = OpenGL
+  [PinCabOS.Compat] GfxBackendFallback = <date> segfault au demarrage (Vulkan)
+Le joueur (ou la WebApp) garde la main : un GfxBackend deja present, quel
+qu'il soit, n'est jamais modifie.
+"""
+from __future__ import annotations
+
+import re
+import sys
+from datetime import datetime
+from pathlib import Path
+
+sys.path.insert(0, "/opt/pincabos/tools")
+try:
+    from pincabos_paths import PATHS as _PATHS
+    VPX_LOG = Path(_PATHS.vpx_ini).parent / "vpinball.log"
+except ImportError:
+    VPX_LOG = Path("/home/pinball/.pincabos/vpx/vpinball.log")
+
+
+def section_value(text: str, section: str, key: str) -> str | None:
+    inside = False
+    for line in text.splitlines():
+        m = re.match(r"^\s*\[([^\]]+)\]\s*$", line)
+        if m:
+            inside = m.group(1).strip().casefold() == section.casefold()
+            continue
+        if not inside:
+            continue
+        m = re.match(r"^\s*([^;#=][^=]*?)\s*=\s*(.*?)\s*$", line)
+        if m and m.group(1).strip().casefold() == key.casefold():
+            return m.group(2)
+    return None
+
+
+def patch_section(text: str, section: str, values: dict[str, str]) -> str:
+    """Ecrit/remplace des cles dans une section, en creant la section au besoin."""
+    newline = "\r\n" if "\r\n" in text else "\n"
+    lines = text.split(newline) if text else []
+    while lines and lines[-1] == "":
+        lines.pop()
+    start = None
+    for i, line in enumerate(lines):
+        if line.strip().casefold() == f"[{section}]".casefold():
+            start = i
+            break
+    if start is None:
+        if lines:
+            lines.append("")
+        lines.append(f"[{section}]")
+        lines += [f"{k} = {v}" for k, v in values.items()]
+        return newline.join(lines) + newline
+    end = len(lines)
+    for i in range(start + 1, len(lines)):
+        if re.match(r"^\s*\[[^\]]+\]\s*$", lines[i]):
+            end = i
+            break
+    done = set()
+    for i in range(start + 1, end):
+        m = re.match(r"^\s*([^;#=][^=]*?)\s*=", lines[i])
+        if m and m.group(1).strip() in values:
+            lines[i] = f"{m.group(1).strip()} = {values[m.group(1).strip()]}"
+            done.add(m.group(1).strip())
+    additions = [f"{k} = {v}" for k, v in values.items() if k not in done]
+    lines[end:end] = additions
+    return newline.join(lines) + newline
+
+
+def demarrage_acheve(log_text: str, table_name: str) -> bool | None:
+    """True si le dernier lancement de cette table a atteint « Startup done »,
+    False s'il s'est arrete avant, None si le journal ne parle pas d'elle."""
+    debut = None
+    for i, line in enumerate(log_text.splitlines()):
+        if "LoadGameFromFilename@" in line and "LoadGameFromFilename /" in line and table_name in line:
+            debut = i
+    if debut is None:
+        return None
+    return any("Startup done" in line for line in log_text.splitlines()[debut:])
+
+
+def decision(ini_text: str, log_text: str | None, table_name: str) -> tuple[bool, str]:
+    backend = section_value(ini_text, "Player", "GfxBackend")
+    if backend:
+        return False, f"backend deja choisi ({backend}), on n'y touche pas"
+    if log_text is not None:
+        acheve = demarrage_acheve(log_text, table_name)
+        if acheve is True:
+            return False, "le demarrage etait acheve : plantage en jeu, pas de bascule"
+    return True, "segfault au demarrage : bascule en OpenGL"
+
+
+def basculer(ini_text: str, motif: str) -> str:
+    text = patch_section(ini_text, "Player", {"GfxBackend": "OpenGL"})
+    return patch_section(text, "PinCabOS.Compat", {"GfxBackendFallback": motif})
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 2 or not argv[1].casefold().endswith(".vpx"):
+        print(__doc__)
+        return 2
+    table = Path(argv[1])
+    ini = table.with_suffix(".ini")
+    ini_text = ini.read_text(encoding="utf-8", errors="surrogateescape") if ini.is_file() else ""
+    try:
+        log_text = VPX_LOG.read_text(encoding="utf-8", errors="ignore")[-400_000:]
+    except OSError:
+        log_text = None
+    ok, motif = decision(ini_text, log_text, table.name)
+    print(f"PINCABOS [BACKEND] {table.name} : {motif}", file=sys.stderr)
+    if not ok:
+        return 1
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    nouveau = basculer(ini_text, f"{stamp} segfault au demarrage (Vulkan) -> OpenGL")
+    tmp = ini.with_name(ini.name + ".pincabos-backend.tmp")
+    tmp.write_text(nouveau, encoding="utf-8", errors="surrogateescape")
+    tmp.replace(ini)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

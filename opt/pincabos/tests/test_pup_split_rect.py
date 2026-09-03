@@ -55,5 +55,27 @@ class CustomPos(unittest.TestCase):
         self.assertIsNone(sp._custom_pos(["1", "DMD"]))
 
 
+class TableSansPinmame(unittest.TestCase):
+    """PINCABOS_PUP_SPLIT_SANS_PINMAME_V1 : le split n'a de sens qu'avec une ROM PinMAME."""
+
+    def _vpx(self, contenu: str, enc: str):
+        import tempfile, os
+        d = tempfile.mkdtemp(); p = os.path.join(d, "t.vpx")
+        with open(p, "wb") as f:
+            f.write(b"\x00\x01" + contenu.encode(enc) + b"\x00\x02")
+        return __import__("pathlib").Path(p)
+
+    def test_rom_presente_selon_le_detecteur(self):
+        self.assertTrue(sp.table_has_pinmame(self._vpx("x", "latin-1"), {"rom_files": ["/t/pinmame/roms/t2_l8.zip"]}))
+
+    def test_sans_rom_meme_avec_cgamename(self):
+        vpx = self._vpx('Const cGameName = "BlizzardOfOzz-Data"', "utf-16-le")
+        self.assertFalse(sp.table_has_pinmame(vpx, {"rom_files": []}))
+
+    def test_sans_detecteur_le_script_tranche(self):
+        self.assertTrue(sp.table_has_pinmame(self._vpx('Set Controller = CreateObject("VPinMAME.Controller")', "utf-16-le")))
+        self.assertFalse(sp.table_has_pinmame(self._vpx("' Set Controller = CreateObject(\"VPinMAME.Controller\")\nSet PuPlayer = CreateObject(\"PinUpPlayer.PinDisplay\")", "latin-1")))
+
+
 if __name__ == "__main__":
     unittest.main()

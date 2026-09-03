@@ -183,6 +183,41 @@ ensure_pupvideos_alias() {
     fi
 }
 
+ensure_pack_rom_alias() {
+    # PINCABOS_PUPVIDEOS_ROM_ALIAS_V3
+    # Le plugin PuP de VPX cherche le pack dans pupvideos/<nom de ROM>. JP's
+    # Transformers livre le sien sous "tf_180og" pour la ROM tf_180 : en mode
+    # PuP rien ne s'affichait (backglass noir, DMD seul), le plugin ne trouvant
+    # pas "pupvideos/tf_180". Quand aucun dossier ne porte le nom de la ROM et
+    # qu'un seul pack existe, on pose un lien symbolique au nom de la ROM.
+    local table="$1" directory pv rom="" pack n=0 only="" out
+    directory="$(dirname -- "$table")"
+    pv="$directory/pupvideos"
+    [[ -d "$pv" ]] || return 0
+    if [[ -z "${DETECT_ROM_FILES+x}" && -x "$DETECTOR" ]]; then
+        out="$(python3 "$DETECTOR" --shell "$table" 2>/dev/null)" && eval "$out"
+    fi
+    while IFS= read -r pack; do
+        [[ -n "$pack" ]] || continue
+        rom="$(basename -- "$pack")"; rom="${rom%.*}"
+        [[ -n "$rom" ]] && break
+    done <<< "${DETECT_ROM_FILES:-}"
+    [[ -n "$rom" ]] || return 0
+    [[ -e "$pv/$rom" ]] && return 0
+    while IFS= read -r pack; do
+        [[ -n "$pack" && -d "$pack" ]] || continue
+        case "$pack" in
+            "$pv"/*) n=$((n + 1)); only="$pack" ;;
+        esac
+    done <<< "${DETECT_PUP_PACKS:-}"
+    [[ "$n" -eq 1 ]] || return 0
+    if ln -s -- "$(basename -- "$only")" "$pv/$rom" 2>/dev/null; then
+        log "PUP [=] Lien pupvideos/$rom -> $(basename -- "$only") pose (le plugin PuP cherche le pack au nom de la ROM)."
+    else
+        log "AVERTISSEMENT [!] Impossible de poser le lien pupvideos/$rom -> $(basename -- "$only")."
+    fi
+}
+
 # Ce finder NE choisit PAS le mode de jeu.
 # Il sert seulement au bouton Legacy afin de masquer un
 # éventuel dossier PuP local pendant l'exécution Original.
@@ -457,6 +492,7 @@ case "$SELECTED_MODE" in
         mode_helper show >> "$LOG" 2>&1 || true
 
         ensure_pupvideos_alias "$TABLE"
+        ensure_pack_rom_alias "$TABLE"
 
         # PINCABOS_PUPPACK_GUARD_V1
         #

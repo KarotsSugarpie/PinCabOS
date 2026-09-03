@@ -797,6 +797,14 @@ if TARGET_VPX and TARGET_VPX.is_file():
         if real_fill:
             overwrite["ScoreView"] = SCOREVIEW_WINDOW
             overwrite["Plugin.B2SLegacy"] = real_fill
+        # PINCABOS_B2S_RETOUR_ORIGINAL_V1 : un directb2s « deux ecrans » (DMDType
+        # 1, cas TNA, Pizza Time) sortait d'une partie PuP avec Enable=0 et
+        # B2SHideB2SBackglass=1 (profil du pack) que cette branche ne remettait
+        # jamais : plus de fenetre backglass en Original. La geometrie B2S
+        # (Enable=1, backglass visible, positions par role) est reposee ici
+        # comme dans les autres branches.
+        if b2s:
+            overwrite["Plugin.B2SLegacy"] = {**B2S_GEOMETRY, **(real_fill or {})}
         patch_ini_fronton(
             table_ini,
             overwrite,

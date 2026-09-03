@@ -585,6 +585,29 @@ def split_rectangle(pack: Path, rows: list[list[str]]) -> tuple[int, int, int, i
     return 0, 0, 640, 160, "defaut"
 
 
+def table_has_pinmame(table: Path, info: dict | None = None) -> bool:
+    """La table emule-t-elle vraiment une ROM PinMAME ?
+
+    PINCABOS_PUP_SPLIT_SANS_PINMAME_V1 — sans PinMAME (tables « originales » a
+    DMD FlexDMD ou PuP : Blizzard of Ozz, Matrix, TNA...), le pack dessine
+    lui-meme son DMD sur le FullDMD ; y superposer le Score View de VPX double
+    le texte (Oz : « ecritures en double qui se chevauchent »). Le critere est
+    la presence d'une ROM (detecteur de modes) : Oz declare un cGameName pour
+    son pack et son DOF sans emuler quoi que ce soit."""
+    if info is not None:
+        return bool(info.get("rom_files"))
+    try:
+        data = table.read_bytes()
+    except OSError:
+        return True  # doute : comportement historique
+    # une ligne NON commentee « Set Controller = CreateObject("VPinMAME.Controller") »
+    motif = re.compile(r"(?im)^[^'\r\n]*Set\s+Controller\s*=\s*CreateObject\(\s*[\"']VPinMAME\.Controller")
+    for enc in ("utf-16-le", "latin-1"):
+        if motif.search(data.decode(enc, "ignore")):
+            return True
+    return False
+
+
 def make_split(table: Path) -> dict[str, str]:
     # PINCABOS_PUP_SPLIT_ROOT_GATE_V1
     # Le montage en namespace qui applique le split exige root ; la chaine de
@@ -597,6 +620,12 @@ def make_split(table: Path) -> dict[str, str]:
     # le screens.pup du pack le temps de la partie et le restaure a la sortie
     # (sauvegarde SPLIT_BACKUP_SUFFIX). Ce helper tourne donc en pinball.
     info = detect(table)
+
+    if not table_has_pinmame(table, info):
+        return {
+            "active": "0",
+            "reason": "table sans PinMAME : le pack dessine son DMD",
+        }
 
     packs = [
         Path(p)
