@@ -90,13 +90,6 @@
       "kind": "executable"
     },
     {
-      "module": "pincabos-score-mode-policy",
-      "source": "opt/pincabos/bin/pincabos-score-mode-policy.py",
-      "manifest": "opt/pincabos/bin/pincabos-score-mode-policy.json",
-      "scope": "runtime_bin",
-      "kind": "executable"
-    },
-    {
       "module": "pincabos-wallpaper-per-screen",
       "source": "opt/pincabos/bin/pincabos-wallpaper-per-screen.py",
       "manifest": "opt/pincabos/bin/pincabos-wallpaper-per-screen.json",
