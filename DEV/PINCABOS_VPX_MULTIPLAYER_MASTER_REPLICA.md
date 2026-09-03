@@ -9,8 +9,8 @@
 - **Fichier de référence :** `DEV/PINCABOS_VPX_MULTIPLAYER_MASTER_REPLICA.md`
 - **Branche de référence :** `main`
 - **Date de création :** 2026-08-24
-- **État :** plan fonctionnel accepté; inventaire initial terminé; fondations inactives en PR; aucun transport ni moteur de synchronisation VPX activé.
-- **Prochaine étape autorisée :** Phase 1 — audits en lecture seule et preuve de faisabilité locale.
+- **État :** fondations GitHub fusionnées; autorité `.CC` activable; runtime LAB isolé en cours de PR; déploiement production de l'autorité à confirmer; aucun transport de synchronisation physique VPX encore validé.
+- **Prochaine étape autorisée :** installer le runtime `VPX_MultiPlayers` sur un cabinet de test, valider l'orchestration avec deux agents simulés, puis réaliser le POC cab-à-cab.
 
 ### Règle de reprise dans un nouveau chat
 
@@ -42,9 +42,9 @@ Permettre à deux, trois ou quatre utilisateurs PinCabOS de rejoindre un lobby e
 - Le créateur du lobby est le **capitaine** pour toute la session.
 - Le capitaine choisit une table disponible dans le catalogue pincabos.cc.
 - Tous les cabinets doivent utiliser le même package et le même hash SHA-256 du fichier `.vpx` et de ses ressources obligatoires.
-- **VPX BGFX et VPinFE sont intouchables.** Leurs sources, binaires, bibliothèques, plugins fournis, configurations et fonctions existantes doivent rester strictement intacts.
-- Aucun patch, fork, recompilation, remplacement, injection intrusive ou modification de VPX BGFX ou VPinFE n'est autorisé, même pour un POC.
-- Le multijoueur doit être fourni par un agent PinCabOS externe, isolé, installable et supprimable sans écrire dans VPX BGFX, VPinFE ou leurs fichiers de configuration.
+- **Le VPX privé actif et VPinFE sont intouchables.** Leurs sources, binaires, bibliothèques, plugins fournis, configurations et fonctions existantes doivent rester strictement intacts.
+- Une copie complète du runtime VPX peut être créée, fourchée, recompilée ou modifiée uniquement sous `/opt/pincabos/apps/VPX_MultiPlayers/engine`. Cette autorisation ne s'étend à aucun fichier du VPX privé.
+- Le multijoueur doit être fourni par un agent PinCabOS externe, isolé, installable et supprimable. Il utilise exclusivement le moteur, le `HOME`, les répertoires XDG, le `PrefPath`, les tables, le cache et les journaux sous `VPX_MultiPlayers`.
 - VPinFE ne doit jamais transporter, orchestrer, lancer ni contrôler une session multijoueur. Il demeure uniquement le frontend local normal du cabinet.
 - Le Lobby de pincabos.cc est l'unique point d'entrée et l'unique autorité d'orchestration du multijoueur : création, joueurs, table, état `PRÊT`, démarrage, changement de joueur et fermeture.
 - Le capitaine administre le lobby, mais le **maître VPX** est toujours le cabinet du joueur actif.
@@ -58,6 +58,16 @@ Permettre à deux, trois ou quatre utilisateurs PinCabOS de rejoindre un lobby e
 - ScoreView demeure l'unique source d'affichage du score et du DMD. Le Chat ne duplique pas les scores.
 - Aucun message réseau ne doit permettre d'exécuter arbitrairement du Bash, Python, VBScript ou un binaire fourni par un autre joueur. Le terme « code de synchronisation » signifie un protocole binaire strictement typé et validé.
 
+## Amendement d'isolation validé — 2026-09-03
+
+Le choix utilisateur le plus récent remplace l'interdiction générale de fork inscrite dans la première version du plan. La frontière de sécurité est désormais le répertoire d'installation :
+
+- production privée : lecture seule, jamais lancée par le mode multijoueur;
+- VPinFE : totalement absent du chemin multijoueur;
+- LAB : moteur dédié sous `/opt/pincabos/apps/VPX_MultiPlayers/engine`;
+- configuration LAB : `HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME` et `-PrefPath` tous dédiés;
+- retrait : désactivation du service LAB sans supprimer ni altérer le VPX privé.
+
 ## Fonctionnement d'une session
 
 1. Le capitaine crée le lobby.
@@ -65,7 +75,7 @@ Permettre à deux, trois ou quatre utilisateurs PinCabOS de rejoindre un lobby e
 3. pincabos.cc fournit un manifeste signé : identifiant, version, hashes, ressources, compatibilité VPX/PinMAME et profil multijoueur.
 4. Chaque cabinet vérifie son cache et télécharge seulement les fichiers absents ou différents.
 5. Chaque cabinet retourne `PRÊT — VERSION IDENTIQUE`.
-6. Le Lobby ordonne aux agents PinCabOS locaux de lancer la même table avec le launcher PinCabOS existant, sans passer par VPinFE et sans modifier VPX BGFX.
+6. Le Lobby ordonne aux agents PinCabOS locaux de lancer la même table avec le launcher dédié `VPX_MultiPlayers`, sans passer par VPinFE et sans appeler le launcher VPX privé.
 7. Le cabinet du joueur 1 devient maître; les autres deviennent répliques chaudes.
 8. Le maître transmet snapshots, deltas, événements et checksums.
 9. À la fin de la balle, tous figent le même tick et valident le même état.
@@ -125,14 +135,14 @@ Chaque package multijoueur doit contenir un manifeste versionné, par exemple `p
 - `package_id` et `package_version`.
 - Hash SHA-256 du `.vpx`.
 - Hashes des scripts et ressources obligatoires.
-- Version minimale/maximale du VPX BGFX officiel et intact, ainsi que de l'agent PinCabOS Sync externe.
+- Version et hash exacts du moteur isolé `VPX_MultiPlayers`, ainsi que de l'agent PinCabOS Sync externe.
 - Version de protocole.
 - Mode Original/PuP-Pack et ressources requises.
 - Hash de ROM requis lorsque permis, sans copier automatiquement une ROM non distribuable.
 - Profil de compatibilité multijoueur commun, validé sans modifier VPX BGFX ou VPinFE.
 - Signature du manifeste.
 
-Le module multijoueur ne doit jamais modifier ni remplacer `VPinballX.ini` ou la configuration VPinFE. Le manifeste vérifie les prérequis; en cas d'incompatibilité, le cabinet reste `NON PRÊT` et la correction demeure une action locale séparée. Les écrans, l'audio, les contrôleurs, le POV et le matériel restent locaux.
+Le module multijoueur ne doit jamais modifier ni remplacer le `VPinballX.ini` privé ou la configuration VPinFE. Il fournit son propre `VPinballX.ini` via `VPX_MultiPlayers/config/vpx` et force ce chemin avec `-PrefPath`. Le manifeste vérifie les prérequis; en cas d'incompatibilité, le cabinet reste `NON PRÊT`. Les écrans, l'audio, les contrôleurs, le POV et le matériel restent locaux.
 
 ## Chat Audio/Vidéo sur le backglass
 
@@ -193,10 +203,10 @@ L'image du backglass disparaît. Le titre de la table peut rester dans la barre 
 | [`PinCabOs/PinCabOS`](https://github.com/PinCabOs/PinCabOS) | Intégration OS, WebApp locale, launchers, services et publication | Existant, obligatoire |
 | `KarotsSugarpie/PinCabOS-Sync` | Protocole, schémas, agent externe, adaptateurs non intrusifs, tests réseau et paquets | À créer après la Phase 1; recommandé séparé du gros dépôt rootfs |
 | [`KarotsSugarpie/PinCabOS.CC`](https://github.com/KarotsSugarpie/PinCabOS.CC) | APIs pincabos.cc, lobby, signalisation, manifestes et migrations DB | Existant, privé et canonique; aucun secret dans Git |
-| [`vpinball/vpinball`](https://github.com/vpinball/vpinball) | Référence en lecture seule pour comprendre les interfaces déjà disponibles | Aucun fork, patch, recompilation ou remplacement autorisé |
+| [`vpinball/vpinball`](https://github.com/vpinball/vpinball) | Référence amont et source possible du moteur LAB isolé | Fork/patch permis uniquement pour `VPX_MultiPlayers/engine`, après audit de licence; aucun remplacement du VPX privé |
 | [`vpinball/pinmame`](https://github.com/vpinball/pinmame) | Référence en lecture seule pour les interfaces d'état ROM déjà exposées | Aucun remplacement de la version utilisée par VPX BGFX |
 
-Les forks et modifications de VPX BGFX et VPinFE sont interdits. Si les interfaces externes déjà disponibles ne suffisent pas, le résultat est NOGO et l'architecture de l'agent PinCabOS doit être revue sans toucher à ces composants.
+Les forks et modifications de VPinFE et du VPX privé sont interdits. Si les interfaces externes du moteur copié ne suffisent pas, les modifications sont limitées au fork compilé et installé sous `VPX_MultiPlayers/engine`; toute écriture ou dépendance vers le VPX privé constitue un NOGO.
 
 ## Outils et bibliothèques à évaluer
 
@@ -245,7 +255,8 @@ Les forks et modifications de VPX BGFX et VPinFE sont interdits. Si les interfac
 - [x] Valider la latence réseau tolérée uniquement pour les spectateurs.
 - [x] Valider la grille Chat backglass 2/3/4 joueurs.
 - [x] Valider ScoreView comme seul affichage du score.
-- [x] Figer VPX BGFX et VPinFE comme composants intouchables.
+- [x] Figer le VPX privé et VPinFE comme composants intouchables.
+- [x] Autoriser un moteur copié/fourché uniquement dans `VPX_MultiPlayers/engine`, avec `HOME`, XDG et `PrefPath` dédiés.
 - [x] Figer le Lobby pincabos.cc comme unique point d'entrée et autorité d'orchestration multijoueur.
 - [x] Interdire tout passage du multijoueur par VPinFE.
 - [x] Créer le document de référence et le safeword.
@@ -262,23 +273,23 @@ Les forks et modifications de VPX BGFX et VPinFE sont interdits. Si les interfac
 - [ ] Auditer les possibilités externes de pause/reprise et export/import de l'état physique sans patch, fork ou recompilation.
 - [ ] Déterminer si l'état VBScript peut être observé ou reconstruit par une interface externe existante.
 - [ ] Auditer `state.c/state.h` PinMAME et les APIs déjà exposées sans remplacer la bibliothèque utilisée par VPX BGFX.
-- [ ] Prouver que VPinFE est absent du chemin multijoueur et identifier le chemin Lobby pincabos.cc → agent local → launcher PinCabOS existant → VPX BGFX intact.
+- [ ] Prouver que VPinFE est absent du chemin multijoueur et identifier le chemin Lobby pincabos.cc → agent local → launcher `VPX_MultiPlayers` → moteur LAB isolé.
 - [ ] Auditer le code actif de pincabos.cc : comptes, amis, chat, lobby, tables et APIs cabinet.
 - [x] Identifier où le code serveur pincabos.cc doit être versionné : `KarotsSugarpie/PinCabOS.CC`.
 - [ ] Produire une matrice de licences pour chaque fichier susceptible d'être réutilisé dans l'agent externe; aucun fichier VPX BGFX ou VPinFE ne sera modifié.
 - [ ] Aucun changement de service, heartbeat, token, table ou configuration pendant cette phase.
 
-**GO Phase 1 :** rapport prouvant qu'un agent externe peut fonctionner avec VPX BGFX et VPinFE intacts, et que VPinFE est totalement absent du chemin multijoueur. Toute nécessité de fork ou de patch constitue un NOGO.
+**GO Phase 1 :** rapport prouvant qu'un agent externe peut fonctionner avec le VPX privé et VPinFE intacts, et que VPinFE est totalement absent du chemin multijoueur. Un fork est permis seulement dans `VPX_MultiPlayers/engine`; toute modification hors de ce répertoire constitue un NOGO.
 
 ### Phase 2 — stratégie de dépôts et environnement DEV
 
 - [ ] Décider si `PinCabOS-Sync` est créé comme dépôt séparé.
 - [x] Créer/identifier le dépôt serveur pincabos.cc sans y placer de secret ni de dump utilisateur : `KarotsSugarpie/PinCabOS.CC`.
-- [ ] Ajouter une règle de dépôt et de CI qui interdit tout fork, patch ou remplacement de VPX BGFX et VPinFE.
+- [ ] Ajouter une règle de dépôt et de CI qui interdit tout patch ou remplacement du VPX privé et de VPinFE, tout en autorisant le moteur LAB isolé.
 - [ ] Créer une branche DEV dédiée et une stratégie de versions du protocole.
 - [ ] Ajouter compilation reproductible, tests et artefacts GitHub Actions.
 - [ ] Ajouter SBOM et inventaire de licences.
-- [ ] Définir un agent PinCabOS Sync installable et supprimable sans modifier VPX BGFX, VPinFE, leurs binaires, leurs plugins fournis ou leurs configurations.
+- [ ] Définir un agent PinCabOS Sync installable et supprimable sans modifier le VPX privé, VPinFE, leurs binaires, leurs plugins fournis ou leurs configurations.
 
 **GO Phase 2 :** environnement isolé qui compile uniquement les composants PinCabOS et ne touche jamais à VPX BGFX ou VPinFE.
 
