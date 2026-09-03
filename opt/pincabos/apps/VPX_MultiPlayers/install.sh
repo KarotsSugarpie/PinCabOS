@@ -7,6 +7,14 @@ UNIT_SOURCE="$ROOT/systemd/pincabos-multiplayer-agent.service"
 UNIT_TARGET=/etc/systemd/system/pincabos-multiplayer-agent.service
 SUDOERS=/etc/sudoers.d/pincabos-multiplayer
 SOURCE="${1:-}"
+SUDOERS_TEMP=""
+
+cleanup() {
+    if [[ -n "$SUDOERS_TEMP" && -e "$SUDOERS_TEMP" ]]; then
+        rm -f -- "$SUDOERS_TEMP"
+    fi
+}
+trap cleanup EXIT
 
 fail() {
     printf 'NOGO [!!] %s\n' "$*" >&2
@@ -26,11 +34,14 @@ printf 'GO: audit du dossier source en lecture seule.\n'
 
 install -o root -g root -m 0644 "$UNIT_SOURCE" "$UNIT_TARGET"
 install -d -o root -g root -m 0750 /etc/sudoers.d
+SUDOERS_TEMP="$(mktemp /etc/sudoers.d/.pincabos-multiplayer.XXXXXX)"
 printf '%s\n' \
     'pinball ALL=(root) NOPASSWD: /opt/pincabos/apps/VPX_MultiPlayers/bin/pincabos-multiplayer-agent' \
-    > "$SUDOERS"
-chmod 0440 "$SUDOERS"
-visudo -cf "$SUDOERS" >/dev/null || fail "Règle sudo invalide."
+    > "$SUDOERS_TEMP"
+chmod 0440 "$SUDOERS_TEMP"
+visudo -cf "$SUDOERS_TEMP" >/dev/null || fail "Règle sudo invalide."
+mv -f -- "$SUDOERS_TEMP" "$SUDOERS"
+SUDOERS_TEMP=""
 
 for directory in home config data cache logs sessions tables-test; do
     chown -R pinball:pinball "$ROOT/$directory"
