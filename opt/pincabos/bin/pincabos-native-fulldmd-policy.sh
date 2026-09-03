@@ -162,7 +162,6 @@ def _b2s_geometry_from_screens() -> dict:
         "B2SHideB2SBackglass": "0",
         "B2SDualMode": "0",
         "BackglassDMDOverlay": "0",
-        "BackglassDMDAutoPos": "0",
         "B2SBackglassWidth": str(bgw),
         "B2SBackglassHeight": str(bgh),
         "B2SBackglassX": str(bgx),
@@ -191,10 +190,15 @@ if SANS_FULLDMD:
     B2S_GEOMETRY.update(SANS_FULLDMD["Plugin.B2SLegacy"])
 
 
-def patch_ini_fronton(path, overwrite, **kwargs):
-    """patch_ini, la politique 'sans FullDMD' ayant le dernier mot."""
+def patch_ini_fronton(path, overwrite, nettoyer=True, **kwargs):
+    """patch_ini, la politique 'sans FullDMD' ayant le dernier mot ; par defaut
+    retire de l'ini de table les coordonnees DMD figees (CLES_POSITION_DMD,
+    PINCABOS_DMD_PLACEMENT_PAR_VPX_V1). nettoyer=False pour l'ini global (domaine
+    de la WebApp) et le mode PuP (le split gere ses propres cles)."""
     if SANS_FULLDMD:
         overwrite = _fronton.fusionner(overwrite, SANS_FULLDMD)
+    if nettoyer:
+        kwargs.setdefault("remove_keys", {})["Plugin.B2SLegacy"] = CLES_POSITION_DMD
     return patch_ini(path, overwrite, **kwargs)
 
 B2S_FULLDMD = {
@@ -216,7 +220,6 @@ B2S_PUP = {
     "B2SHideB2SDMD": "1",
     "B2SHideDMD": "1",
     "ScoreViewDMDOverlay": "0",
-    "ScoreViewDMDAutoPos": "0",
 }
 
 # PINCABOS_PUP_B2S_CONDITIONNEL_V1
@@ -257,64 +260,37 @@ def pup_peint_le_fronton(table) -> bool:
     return resultat.returncode == 0
 
 
-DMD_DEFAULTS_ONLY = {
-    "ScoreViewDMDAutoPos": "1",
-    "ScoreViewDMDX": "0",
-    "ScoreViewDMDY": "0",
-    "ScoreViewDMDW": "0",
-    "ScoreViewDMDH": "0",
-}
+# PINCABOS_DMD_PLACEMENT_PAR_VPX_V1
+# Le placement du DMD live dans l'art FullDMD est fait par VPX lui-meme : le
+# plugin B2S (utils/DMDOverlay, ScoreViewDMDAutoPos=1 par defaut) cherche le
+# plus grand rectangle sombre de l'image DMD du directb2s, l'ajuste au ratio du
+# DMD et l'y pose (T2 : le cadre rouge de l'auteur, T3 : le cadre bleu). Aucune
+# coordonnee n'est a inventer ici. PinCabOS n'ecrit donc JAMAIS
+# ScoreViewDMDX/Y/W/H ni ne force ScoreViewDMDAutoPos dans l'ini d'une table en
+# mode Original, et il RETIRE ceux qu'un mode precedent (split PuP) aurait
+# laisses : sinon le DMD reste fige a une taille de calibration (T2 : 640x160
+# en bas a gauche, hors du cadre). Les reglages globaux (WebApp) restent a
+# l'utilisateur.
+CLES_POSITION_DMD = (
+    "ScoreViewDMDAutoPos", "ScoreViewDMDX", "ScoreViewDMDY", "ScoreViewDMDW", "ScoreViewDMDH",
+    "BackglassDMDAutoPos", "BackglassDMDX", "BackglassDMDY", "BackglassDMDW", "BackglassDMDH",
+)
 
 
 # Un ecran FullDMD DEDIE existe-t-il ? (role fulldmd present ET distinct du
-# backglass). Sur un cab a 2 ecrans (playfield+backglass, pas de FullDMD) le DMD
-# ne doit PAS etre force ailleurs : on ne touche a rien dans ce cas.
+# backglass).
 _FULLDMD_ROLE = role_geometry("fulldmd")
 _BACKGLASS_ROLE = role_geometry("backglass")
 HAS_DEDICATED_FULLDMD = bool(_FULLDMD_ROLE) and _FULLDMD_ROLE != _BACKGLASS_ROLE
 
-# Rectangle DMD explicite : ratio ~4:1 (forme d'un vrai DMD 128x32) non
-# deforme, largeur = ecran FullDMD, centre verticalement. Sert a poser le DMD a
-# la bonne taille et au bon endroit quand l'auto-placement de B2S echoue.
-# Coordonnees relatives a la fenetre ScoreView (rendue dans le contexte 2D de
-# cette fenetre, elle-meme posee sur le FullDMD). Derive du role fulldmd de
-# screens.json => universel : chaque cab obtient sa propre geometrie, aucune
-# valeur figee. Sur un cab sans FullDMD dedie : vide (on ne force rien).
-def _dmd_rect() -> dict[str, str]:
-    if not HAS_DEDICATED_FULLDMD:
-        return {}
-    _, _, fw, fh = _FULLDMD_ROLE
-    w = fw
-    h = w // 4
-    if h > fh:
-        h, w = fh, fh * 4
-    return {
-        "ScoreViewDMDOverlay": "1",
-        "ScoreViewDMDAutoPos": "0",
-        "ScoreViewDMDX": str((fw - w) // 2),
-        "ScoreViewDMDY": str((fh - h) // 2),
-        "ScoreViewDMDW": str(w),
-        "ScoreViewDMDH": str(h),
-    }
-
-
-DMD_RECT = _dmd_rect()
-
 # DMD LIVE (PinMAME) a afficher sur le FullDMD : cas des tables sans image DMD
 # cote B2S (directb2s FullDMD sans <DMDImage>, ou pas de directb2s du tout). Le
 # defaut global masque le DMD live (B2SHideDMD=1) -> on le reaffiche et on masque
-# l'eventuelle image DMD statique.
+# l'eventuelle image DMD statique. Sa position : VPX (AutoPos).
 STANDARD_DMD_FILL = ({
     "B2SHideB2SDMD": "1",
     "B2SHideDMD": "0",
-    **DMD_RECT,
-} if DMD_RECT else {})
-
-# FullDMD B2S natif AVEC image DMD mais dont l'auto-placement degenere
-# (GrillHeight=0) : on garde l'affichage de l'image FullDMD B2S (DMD composite
-# par B2S) mais on pose le DMD explicitement au lieu de l'AutoPos qui le rend
-# minuscule.
-B2S_FULLDMD_EXPLICIT = {**B2S_FULLDMD, **DMD_RECT} if DMD_RECT else dict(B2S_FULLDMD)
+} if HAS_DEDICATED_FULLDMD else {})
 
 
 def find_section(lines: list[str], section_name: str) -> tuple[int | None, int]:
@@ -341,6 +317,7 @@ def patch_ini(
     overwrite: dict[str, dict[str, str]],
     ensure: dict[str, dict[str, str]] | None = None,
     remove_sections: tuple[str, ...] = (),
+    remove_keys: dict[str, tuple[str, ...]] | None = None,
 ) -> None:
     raw = path.read_text(encoding="utf-8", errors="surrogateescape") if path.exists() else ""
     newline = "\r\n" if "\r\n" in raw else "\n"
@@ -352,6 +329,17 @@ def patch_ini(
             del lines[start:end]
             while start < len(lines) and not lines[start].strip():
                 del lines[start]
+
+    # cles a retirer d'une section (PINCABOS_DMD_PLACEMENT_PAR_VPX_V1)
+    for section_name, keys in (remove_keys or {}).items():
+        start, end = find_section(lines, section_name)
+        if start is None:
+            continue
+        cibles = {key.casefold() for key in keys}
+        for index in range(end - 1, start, -1):
+            match = re.match(r"^\s*([^=;#]+?)\s*=", lines[index])
+            if match and match.group(1).strip().casefold() in cibles:
+                del lines[index]
 
     sections = [(section_name, values, False) for section_name, values in overwrite.items()]
     for section_name, values in (ensure or {}).items():
@@ -708,7 +696,8 @@ def has_table_local_pup(table_dir: Path) -> bool:
 # reste disponible seulement pour les tables qui n'ont pas de FullDMD B2S.
 patch_ini_fronton(
     GLOBAL_INI,
-    {
+    nettoyer=False,
+    overwrite={
         "ScoreView": SCOREVIEW_WINDOW,
         "Plugin.B2SLegacy": B2S_GEOMETRY,
         "Plugin.ScoreView": {"Enable": "1"},
@@ -749,18 +738,16 @@ if TARGET_VPX and TARGET_VPX.is_file():
             info = directb2s_info(b2s)
     grill = info["grill"] or 0
     force_dmd = info["type3"] and style == "dmd"
-    # Le placement fin du DMD n'est PAS pilotable au pixel dans ce moteur : selon
-    # le mode, le DMD est pose automatiquement (plein largeur, en haut si le
-    # plugin ScoreView est off, centre s'il est on). On s'appuie donc sur ce
-    # placement auto (universel, independant de la resolution) ; le calage precis
-    # au cadre d'un art donne depend de l'art lui-meme (cf. AutoPos B2S).
+    # Position du DMD live : VPX (DMDOverlay, AutoPos) lit le cadre dans l'art
+    # du directb2s. PinCabOS ne pose aucune coordonnee (PINCABOS_DMD_PLACEMENT_PAR_VPX_V1).
     real_fill = STANDARD_DMD_FILL
 
     if pup:
         fronton_au_pack = pup_peint_le_fronton(TARGET_VPX)
         patch_ini_fronton(
             table_ini,
-            {
+            nettoyer=False,
+            overwrite={
                 "ScoreView": SCOREVIEW_DISABLED_OUTPUT,
                 "Plugin.B2SLegacy": B2S_PUP if fronton_au_pack else B2S_PUP_FRONTON_B2S,
                 "Plugin.ScoreView": {"Enable": "0"},
@@ -768,20 +755,14 @@ if TARGET_VPX and TARGET_VPX.is_file():
             remove_sections=("PinCabOS.ScoreViewWindow",),
         )
         mode = "PUP" if fronton_au_pack else "PUP_FRONTON_B2S"
-    elif (
-        info["type3"]
-        and not force_dmd
-        and (info["has_dmdimage"] or grill > 0)
-        and not (info["has_dmdimage"] and grill == 0)
-    ):
+    elif info["type3"] and not force_dmd and (info["has_dmdimage"] or grill > 0):
         # Art FullDMD B2S disponible : soit une image DMD dediee (<DMDImage>),
         # soit le bandeau grill du bas de l'image backglass (GrillHeight>0, le
         # modele B2S classique : le bas de la BackglassImage EST l'art FullDMD,
         # cas Junk Yard). B2S affiche cet art sur l'ecran FullDMD et
-        # l'auto-placement y pose le DMD live (cas T2, SW, Medieval Madness,
-        # Junk Yard...). Comportement d'origine : on n'y touche pas. Universel
-        # (B2S met a l'echelle selon la resolution). Seule exclusion : image DMD
-        # avec GrillHeight=0, dont l'auto-placement degenere (branche suivante).
+        # VPX y pose le DMD live dans le cadre detecte (DMDOverlay, AutoPos ;
+        # cas T2, T3, SW, Medieval Madness, Junk Yard...). Universel : B2S met a
+        # l'echelle selon la resolution. PINCABOS_DMD_PLACEMENT_PAR_VPX_V1.
         patch_ini_fronton(
             table_ini,
             {
@@ -789,27 +770,9 @@ if TARGET_VPX and TARGET_VPX.is_file():
                 "Plugin.B2SLegacy": B2S_FULLDMD,
                 "Plugin.ScoreView": {"Enable": "0"},
             },
-            ensure={"Plugin.B2SLegacy": DMD_DEFAULTS_ONLY},
             remove_sections=("PinCabOS.ScoreViewWindow",),
         )
         mode = "B2S_FULLDMD"
-    elif info["type3"] and info["has_dmdimage"] and not force_dmd:
-        # FullDMD B2S avec image mais GrillHeight=0 : l'auto-placement B2S
-        # degenere (DMD minuscule en haut, cas T3 Siggis). On active le plugin
-        # ScoreView, qui affiche le DMD plein largeur CENTRE sur le FullDMD
-        # (universel, independant de la resolution). Le placement fin n'est pas
-        # pilotable : si l'art a son cadre DMD ailleurs qu'au centre, seul un
-        # directb2s a cadre centre (ou GrillHeight>0) le calera parfaitement.
-        patch_ini_fronton(
-            table_ini,
-            {
-                "ScoreView": SCOREVIEW_WINDOW,
-                "Plugin.B2SLegacy": B2S_FULLDMD_EXPLICIT,
-                "Plugin.ScoreView": {"Enable": "1"},
-            },
-            remove_sections=("PinCabOS.ScoreViewWindow",),
-        )
-        mode = "B2S_FULLDMD_CENTRE" if DMD_RECT else "B2S_FULLDMD"
     elif info["type3"]:
         # Grand DMD seul sur le FullDMD : soit AUCUN art disponible (pas de
         # <DMDImage> et GrillHeight=0), soit style 'dmd' choisi (l'art du pack
