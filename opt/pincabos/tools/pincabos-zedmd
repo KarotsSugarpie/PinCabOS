@@ -349,27 +349,52 @@ def desired_vpinfe_values(cfg):
     }
 
 
-def validate(cfg):
-    errors = []
+def problemes(cfg):
+    """(erreurs, avertissements).
+
+    PINCABOS_ZEDMD_APPLY_TOLERANT_V1 — les erreurs empechent toute ecriture ;
+    les avertissements ne concernent que le MENU VPinFE : le DMD est alors
+    applique a VPX (le jeu) et VPinFE reste sans DMD. Avant, un port USB laisse
+    en « auto » avec le menu coche, ou PIN2DMD avec le menu coche, faisaient
+    tout refuser : VPX restait a Enable=0 et le ZeDMD « ne marchait pas ».
+    """
+    erreurs, avertissements = [], []
     if cfg["mode"] == "wifi" and not re.match(r"^[A-Za-z0-9.\-]+$", cfg["wifi_addr"] or ""):
-        errors.append("adresse Wi-Fi du ZeDMD manquante ou invalide")
+        erreurs.append("adresse Wi-Fi du ZeDMD manquante ou invalide")
     if cfg["mode"] == "usb" and cfg["device"] and not cfg["device"].startswith("/dev/"):
-        errors.append("le port USB doit etre un chemin /dev/…")
+        erreurs.append("le port USB doit etre un chemin /dev/…")
     if cfg["mode"] == "usb" and cfg["targets"] == "both" and not cfg["device"]:
-        errors.append("en USB avec le menu VPinFE, un port explicite est obligatoire "
-                      "(VPinFE ne sait pas chercher le ZeDMD tout seul)")
+        avertissements.append("menu VPinFE impossible en USB sans port explicite (VPinFE ne sait "
+                              "pas chercher le ZeDMD tout seul) : ZeDMD en jeu seulement")
     if cfg["mode"] == "pin2dmd" and cfg["targets"] == "both":
-        errors.append("PIN2DMD : en jeu seulement — la bibliotheque libdmdutil embarquee "
-                      "dans VPinFE n'a pas la prise en charge PIN2DMD")
-    return errors
+        avertissements.append("PIN2DMD : en jeu seulement — la bibliotheque libdmdutil embarquee "
+                              "dans VPinFE n'a pas la prise en charge PIN2DMD")
+    return erreurs, avertissements
+
+
+def validate(cfg):
+    """Tous les problemes (erreurs + avertissements), pour la page de statut."""
+    erreurs, avertissements = problemes(cfg)
+    return erreurs + avertissements
 
 
 def apply(cfg):
-    errors = validate(cfg)
-    if errors:
-        for e in errors:
+    erreurs, avertissements = problemes(cfg)
+    if erreurs:
+        for e in erreurs:
             print("ERREUR: " + e)
         return 2
+    if avertissements:
+        # PINCABOS_ZEDMD_APPLY_TOLERANT_V1 : on degrade au lieu de refuser — le
+        # jeu (VPX) recoit le DMD, le menu VPinFE non ; la configuration
+        # enregistree reflete ce qui est reellement applique.
+        for a in avertissements:
+            print("AVERTISSEMENT: " + a)
+        cfg = dict(cfg, targets="game")
+        try:
+            save_config(cfg)
+        except OSError as exc:
+            print(f"AVERTISSEMENT: configuration non reecrite ({exc})")
     vpx = vpx_ini_path()
     if vpx:
         with open(vpx, encoding="utf-8", errors="replace") as f:
