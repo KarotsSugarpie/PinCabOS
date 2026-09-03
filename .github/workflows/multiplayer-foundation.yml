@@ -48,6 +48,22 @@ jobs:
           bash -n \
             opt/pincabos/apps/VPX_MultiPlayers/install.sh \
             opt/pincabos/apps/VPX_MultiPlayers/uninstall.sh
+      - name: Prove Publy ships the isolated LAB runtime
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          include_block="$(
+            sed -n \
+              '/cat > "\$INCLUDE_LIST" <<'\''LISTEOF'\''/,/^LISTEOF$/p' \
+              opt/pincabos/tools/publy.sh
+          )"
+          if ! grep -Fxq \
+            'opt/pincabos/apps/VPX_MultiPlayers' \
+            <<<"$include_block"; then
+            echo "NOGO: Publy omet le runtime VPX_MultiPlayers."
+            exit 1
+          fi
+
       - name: Prove the LAB cannot launch private VPX or VPinFE paths
         run: |
           if grep -RInE '/home/pinball/(vpinfe|\.vpinball|\.local/share/VPinballX)|/opt/pincabos/apps/vpinball' \
