@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # PINCABOS_PATHS_CONSUMER_V1
-. /opt/pincabos/tools/pincabos-paths.shset -Eeuo pipefail
+. /opt/pincabos/tools/pincabos-paths.sh
+set -Eeuo pipefail
 
 TABLES_ROOT="$PCO_TABLES"
 GLOBAL_INI="$PCO_VPX_INI"
@@ -39,6 +40,15 @@ GLOBAL_INI = Path(sys.argv[1])
 # gestionnaire de fenetres ne peut la corriger ensuite : la seule fenetre de
 # tir est ici, avant le lancement.
 SCREENS_JSON = Path("/opt/pincabos/config/screens/screens.json")
+
+# PINCABOS_FRONTON_SANS_FULLDMD_V1 : sur un cabinet sans ecran FullDMD (deux
+# ecrans, cas Francois), ne jamais inventer une fenetre Score View ni une
+# geometrie DMD de repli. Reponse partagee : opt/pincabos/tools/pincabos_fronton.py
+sys.path.insert(0, "/opt/pincabos/tools")
+try:
+    import pincabos_fronton as _fronton
+except ImportError:  # mise a jour partielle : comportement historique
+    _fronton = None
 
 
 def role_geometry(role: str) -> tuple[int, int, int, int] | None:
@@ -83,6 +93,17 @@ BACKGLASS_WINDOW = backglass_window_geometry()
 TABLES_ROOT = Path(sys.argv[2]).resolve()
 TARGET_VPX = Path(sys.argv[3]).resolve() if sys.argv[3] else None
 
+def _fulldmd_present() -> bool:
+    """Ecran FullDMD dedie (role present et distinct du backglass). Sans
+    screens.json lisible on garde le comportement historique : present."""
+    if _fronton is not None:
+        reponse = _fronton.fulldmd_disponible()
+        if reponse is not None:
+            return reponse
+    fd = role_geometry("fulldmd")
+    return bool(fd) and fd != role_geometry("backglass")
+
+
 def scoreview_window() -> dict[str, str]:
     """Fenetre Score View posee sur l'ecran qui porte le role fulldmd.
 
@@ -95,7 +116,8 @@ def scoreview_window() -> dict[str, str]:
     exactement les anciennes valeurs.
     """
     base = {
-        "ScoreViewOutput": "1",
+        # sans FullDMD : pas de fenetre (PINCABOS_FRONTON_SANS_FULLDMD_V1)
+        "ScoreViewOutput": "1" if _fulldmd_present() else "0",
         "ScoreViewDisplay": "",
         "ScoreViewFullScreen": "0",
         "ScoreViewWndX": "0",
@@ -154,6 +176,26 @@ def _b2s_geometry_from_screens() -> dict:
 
 
 B2S_GEOMETRY = _b2s_geometry_from_screens()
+
+# PINCABOS_FRONTON_SANS_FULLDMD_V1 : sans ecran FullDMD, la geometrie DMD B2S de
+# repli (+5760) n'a aucun sens ; on la retire et on impose la politique du
+# fronton (pas de Score View, DMD B2S masque, DMD live sur le backglass sauf
+# DMD materiel). Elle est fusionnee EN DERNIER dans chaque ecriture INI.
+SANS_FULLDMD = (
+    {} if _fronton is None or _fulldmd_present()
+    else _fronton.politique_sans_fulldmd(_fronton.dmd_materiel())
+)
+if SANS_FULLDMD:
+    for _cle in ("B2SDMDWidth", "B2SDMDHeight", "B2SDMDX", "B2SDMDY"):
+        B2S_GEOMETRY.pop(_cle, None)
+    B2S_GEOMETRY.update(SANS_FULLDMD["Plugin.B2SLegacy"])
+
+
+def patch_ini_fronton(path, overwrite, **kwargs):
+    """patch_ini, la politique 'sans FullDMD' ayant le dernier mot."""
+    if SANS_FULLDMD:
+        overwrite = _fronton.fusionner(overwrite, SANS_FULLDMD)
+    return patch_ini(path, overwrite, **kwargs)
 
 B2S_FULLDMD = {
     **B2S_GEOMETRY,
@@ -664,7 +706,7 @@ def has_table_local_pup(table_dir: Path) -> bool:
 
 # Base globale : la surface ScoreView existe, mais le plugin ScoreView distinct
 # reste disponible seulement pour les tables qui n'ont pas de FullDMD B2S.
-patch_ini(
+patch_ini_fronton(
     GLOBAL_INI,
     {
         "ScoreView": SCOREVIEW_WINDOW,
@@ -716,7 +758,7 @@ if TARGET_VPX and TARGET_VPX.is_file():
 
     if pup:
         fronton_au_pack = pup_peint_le_fronton(TARGET_VPX)
-        patch_ini(
+        patch_ini_fronton(
             table_ini,
             {
                 "ScoreView": SCOREVIEW_DISABLED_OUTPUT,
@@ -740,7 +782,7 @@ if TARGET_VPX and TARGET_VPX.is_file():
         # Junk Yard...). Comportement d'origine : on n'y touche pas. Universel
         # (B2S met a l'echelle selon la resolution). Seule exclusion : image DMD
         # avec GrillHeight=0, dont l'auto-placement degenere (branche suivante).
-        patch_ini(
+        patch_ini_fronton(
             table_ini,
             {
                 "ScoreView": SCOREVIEW_WINDOW,
@@ -758,7 +800,7 @@ if TARGET_VPX and TARGET_VPX.is_file():
         # (universel, independant de la resolution). Le placement fin n'est pas
         # pilotable : si l'art a son cadre DMD ailleurs qu'au centre, seul un
         # directb2s a cadre centre (ou GrillHeight>0) le calera parfaitement.
-        patch_ini(
+        patch_ini_fronton(
             table_ini,
             {
                 "ScoreView": SCOREVIEW_WINDOW,
@@ -777,7 +819,7 @@ if TARGET_VPX and TARGET_VPX.is_file():
         if real_fill:
             overwrite["ScoreView"] = SCOREVIEW_WINDOW
             overwrite["Plugin.B2SLegacy"] = {**B2S_GEOMETRY, **real_fill}
-        patch_ini(
+        patch_ini_fronton(
             table_ini,
             overwrite,
             remove_sections=("PinCabOS.ScoreViewWindow",),
@@ -792,13 +834,15 @@ if TARGET_VPX and TARGET_VPX.is_file():
         if real_fill:
             overwrite["ScoreView"] = SCOREVIEW_WINDOW
             overwrite["Plugin.B2SLegacy"] = real_fill
-        patch_ini(
+        patch_ini_fronton(
             table_ini,
             overwrite,
             remove_sections=("PinCabOS.ScoreViewWindow",),
         )
         mode = "REAL_DMD_FULLDMD" if real_fill else "STANDARD_NO_FULLDMD"
 
+    if SANS_FULLDMD:
+        mode += "+SANS_FULLDMD"  # deux ecrans : Score View off, DMD B2S masque
     print(f"MODE={mode}")
     print(f"STYLE={style}")
     print(f"DMD_INFO=type3={info['type3']} dmdimage={info['has_dmdimage']} grill={info['grill']}")

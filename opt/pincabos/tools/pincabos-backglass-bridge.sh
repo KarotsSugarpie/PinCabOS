@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # PINCABOS_PATHS_CONSUMER_V1
-. /opt/pincabos/tools/pincabos-paths.shset -Eeuo pipefail
+. /opt/pincabos/tools/pincabos-paths.sh
+set -Eeuo pipefail
 
 TABLES_ROOT="$PCO_TABLES"
 PINBALL_UID="$(id -u)"

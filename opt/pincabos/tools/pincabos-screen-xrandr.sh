@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # PINCABOS_PATHS_CONSUMER_V1
-. /opt/pincabos/tools/pincabos-paths.shset -euo pipefail
+. /opt/pincabos/tools/pincabos-paths.sh
+set -euo pipefail
 
 ACTION="${1:-query}"
 CFG="/opt/pincabos/config/screens/screens.json"

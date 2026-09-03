@@ -9,7 +9,15 @@ import sys
 import time
 from pathlib import Path
 
-GLOBAL_INI = Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini")
+# PINCABOS_PATHS_CONSUMER_V1 : preferences VPX (-PrefPath), repli sur l'ancien dossier versionne
+sys.path.insert(0, "/opt/pincabos/tools")
+try:
+    from pincabos_paths import PATHS as _PATHS
+    GLOBAL_INI = Path(_PATHS.vpx_ini)
+    if not GLOBAL_INI.is_file():
+        GLOBAL_INI = Path(_PATHS.vpx_legacy_pref) / "VPinballX.ini"
+except ImportError:
+    GLOBAL_INI = Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini")
 
 REQUIRED = {
     "Plugin.ScoreView": {
@@ -27,6 +35,18 @@ REQUIRED = {
         "ScoreViewDMDAutoPos": "1",
     },
 }
+
+# PINCABOS_FRONTON_SANS_FULLDMD_V1 : sur un cabinet sans ecran FullDMD (deux
+# ecrans, cas Francois), ne jamais inventer une fenetre Score View ni une
+# geometrie DMD de repli. Reponse partagee : opt/pincabos/tools/pincabos_fronton.py
+sys.path.insert(0, "/opt/pincabos/tools")
+try:
+    import pincabos_fronton as _fronton
+except ImportError:  # mise a jour partielle : comportement historique
+    _fronton = None
+if _fronton is not None and _fronton.fulldmd_disponible() is False:
+    REQUIRED["ScoreView"]["ScoreViewOutput"] = "0"
+    REQUIRED["Plugin.ScoreView"]["Enable"] = "0"
 
 
 def find_table(args: list[str]) -> Path | None:
