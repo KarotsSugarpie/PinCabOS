@@ -1,0 +1,83 @@
+from __future__ import annotations
+
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from pincabos_multiplayer.client import (
+    DeviceCredentials,
+    MultiplayerClientError,
+    ServerClient,
+    load_credentials,
+    normalize_room_code,
+)
+
+
+class FakeResponse:
+    status = 200
+
+    def __init__(self, value):
+        self.value = value
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self, _size):
+        return json.dumps(self.value).encode("utf-8")
+
+
+class ClientTests(unittest.TestCase):
+    def test_room_code_is_normalized_and_strict(self):
+        self.assertEqual(normalize_room_code(" ab-cd 23 "), "ABCD23")
+        with self.assertRaises(MultiplayerClientError):
+            normalize_room_code("ABC")
+
+    def test_credentials_are_loaded_without_exposing_the_token(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "device.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "token_type": "PinCabOS-Device",
+                        "device_token": "s" * 48,
+                        "cabinet": {"cabinet_uuid": "cab-uuid"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            value = load_credentials(path)
+        self.assertEqual(value.cabinet_uuid, "cab-uuid")
+        self.assertNotIn(value.token, repr(value))
+
+    def test_only_multiplayer_device_endpoints_are_allowed(self):
+        client = ServerClient(
+            DeviceCredentials("PinCabOS-Device", "s" * 48, "cab-1"),
+            opener=lambda *_args, **_kwargs: FakeResponse({"ok": True}),
+        )
+        with self.assertRaises(MultiplayerClientError):
+            client.request("GET", "/api/me")
+
+    def test_join_sends_normalized_room_code(self):
+        captured = {}
+
+        def opener(request, **_kwargs):
+            captured["body"] = json.loads(request.data.decode("utf-8"))
+            captured["authorization"] = request.headers["Authorization"]
+            return FakeResponse({"ok": True, "room_code": "ABC123"})
+
+        client = ServerClient(
+            DeviceCredentials("PinCabOS-Device", "s" * 48, "cab-1"),
+            opener=opener,
+        )
+        result = client.join("abc-123")
+        self.assertEqual(result["room_code"], "ABC123")
+        self.assertEqual(captured["body"], {"room_code": "ABC123"})
+        self.assertTrue(captured["authorization"].startswith("PinCabOS-Device "))
+
+
+if __name__ == "__main__":
+    unittest.main()

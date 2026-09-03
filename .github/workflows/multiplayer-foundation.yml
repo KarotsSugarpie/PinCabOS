@@ -36,6 +36,27 @@ jobs:
         run: |
           PYTHONPATH=opt/pincabos/multiplayer \
             python3 -m unittest discover -s opt/pincabos/multiplayer/tests -v
+      - name: Test the isolated VPX MultiPlayers runtime
+        run: |
+          PYTHONPATH=opt/pincabos/apps/VPX_MultiPlayers \
+            python3 -m unittest discover \
+              -s opt/pincabos/apps/VPX_MultiPlayers/tests -v
+          python3 -m py_compile \
+            opt/pincabos/apps/VPX_MultiPlayers/pincabos_multiplayer/*.py \
+            opt/pincabos/web/pincaboslink_multiplayer.py \
+            opt/pincabos/web/pincaboslink.py
+          bash -n \
+            opt/pincabos/apps/VPX_MultiPlayers/install.sh \
+            opt/pincabos/apps/VPX_MultiPlayers/uninstall.sh
+      - name: Prove the LAB cannot launch private VPX or VPinFE paths
+        run: |
+          if grep -RInE '/home/pinball/(vpinfe|\.vpinball|\.local/share/VPinballX)|/opt/pincabos/apps/vpinball' \
+            opt/pincabos/apps/VPX_MultiPlayers/pincabos_multiplayer \
+            opt/pincabos/apps/VPX_MultiPlayers/bin \
+            opt/pincabos/web/pincaboslink_multiplayer.py; then
+            echo "NOGO: le code LAB référence un chemin VPX privé ou VPinFE."
+            exit 1
+          fi
       - name: Prove forbidden runtime hooks are absent
         run: |
           if grep -RInE 'subprocess|os\.system|Popen|VPinFE|VPinballX_GL|vpinball_gl|VPinball_GL' \
