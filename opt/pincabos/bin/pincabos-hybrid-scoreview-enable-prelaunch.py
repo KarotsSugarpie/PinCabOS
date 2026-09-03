@@ -32,7 +32,6 @@ REQUIRED = {
     },
     "Plugin.B2SLegacy": {
         "ScoreViewDMDOverlay": "1",
-        "ScoreViewDMDAutoPos": "1",
     },
 }
 
