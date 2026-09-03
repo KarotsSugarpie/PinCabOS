@@ -1,22 +1,23 @@
 "use strict";
 
 /*
- * PINCABOS_LOBBY_AV_BROWSER_GUARD_V3
+ * PINCABOS_LOBBY_AV_BROWSER_GUARD_V4
  *
  * Cabinet-only WebRTC guard for the dedicated PinCabOS Lobby A/V Chromium.
  *
- * V3 keeps the SDP protections from V2 and adds an explicit local camera
- * preview sourced from the exact MediaStream returned to LiveKit. The local
- * tile therefore does not depend on a published/subscribed WebRTC track in
- * order to show the cabinet operator their own camera.
+ * V4 keeps the SDP protections and local camera preview from V3, while
+ * persisting the full-screen transparent PNG frame overlay used on the
+ * cabinet Backglass. The local preview uses the exact MediaStream returned
+ * to LiveKit; no second camera capture is opened.
  */
 (() => {
   const marker = "[PinCabOS Lobby A/V]";
   const guardState = {
-    version: "3.0.0",
+    version: "4.0.0",
     normalizedDescriptions: 0,
     generatedLocalDescriptions: 0,
     localPreviewMounts: 0,
+    frameOverlayMounts: 0,
   };
   window.__PINCABOS_LOBBY_AV_GUARD__ = guardState;
 
@@ -239,10 +240,6 @@
     window.setTimeout(mountLocalPreview, 500);
   }
 
-  /*
-   * Keep the real cabinet webcam lightweight and use that exact capture as
-   * the local preview. No second camera capture is opened.
-   */
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     const nativeGetUserMedia =
       navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
@@ -275,10 +272,9 @@
   }
 
   /*
-   * The B2S JPEG is only a local preview, never the camera. While a real
-   * A/V call is connected it is frozen, and while idle it is throttled to
-   * one request every two seconds even though the legacy page timer runs
-   * more often.
+   * Legacy protection: if an older Lobby A/V page still tries to refresh the
+   * Backglass screenshot, throttle it and freeze it while a call is active.
+   * Newer pages use /b2s-state and no longer mirror the complete Backglass.
    */
   const imageSrc = Object.getOwnPropertyDescriptor(
     HTMLImageElement.prototype,
@@ -311,4 +307,115 @@
       },
     });
   }
+
+  /* PINCABOS_LOBBY_AV_FRAME_V1 */
+  let frameOverlayImage = null;
+  let frameOverlayTimer = null;
+
+  function buildFramePng() {
+    const width = Math.max(window.innerWidth || 0, 1);
+    const height = Math.max(window.innerHeight || 0, 1);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * dpr));
+    canvas.height = Math.max(1, Math.round(height * dpr));
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return "";
+    }
+
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, width, height);
+
+    const inset = 10;
+    const inner = 24;
+
+    ctx.shadowColor = "rgba(255, 120, 0, 0.85)";
+    ctx.shadowBlur = 28;
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "rgba(255, 130, 20, 0.98)";
+    ctx.strokeRect(inset, inset, width - inset * 2, height - inset * 2);
+
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255, 205, 120, 0.95)";
+    ctx.strokeRect(inner, inner, width - inner * 2, height - inner * 2);
+
+    const accent = 90;
+    const gap = 18;
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "rgba(255, 120, 0, 0.95)";
+
+    const lines = [
+      [inset + gap, inset + gap, inset + gap + accent, inset + gap],
+      [inset + gap, inset + gap, inset + gap, inset + gap + accent],
+      [width - inset - gap, inset + gap, width - inset - gap - accent, inset + gap],
+      [width - inset - gap, inset + gap, width - inset - gap, inset + gap + accent],
+      [inset + gap, height - inset - gap, inset + gap + accent, height - inset - gap],
+      [inset + gap, height - inset - gap, inset + gap, height - inset - gap - accent],
+      [width - inset - gap, height - inset - gap, width - inset - gap - accent, height - inset - gap],
+      [width - inset - gap, height - inset - gap, width - inset - gap, height - inset - gap - accent],
+    ];
+
+    for (const [x1, y1, x2, y2] of lines) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    return canvas.toDataURL("image/png");
+  }
+
+  function mountFrameOverlay() {
+    if (!document.body) {
+      window.setTimeout(mountFrameOverlay, 50);
+      return;
+    }
+
+    if (!frameOverlayImage) {
+      frameOverlayImage = document.createElement("img");
+      frameOverlayImage.dataset.pincabosFrameOverlay = "1";
+      frameOverlayImage.alt = "";
+      Object.assign(frameOverlayImage.style, {
+        position: "fixed",
+        inset: "0",
+        width: "100vw",
+        height: "100vh",
+        pointerEvents: "none",
+        zIndex: "2147483647",
+        objectFit: "fill",
+        opacity: "1",
+      });
+      document.body.appendChild(frameOverlayImage);
+      guardState.frameOverlayMounts += 1;
+    } else if (!frameOverlayImage.isConnected) {
+      document.body.appendChild(frameOverlayImage);
+      guardState.frameOverlayMounts += 1;
+    }
+
+    const png = buildFramePng();
+    if (png) {
+      frameOverlayImage.src = png;
+    }
+  }
+
+  function scheduleFrameOverlayRefresh() {
+    if (frameOverlayTimer) {
+      window.clearTimeout(frameOverlayTimer);
+    }
+    frameOverlayTimer = window.setTimeout(mountFrameOverlay, 60);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountFrameOverlay, { once: true });
+  } else {
+    mountFrameOverlay();
+  }
+
+  window.addEventListener("resize", scheduleFrameOverlayRefresh, { passive: true });
+  window.setTimeout(mountFrameOverlay, 150);
+  window.setTimeout(mountFrameOverlay, 600);
 })();

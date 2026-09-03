@@ -12,7 +12,7 @@ from typing import Callable, Optional
 from flask import Blueprint, Response, jsonify, request, send_file
 
 
-PINFORGE_MODULE = "PINCABOS_LINK_LOBBY_AV_V2_REMOTE_CONTROLS"
+PINFORGE_MODULE = "PINCABOS_LINK_LOBBY_AV_V3_STABLE_LOCAL_B2S_STATE"
 LIVEKIT_CLIENT_VERSION = "2.22.2"
 SCREENS_FILE = Path("/opt/pincabos/config/screens/screens.json")
 LIVE_CAPTURE_DIR = Path("/run/pincabos-dashboard-live")
@@ -121,6 +121,32 @@ def _require_csrf():
     return bool(_csrf_ok and _csrf_ok())
 
 
+def _vpx_game_running() -> bool:
+    """Return True only when an actual VPX table process is running."""
+    try:
+        processes = Path("/proc").iterdir()
+    except OSError:
+        return False
+
+    for process in processes:
+        if not process.name.isdigit():
+            continue
+        try:
+            raw = (process / "cmdline").read_bytes()
+        except (OSError, PermissionError):
+            continue
+        if not raw:
+            continue
+        command = raw.replace(b"\0", b" ").decode("utf-8", errors="replace")
+        lowered = command.lower()
+        if (
+            ("VPinballX_BGFX" in command or "VPinballX" in command)
+            and ".vpx" in lowered
+        ):
+            return True
+    return False
+
+
 def _backglass_preview_path() -> Path | None:
     try:
         config = json.loads(SCREENS_FILE.read_text(encoding="utf-8"))
@@ -162,8 +188,6 @@ def _backglass_preview_path() -> Path | None:
                     slot = index
                     break
 
-    # Cabinet de référence: playfield=0, backglass=1, FullDMD=2.
-    # Le fallback reste une lecture seule et ne change aucune configuration.
     if slot is None:
         slot = 1
 
@@ -206,7 +230,7 @@ button.primary{border-color:#ff984f;background:#d85d08}button.good{border-color:
 .lobby-content{height:100%;overflow:auto;padding:48px 13px 13px}.lobby-name{color:var(--orange);font-weight:950;font-size:1.08rem}.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin-top:10px;font-size:.88rem}.kv span:nth-child(odd){color:var(--muted)}
 .members{display:grid;gap:5px;margin-top:10px}.member{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:7px;background:#1a1e2b;font-size:.82rem}.ready{color:var(--green)}.not-ready{color:#ffbc72}
 .empty-room{display:grid;place-items:center;height:100%;padding:20px;color:var(--muted);text-align:center;font-weight:800}
-.b2s img{width:100%;height:100%;object-fit:contain;background:#000}.b2s-note{position:absolute;left:9px;right:9px;bottom:8px;z-index:3;padding:5px 7px;border-radius:7px;background:rgba(0,0,0,.7);color:var(--muted);font-size:.72rem}
+.b2s img{width:100%;height:100%;object-fit:contain;background:#000}.b2s-empty{position:absolute;inset:0;display:grid;place-items:center;padding:52px 20px 42px;text-align:center;background:#030409;color:#aeb4c6;font-weight:950;font-size:1.05rem;letter-spacing:.04em}.b2s-note{position:absolute;left:9px;right:9px;bottom:8px;z-index:3;padding:5px 7px;border-radius:7px;background:rgba(0,0,0,.7);color:var(--muted);font-size:.72rem}
 @media(max-width:1050px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))}.guest-1{grid-column:1;grid-row:1}.guest-2{grid-column:2;grid-row:1}.guest-3{grid-column:1;grid-row:2}.lobby{grid-column:2;grid-row:2}.local{grid-column:1;grid-row:3}.b2s{grid-column:2;grid-row:3}}
 </style>
 </head>
@@ -228,7 +252,7 @@ button.primary{border-color:#ff984f;background:#d85d08}button.good{border-color:
     <article id="guest3" class="zone guest-3"><div class="zone-title"><span>INVITÉ 3</span><span>EN ATTENTE</span></div><div class="media">SLOT DISTANT</div></article>
     <article class="zone lobby"><div class="zone-title"><span>LOBBY A/V</span><span id="roomState">HORS LIGNE</span></div><div id="lobby" class="lobby-content"><div class="empty-room">Rejoignez d'abord une room sur pincabos.cc.</div></div></article>
     <article id="local" class="zone local"><div class="zone-title"><span>JOUEUR LOCAL</span><span id="localMedia">MIC OFF · CAM OFF</span></div><div class="media">CAMÉRA DÉSACTIVÉE</div></article>
-    <article class="zone b2s"><div class="zone-title"><span>B2S LOCAL</span><span>LECTURE SEULE</span></div><img id="b2s" alt="Aperçu Backglass local"><div class="b2s-note">Miroir local uniquement — VPX/BGFX/VPinFE intacts</div></article>
+    <article class="zone b2s"><div class="zone-title"><span>DIRECTB2S LOCAL</span><span id="b2sState">AUCUN JEU</span></div><img id="b2s" alt="DirectB2S local" hidden><div id="b2sEmpty" class="b2s-empty">AUCUN JEU EN COURS</div><div class="b2s-note">DirectB2S uniquement — jamais le Backglass complet</div></article>
   </section>
   <footer class="bar">
     <div id="sync" class="status">La room pincabos.cc est consultée en lecture seule pour autoriser et ordonner les participants A/V.</div>
@@ -264,7 +288,10 @@ function attachParticipant(zone,member,isLocal){
   const p=participant(member.user_id);zone.dataset.identity=identity(member.user_id);
   zone.querySelector(".zone-title span:first-child").textContent=(isLocal?"JOUEUR LOCAL":"SLOT "+member.slot)+" — "+member.display_name;
   zone.querySelector(".zone-title span:last-child").textContent=p?"CONNECTÉ":"EN ATTENTE";
-  const media=zone.querySelector(".media");media.replaceChildren(p?"MÉDIA DÉSACTIVÉ":"CONNEXION EN ATTENTE");
+  const media=zone.querySelector(".media");
+  const directLocalPreview=isLocal?media.querySelector('video[data-pincabos-local-preview="1"]'):null;
+  if(directLocalPreview)return;
+  media.replaceChildren(p?"MÉDIA DÉSACTIVÉ":"CONNEXION EN ATTENTE");
   if(!p)return;
   p.trackPublications.forEach(publication=>{
     if(!publication.track)return;
@@ -276,7 +303,10 @@ function attachParticipant(zone,member,isLocal){
 function renderMedia(){
   const guests=[$("guest1"),$("guest2"),$("guest3")];
   guests.forEach((zone,index)=>resetZone(zone,"INVITÉ "+(index+1),"EN ATTENTE"));
-  const local=$("local"),localMedia=local.querySelector(".media");local.dataset.identity="";localMedia.replaceChildren("CAMÉRA DÉSACTIVÉE");
+  const local=$("local"),localMedia=local.querySelector(".media");
+  const directLocalPreview=localMedia.querySelector('video[data-pincabos-local-preview="1"]');
+  local.dataset.identity="";
+  if(!directLocalPreview)localMedia.replaceChildren("CAMÉRA DÉSACTIVÉE");
   if(!state.room||!state.room.me)return;
   attachParticipant(local,state.room.me,true);
   state.room.members.filter(member=>Number(member.user_id)!==Number(state.room.me.user_id)).sort((a,b)=>a.slot-b.slot).slice(0,3).forEach((member,index)=>attachParticipant(guests[index],member,false));
@@ -334,11 +364,32 @@ async function pollControl(){
     }
   }catch(_error){}finally{state.controlBusy=false;}
 }
-function refreshB2s(){const image=$("b2s");image.src="/pincabos-link/api/lobby/b2s-preview?t="+Date.now();}
+async function refreshB2s(){
+  const image=$("b2s"),empty=$("b2sEmpty"),badge=$("b2sState");
+  try{
+    const data=await api("/pincabos-link/api/lobby/b2s-state");
+    image.hidden=true;
+    image.removeAttribute("src");
+    empty.hidden=false;
+    if(data.game_running){
+      badge.textContent="JEU EN COURS";
+      empty.textContent="JEU EN COURS · DIRECTB2S EN ATTENTE";
+    }else{
+      badge.textContent="AUCUN JEU";
+      empty.textContent="AUCUN JEU EN COURS";
+    }
+  }catch(_error){
+    image.hidden=true;
+    image.removeAttribute("src");
+    empty.hidden=false;
+    badge.textContent="INDISPONIBLE";
+    empty.textContent="ÉTAT DIRECTB2S INDISPONIBLE";
+  }
+}
 
 $("connect").onclick=connect;$("mic").onclick=toggleMic;$("cam").onclick=toggleCam;$("hangup").onclick=hangup;$("close").onclick=closeWindow;
 document.addEventListener("keydown",event=>{if(event.repeat)return;if(event.key==="Enter"&&!state.lk)connect();else if(event.key==="Escape")hangup();else if(event.key.toLowerCase()==="m")toggleMic();else if(event.key.toLowerCase()==="v")toggleCam();});
-setInterval(loadState,2000);setInterval(refreshB2s,500);setInterval(pollControl,500);loadState();refreshB2s();publishControl("Fenêtre A/V ouverte");pollControl();
+setInterval(loadState,2000);setInterval(refreshB2s,1500);setInterval(pollControl,500);loadState();refreshB2s();publishControl("Fenêtre A/V ouverte");pollControl();
 })();
 </script>
 </body>
@@ -436,6 +487,19 @@ def lobby_control():
     if sequence is not None:
         payload["queued_sequence"] = sequence
     return jsonify(payload)
+
+
+@lobby_av_blueprint.get("/pincabos-link/api/lobby/b2s-state")
+def lobby_b2s_state():
+    game_running = _vpx_game_running()
+    return jsonify(
+        {
+            "ok": True,
+            "game_running": game_running,
+            "preview_available": False,
+            "state": "game_running" if game_running else "idle",
+        }
+    )
 
 
 @lobby_av_blueprint.get("/pincabos-link/api/lobby/b2s-preview")
