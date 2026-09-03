@@ -323,6 +323,16 @@ def _main_body(
     </div>
 
     <div class="card pco-mirror-wide">
+      <div class="pco-row">
+        <div>
+          <h2 style="margin-bottom:4px">VPX MultiPlayers — LAB</h2>
+          <div class="pco-muted">Moteur VPX séparé, code de room et contrôles de test cab-à-cab.</div>
+        </div>
+        <a class="button" href="/pincabos-link/multiplayer">OUVRIR LE LAB</a>
+      </div>
+    </div>
+
+    <div class="card pco-mirror-wide">
       <div class="pco-chat-head">
         <div>
           <h2 style="margin-bottom:4px">Chat PinCabOS</h2>
@@ -936,4 +946,11 @@ def register_pincaboslink(
         _csrf_ok,
         CSRF_TOKEN,
         _lobby_av_display_action,
+    )
+    from pincaboslink_multiplayer import register_pincaboslink_multiplayer
+    register_pincaboslink_multiplayer(
+        app,
+        page_renderer,
+        _csrf_ok,
+        CSRF_TOKEN,
     )
