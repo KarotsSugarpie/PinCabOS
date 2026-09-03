@@ -263,7 +263,7 @@ button.primary{border-color:#ff984f;background:#d85d08}button.good{border-color:
 (() => {
 "use strict";
 const CSRF="__CSRF__";
-const state={room:null,av:null,lk:null,mic:false,cam:false,controlSequence:0,controlBusy:false};
+const state={room:null,av:null,lk:null,mic:false,cam:false,controlSequence:0,controlBusy:false,roomRenderSignature:null};
 const $=id=>document.getElementById(id);
 const html=value=>String(value??"").replace(/[&<>"']/g,character=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[character]);
 
@@ -322,9 +322,67 @@ function renderLobby(){
   $("roomState").textContent="AUTORISÉ";$("connect").disabled=!!state.lk;
   renderMedia();
 }
+/* PINCABOS_LOBBY_AV_ANTI_FLICKER_V2 */
+function roomRenderSignature(room){
+  if(!room)return "NO_ROOM";
+
+  const members=(room.members||[])
+    .map(member=>[
+      Number(member.user_id||0),
+      Number(member.slot||0),
+      String(member.display_name||""),
+      String(member.cab_name||"")
+    ])
+    .sort((a,b)=>a[1]-b[1]);
+
+  return JSON.stringify({
+    id:room.id||null,
+    code:String(room.code||""),
+    name:String(room.name||""),
+    member_count:Number(room.member_count||0),
+    max_players:Number(room.max_players||0),
+    me:room.me?[
+      Number(room.me.user_id||0),
+      Number(room.me.slot||0),
+      String(room.me.display_name||""),
+      String(room.me.cab_name||"")
+    ]:null,
+    members
+  });
+}
+
 async function loadState(){
-  try{const data=await api("/pincabos-link/api/lobby");state.room=data.room;$("status").textContent=state.room?"Autorisé · "+state.room.code:"Aucune room active";renderLobby();}
-  catch(error){$("status").textContent="Synchronisation : "+error.code;}
+  try{
+    const data=await api("/pincabos-link/api/lobby");
+    const nextRoom=data.room||null;
+    const nextSignature=roomRenderSignature(nextRoom);
+
+    state.room=nextRoom;
+
+    const nextStatus=state.room
+      ?"Autorisé · "+state.room.code
+      :"Aucune room active";
+
+    if($("status").textContent!==nextStatus){
+      $("status").textContent=nextStatus;
+    }
+
+    /*
+     * Important: polling continues, but the six Lobby zones are rebuilt
+     * only when the actual room composition changes. This keeps the direct
+     * local camera <video> mounted continuously and avoids periodic flicker.
+     */
+    if(nextSignature!==state.roomRenderSignature){
+      state.roomRenderSignature=nextSignature;
+      renderLobby();
+    }
+  }
+  catch(error){
+    const message="Synchronisation : "+error.code;
+    if($("status").textContent!==message){
+      $("status").textContent=message;
+    }
+  }
 }
 function speakers(values){document.querySelectorAll(".zone.speaking").forEach(zone=>zone.classList.remove("speaking"));(values||[]).forEach(p=>{const zone=document.querySelector('.zone[data-identity="'+p.identity+'"]');if(zone)zone.classList.add("speaking");});}
 async function publishControl(status){
