@@ -5,11 +5,11 @@
 ## Référence de reprise
 
 - **Safeword :** `PINFORGE-SAFE-VPX-LOBBY-MASTER-32`
-- **Dépôt de référence :** `KarotsSugarpie/PinCabOS`
+- **Dépôt de référence :** `PinCabOs/PinCabOS`
 - **Fichier de référence :** `DEV/PINCABOS_VPX_MULTIPLAYER_MASTER_REPLICA.md`
 - **Branche de référence :** `main`
 - **Date de création :** 2026-08-24
-- **État :** plan fonctionnel accepté; inventaire initial terminé; document publié sur GitHub; aucune implémentation du moteur de synchronisation commencée.
+- **État :** plan fonctionnel accepté; inventaire initial terminé; fondations inactives en PR; aucun transport ni moteur de synchronisation VPX activé.
 - **Prochaine étape autorisée :** Phase 1 — audits en lecture seule et preuve de faisabilité locale.
 
 ### Règle de reprise dans un nouveau chat
@@ -170,9 +170,9 @@ L'image du backglass disparaît. Le titre de la table peut rester dans la barre 
 
 ## Inventaire initial — 2026-08-24
 
-### Briques déjà présentes dans `KarotsSugarpie/PinCabOS`
+### Briques déjà présentes dans `PinCabOs/PinCabOS`
 
-- [x] Dépôt principal confirmé : `KarotsSugarpie/PinCabOS`, branche `main`.
+- [x] Dépôt principal confirmé : `PinCabOs/PinCabOS`, branche `main`.
 - [x] Version du dépôt observée : PinCabOS `Alpha 2.47` au moment de l'inventaire.
 - [x] Client sécurisé existant : `opt/pincabos/bin/pincabos-link`.
 - [x] Heartbeat existant : `opt/pincabos/bin/pincabos-link-heartbeat`.
@@ -184,15 +184,15 @@ L'image du backglass disparaît. Le titre de la table peut rester dans la barre 
 - [x] PipeWire, FFmpeg, Chrome, CMake, Ninja, GCC/G++, GDB, Git et GitHub CLI déjà inventoriés dans l'image PinCabOS.
 - [x] Environnement Python Flask/Waitress existant pour la WebApp locale.
 - [x] Aucune implémentation de synchronisation physique VPX trouvée dans le dépôt PinCabOS actuel.
-- [x] Aucun dépôt distinct de code source pincabos.cc identifié pendant l'inventaire initial.
+- [x] Dépôt serveur canonique identifié : `KarotsSugarpie/PinCabOS.CC`, privé, branche `main`.
 
 ## Dépôts nécessaires ou candidats
 
 | Dépôt | Rôle | État/décision |
 |---|---|---|
-| [`KarotsSugarpie/PinCabOS`](https://github.com/KarotsSugarpie/PinCabOS) | Intégration OS, WebApp locale, launchers, services et publication | Existant, obligatoire |
+| [`PinCabOs/PinCabOS`](https://github.com/PinCabOs/PinCabOS) | Intégration OS, WebApp locale, launchers, services et publication | Existant, obligatoire |
 | `KarotsSugarpie/PinCabOS-Sync` | Protocole, schémas, agent externe, adaptateurs non intrusifs, tests réseau et paquets | À créer après la Phase 1; recommandé séparé du gros dépôt rootfs |
-| `KarotsSugarpie/PinCabOS-Server` | APIs pincabos.cc, lobby, signalisation, manifestes et migrations DB | À créer ou identifier; visibilité et secrets à décider; aucun secret dans Git |
+| [`KarotsSugarpie/PinCabOS.CC`](https://github.com/KarotsSugarpie/PinCabOS.CC) | APIs pincabos.cc, lobby, signalisation, manifestes et migrations DB | Existant, privé et canonique; aucun secret dans Git |
 | [`vpinball/vpinball`](https://github.com/vpinball/vpinball) | Référence en lecture seule pour comprendre les interfaces déjà disponibles | Aucun fork, patch, recompilation ou remplacement autorisé |
 | [`vpinball/pinmame`](https://github.com/vpinball/pinmame) | Référence en lecture seule pour les interfaces d'état ROM déjà exposées | Aucun remplacement de la version utilisée par VPX BGFX |
 
@@ -264,7 +264,7 @@ Les forks et modifications de VPX BGFX et VPinFE sont interdits. Si les interfac
 - [ ] Auditer `state.c/state.h` PinMAME et les APIs déjà exposées sans remplacer la bibliothèque utilisée par VPX BGFX.
 - [ ] Prouver que VPinFE est absent du chemin multijoueur et identifier le chemin Lobby pincabos.cc → agent local → launcher PinCabOS existant → VPX BGFX intact.
 - [ ] Auditer le code actif de pincabos.cc : comptes, amis, chat, lobby, tables et APIs cabinet.
-- [ ] Identifier où le code serveur pincabos.cc doit être versionné.
+- [x] Identifier où le code serveur pincabos.cc doit être versionné : `KarotsSugarpie/PinCabOS.CC`.
 - [ ] Produire une matrice de licences pour chaque fichier susceptible d'être réutilisé dans l'agent externe; aucun fichier VPX BGFX ou VPinFE ne sera modifié.
 - [ ] Aucun changement de service, heartbeat, token, table ou configuration pendant cette phase.
 
@@ -273,7 +273,7 @@ Les forks et modifications de VPX BGFX et VPinFE sont interdits. Si les interfac
 ### Phase 2 — stratégie de dépôts et environnement DEV
 
 - [ ] Décider si `PinCabOS-Sync` est créé comme dépôt séparé.
-- [ ] Créer/identifier le dépôt serveur pincabos.cc sans y placer de secret ni de dump utilisateur.
+- [x] Créer/identifier le dépôt serveur pincabos.cc sans y placer de secret ni de dump utilisateur : `KarotsSugarpie/PinCabOS.CC`.
 - [ ] Ajouter une règle de dépôt et de CI qui interdit tout fork, patch ou remplacement de VPX BGFX et VPinFE.
 - [ ] Créer une branche DEV dédiée et une stratégie de versions du protocole.
 - [ ] Ajouter compilation reproductible, tests et artefacts GitHub Actions.
@@ -489,6 +489,8 @@ Les forks et modifications de VPX BGFX et VPinFE sont interdits. Si les interfac
 | 2026-08-24 | Reconnexion GitHub | GO — accès `push` et `admin` confirmé sur `KarotsSugarpie/PinCabOS` | Checklist publiée dans `DEV/` sur `main` |
 | 2026-08-24 | Phase 3 — scénario Record/Replay | Planifié — test local d'enregistrement, réinjection et comparaison live ajouté; non exécuté | Mise à jour du document de référence |
 | 2026-08-24 | Non négociables VPX/VPinFE/Lobby | GO — VPX BGFX et VPinFE figés; VPinFE exclu du multijoueur; Lobby pincabos.cc déclaré seule autorité | Plan et phases contradictoires corrigés |
+| 2026-09-03 | Dépôts cabinet + serveur | GO — dépôt cabinet actuel et dépôt serveur privé canonique identifiés | `PinCabOs/PinCabOS` + `KarotsSugarpie/PinCabOS.CC` |
+| 2026-09-03 | Fondation inactive cab-à-cab | GO code/CI seulement — 9 tests cabinet, 6 tests serveur, contrat signé et deux schémas identiques; matériel/transport/VPX PENDING | PR cabinet [#134](https://github.com/PinCabOs/PinCabOS/pull/134) + PR serveur [#4](https://github.com/KarotsSugarpie/PinCabOS.CC/pull/4) |
 
 ## Prochaine action
 

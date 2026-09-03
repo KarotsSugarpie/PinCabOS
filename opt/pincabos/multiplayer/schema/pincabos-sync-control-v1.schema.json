@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pincabos.cc/schemas/pincabos-sync-control-v1.schema.json",
+  "title": "PinCabOS Sync Control Envelope V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "session_id", "command_id", "issued_at", "expires_at",
+    "epoch", "sequence", "master_cabinet_id", "target_cabinet_id", "type",
+    "payload", "payload_hash", "signature"
+  ],
+  "properties": {
+    "protocol_version": {"const": "pcos-sync-control/1"},
+    "session_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "command_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "issued_at": {"type": "integer", "minimum": 0},
+    "expires_at": {"type": "integer", "minimum": 1},
+    "epoch": {"type": "integer", "minimum": 0},
+    "sequence": {"type": "integer", "minimum": 1},
+    "master_cabinet_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "target_cabinet_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "type": {
+      "enum": ["SESSION_PREPARE", "PACKAGE_VERIFY", "READY_COMMIT", "START_COMMIT", "HANDOFF_PREPARE", "HANDOFF_COMMIT", "SESSION_STOP"]
+    },
+    "payload": {"type": "object"},
+    "payload_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

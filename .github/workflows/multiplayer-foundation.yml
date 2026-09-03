@@ -1,0 +1,45 @@
+name: Multiplayer foundation guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "feat/multiplayer-*"
+
+permissions:
+  contents: read
+
+jobs:
+  boundary-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Refuse protected VPX and VPinFE paths on multiplayer branches
+        if: startsWith(github.head_ref || github.ref_name, 'feat/multiplayer-')
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          changed="$(git diff --name-only "$base" "${{ github.sha }}")"
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -E '^(opt/pincabos/apps/(vpinball|vpinfe)/|home/pinball/(vpinfe/|\.vpinball/|\.local/share/VPinballX/))'; then
+            echo "NOGO: une branche multijoueur ne peut pas modifier VPX BGFX ou VPinFE."
+            exit 1
+          fi
+      - name: Run cabinet foundation tests
+        run: |
+          PYTHONPATH=opt/pincabos/multiplayer \
+            python3 -m unittest discover -s opt/pincabos/multiplayer/tests -v
+      - name: Prove forbidden runtime hooks are absent
+        run: |
+          if grep -RInE 'subprocess|os\.system|Popen|VPinFE|VPinballX_GL|vpinball_gl|VPinball_GL' \
+            opt/pincabos/multiplayer/pincabos_sync; then
+            echo "NOGO: hook d'exécution ou référence moteur interdite."
+            exit 1
+          fi

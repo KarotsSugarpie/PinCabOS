@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pincabos.cc/schemas/pincabos-sync-topology-v1.schema.json",
+  "title": "PinCabOS Sync Cabinet-to-Cabinet Topology V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "session_id", "epoch", "master_cabinet_id", "data_plane", "transport", "members"],
+  "properties": {
+    "protocol_version": {"const": "pcos-sync-control/1"},
+    "session_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "epoch": {"type": "integer", "minimum": 0},
+    "master_cabinet_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "data_plane": {"const": "cabinet-to-cabinet"},
+    "transport": {"const": "pending-poc"},
+    "members": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cabinet_id", "player_number", "role"],
+        "properties": {
+          "cabinet_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+          "player_number": {"type": "integer", "minimum": 1, "maximum": 4},
+          "role": {"enum": ["master", "replica"]}
+        }
+      }
+    }
+  }
+}
