@@ -841,6 +841,8 @@ if TARGET_VPX and TARGET_VPX.is_file():
         )
         mode = "REAL_DMD_FULLDMD" if real_fill else "STANDARD_NO_FULLDMD"
 
+    if SANS_FULLDMD:
+        mode += "+SANS_FULLDMD"  # deux ecrans : Score View off, DMD B2S masque
     print(f"MODE={mode}")
     print(f"STYLE={style}")
     print(f"DMD_INFO=type3={info['type3']} dmdimage={info['has_dmdimage']} grill={info['grill']}")
