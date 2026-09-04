@@ -48,6 +48,33 @@ if not cfg_path.exists():
 
 data = json.loads(cfg_path.read_text(errors="replace") or "{}")
 
+# PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation de chaque role est appliquee ici,
+# par xrandr, et nulle part ailleurs (VPinFE recoit 0, VPX rien).
+sys.path.insert(0, "/opt/pincabos/tools")
+import pincabos_screen_rotation as rotation_pf
+
+# Les modes reellement disponibles par sortie : une geometrie memorisee apres
+# une rotation de 90/270 est inversee par rapport au mode de la dalle.
+_modes = {}
+try:
+    _sortie = None
+    for _l in subprocess.run(["xrandr", "--query"], text=True, capture_output=True).stdout.splitlines():
+        _m = re.match(r"^(\S+) (connected|disconnected)", _l)
+        if _m:
+            _sortie = _m.group(1)
+            continue
+        _m = re.match(r"^\s+(\d+x\d+)", _l)
+        if _m and _sortie:
+            _modes.setdefault(_sortie, set()).add(_m.group(1))
+except Exception:
+    pass
+
+def mode_de_dalle(output, mode, rot):
+    for candidat in rotation_pf.modes_candidats(mode, rot):
+        if not _modes.get(output) or candidat in _modes[output]:
+            return candidat
+    return mode
+
 def clean_rate(rate):
     return str(rate or "").replace("*", "").replace("+", "").strip()
 
@@ -118,19 +145,24 @@ fd = role_from_data("fulldmd")
 # PINCABOS_APPLY_TOPPER_V1 : cabinets a 4 ecrans
 tp = role_from_data("topper")
 
-pfw = mode_width(pf.get("mode"))
-bgw = mode_width(bg.get("mode"))
+# Largeur de chaque sortie telle que X la voit APRES sa rotation : a 90/270
+# c'est la hauteur de la dalle, sinon l'ecran suivant se pose dessus.
+def largeur_vue(role, r):
+    rr = rotation_pf.role_rotation(role, data)
+    if r.get("output") and r.get("mode"):
+        r["mode"] = mode_de_dalle(r["output"], r["mode"], rr)
+    l, _ = rotation_pf.tourne(mode_width(r.get("mode")), mode_height(r.get("mode")), rr)
+    return l
+
+pfw = largeur_vue("playfield", pf)
+bgw = largeur_vue("backglass", bg)
+fdw = largeur_vue("fulldmd", fd)
+largeur_vue("topper", tp)
 
 items = []
 
 if pf.get("output") and pf.get("mode"):
-    rot = str(data.get("playfield_rotation", "0"))
-    rotate = {
-        "0": "normal",
-        "90": "right",
-        "180": "inverted",
-        "270": "left",
-    }.get(rot, "normal")
+    rotate = rotation_pf.xrandr_rotate(rotation_pf.role_rotation("playfield", data))
 
     cmd = [
         "xrandr",
@@ -151,7 +183,7 @@ if bg.get("output") and bg.get("mode"):
         "--output", bg["output"],
         "--mode", bg["mode"],
         "--pos", bg.get("pos") or f"{x}x0",
-        "--rotate", "normal",
+        "--rotate", rotation_pf.xrandr_rotate(rotation_pf.role_rotation("backglass", data)),
     ]
     if bg.get("rate"):
         cmd += ["--rate", bg["rate"]]
@@ -164,7 +196,7 @@ if fd.get("output") and fd.get("mode"):
         "--output", fd["output"],
         "--mode", fd["mode"],
         "--pos", fd.get("pos") or f"{x}x0",
-        "--rotate", "normal",
+        "--rotate", rotation_pf.xrandr_rotate(rotation_pf.role_rotation("fulldmd", data)),
     ]
     if fd.get("rate"):
         cmd += ["--rate", fd["rate"]]
@@ -174,13 +206,13 @@ if tp.get("output") and tp.get("mode"):
     # Pas d'ordre canonique pour le topper : uniquement la geometrie de son
     # role (typiquement au-dessus du fronton, y negatif). Sans geometrie, on
     # le place a droite de tout le reste plutot que d'inventer une position.
-    x = pfw + bgw + mode_width(fd.get("mode"))
+    x = pfw + bgw + fdw
     cmd = [
         "xrandr",
         "--output", tp["output"],
         "--mode", tp["mode"],
         "--pos", tp.get("pos") or f"{x}x0",
-        "--rotate", "normal",
+        "--rotate", rotation_pf.xrandr_rotate(rotation_pf.role_rotation("topper", data)),
     ]
     if tp.get("rate"):
         cmd += ["--rate", tp["rate"]]

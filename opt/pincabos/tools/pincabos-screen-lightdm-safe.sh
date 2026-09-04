@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # PINCABOS_SCREEN_LIGHTDM_SAFE_V2
 # Ne retourne jamais une erreur fatale a LightDM.
+# PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation de chaque role (screens.json)
+# est appliquee ici a chaque demarrage de session. Avant, ce script forcait
+# « normal » sur toutes les sorties et la rotation etait perdue au boot.
 
 set -u
 LOG="/var/log/pincabos-screen-layout.log"
@@ -26,18 +29,26 @@ xrandr --query >"$TMP" 2>&1 || exit 0
 if [ -r "$CFG" ]; then
 python3 - "$CFG" >"$ITEMS" <<'PY'
 import json, sys
+sys.path.insert(0, "/opt/pincabos/tools")
 try:
+    import pincabos_screen_rotation as rotation_pf
     with open(sys.argv[1], encoding="utf-8") as f:
         data = json.load(f)
     prefs = data.get("roles") if isinstance(data.get("roles"), dict) else {}
-    for role in ("playfield", "backglass", "fulldmd"):
+    for role in ("playfield", "backglass", "fulldmd", "topper"):
         s = data.get(role) or {}
         if all(k in s for k in ("name", "width", "height", "x", "y")):
             pref = prefs.get(role) if isinstance(prefs.get(role), dict) else {}
+            rot = rotation_pf.role_rotation(role, data)
+            # colonnes : sortie, largeur, hauteur, x, y, primaire, rate,
+            # mot-cle xrandr de rotation, mode inverse a essayer (90/270)
+            candidats = rotation_pf.modes_candidats(f'{s["width"]}x{s["height"]}', rot)
             print("\t".join(map(str, [
                 s["name"], s["width"], s["height"],
                 s["x"], s["y"], int(bool(s.get("is_primary"))),
-                str(pref.get("rate") or "")
+                str(pref.get("rate") or ""),
+                rotation_pf.xrandr_rotate(rot),
+                candidats[1] if len(candidats) > 1 else "",
             ])))
 except Exception:
     pass
@@ -83,12 +94,17 @@ has_mode() {
   ' "$TMP"
 }
 
-while IFS=$'\t' read -r OUT W H X Y PRIMARY RATE_CFG; do
+while IFS=$'\t' read -r OUT W H X Y PRIMARY RATE_CFG ROTATE MODE_ALT; do
   [ -n "${OUT:-}" ] || continue
   is_connected "$OUT" || continue
 
   MODE="${W}x${H}"
   ARGS=(--output "$OUT")
+  ROTATE="${ROTATE:-normal}"
+  # geometrie memorisee tournee (90/270) : le mode de la dalle est l'inverse
+  if ! has_mode "$OUT" "$MODE" && [ -n "${MODE_ALT:-}" ] && has_mode "$OUT" "$MODE_ALT"; then
+    MODE="$MODE_ALT"
+  fi
 
   if has_mode "$OUT" "$MODE"; then
     ARGS+=(--mode "$MODE")
@@ -114,7 +130,7 @@ while IFS=$'\t' read -r OUT W H X Y PRIMARY RATE_CFG; do
     echo "WARN : $OUT ne fournit plus $MODE; mode natif conserve."
   fi
 
-  ARGS+=(--pos "${X}x${Y}" --rotate normal)
+  ARGS+=(--pos "${X}x${Y}" --rotate "$ROTATE")
   [ "$PRIMARY" = "1" ] && ARGS+=(--primary)
 
   xrandr "${ARGS[@]}" || true
