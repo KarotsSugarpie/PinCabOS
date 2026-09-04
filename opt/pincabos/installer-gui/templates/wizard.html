@@ -64,6 +64,20 @@ button:disabled,.primary:disabled{opacity:.32;filter:grayscale(.9);cursor:not-al
   font-weight:900;letter-spacing:.08em;color:#160020;background:var(--accent);
   margin:0 14px;border-radius:3px;line-height:1.35;z-index:2}
 .orients{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+/* PINCABOS_INSTALLEUR_ECRANS_V1 */
+.screens{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.scr{padding:14px;border:2px solid var(--border);border-radius:var(--radius);background:var(--card);text-align:center}
+.scr.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.scr .num{font-size:2.4rem;font-weight:900;color:var(--accent);line-height:1}
+.scr .name{font-weight:700;margin-top:4px}.scr .geo{color:var(--muted);font-size:.9rem;margin-bottom:8px}
+.scr select{width:100%;min-width:0}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.segb{background:transparent;color:var(--muted);border:1px solid var(--border);padding:9px 14px;border-radius:10px;font-size:.95rem}
+.segb.sel{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#160020;border-color:transparent}
+.preview{display:flex;align-items:flex-start;gap:6px;min-height:60px;margin:10px 0 4px;overflow-x:auto}
+.pv-scr{border:2px solid var(--border);border-radius:6px;background:#0d0318;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+.pv-scr span{font-weight:900;color:var(--accent);font-size:1.2rem}.pv-scr small{color:var(--muted);font-size:.7rem;text-align:center}
+.pv-scr.playfield{border-color:var(--accent)}
 .mon{width:74px;height:48px;border:3px solid var(--accent);border-radius:6px;margin:0 auto 10px;position:relative;transition:.2s}
 .mon::after{content:"";position:absolute;inset:6px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:3px;opacity:.7}
 .rot90{transform:rotate(90deg)}.rot270{transform:rotate(-90deg)}.rot180{transform:rotate(180deg)}
@@ -148,21 +162,30 @@ button{
     <div class="row"><label data-i18n="timezone"></label><select id="f-tz"></select></div>
   </div>
   <div class="btns"><button class="ghost" onclick="go('st-lang')" data-i18n="back"></button>
-  <button class="primary" onclick="go('st-orient')" data-i18n="next"></button></div>
+  <button class="primary" onclick="loadScreens();go('st-screens')" data-i18n="next"></button></div>
 </section>
 
-<section class="step" id="st-orient">
-  <h2 data-i18n="orientation"></h2>
-  <p style="color:var(--muted);margin-bottom:6px" data-i18n="orient_hint"></p>
-  <p style="color:var(--accent);margin-bottom:14px;font-size:.95rem" data-i18n="orient_bottom"></p>
-  <div class="grid orients">
-    <div class="opt" role="button" tabindex="0" data-orient="1"><div class="mon"><b class="mon-bas" data-i18n="obot"></b></div><div class="o-label" data-i18n="o1"></div><div class="o-desc" data-i18n="o1d"></div></div>
-    <div class="opt" role="button" tabindex="0" data-orient="2"><div class="mon rot270"><b class="mon-bas" data-i18n="obot"></b></div><div class="o-label" data-i18n="o2"></div><div class="o-desc" data-i18n="o2d"></div></div>
-    <div class="opt" role="button" tabindex="0" data-orient="3"><div class="mon rot90"><b class="mon-bas" data-i18n="obot"></b></div><div class="o-label" data-i18n="o3"></div><div class="o-desc" data-i18n="o3d"></div></div>
-    <div class="opt" role="button" tabindex="0" data-orient="4"><div class="mon rot180"><b class="mon-bas" data-i18n="obot"></b></div><div class="o-label" data-i18n="o4"></div><div class="o-desc" data-i18n="o4d"></div></div>
+<section class="step" id="st-screens">
+  <h2 data-i18n="screens"></h2>
+  <p style="color:var(--muted);margin-bottom:12px" data-i18n="screens_hint"></p>
+  <div class="grid screens" id="screen-list"></div>
+  <div class="card" style="margin-top:14px">
+    <div class="row" style="margin-bottom:8px"><label data-i18n="orient_q"></label>
+      <div class="seg" id="rot-seg">
+        <button type="button" class="segb sel" data-rot="0" data-i18n="o_up"></button>
+        <button type="button" class="segb" data-rot="180" data-i18n="o_down"></button>
+        <button type="button" class="segb" data-rot="90" data-i18n="o_90"></button>
+        <button type="button" class="segb" data-rot="270" data-i18n="o_270"></button>
+      </div></div>
+    <div class="preview" id="screen-preview"></div>
+    <div class="hint" id="screens-status" data-i18n="screens_pending"></div>
   </div>
   <div class="btns"><button class="ghost" onclick="go('st-regional')" data-i18n="back"></button>
-  <button class="primary" id="orient-next" disabled onclick="go('st-disk')" data-i18n="next"></button></div>
+    <div style="display:flex;gap:10px">
+      <button class="ghost" id="btn-identify" onclick="identifyScreens()" data-i18n="identify"></button>
+      <button class="ghost" id="btn-apply" onclick="applyScreens()" data-i18n="apply_layout"></button>
+      <button class="primary" id="screens-next" disabled onclick="go('st-disk')" data-i18n="next"></button>
+    </div></div>
 </section>
 
 <section class="step" id="st-disk">
@@ -177,7 +200,7 @@ button{
       <b data-i18n="mode_up"></b><div class="o-desc" data-i18n="mode_up_d"></div></div>
   </div>
   <div class="hint" id="disk-hint" data-i18n="disk_hint"></div>
-  <div class="btns"><button class="ghost" onclick="go('st-orient')" data-i18n="back"></button>
+  <div class="btns"><button class="ghost" onclick="go('st-screens')" data-i18n="back"></button>
   <button class="primary" id="disk-next" disabled onclick="fillSummary();go('st-confirm')" data-i18n="next"></button></div>
 </section>
 
@@ -249,10 +272,67 @@ function applyKbd(){fetch("/api/keyboard",{method:"POST",
   S[{ "f-locale":"locale","f-xkb":"xkb","f-tz":"tz" }[id]]=e.target.value;
   if(id==="f-xkb")applyKbd()});
 
-document.querySelectorAll("[data-orient]").forEach(el=>el.onclick=()=>{
-  document.querySelectorAll("[data-orient]").forEach(o=>o.classList.remove("sel"));
-  el.classList.add("sel");S.orient=el.dataset.orient;
-  document.getElementById("orient-next").disabled=false});
+// PINCABOS_INSTALLEUR_ECRANS_V1 — étape Écrans : les choix s'accumulent dans la
+// page (aperçu immédiat), « Tester la disposition » applique réellement par
+// xrandr, « Continuer » ne s'ouvre qu'après une application réussie des choix
+// courants. L'assistant suit lui-même l'écran désigné comme playfield.
+const ROLE_KEYS=["playfield","backglass","fulldmd","topper"];
+S.screens={roles:{},rotation:0};
+let screensMon=[],screensApplied="";
+function screensKey(){return JSON.stringify([S.screens.roles,S.screens.rotation])}
+function loadScreens(){
+  const box=document.getElementById("screen-list");box.innerHTML="<div class='hint'>…</div>";
+  fetch("/api/screens").then(r=>r.json()).then(d=>{
+    screensMon=d.monitors||[];
+    if(d.error||!screensMon.length){box.innerHTML="<div class='hint'>"+t("screens_none")+"</div>";return}
+    if(!Object.keys(S.screens.roles).length){S.screens.roles=d.roles||{};S.screens.rotation=d.rotation||0}
+    document.querySelectorAll("#rot-seg .segb").forEach(b=>b.classList.toggle("sel",+b.dataset.rot===+S.screens.rotation));
+    renderScreens();setScreensStatus("screens_pending",false)})
+  .catch(()=>{box.innerHTML="<div class='hint'>"+t("screens_none")+"</div>"})}
+function roleOf(name){return ROLE_KEYS.find(r=>S.screens.roles[r]===name)||""}
+function renderScreens(){
+  const box=document.getElementById("screen-list");box.innerHTML="";
+  screensMon.forEach(m=>{
+    const el=document.createElement("div");el.className="scr"+(roleOf(m.name)==="playfield"?" sel":"");
+    const opts=[["",t("role_none")]].concat(ROLE_KEYS.map(r=>[r,t("role_"+r)]))
+      .map(([v,l])=>`<option value="${v}" ${roleOf(m.name)===v?"selected":""}>${l}</option>`).join("");
+    el.innerHTML=`<div class="num">${m.app_index+1}</div><div class="name">${m.name}</div>
+      <div class="geo">${m.width} × ${m.height}</div>
+      <select data-name="${m.name}">${opts}</select>`;
+    el.querySelector("select").onchange=e=>{
+      const name=e.target.dataset.name,role=e.target.value;
+      ROLE_KEYS.forEach(r=>{if(S.screens.roles[r]===name)S.screens.roles[r]=""});
+      if(role){S.screens.roles[role]=name}
+      renderScreens();setScreensStatus("screens_pending",false)};
+    box.appendChild(el)});
+  renderPreview()}
+function renderPreview(){
+  const pv=document.getElementById("screen-preview");const rot=+S.screens.rotation;
+  const order=ROLE_KEYS.filter(r=>S.screens.roles[r]).map(r=>[r,screensMon.find(m=>m.name===S.screens.roles[r])]).filter(x=>x[1]);
+  if(!order.length){pv.innerHTML="<span class='hint'>"+t("screens_need_pf")+"</span>";return}
+  const scale=180/Math.max(...order.map(([r,m])=>r==="playfield"&&(rot===90||rot===270)?m.height:m.width));
+  pv.innerHTML=order.map(([r,m])=>{const turned=r==="playfield"&&(rot===90||rot===270);
+    const w=(turned?m.height:m.width)*scale,h=(turned?m.width:m.height)*scale;
+    return `<div class="pv-scr ${r}" style="width:${w}px;height:${h}px"><span>${m.app_index+1}</span><small>${t("role_"+r)}${r==="playfield"&&rot?" · "+rot+"°":""}</small></div>`}).join("")}
+document.querySelectorAll("#rot-seg .segb").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#rot-seg .segb").forEach(o=>o.classList.remove("sel"));b.classList.add("sel");
+  S.screens.rotation=+b.dataset.rot;renderPreview();setScreensStatus("screens_pending",false)});
+function setScreensStatus(key,ok,extra){const st=document.getElementById("screens-status");
+  st.textContent=t(key)+(extra?" "+extra:"");st.style.color=ok?"var(--good)":"var(--muted)";
+  document.getElementById("screens-next").disabled=!(ok&&screensApplied===screensKey()&&S.screens.roles.playfield)}
+function applyScreens(){
+  if(!S.screens.roles.playfield){setScreensStatus("screens_need_pf",false);return}
+  const btn=document.getElementById("btn-apply");btn.disabled=true;setScreensStatus("screens_applying",false);
+  fetch("/api/screens/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(S.screens)})
+  .then(r=>r.json()).then(d=>{btn.disabled=false;
+    if(d.ok){screensApplied=screensKey();setScreensStatus("screens_applied",true)}
+    else{screensApplied="";setScreensStatus("screens_failed",false,(d.erreurs||[]).join(" ; "))}})
+  .catch(()=>{btn.disabled=false;screensApplied="";setScreensStatus("screens_failed",false)})}
+function identifyScreens(){
+  const btn=document.getElementById("btn-identify");btn.disabled=true;
+  const labels={};ROLE_KEYS.forEach(r=>labels[r]=t("role_"+r));
+  fetch("/api/screens/identify",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({roles:S.screens.roles,seconds:6,labels})}).catch(()=>{}).finally(()=>setTimeout(()=>btn.disabled=false,6500))}
 
 fetch("/api/disks").then(r=>r.json()).then(disks=>{
   const box=document.getElementById("disk-list");
@@ -273,7 +353,8 @@ function checkDisk(){const ok=!!(S.disk&&S.mode);
 
 function fillSummary(){
   const rows=[[t("locale"),S.locale],[t("keyboard"),S.xkb],[t("timezone"),S.tz],
-    [t("orientation"),t("o"+S.orient)+" — "+t("o"+S.orient+"d")],
+    [t("screens"),ROLE_KEYS.filter(r=>S.screens.roles[r]).map(r=>t("role_"+r)+" = "+S.screens.roles[r]).join(", ")||"—"],
+    [t("orient_q"),t({0:"o_up",180:"o_down",90:"o_90",270:"o_270"}[+S.screens.rotation]||"o_up")],
     [t("disk"),S.disk+" ("+(S.mode==1?t("mode_erase"):S.mode==3?t("mode_up"):t("mode_dual"))+")"]];
   document.getElementById("summary").innerHTML=rows.map(([k,v])=>
     `<div class="sumline"><span>${k}</span><b>${v}</b></div>`).join("");

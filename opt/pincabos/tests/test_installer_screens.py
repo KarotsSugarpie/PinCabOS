@@ -1,0 +1,291 @@
+"""Étape « Écrans » de l'assistant d'installation (PINCABOS_INSTALLEUR_ECRANS_V1).
+
+Sorties xrandr réelles du cab de Yann (NVIDIA, trois écrans) ; aucune commande
+exécutée : un faux exécuteur enregistre ce qui serait lancé.
+"""
+import json
+import os
+import shutil
+import tempfile
+import unittest
+from pathlib import Path
+
+from _charge import charger, RACINE
+
+sc = charger("opt/pincabos/installer-gui/screens.py", "pco_installer_screens")
+
+QUERY = """Screen 0: minimum 8 x 8, current 7680 x 2160, maximum 32767 x 32767
+HDMI-0 connected primary 3840x2160+0+0 (normal left inverted right x axis y axis) 1600mm x 900mm
+   3840x2160     143.99*+  60.00    59.94    50.00    30.00
+   1920x1080     60.00    59.94    50.00
+DP-0 connected 1920x1080+5760+0 (normal left inverted right x axis y axis) 597mm x 336mm
+   1920x1080     60.00*+  50.00
+DP-1 disconnected (normal left inverted right x axis y axis)
+DP-2 connected 1920x1080+3840+0 (normal left inverted right x axis y axis) 598mm x 336mm
+   1920x1080     60.00*+
+DP-3 disconnected (normal left inverted right x axis y axis)
+"""
+QUERY_INVERTED = QUERY.replace("HDMI-0 connected primary 3840x2160+0+0 (normal", "HDMI-0 connected primary 3840x2160+0+0 inverted (normal")
+PROPS = """HDMI-0 connected primary 3840x2160+0+0 (0x1c6) normal (normal left inverted right x axis y axis) 1600mm x 900mm
+	EDID:
+		00ffffffffffff001e6dcd8201010101
+		0122010380a05a780aee91a3544c9926
+		0f5054a1080031404540614071408180
+		d1c00101010108e80030f2705a80b058
+		8a0040846300001e6fc200a0a0a05550
+		3020350040846300001e000000fd0018
+		901eff86000a202020202020000000fc
+		004c472054562053534352320a200372
+DP-0 connected 1920x1080+5760+0 (0x1d3) normal (normal left inverted right x axis y axis) 597mm x 336mm
+	EDID:
+		00ffffffffffff004a8b3b2a01010101
+		17150103803c2278ea1ec5ae4f34b126
+		0e5054a54b008180a940d1c0714f0101
+		010101010101023a801871382d40582c
+		450055502100001e000000ff004a3235
+		374d3936423030464c0a000000fc0052
+		544b204648440a2020202020000000fd
+		00384c1e5111000a20202020202001bb
+DP-2 connected 1920x1080+3840+0 (0x1d3) normal (normal left inverted right x axis y axis) 598mm x 336mm
+	Brightness: 1.0
+"""
+
+
+class Faux:
+    def __init__(self, query=QUERY, props=PROPS, rc=0):
+        self.query, self.props, self.rc = query, props, rc
+        self.commandes = []
+
+    def __call__(self, args, timeout=20):
+        self.commandes.append(list(args))
+        if args[:2] == ["xrandr", "--query"]:
+            return 0, self.query, ""
+        if args[:2] == ["xrandr", "--prop"]:
+            return 0, self.props, ""
+        return self.rc, "", "" if self.rc == 0 else "xrandr: erreur simulee"
+
+
+class Decouverte(unittest.TestCase):
+    def test_parse_query(self):
+        s = sc.parse_query(QUERY)
+        self.assertEqual([x["name"] for x in s], ["HDMI-0", "DP-0", "DP-1", "DP-2", "DP-3"])
+        pf = s[0]
+        self.assertTrue(pf["connected"] and pf["primary"])
+        self.assertEqual((pf["width"], pf["height"], pf["x"], pf["y"]), (3840, 2160, 0, 0))
+        self.assertEqual(pf["preferred"], "3840x2160")
+        self.assertEqual(pf["modes"], ["3840x2160", "1920x1080"])
+        self.assertEqual(pf["mm"], (1600, 900))
+        self.assertFalse(s[2]["connected"])
+        self.assertEqual(sc.parse_query(QUERY_INVERTED)[0]["rotation"], 180)
+
+    def test_edid(self):
+        e = sc.parse_edids(PROPS)
+        self.assertEqual(set(e), {"HDMI-0", "DP-0"})
+        self.assertEqual(len(e["HDMI-0"]), 64)
+        self.assertNotEqual(e["HDMI-0"], e["DP-0"])
+
+    def test_moniteurs(self):
+        mons = sc.moniteurs(QUERY, PROPS)
+        self.assertEqual([m["name"] for m in mons], ["HDMI-0", "DP-0", "DP-2"], "ordre de declaration X = identifiant VPinFE")
+        self.assertEqual([m["app_index"] for m in mons], [0, 1, 2])
+        self.assertTrue(mons[2]["edid_sha256"].startswith("connector:DP-2"), "sans EDID : repli sur le nom de sortie")
+        self.assertEqual(mons[0]["area"], 3840 * 2160)
+
+    def test_decouvrir(self):
+        f = Faux()
+        mons = sc.decouvrir(f)
+        self.assertEqual(len(mons), 3)
+        self.assertEqual(f.commandes[0], ["xrandr", "--query"])
+        with self.assertRaises(RuntimeError):
+            sc.decouvrir(lambda a, timeout=20: (1, "", "Can't open display"))
+
+
+class Roles(unittest.TestCase):
+    def test_proposition_cab_de_yann(self):
+        mons = sc.moniteurs(QUERY, PROPS)
+        r = sc.proposer_roles(mons)
+        self.assertEqual(r["playfield"], "HDMI-0")
+        self.assertEqual({r["backglass"], r["fulldmd"]}, {"DP-0", "DP-2"})
+        self.assertEqual(r["topper"], "")
+
+    def test_dmd_reconnu_par_son_format(self):
+        q = QUERY.replace("DP-0 connected 1920x1080+5760+0", "DP-0 connected 1920x480+5760+0").replace("   1920x1080     60.00*+  50.00", "   1920x480      60.00*+")
+        mons = sc.moniteurs(q, PROPS)
+        r = sc.proposer_roles(mons)
+        self.assertEqual(r, {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""})
+
+    def test_quatre_ecrans(self):
+        q = QUERY.replace("DP-3 disconnected (normal left inverted right x axis y axis)", "DP-3 connected 1280x720+7680+0 (normal left inverted right x axis y axis) 300mm x 170mm\n   1280x720      60.00*+")
+        r = sc.proposer_roles(sc.moniteurs(q, PROPS))
+        self.assertEqual(r["topper"], "DP-3")
+
+    def test_un_seul_ecran(self):
+        q = "\n".join(l for l in QUERY.splitlines() if not l.startswith(("DP-0", "DP-2", "   1920x1080     60.00*+"))) + "\n"
+        r = sc.proposer_roles(sc.moniteurs(q, PROPS))
+        self.assertEqual(r, {"playfield": "HDMI-0", "backglass": "", "fulldmd": "", "topper": ""})
+
+    def test_validation(self):
+        mons = sc.moniteurs(QUERY, PROPS)
+        self.assertEqual(sc.valider_roles({"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}, mons), [])
+        self.assertIn("le playfield est obligatoire", sc.valider_roles({"playfield": "", "backglass": "DP-2"}, mons))
+        self.assertTrue(any("inconnue" in e for e in sc.valider_roles({"playfield": "HDMI-9"}, mons)))
+        self.assertTrue(any("à la fois" in e for e in sc.valider_roles({"playfield": "HDMI-0", "backglass": "HDMI-0"}, mons)))
+
+
+class Disposition(unittest.TestCase):
+    ROLES = {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}
+
+    def test_canonique(self):
+        mons = sc.moniteurs(QUERY, PROPS)
+        d = sc.disposition(mons, self.ROLES, 0)
+        self.assertEqual((d["HDMI-0"]["x"], d["DP-2"]["x"], d["DP-0"]["x"]), (0, 3840, 5760))
+        self.assertTrue(d["HDMI-0"]["primary"] and not d["DP-2"]["primary"])
+        cmd = sc.commande_xrandr(d, ["DP-1"])
+        self.assertEqual(cmd[:8], ["xrandr", "--output", "HDMI-0", "--mode", "3840x2160", "--pos", "0x0", "--rotate"])
+        self.assertIn("--primary", cmd)
+        self.assertEqual(cmd[-3:], ["--output", "DP-1", "--off"])
+
+    def test_playfield_tourne_de_90(self):
+        mons = sc.moniteurs(QUERY, PROPS)
+        d = sc.disposition(mons, self.ROLES, 90)
+        self.assertEqual((d["HDMI-0"]["width"], d["HDMI-0"]["height"]), (2160, 3840), "largeur vue par X apres rotation")
+        self.assertEqual(d["DP-2"]["x"], 2160, "le fronton se pose apres la hauteur de la dalle")
+        self.assertEqual(d["HDMI-0"]["mode"], "3840x2160", "le mode reste celui de la dalle")
+        self.assertIn("right", sc.commande_xrandr(d))
+
+    def test_appliquer(self):
+        f = Faux()
+        mons = sc.decouvrir(f)
+        res = sc.appliquer(mons, self.ROLES, 180, f)
+        self.assertTrue(res["ok"], res)
+        self.assertIn("inverted", res["commande"])
+        self.assertEqual(sc.appliquer(mons, {"playfield": ""}, 0, f)["ok"], False)
+        self.assertEqual(sc.appliquer(mons, self.ROLES, 45, f)["ok"], False)
+        f2 = Faux(rc=1)
+        mons = sc.decouvrir(f2)
+        res = sc.appliquer(mons, self.ROLES, 0, f2)
+        self.assertFalse(res["ok"])
+        self.assertIn("xrandr", res["erreurs"][0])
+
+
+class Fichier(unittest.TestCase):
+    ROLES = {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}
+
+    def test_screens_json(self):
+        mons = sc.moniteurs(QUERY, PROPS)
+        d = sc.screens_json(mons, self.ROLES, 180)
+        self.assertEqual(d["playfield_rotation"], "180")
+        self.assertEqual(d["mode"], "installer")
+        self.assertEqual(d["roles"]["playfield"], {"output": "HDMI-0", "mode": "3840x2160", "rate": ""})
+        pf = d["playfield"]
+        for k in ("name", "x", "y", "width", "height", "area", "is_primary", "raw", "edid_sha256", "geometry", "id", "screen_id", "available"):
+            self.assertIn(k, pf, k)
+        self.assertEqual(pf["geometry"], "3840x2160+0+0")
+        self.assertEqual(d["backglass"]["geometry"], "1920x1080+3840+0")
+        self.assertEqual(d["fulldmd"]["screen_id"], 1, "identifiant VPinFE = rang de la sortie, pas rang du role")
+        self.assertNotIn("topper", d)
+        b = sc.bindings_json(d)
+        self.assertEqual(set(b["roles"]), {"playfield", "backglass", "fulldmd"})
+        self.assertEqual(b["disabled_roles"], ["topper"])
+        self.assertEqual(b["roles"]["playfield"], pf["edid_sha256"])
+        json.dumps(d)
+
+    def test_code_orient_du_moteur(self):
+        self.assertEqual([sc.code_orient(r) for r in (0, 90, 180, 270)], ["1", "2", "4", "3"])
+
+    def test_identification(self):
+        appels = []
+
+        def run(args, timeout=20):
+            appels.append(list(args))
+            return 0, "", ""
+        mons = sc.moniteurs(QUERY, PROPS)
+        res = sc.identifier(mons, self.ROLES, 5, run=run)
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["labels"]["HDMI-0"], {"number": 1, "role": "Playfield"})
+        self.assertEqual(res["labels"]["DP-2"]["number"], 3)
+        self.assertEqual(appels[0][:3], ["python3", str(sc.IDENTIFY), "--seconds"])
+
+
+class Assistant(unittest.TestCase):
+    """L'appli Flask en mode démo : trois écrans factices, aucune commande."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            import flask  # noqa: F401
+        except ImportError:
+            raise unittest.SkipTest("flask absent")
+        cls.tmp = Path(tempfile.mkdtemp())
+        os.environ["PCO_DEMO"] = "1"
+        os.environ["PCO_RUN_DIR"] = str(cls.tmp)
+        import sys
+        sys.path.insert(0, str(Path(RACINE) / "opt/pincabos/installer-gui"))
+        cls.app = charger("opt/pincabos/installer-gui/app.py", "pco_installer_app")
+        cls.client = cls.app.app.test_client()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def test_ecrans_demo(self):
+        d = self.client.get("/api/screens").get_json()
+        self.assertEqual([m["name"] for m in d["monitors"]], ["HDMI-0", "DP-0", "DP-2"])
+        self.assertEqual(d["roles"], {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""})
+        r = self.client.post("/api/screens/apply", json={"roles": d["roles"], "rotation": 180}).get_json()
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["disposition"]["DP-2"]["x"], 3840)
+        r = self.client.post("/api/screens/apply", json={"roles": {"playfield": ""}, "rotation": 0}).get_json()
+        self.assertFalse(r["ok"])
+        self.assertTrue(self.client.post("/api/screens/identify", json={"roles": d["roles"]}).get_json()["ok"])
+
+    def test_installation_ecrit_screens_et_orient(self):
+        d = self.client.get("/api/screens").get_json()
+        r = self.client.post("/api/install", json={"lang": "fr", "locale": "fr_FR.UTF-8", "xkb": "fr", "tz": "Europe/Paris", "mode": "1",
+                                                   "disk": "/dev/nvme0n1", "confirm": "INSTALL PINCABOS",
+                                                   "screens": {"roles": d["roles"], "rotation": 180}})
+        self.assertEqual(r.status_code, 200, r.get_json())
+        env = (self.tmp / "gui-answers.env").read_text(encoding="utf-8")
+        self.assertIn("PCO_ANS_SCREENS_FILE=" + str(self.tmp / "gui-screens.json"), env.replace("'", ""))
+        self.assertIn("PCO_ANS_BINDINGS_FILE=", env)
+        self.assertIn("PCO_ANS_ORIENT=4", env)
+        data = json.loads((self.tmp / "gui-screens.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["playfield_rotation"], "180")
+        self.assertEqual(data["playfield"]["name"], "HDMI-0")
+        liaisons = json.loads((self.tmp / "gui-screens-bindings.json").read_text(encoding="utf-8"))
+        self.assertEqual(liaisons["roles"]["playfield"], "demo-pf")
+        r = self.client.post("/api/install", json={"lang": "fr", "mode": "1", "disk": "/dev/nvme0n1", "confirm": "INSTALL PINCABOS",
+                                                   "screens": {"roles": {"playfield": "HDMI-9"}, "rotation": 0}})
+        self.assertEqual(r.status_code, 400)
+
+    def test_page(self):
+        html = self.client.get("/").get_data(as_text=True)
+        self.assertIn('id="st-screens"', html)
+        self.assertNotIn('id="st-orient"', html)
+        self.assertIn("applyScreens", html)
+        self.assertIn("screens-next", html)
+
+
+class Integration(unittest.TestCase):
+    def test_iso_sh_pose_screens_sur_la_cible(self):
+        s = (Path(RACINE) / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        self.assertIn("apply_target_screens() {", s)
+        self.assertIn('install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/screens/screens.json"', s)
+        self.assertIn("  apply_target_identity\n  apply_target_screens\n  refresh_target_initrd_for_orientation\n", s)
+
+    def test_i18n_complet(self):
+        d = json.loads((Path(RACINE) / "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
+        for lang, keys in d.items():
+            for k in ("screens", "identify", "apply_layout", "orient_q", "o_up", "o_down", "role_playfield", "screens_applied", "screens_none"):
+                self.assertIn(k, keys, f"{lang}: {k}")
+
+    def test_kiosque_suit_le_playfield(self):
+        s = (Path(RACINE) / "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8")
+        self.assertIn("kiosk-target", s)
+        self.assertIn("fullscreen_on_monitor", s)
+        s = (Path(RACINE) / "opt/pincabos/installer-gui/identify.py").read_text(encoding="utf-8")
+        self.assertIn("fullscreen_on_monitor", s)
+
+
+if __name__ == "__main__":
+    unittest.main()

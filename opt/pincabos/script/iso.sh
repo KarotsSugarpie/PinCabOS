@@ -5097,6 +5097,28 @@ refresh_target_initrd_for_orientation() {
     pco_go "Target initrd regenerated with oriented splash"
 }
 
+apply_target_screens() {
+    # PINCABOS_INSTALLEUR_ECRANS_V1 : l'etape Ecrans de l'assistant a produit
+    # screens.json (roles, geometrie, rotation) et les liaisons role -> EDID.
+    # Poses sur la cible, ils font du premier demarrage un cab deja regle :
+    # topologie (roles par EDID), rotation physique (lot 0), VPinFE, VPX, splash.
+    local src="${PCO_ANS_SCREENS_FILE:-}"
+    local liaisons="${PCO_ANS_BINDINGS_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying screens chosen in the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "screens file missing or empty: $src (first boot will auto-detect)"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config/screens"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/screens/screens.json"
+    if [ -n "$liaisons" ] && [ -s "$liaisons" ]; then
+        install -o 1000 -g 1000 -m 0664 "$liaisons" "$TARGET/opt/pincabos/config/screens/display-role-bindings.json"
+    fi
+    pco_go "screens.json and EDID bindings installed (playfield rotation: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("playfield_rotation","0"))' "$src" 2>/dev/null || echo '?'))"
+}
+
 apply_target_identity() {
     echo
     pco_step "Applying PinCabOS identity to installed system (os-release, issue, GRUB_DISTRIBUTOR)"
@@ -5758,6 +5780,7 @@ install_payload() {
   apply_target_regional
   apply_target_orientation
   apply_target_identity
+  apply_target_screens
   refresh_target_initrd_for_orientation
 
   test -f "$TARGET/etc/pincabos/orientation.conf"

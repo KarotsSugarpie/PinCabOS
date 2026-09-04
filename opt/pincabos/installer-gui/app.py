@@ -16,6 +16,8 @@ from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request
 
+import screens as pco_screens  # PINCABOS_INSTALLEUR_ECRANS_V1
+
 BASE = Path(__file__).resolve().parent
 DEMO = os.environ.get("PCO_DEMO") == "1"
 RUN_DIR = Path(os.environ.get("PCO_RUN_DIR", "/run/pincabos"))
@@ -71,6 +73,114 @@ def disks():
     return jsonify(disques_reels())
 
 
+# PINCABOS_INSTALLEUR_ECRANS_V1
+# L'étape Écrans : la session d'installation voit les mêmes dalles que le
+# système installé. On les numérote, on attribue les rôles, on applique la
+# disposition tout de suite (le propriétaire voit), et le résultat part sur la
+# cible au format que lit tout PinCabOS (screens.json + liaisons EDID).
+ECRANS_DEMO = [
+    {"app_index": 0, "name": "HDMI-0", "x": 0, "y": 0, "width": 3840, "height": 2160, "area": 3840 * 2160, "is_primary": True,
+     "raw": "HDMI-0 connected primary 3840x2160+0+0", "rotation": 0, "preferred": "3840x2160", "modes": ["3840x2160", "1920x1080"], "mm": (1600, 900), "edid_sha256": "demo-pf"},
+    {"app_index": 1, "name": "DP-0", "x": 5760, "y": 0, "width": 1920, "height": 480, "area": 1920 * 480, "is_primary": False,
+     "raw": "DP-0 connected 1920x480+5760+0", "rotation": 0, "preferred": "1920x480", "modes": ["1920x480"], "mm": (600, 150), "edid_sha256": "demo-dmd"},
+    {"app_index": 2, "name": "DP-2", "x": 3840, "y": 0, "width": 1920, "height": 1080, "area": 1920 * 1080, "is_primary": False,
+     "raw": "DP-2 connected 1920x1080+3840+0", "rotation": 0, "preferred": "1920x1080", "modes": ["1920x1080"], "mm": (600, 340), "edid_sha256": "demo-bg"},
+]
+KIOSK_TARGET = RUN_DIR / "kiosk-target"
+
+
+def ecrans_detectes():
+    if DEMO:
+        return [dict(m) for m in ECRANS_DEMO]
+    return pco_screens.decouvrir()
+
+
+def _roles_depuis(a):
+    roles = a.get("roles") if isinstance(a, dict) else None
+    if not isinstance(roles, dict):
+        return None
+    return {r: str(roles.get(r) or "") for r in pco_screens.ROLES}
+
+
+def _rotation_depuis(a):
+    try:
+        rot = int(a.get("rotation", 0))
+    except (TypeError, ValueError):
+        return None
+    return rot if rot in pco_screens.ROTATIONS else None
+
+
+@app.route("/api/screens")
+def screens_list():
+    try:
+        mons = ecrans_detectes()
+    except Exception as exc:
+        return jsonify({"error": "no-x", "detail": str(exc), "monitors": [], "roles": {}}), 200
+    roles = pco_screens.proposer_roles(mons)
+    pf = next((m for m in mons if m["name"] == roles.get("playfield")), None)
+    return jsonify({"monitors": mons, "roles": roles, "rotation": pf["rotation"] if pf else 0, "demo": DEMO})
+
+
+@app.route("/api/screens/identify", methods=["POST"])
+def screens_identify():
+    a = request.get_json(force=True, silent=True) or {}
+    roles = _roles_depuis(a) or {}
+    try:
+        mons = ecrans_detectes()
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 200
+    if DEMO:
+        return jsonify({"ok": True, "demo": True})
+    libelles = a.get("labels") if isinstance(a.get("labels"), dict) else None
+    res = pco_screens.identifier(mons, roles, int(a.get("seconds", 6)), libelles=libelles)
+    return jsonify(res)
+
+
+@app.route("/api/screens/apply", methods=["POST"])
+def screens_apply():
+    """Le bouton « Tester la disposition » : applique réellement, l'assistant suit le playfield."""
+    a = request.get_json(force=True, silent=True) or {}
+    roles, rotation = _roles_depuis(a), _rotation_depuis(a)
+    if roles is None or rotation is None:
+        return jsonify({"ok": False, "erreurs": ["rôles ou rotation invalides"]}), 400
+    try:
+        mons = ecrans_detectes()
+    except Exception as exc:
+        return jsonify({"ok": False, "erreurs": [str(exc)]}), 200
+    erreurs = pco_screens.valider_roles(roles, mons)
+    if erreurs:
+        return jsonify({"ok": False, "erreurs": erreurs}), 200
+    if DEMO:
+        return jsonify({"ok": True, "demo": True, "disposition": pco_screens.disposition(mons, roles, rotation)})
+    res = pco_screens.appliquer(mons, roles, rotation)
+    if res.get("ok"):
+        try:
+            RUN_DIR.mkdir(parents=True, exist_ok=True)
+            KIOSK_TARGET.write_text(roles["playfield"] + "\n", encoding="utf-8")
+        except OSError:
+            pass
+    return jsonify(res)
+
+
+def ecrans_vers_fichiers(a):
+    """Les choix validés deviennent screens.json + liaisons EDID, pour la cible."""
+    roles, rotation = _roles_depuis(a), _rotation_depuis(a)
+    if roles is None or rotation is None:
+        return {"error": "bad-screens"}
+    mons = ecrans_detectes()
+    erreurs = pco_screens.valider_roles(roles, mons)
+    if erreurs:
+        return {"error": "bad-screens", "detail": erreurs}
+    data = pco_screens.screens_json(mons, roles, rotation)
+    liaisons = pco_screens.bindings_json(data)
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    f1 = RUN_DIR / "gui-screens.json"
+    f2 = RUN_DIR / "gui-screens-bindings.json"
+    f1.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    f2.write_text(json.dumps(liaisons, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return {"screens_file": str(f1), "bindings_file": str(f2), "orient": pco_screens.code_orient(rotation)}
+
+
 @app.route("/api/keyboard", methods=["POST"])
 def keyboard():
     """Applique le layout au serveur X du kiosk (l'utilisateur tape ce qu'il voit)."""
@@ -101,6 +211,9 @@ ANSWER_RULES = {
     "orient": re.compile(r"^[1-4]$"),
     "mode": re.compile(r"^[1-3]$"),
     "disk": re.compile(r"^/dev/[a-z0-9]+$"),
+    # PINCABOS_INSTALLEUR_ECRANS_V1 : fichiers produits ici même, chemins fixes
+    "screens_file": re.compile(r"^/run/pincabos/gui-screens\.json$"),
+    "bindings_file": re.compile(r"^/run/pincabos/gui-screens-bindings\.json$"),
 }
 
 
@@ -133,6 +246,16 @@ def install():
         if not moule.match(valeur):
             return jsonify({"error": f"bad-{cle.replace('_', '-')}"}), 400
         reponses[cle] = valeur
+
+    # PINCABOS_INSTALLEUR_ECRANS_V1 : l'étape Écrans remplace la vignette
+    # d'orientation ; le code « orient » du moteur (fbcon, splash) en dérive.
+    if isinstance(a.get("screens"), dict):
+        res = ecrans_vers_fichiers(a["screens"])
+        if "error" in res:
+            return jsonify(res), 400
+        for cle in ("screens_file", "bindings_file", "orient"):
+            if ANSWER_RULES[cle].match(res[cle]):
+                reponses[cle] = res[cle]
 
     if "mode" not in reponses:
         return jsonify({"error": "bad-mode"}), 400
