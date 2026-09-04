@@ -101,12 +101,23 @@ def register(host_app, runtime_globals: dict):
 
 
 
-PINCABOS_INPUTS_INI = "/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+# PINCABOS_VPX_INPUT_V1 : depuis la refonte des entrées de VPX (oct. 2025) les
+# boutons vivent dans [Input] (Mapping.<Action> = Key;<scancode> | SDLJoy_<guid>_<n>;<bouton>).
+# La conversion evdev -> SDL, l'écriture de l'ini et la recopie VPinFE sont dans
+# /opt/pincabos/tools/pincabos_vpx_input.py (CLI : pincabos-vpx-input).
+import sys as _sys
+if "/opt/pincabos/tools" not in _sys.path:
+    _sys.path.insert(0, "/opt/pincabos/tools")
+import pincabos_vpx_input as vpxin  # noqa: E402
+PINCABOS_INPUTS_INI = str(vpxin.ini_path())
+# action VPX -> ancienne clé (pour retrouver l'icône livrée avec Map Commander)
+MAP_COMMANDER_LEGACY_KEY_BY_ACTION = {v: k for k, v in vpxin.LEGACY_KEYS.items() if v}
 
 
 PINCABOS_INPUTS_CFG = "/opt/pincabos/config/inputs-commander.json"
 
 
+# Ancienne table (codes DIK) : VPX ne lit plus ces clés ; voir vpxin.ACTIONS.
 PINCABOS_INPUT_KEYMAP = [
     ("LeftFlipperKey", "Flipper gauche", "42"),
     ("RightFlipperKey", "Flipper droit", "54"),
@@ -261,81 +272,121 @@ def inputs_find_section(lines, wanted):
     return None, None
 
 
-def inputs_rewrite_ini(key_values, player_values):
-    from pathlib import Path
+def _inputs_rewrite_section(lines, section_name, values, managed_keys, label):
+    """Réécrit les clés gérées d'une section (bloc daté), sans toucher au reste."""
     from datetime import datetime
-    import shutil
-    import subprocess
-
-    ini = Path(PINCABOS_INPUTS_INI)
-    if not ini.exists():
-        raise FileNotFoundError(str(ini))
-
-    backup_dir = Path("/opt/pincabos/backups/inputs-commander")
-    backup_dir.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    backup = backup_dir / f"VPinballX.ini.backup-inputs-commander-{stamp}"
-    shutil.copy2(ini, backup)
-
-    lines, found = inputs_read_ini()
-
-    keyboard_section = "Keyboard"
-    for probe in ["AddCreditKey", "LeftFlipperKey", "RightFlipperKey", "StartGameKey"]:
-        if probe in found and found[probe].get("section"):
-            keyboard_section = found[probe]["section"]
-            break
-
-    def rewrite_section(section_name, values, managed_keys, label):
-        nonlocal lines
-        start, end = inputs_find_section(lines, section_name)
-        if start is None:
-            if lines and lines[-1].strip():
-                lines.append("")
-            lines.append("[" + section_name + "]")
-            start = len(lines) - 1
-            end = len(lines)
-
-        before = lines[:start + 1]
-        section = lines[start + 1:end]
-        after = lines[end:]
-
-        cleaned = []
-        for line in section:
-            stripped = line.strip()
-            if "PinCabOS fonction(Inputs Commander" in line:
+    start, end = inputs_find_section(lines, section_name)
+    if start is None:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.append("[" + section_name + "]")
+        start = len(lines) - 1
+        end = len(lines)
+    before = lines[:start + 1]
+    section = lines[start + 1:end]
+    after = lines[end:]
+    cleaned = []
+    for line in section:
+        stripped = line.strip()
+        if "PinCabOS fonction(" + label + ")" in line:
+            continue
+        if "=" in line and not stripped.startswith((";", "#")):
+            key = line.split("=", 1)[0].strip()
+            if key in managed_keys:
                 continue
-            if "=" in line and not stripped.startswith((";", "#")):
-                key = line.split("=", 1)[0].strip()
-                if key in managed_keys:
-                    continue
-            cleaned.append(line)
+        cleaned.append(line)
+    while cleaned and not cleaned[-1].strip():
+        cleaned.pop()
+    if cleaned:
+        cleaned.append("")
+    comment = "; Modifié " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " par PinCabOS fonction(" + label + ")"
+    new_part = [comment] + [key + " = " + str(values.get(key, "")) for key in managed_keys]
+    return before + cleaned + new_part + after
 
-        while cleaned and not cleaned[-1].strip():
-            cleaned.pop()
-        if cleaned:
-            cleaned.append("")
 
-        comment = "; Modifié " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " par PinCabOS fonction(" + label + ")"
-        new_part = [comment]
-        for key in managed_keys:
-            new_part.append(key + " = " + str(values.get(key, "")))
-
-        lines = before + cleaned + new_part + after
-
-    keyboard_keys = [k for k, label, default in PINCABOS_INPUT_KEYMAP]
+def inputs_rewrite_ini(mappings, player_values, vpinfe_policy=None):
+    """PINCABOS_VPX_INPUT_V1 : écrit les boutons dans [Input] au format que VPX lit,
+    purge les anciennes clés DIK, conserve l'écriture des paramètres nudge de
+    [Player], puis recopie la navigation VPinFE. Renvoie un compte rendu."""
+    ini_file = vpxin.ini_path()
+    if not ini_file.exists():
+        raise FileNotFoundError(str(ini_file))
+    report = vpxin.write_mappings(mappings, path=ini_file, backup=True)
+    ini = vpxin.VpxIni(ini_file)
     player_keys = [k for k, label, default in PINCABOS_INPUT_PLAYERMAP]
+    ini.lines = _inputs_rewrite_section(ini.lines, "Player", player_values, player_keys, "Inputs Commander Nudge")
+    ini.save(backup=False)
+    all_mappings = dict(vpxin.ACTION_DEFAULTS)
+    all_mappings.update(vpxin.VpxIni(ini_file).input_mappings())
+    report["decoded"] = {a: vpxin.mapping_label(t, vpxin.VpxIni(ini_file).device_names()) for a, t in report["mappings"].items()}
+    vpinfe = {}
+    if vpxin.VPINFE_INI.exists():
+        values = vpxin.vpinfe_values(all_mappings, vpinfe_policy)
+        vpinfe = vpxin.write_vpinfe(values)
+        vpinfe["values"] = values
+    report["vpinfe"] = vpinfe
+    return report
 
-    rewrite_section(keyboard_section, key_values, keyboard_keys, "Inputs Commander Keyboard")
-    rewrite_section("Player", player_values, player_keys, "Inputs Commander Nudge")
 
-    ini.write_text(chr(10).join(lines) + chr(10))
+def inputs_vpx_running():
     try:
-        subprocess.run(["chown", "pinball:pinball", str(ini)], timeout=10)
+        r = subprocess.run(["pgrep", "-f", "VPinballX"], capture_output=True, text=True, timeout=5)
+        return r.returncode == 0
     except Exception:
-        pass
+        return False
 
-    return str(backup), keyboard_section
 
+def inputs_report_html(title, report, intro=""):
+    """Compte rendu après écriture : ce qui est dans l'ini VPX, ce qui est dans VPinFE."""
+    rows = []
+    for action, text in report.get("mappings", {}).items():
+        rows.append("<tr><td>" + inputs_esc(vpxin.ACTION_LABELS.get(action, action)) + "</td><td><code>" + inputs_esc(action)
+                    + "</code></td><td>" + inputs_esc(report.get("decoded", {}).get(action, "")) + "</td><td><code>" + inputs_esc(text or "—") + "</code></td></tr>")
+    vp = report.get("vpinfe") or {}
+    vp_rows = []
+    for fn, label in vpxin.VPINFE_FUNCTIONS:
+        v = (vp.get("values") or {}).get(fn)
+        if not v:
+            continue
+        notes = " ; ".join(v.get("notes", []))
+        vp_rows.append("<tr><td>" + inputs_esc(label) + "</td><td><code>" + inputs_esc(v.get("action") or "—") + "</code></td><td><code>"
+                       + inputs_esc(v.get("joy") or "—") + "</code></td><td><code>" + inputs_esc(v.get("keys") or "—") + "</code></td><td class='warn'>" + inputs_esc(notes) + "</td></tr>")
+    running = inputs_vpx_running()
+    if vp:
+        restart = ("<p class='warn'>Une table VPX est en cours : redémarre VPinFE plus tard pour ne pas l'interrompre.</p>" if running else
+                   "<form method='post' action='/inputs/vpinfe-restart' style='display:inline'><button class='button' type='submit'>Redémarrer VPinFE maintenant</button></form>")
+        vp_block = ("<h2>Navigation VPinFE</h2><p>Écrit dans <code>" + inputs_esc(vp.get("path", "")) + "</code>. VPinFE lit ce fichier au démarrage : "
+                    "il faut le redémarrer pour appliquer.</p><table class='map-table'><tr><th>Fonction VPinFE</th><th>Action VPX</th><th>Bouton</th><th>Touches</th><th>Remarque</th></tr>"
+                    + "".join(vp_rows) + "</table><p>" + restart + "</p>")
+    else:
+        vp_block = "<p class='warn'>VPinFE non installé sur ce cab (pas de vpinfe.ini) : navigation non recopiée.</p>"
+    body = """
+<div class="card">
+  <h1>""" + inputs_esc(title) + """</h1>
+  """ + intro + """
+  <p class="good">Mapping écrit dans <code>""" + inputs_esc(report.get("path", "")) + """</code>, section <code>[Input]</code>.
+  VPX le prend en compte au prochain lancement de table.</p>
+  <p>Sauvegarde : <code>""" + inputs_esc(report.get("backup") or "aucune") + """</code>""" + (
+        " · anciennes clés DIK retirées : " + str(report.get("purged")) if report.get("purged") else "") + """</p>
+  <div class="map-table-wrap"><table class="map-table"><tr><th>Fonction</th><th>Action VPX</th><th>Lecture</th><th>Valeur écrite</th></tr>""" + "".join(rows) + """</table></div>
+  """ + vp_block + """
+  <p><a class="button" href="/inputs/map-commander">Retour Map Commander</a></p>
+</div>
+"""
+    return page("Inputs", body)
+
+
+@route("/inputs/vpinfe-restart", methods=["POST"])
+def inputs_vpinfe_restart():
+    if inputs_vpx_running():
+        body = "<div class='card'><h1>VPinFE non redémarré</h1><p class='warn'>Une table VPX est en cours.</p><p><a class='button' href='/inputs/map-commander'>Retour Map Commander</a></p></div>"
+        return page("Inputs", body)
+    try:
+        subprocess.run(["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "restart", "pincabos-vpinfe.service"], timeout=30, check=False)
+        body = "<div class='card'><h1>VPinFE redémarré</h1><p class='good'>La navigation utilise les nouveaux boutons.</p><p><a class='button' href='/inputs/map-commander'>Retour Map Commander</a></p></div>"
+    except Exception as exc:
+        body = "<div class='card'><h1>Erreur</h1><p class='bad'><code>" + inputs_esc(exc) + "</code></p><p><a class='button' href='/inputs/map-commander'>Retour</a></p></div>"
+    return page("Inputs", body)
 
 def inputs_select(name, current, choices):
     out = ['<select name="' + inputs_esc(name) + '">']
@@ -404,24 +455,45 @@ def inputs_map_commander_page():
     cfg = inputs_load_cfg()
     lines, found = inputs_read_ini()
 
+    # PINCABOS_VPX_INPUT_V1 : état lu dans [Input], décodé, avec le rôle VPinFE de chaque action
+    state = vpxin.current_state()
+    policy = dict(vpxin.VPINFE_DEFAULT_POLICY, **(cfg.get("vpinfe_policy") or {}))
+    role_by_action = {}
+    for fn, fn_label in vpxin.VPINFE_FUNCTIONS:
+        if policy.get(fn):
+            role_by_action.setdefault(policy[fn], []).append(fn_label)
     key_rows = []
-    for idx, (key, label, default) in enumerate(PINCABOS_INPUT_KEYMAP):
-        current = found.get(key, {}).get("value", default)
-        section = found.get(key, {}).get("section", "auto")
-        status = "Détecté" if key in found else "Défaut"
-        status_class = "good" if key in found else "warn"
-        row = """
+    for a in state["actions"]:
+        action = a["action"]
+        icon = MAP_COMMANDER_ICON_FILES.get(MAP_COMMANDER_LEGACY_KEY_BY_ACTION.get(action, ""), "")
+        icon_html = ('<img class="map-function-icon" src="/static/pincabos-assets/icons/' + inputs_esc(icon) + '" alt="" loading="lazy">') if icon else ""
+        status = "Défini" if a["present"] else "Défaut VPX"
+        status_class = "good" if a["present"] else "warn"
+        roles = " · ".join(role_by_action.get(action, [])) or "—"
+        key_rows.append("""
 <tr>
-  <td class="map-func"><div class="map-function-cell"><img class="map-function-icon" src="/static/pincabos-assets/icons/""" + inputs_esc(MAP_COMMANDER_ICON_FILES.get(key, "")) + """" alt="" loading="lazy" onerror="this.style.display='none'"><strong>""" + inputs_esc(label) + """</strong></div></td>
-  <td class="map-key"><code>""" + inputs_esc(key) + """</code></td>
-  <td class="map-raw"><input id="raw_""" + inputs_esc(key) + """" class="map-raw-input" value="" readonly></td>
-  <td class="map-value"><input id="key_""" + inputs_esc(key) + """" name="key_""" + inputs_esc(key) + """" value=\"""" + inputs_esc(current) + """" class="map-code-input"></td>
-  <td class="map-section"><code>""" + inputs_esc(section) + """</code></td>
+  <td class="map-func"><div class="map-function-cell">""" + icon_html + """<strong>""" + inputs_esc(a["label"]) + """</strong></div></td>
+  <td class="map-key"><code>""" + inputs_esc(action) + """</code></td>
+  <td class="map-raw"><input id="raw_""" + inputs_esc(action) + """" class="map-raw-input" value=\"""" + inputs_esc(a["decoded"]) + """\" readonly></td>
+  <td class="map-value"><input id="key_""" + inputs_esc(action) + """" name="map_""" + inputs_esc(action) + """" value=\"""" + inputs_esc(a["mapping"]) + """\" class="map-code-input" spellcheck="false"></td>
+  <td class="map-section">""" + inputs_esc(roles) + """</td>
   <td class="map-state"><span class=\"""" + status_class + """\">""" + inputs_esc(status) + """</span></td>
-  <td class="map-actions"><button class="button secondary map-mini-btn" type="button" onclick="detectInput('key_""" + inputs_esc(key) + """')">Détecter</button><button class="button secondary map-mini-btn" type="button" onclick="clearInput('key_""" + inputs_esc(key) + """')">Clear</button></td>
+  <td class="map-actions"><button class="button secondary map-mini-btn" type="button" onclick="detectInput('key_""" + inputs_esc(action) + """')">Détecter</button><button class="button secondary map-mini-btn" type="button" onclick="clearInput('key_""" + inputs_esc(action) + """')">Vider</button></td>
 </tr>
-"""
-        key_rows.append(row)
+""")
+
+    vpinfe_preview = vpxin.vpinfe_values({a["action"]: a["mapping"] for a in state["actions"]}, policy)
+    vpinfe_installed = vpxin.VPINFE_INI.exists()
+    vpinfe_rows = []
+    for fn, fn_label in vpxin.VPINFE_FUNCTIONS:
+        options = ['<option value=""' + (" selected" if not policy.get(fn) else "") + '>— aucune —</option>']
+        for act, act_label, _d in vpxin.ACTIONS:
+            options.append('<option value="' + inputs_esc(act) + '"' + (" selected" if policy.get(fn) == act else "") + '>' + inputs_esc(act_label) + '</option>')
+        pv = vpinfe_preview.get(fn, {})
+        note = " ; ".join(pv.get("notes", []))
+        vpinfe_rows.append("<tr><td>" + inputs_esc(fn_label) + "</td><td><code>joy" + inputs_esc(fn) + "</code></td><td><select name=\"vpinfe_" + inputs_esc(fn) + "\" class=\"map-code-input\">"
+                           + "".join(options) + "</select></td><td><code>" + inputs_esc(pv.get("joy") or "—") + "</code></td><td><code>" + inputs_esc(pv.get("keys") or "—")
+                           + "</code></td><td class=\"warn\">" + inputs_esc(note) + "</td></tr>")
 
     player_rows = []
     for key, label, default in PINCABOS_INPUT_PLAYERMAP:
@@ -2872,10 +2944,15 @@ def inputs_map_commander_page():
       <section class="map-master-left-v3">
 
   <h2>Mapping boutons VPX</h2>
-  <p>Ces valeurs écrivent les codes dans <code>VPinballX.ini</code>.</p>
+  <p>
+    <strong>Détecter</strong> puis appuie sur le bouton du cab (ou une touche) : la valeur est écrite au format que VPX lit
+    (<code>[Input]</code>, <code>Mapping.&lt;Action&gt;</code>). Un bouton joystick remplace le bouton joystick précédent
+    de la fonction et <em>conserve</em> la touche clavier ; une touche remplace la touche. Plusieurs entrées se cumulent avec <code>|</code>.
+    Les mêmes boutons pilotent la navigation VPinFE (carte ci-dessous).
+  </p>
   <div class="map-table-wrap">
     <table class="map-table">
-      <tr class="map-table-header"><th>Fonction</th><th>Clé VPX</th><th>Détecté brut</th><th>Valeur VPX</th><th>Section</th><th>État</th><th>Actions</th></tr>
+      <tr class="map-table-header"><th>Fonction</th><th>Action VPX</th><th>Mapping actif</th><th>Valeur VPX ([Input])</th><th>Rôle VPinFE</th><th>État</th><th>Actions</th></tr>
       """ + "".join(key_rows) + """
     </table>
   </div>
@@ -2923,6 +3000,16 @@ function closeDetectPopup() {
   }
 }
 
+function mergeBinding(current, binding) {
+  // même règle que côté serveur (pincabos_vpx_input.merge_binding) : un bouton
+  // joystick remplace les boutons joystick, une touche remplace les touches
+  const isKey = binding.startsWith("Key;");
+  const alts = String(current || "").split("|").map(s => s.trim()).filter(Boolean);
+  const kept = alts.filter(a => a.startsWith("Key;") !== isKey);
+  kept.push(binding);
+  return kept.join(" | ");
+}
+
 async function detectInput(id) {
   const el = document.getElementById(id);
   const rawEl = document.getElementById(id.replace("key_", "raw_"));
@@ -2932,20 +3019,19 @@ async function detectInput(id) {
 
   if (!el) return;
 
+  // KeyboardEvent.code -> scancode SDL (VPX écrit "Key;<scancode>")
   const keyMap = {
-    Escape:1,
-    Digit1:2, Digit2:3, Digit3:4, Digit4:5, Digit5:6, Digit6:7, Digit7:8, Digit8:9, Digit9:10, Digit0:11,
-    KeyQ:16, KeyW:17, KeyE:18, KeyR:19, KeyT:20, KeyY:21, KeyU:22, KeyI:23, KeyO:24, KeyP:25,
-    KeyA:30, KeyS:31, KeyD:32, KeyF:33, KeyG:34, KeyH:35, KeyJ:36, KeyK:37, KeyL:38,
-    KeyZ:44, KeyX:45, KeyC:46, KeyV:47, KeyB:48, KeyN:49, KeyM:50,
-    Enter:28, Space:57,
-    ShiftLeft:42, ShiftRight:54,
-    ControlLeft:29, ControlRight:97,
-    AltLeft:56, AltRight:100,
-    ArrowLeft:105, ArrowRight:106, ArrowUp:103, ArrowDown:108,
-    Insert:110, Delete:111, Home:102, End:107, PageUp:104, PageDown:109,
-    F1:59, F2:60, F3:61, F4:62, F5:63, F6:64, F7:65, F8:66, F9:67, F10:68, F11:87, F12:88
+    Escape:41, Enter:40, Space:44, Tab:43, Backspace:42, Minus:45, Equal:46,
+    BracketLeft:47, BracketRight:48, Backslash:49, Semicolon:51, Quote:52, Backquote:53,
+    Comma:54, Period:55, Slash:56, CapsLock:57,
+    ShiftLeft:225, ShiftRight:229, ControlLeft:224, ControlRight:228, AltLeft:226, AltRight:230,
+    ArrowRight:79, ArrowLeft:80, ArrowDown:81, ArrowUp:82,
+    Insert:73, Home:74, PageUp:75, Delete:76, End:77, PageDown:78, NumpadEnter:88
   };
+  for (let i = 0; i < 26; i++) keyMap["Key" + String.fromCharCode(65 + i)] = 4 + i;
+  for (let i = 1; i <= 9; i++) keyMap["Digit" + i] = 29 + i;
+  keyMap.Digit0 = 39;
+  for (let i = 1; i <= 12; i++) keyMap["F" + i] = 57 + i;
 
   mapDetectActive = true;
   let seconds = 30;
@@ -2965,44 +3051,41 @@ async function detectInput(id) {
     }
   }, 1000);
 
-  function finish(code, raw) {
+  function finish(binding, label, raw) {
     if (!mapDetectActive) return;
-
-    el.value = String(code);
-    if (rawEl) rawEl.value = raw;
-    if (rawBox) rawBox.textContent = raw + " -> VPX code " + code;
-
-    setTimeout(closeDetectPopup, 700);
+    el.value = mergeBinding(el.value, binding);
+    el.dispatchEvent(new Event("input", {bubbles:true}));
+    if (rawEl) rawEl.value = label;
+    if (rawBox) rawBox.textContent = label + "  →  " + el.value + "   (" + raw + ")";
+    setTimeout(closeDetectPopup, 900);
   }
 
   mapDetectKeyHandler = function(e) {
     if (!mapDetectActive) return;
-
     e.preventDefault();
     e.stopPropagation();
-
-    const code = keyMap[e.code];
-    const raw = "keyboard:web code=" + e.code + " key=" + e.key;
-
-    if (code !== undefined) {
-      finish(code, raw);
+    const sc = keyMap[e.code];
+    if (sc !== undefined) {
+      finish("Key;" + sc, "Clavier : " + e.code, "clavier du navigateur code=" + e.code);
     } else if (rawBox) {
-      rawBox.textContent = "Touche non mappée : " + raw;
+      rawBox.textContent = "Touche non gérée : " + e.code;
     }
   };
 
   window.addEventListener("keydown", mapDetectKeyHandler, true);
 
+  // Côté cab : /dev/input (boutons du cab, clavier branché au cab). Le serveur
+  // attend 8 s par appel ; on relance tant que la fenêtre est ouverte.
   try {
-    const r = await fetch("/inputs/detect-once", {method:"POST"});
-    const data = await r.json();
-
-    if (mapDetectActive && data.ok) {
-      const raw = "evdev device=" + data.name + " code=" + data.code;
-      finish(data.code, raw);
+    while (mapDetectActive) {
+      const r = await fetch("/inputs/detect-once", {method:"POST"});
+      const data = await r.json();
+      if (!mapDetectActive) break;
+      if (data.ok) { finish(data.binding, data.label, data.raw); break; }
+      if (data.error && data.error !== "timeout") { if (rawBox) rawBox.textContent = data.error; break; }
     }
   } catch(e) {
-    if (rawBox) rawBox.textContent = "evdev non disponible, clavier web actif.";
+    if (rawBox) rawBox.textContent = "evdev non disponible, clavier du navigateur actif.";
   }
 }
 </script>
@@ -3299,6 +3382,19 @@ async function detectInput(id) {
   </div>
 
 
+
+<div class="card">
+  <h2>Navigation VPinFE</h2>
+  <p>Chaque fonction de VPinFE suit une action VPX : le bouton détecté ci-dessus sert aussi à choisir les tables.
+  Les touches par défaut de VPinFE (flèches, Entrée, Échap…) sont conservées.""" + ("" if vpinfe_installed else " <span class='warn'>vpinfe.ini absent : rien ne sera écrit.</span>") + """</p>
+  <div class="map-table-wrap">
+    <table class="map-table">
+      <tr class="map-table-header"><th>Fonction VPinFE</th><th>Clé</th><th>Suit l'action VPX</th><th>Bouton</th><th>Touches</th><th>Remarque</th></tr>
+      """ + "".join(vpinfe_rows) + """
+    </table>
+  </div>
+  <p class="warn">VPinFE lit sa configuration au démarrage : après sauvegarde, un bouton propose de le redémarrer.</p>
+</div>
 
 <div class="card">
   <button class="button" type="submit">Sauvegarder Map Commander</button>
@@ -3814,23 +3910,31 @@ def inputs_save():
     ]:
         cfg[key] = request.form.get(key) == "1"
 
-    key_values = {}
-    for key, label, default in PINCABOS_INPUT_KEYMAP:
-        key_values[key] = request.form.get("key_" + key, "").strip()
+    mappings = {}
+    for action in vpxin.ACTION_IDS:
+        if "map_" + action in request.form:
+            mappings[action] = request.form.get("map_" + action, "").strip()
+    policy = {}
+    for fn, _label in vpxin.VPINFE_FUNCTIONS:
+        if "vpinfe_" + fn in request.form:
+            policy[fn] = request.form.get("vpinfe_" + fn, "").strip()
+    if policy:
+        cfg["vpinfe_policy"] = policy
 
     player_values = {}
     for key, label, default in PINCABOS_INPUT_PLAYERMAP:
         player_values[key] = request.form.get("player_" + key, "").strip()
 
     try:
-        backup, keyboard_section = inputs_rewrite_ini(key_values, player_values)
+        report = inputs_rewrite_ini(mappings, player_values, cfg.get("vpinfe_policy"))
         inputs_save_cfg(cfg)
+        return inputs_report_html("Map Commander sauvegardé", report)
+    except ValueError as e:
         body = """
 <div class="card">
-  <h1>Inputs Commander sauvegardé</h1>
-  <p class="good">Mapping écrit dans <code>""" + inputs_esc(PINCABOS_INPUTS_INI) + """</code>.</p>
-  <p>Section clavier utilisée : <code>""" + inputs_esc(keyboard_section) + """</code></p>
-  <p>Backup : <code>""" + inputs_esc(backup) + """</code></p>
+  <h1>Mapping refusé</h1>
+  <p class="bad">""" + inputs_esc(e) + """</p>
+  <p>Format attendu : <code>Key;&lt;scancode&gt;</code> ou <code>SDLJoy_&lt;guid&gt;_&lt;n&gt;;&lt;bouton&gt;</code>, alternatives séparées par <code>|</code>. Rien n'a été écrit.</p>
   <a class="button" href="/inputs/map-commander">Retour Map Commander</a>
 </div>
 """
@@ -3848,43 +3952,17 @@ def inputs_save():
 
 @route("/inputs/detect-once", methods=["POST"])
 def inputs_detect_once():
-    import os, glob, time, select, struct, json
-    EVENT_FMT = "llHHI"
-    EVENT_SIZE = struct.calcsize(EVENT_FMT)
-
-    devices = []
-    for dev in sorted(glob.glob("/dev/input/event*")):
-        try:
-            fd = os.open(dev, os.O_RDONLY | os.O_NONBLOCK)
-            devices.append((dev, fd))
-        except Exception:
-            pass
-
-    if not devices:
-        return jsonify({"ok": False, "error": "Aucun /dev/input/event* lisible. Vérifie les permissions du service PinCabOS."})
-
+    """Un appui sur le cab -> binding VPX ("Key;225", "SDLJoy_<guid>_1;3"), décodé."""
     try:
-        deadline = time.time() + 8
-        while time.time() < deadline:
-            r, _, _ = select.select([fd for _, fd in devices], [], [], 0.25)
-            for fd in r:
-                try:
-                    data = os.read(fd, EVENT_SIZE)
-                    if len(data) != EVENT_SIZE:
-                        continue
-                    sec, usec, etype, code, value = struct.unpack(EVENT_FMT, data)
-                    if etype == 1 and value == 1:
-                        devname = next((d for d, f in devices if f == fd), "event")
-                        return jsonify({"ok": True, "code": str(code), "name": devname})
-                except Exception:
-                    continue
+        res = vpxin.detect_once(timeout=8.0)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": "détection impossible : " + str(exc)})
+    if not res:
         return jsonify({"ok": False, "error": "timeout"})
-    finally:
-        for _, fd in devices:
-            try:
-                os.close(fd)
-            except Exception:
-                pass
+    if "error" in res:
+        return jsonify({"ok": False, "error": res["error"] + " — vérifie les permissions du service PinCabOS."})
+    res["ok"] = True
+    return jsonify(res)
 
 
 @route("/inputs/defaults", methods=["POST"])
@@ -3892,21 +3970,12 @@ def inputs_defaults():
     cfg = dict(PINCABOS_INPUTS_DEFAULT_CFG)
     inputs_save_cfg(cfg)
 
-    key_values = {key: default for key, label, default in PINCABOS_INPUT_KEYMAP}
+    mappings = dict(vpxin.ACTION_DEFAULTS)
     player_values = {key: default for key, label, default in PINCABOS_INPUT_PLAYERMAP}
 
     try:
-        backup, keyboard_section = inputs_rewrite_ini(key_values, player_values)
-        body = """
-<div class="card">
-  <h1>Défauts Inputs appliqués</h1>
-  <p class="good">Défauts PinCabOS appliqués.</p>
-  <p>Section clavier utilisée : <code>""" + inputs_esc(keyboard_section) + """</code></p>
-  <p>Backup : <code>""" + inputs_esc(backup) + """</code></p>
-  <a class="button" href="/inputs/map-commander">Retour Map Commander</a>
-</div>
-"""
-        return page("Inputs", body)
+        report = inputs_rewrite_ini(mappings, player_values, cfg.get("vpinfe_policy"))
+        return inputs_report_html("Défauts VPX appliqués", report, "<p>Boutons remis aux défauts clavier de VPX (Shift gauche/droit, 1, 5, Entrée…).</p>")
     except Exception as e:
         body = """
 <div class="card">
@@ -3962,8 +4031,8 @@ def studio_vpx_ini():
                     candidates.append(Path(value))
 
     candidates.extend([
-        Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"),
-        Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"),
+        Path(vpxin.PREF_INI),
+        Path(vpxin.LEGACY_INI),
     ])
 
     seen = set()
