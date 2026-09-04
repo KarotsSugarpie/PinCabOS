@@ -7,7 +7,7 @@ audio. Ce répertoire est du temporaire/dev et ne doit jamais entrer dans une IS
 
 Le script ne touche jamais VPX, BGFX ni VPinFE. Il modifie uniquement iso.sh,
 crée un backup, valide la syntaxe Bash et restaure automatiquement en cas
-d'échec.
+d'échec. S'il est lancé par pinball, il se relance automatiquement via sudo.
 """
 from __future__ import annotations
 
@@ -27,7 +27,25 @@ def fail(message: str) -> None:
     raise SystemExit(f"NOGO [X] {message}")
 
 
+def ensure_root() -> None:
+    if os.geteuid() == 0:
+        return
+
+    print("INFO: droits root requis pour modifier /opt/pincabos/script/iso.sh")
+    print("INFO: relance automatique avec sudo...")
+
+    script = str(Path(__file__).resolve())
+    argv = ["sudo", sys.executable, script, *sys.argv[1:]]
+
+    try:
+        os.execvp("sudo", argv)
+    except FileNotFoundError:
+        fail("sudo introuvable; relancer ce patch en root")
+
+
 def main() -> int:
+    ensure_root()
+
     path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT
 
     if not path.is_file():
