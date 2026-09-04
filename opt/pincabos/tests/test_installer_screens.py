@@ -271,7 +271,9 @@ class Integration(unittest.TestCase):
         s = (Path(RACINE) / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
         self.assertIn("apply_target_screens() {", s)
         self.assertIn('install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/screens/screens.json"', s)
-        self.assertIn("  apply_target_identity\n  apply_target_screens\n  refresh_target_initrd_for_orientation\n", s)
+        a, b, c = s.index("  apply_target_identity\n"), s.index("  apply_target_screens\n"), s.index("  refresh_target_initrd_for_orientation\n")
+        self.assertLess(a, b, "apres l'identite")
+        self.assertLess(b, c, "avant la regeneration de l'initrd")
 
     def test_i18n_complet(self):
         d = json.loads((Path(RACINE) / "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))

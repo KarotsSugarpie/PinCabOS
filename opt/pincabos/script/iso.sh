@@ -1370,6 +1370,14 @@ mkdir -p /var/log /var/lib/pincabos
 
   echo "Detected interface: ${IFACE:-none}"
 
+  # PINCABOS_INSTALLEUR_RESEAU_V1 : si l'installateur a configure le reseau
+  # (profils NetworkManager deja en place), ce fichier generique ne doit pas
+  # reapparaitre : netplan fusionnerait son dhcp4: true avec le profil.
+  if [ -e /opt/pincabos/flags/network-installer.done ] || ls /etc/netplan/90-NM-*.yaml >/dev/null 2>&1; then
+    echo "Network configured by the installer / NetworkManager: generic DHCP netplan skipped."
+    IFACE=""
+  fi
+
   if [ -n "$IFACE" ]; then
     ip link set "$IFACE" up 2>/dev/null || true
 
@@ -5097,6 +5105,35 @@ refresh_target_initrd_for_orientation() {
     pco_go "Target initrd regenerated with oriented splash"
 }
 
+apply_target_network() {
+    # PINCABOS_INSTALLEUR_RESEAU_V1 : ce que la session d'installation a configure
+    # (profils NetworkManager dans netplan 90-NM-*.yaml, cles Wi-Fi comprises)
+    # part sur la cible. Les fichiers netplan tiers de la cible qui definissent
+    # encore ces interfaces sont debarrasses de leur section (sinon netplan
+    # fusionne dhcp4: true avec le profil : IP fixe = DHCP + adresse fixe).
+    local fichier="${PCO_ANS_NETWORK_FILE:-}"
+    local dossier="${PCO_ANS_NETPLAN_DIR:-}"
+    [ -n "$fichier" ] && [ -s "$fichier" ] || return 0
+    echo
+    pco_step "Applying network chosen in the installer to the target"
+    install -d -m 0755 "$TARGET/etc/netplan"
+    local n=0
+    if [ -n "$dossier" ] && [ -d "$dossier" ]; then
+        for f in "$dossier"/90-NM-*.yaml; do
+            [ -f "$f" ] || continue
+            install -m 0600 "$f" "$TARGET/etc/netplan/$(basename "$f")"
+            n=$((n + 1))
+        done
+    fi
+    local outil="$TARGET/opt/pincabos/tools/pincabos_network.py"
+    for iface in $(python3 -c 'import json,sys;print(" ".join(i.get("device","") for i in json.load(open(sys.argv[1])).get("interfaces",[])))' "$fichier" 2>/dev/null); do
+        [ -f "$outil" ] && python3 "$outil" netplan-takeover "$iface" --root "$TARGET" || true
+    done
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    date -Is > "$TARGET/opt/pincabos/flags/network-installer.done"
+    pco_go "network profiles installed ($n netplan file(s)), first boot keeps the installer's choice"
+}
+
 apply_target_screens() {
     # PINCABOS_INSTALLEUR_ECRANS_V1 : l'etape Ecrans de l'assistant a produit
     # screens.json (roles, geometrie, rotation) et les liaisons role -> EDID.
@@ -5781,6 +5818,7 @@ install_payload() {
   apply_target_orientation
   apply_target_identity
   apply_target_screens
+  apply_target_network
   refresh_target_initrd_for_orientation
 
   test -f "$TARGET/etc/pincabos/orientation.conf"
