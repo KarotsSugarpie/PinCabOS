@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# pincabos-network : le reseau du cab par NetworkManager — PINCABOS_RESEAU_V1
+# usage : pincabos-network status | proposal <if> | dhcp <if> | static <if> <adr/prefixe> <gw> <dns> | wifi-scan | wifi-join <ssid> [...] | wifi-forget <ssid> | hostname <nom> [--netbios N] | legacy-takeover <if>
+exec /usr/bin/python3 /opt/pincabos/tools/pincabos_network.py "$@"

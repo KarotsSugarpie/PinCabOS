@@ -7139,222 +7139,10 @@ def wifi_options_html():
     return "\n".join(rows) if rows else '<option value="">Aucun réseau WiFi détecté</option>'
 
 
-@app.route("/network")
-def network_page():
-    info = network_info_text()
-    mode_data = network_current_mode()
-
-    iface = mode_data.get("interface", "non détectée")
-    current_mode = mode_data.get("mode", "inconnu")
-    current_ipcidr = mode_data.get("ipcidr", "")
-    current_gateway = mode_data.get("gateway", "")
-    current_dns = mode_data.get("dns", "")
-
-    wifi_options = wifi_options_html()
-
-    dhcp_selected = "selected" if current_mode != "static" else ""
-    static_selected = "selected" if current_mode == "static" else ""
-
-    body = f"""
-<div class="grid">
-  
-<div class="card" style="margin-top:20px;">
-  <h2>Nom du système</h2>
-
-  <p>
-    Modifie le nom Linux du système et le nom NetBIOS/SMB visible sur le réseau.
-  </p>
-
-  <form action="/network/hostname" method="post"
-        onsubmit="return confirm('Changer le nom du système peut nécessiter quelques minutes avant d’être visible sur le réseau. Continuer ?');">
-
-    <label>Nom système / hostname</label><br>
-    <input name="hostname" value="__CURRENT_HOSTNAME__" placeholder="exemple: pincabos"
-           style="width:90%; padding:8px;"><br><br>
-
-    <label>Nom NetBIOS / SMB</label><br>
-    <input name="netbios" value="__CURRENT_NETBIOS__" maxlength="15" placeholder="exemple: PINCABOS"
-           style="width:90%; padding:8px;"><br>
-
-    <p class="warn">
-      NetBIOS est limité à 15 caractères. Utilise idéalement lettres, chiffres et tirets.
-    </p>
-
-    <button class="button" type="submit">Appliquer le nom du système</button>
-  </form>
-</div>
 
 
-<div class="card">
-    <h2>État réseau</h2>
-
-    <p>
-      Interface principale détectée :
-      <code>{esc(iface)}</code>
-    </p>
-
-    <p>
-      Mode détecté :
-      <code>{esc(current_mode)}</code>
-    </p>
-
-    <p>
-      IPv4 actuelle :
-      <code>{esc(current_ipcidr or "non détectée")}</code>
-    </p>
-
-    <p>
-      Passerelle :
-      <code>{esc(current_gateway or "non détectée")}</code>
-    </p>
-
-    <p>
-      DNS :
-      <code>{esc(current_dns or "non détecté")}</code>
-    </p>
-
-    <p class="warn">
-      Si tu appliques une IP fixe, la WebApp sera ensuite accessible à la nouvelle IP.
-      Un avertissement apparaîtra avant l’application.
-    </p>
-  </div>
-
-  <div class="card">
-    
-<h2>Mode réseau</h2>
-
-    <p>
-      Interface utilisée :
-      <code>{esc(iface)}</code>
-    </p>
-
-    <form action="/network/apply-mode" method="post" onsubmit="return confirmNetworkChange(this);">
-      <input type="hidden" name="iface" value="{esc(iface)}">
-
-      <label>Mode</label><br>
-      <select name="mode" id="network_mode" onchange="toggleStaticFields()" style="width:90%; padding:8px; margin:6px 0;">
-        <option value="dhcp" {dhcp_selected}>DHCP automatique</option>
-        <option value="static" {static_selected}>IP fixe</option>
-      </select><br>
-
-      <div id="static_fields" style="display:none;">
-        <label>Adresse IP/CIDR</label><br>
-        <input name="ipcidr" value="{esc(current_ipcidr or "192.168.254.213/24")}" style="width:90%; padding:8px; margin:6px 0;"><br>
-
-        <label>Passerelle</label><br>
-        <input name="gateway" value="{esc(current_gateway or "192.168.254.1")}" style="width:90%; padding:8px; margin:6px 0;"><br>
-
-        <label>DNS</label><br>
-        <input name="dns" value="{esc(current_dns or "1.1.1.1,8.8.8.8")}" style="width:90%; padding:8px; margin:6px 0;"><br>
-      </div>
-
-      <button class="button" type="submit">Appliquer la configuration réseau</button>
-    </form>
-
-    <script>
-      function toggleStaticFields() {{
-        const mode = document.getElementById("network_mode").value;
-        const box = document.getElementById("static_fields");
-        box.style.display = mode === "static" ? "block" : "none";
-      }}
-
-      function confirmNetworkChange(form) {{
-        const mode = document.getElementById("network_mode").value;
-
-        if (mode === "dhcp") {{
-          return confirm(
-            "Tu vas configurer PinCabOS en DHCP.\\n\\n" +
-            "L'adresse IP pourrait changer selon ton routeur.\\n" +
-            "Après l'application, vérifie la nouvelle IP dans ton routeur ou avec la console PinCabOS.\\n\\n" +
-            "Continuer?"
-          );
-        }}
-
-        const ipcidr = form.querySelector('input[name="ipcidr"]').value || "";
-        const ip = ipcidr.split("/")[0];
-
-        return confirm(
-          "Tu vas appliquer une IP fixe à PinCabOS.\\n\\n" +
-          "Nouvelle IP : " + ip + "\\n" +
-          "Nouvelle URL WebApp probable : http://" + ip + "/\\n\\n" +
-          "Si l'adresse, le masque ou la passerelle sont incorrects, tu pourrais perdre l'accès réseau.\\n\\n" +
-          "Continuer?"
-        );
-      }}
-
-      toggleStaticFields();
-    </script>
-  </div>
-</div>
-
-<div class="grid" style="margin-top:20px;">
-  <div class="card">
-    <h2>WiFi — joindre un réseau</h2>
-
-    <p>
-      Sélectionne un réseau WiFi détecté par PinCabOS.
-    </p>
-
-    <form action="/network/wifi-join" method="post">
-      <label>Réseau WiFi</label><br>
-      <select name="ssid" style="width:90%; padding:8px; margin:6px 0;">
-        {wifi_options}
-      </select><br>
-
-      <label>Mot de passe WiFi</label><br>
-      <input name="password" type="password" placeholder="Mot de passe du réseau" style="width:90%; padding:8px; margin:6px 0;"><br>
-
-      <button class="button" type="submit">Joindre le réseau WiFi</button>
-      <a class="button secondary" href="/network" style="display:inline-block; text-decoration:none;">Rafraîchir scan WiFi</a>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>WiFi — Hotspot PinCabOS</h2>
-
-    <p>
-      Permet de créer un réseau WiFi temporaire pour configurer PinCabOS.
-      Nécessite une carte WiFi compatible mode AP/hotspot.
-    </p>
-
-    <form action="/network/wifi-hotspot" method="post">
-      <label>SSID hotspot</label><br>
-      <input name="ssid" value="PinCabOS_WiFi" style="width:90%; padding:8px; margin:6px 0;"><br>
-
-      <label>Mot de passe hotspot</label><br>
-      <input name="password" type="password" value="" placeholder="Mot de passe console" style="width:90%; padding:8px; margin:6px 0;"><br>
-
-      <button class="button" type="submit">Activer le hotspot</button>
-    </form>
-
-    <form action="/network/wifi-hotspot-stop" method="post" style="margin-top:10px;">
-      <button class="button secondary" type="submit">Désactiver le hotspot</button>
-    </form>
-  </div>
-</div>
-
-<div class="card" style="margin-top:20px;">
-  <h2>Détails réseau complets</h2>
-  <pre>{esc(info)}</pre>
-</div>
-"""
-    current_hostname = subprocess.run(["hostname"], capture_output=True, text=True).stdout.strip() or "pincabos"
-    current_netbios = current_hostname.upper()[:15]
-    try:
-        cfg = Path("/etc/pincabos/system-name.conf")
-        if cfg.exists():
-            for line in cfg.read_text(errors="replace").splitlines():
-                if line.startswith("netbios="):
-                    current_netbios = line.split("=", 1)[1].strip() or current_netbios
-    except Exception:
-        pass
-
-    body = body.replace("__CURRENT_HOSTNAME__", esc(current_hostname))
-    body = body.replace("__CURRENT_NETBIOS__", esc(current_netbios))
-
-    return page("Réseau", body)
-
-
+# PINCABOS_RESEAU_V1 : /network, /network/apply-mode, /network/wifi-join et
+# /network/hostname vivent dans pincabos_webapp_network.py (module pincabos_network).
 def network_action_result(title, output):
     body = f"""
 <div class="card">
@@ -7366,54 +7154,6 @@ def network_action_result(title, output):
     return page("Réseau", body)
 
 
-@app.route("/network/apply-mode", methods=["POST"])
-def network_apply_mode():
-    iface = request.form.get("iface", "").strip()
-
-    # Ne jamais appeler les scripts Netplan avec une interface vide.
-    # Utile après un cache navigateur ou une détection réseau temporairement absente.
-    if not iface:
-        iface = network_main_iface()
-
-    mode = request.form.get("mode", "dhcp").strip()
-
-    if not iface or iface == "non détectée":
-        return network_action_result(
-            "Configuration réseau",
-            "Impossible de détecter une interface réseau active. Aucune modification appliquée."
-        )
-
-    if mode == "dhcp":
-        out = run_cmd(
-            ["/usr/bin/sudo", str(pco_script("network_set_dhcp")), iface],
-            timeout=30
-        )
-        return network_action_result("Configuration réseau — DHCP", out)
-
-    if mode == "static":
-        ipcidr = request.form.get("ipcidr", "").strip()
-        gateway = request.form.get("gateway", "").strip()
-        dns = request.form.get("dns", "").strip() or "1.1.1.1,8.8.8.8"
-
-        out = run_cmd(
-            ["/usr/bin/sudo", str(pco_script("network_set_static")), iface, ipcidr, gateway, dns],
-            timeout=30
-        )
-        return network_action_result("Configuration réseau — IP fixe", out)
-
-    return network_action_result("Configuration réseau", "Mode invalide.")
-
-
-@app.route("/network/wifi-join", methods=["POST"])
-def network_wifi_join():
-    ssid = request.form.get("ssid", "").strip()
-    password = request.form.get("password", "")
-
-    out = run_cmd(
-        ["/usr/bin/sudo", str(pco_script("wifi_join")), ssid, password],
-        timeout=40
-    )
-    return network_action_result("Connexion WiFi", out)
 
 
 @app.route("/network/wifi-hotspot", methods=["POST"])
@@ -15564,11 +15304,7 @@ def pincabos_alias_outputs():
 
 # Moved to modular route file by PinCabOS refactor (original lines 20663-20674).
 
-@app.route("/network/hostname", methods=["POST"])
-def pincabos_network_hostname_alias():
-    # Empêche le formulaire hostname de tomber en 404 si l'action existe dans l'ancien HTML.
-    # On ne change pas le hostname ici pour éviter un patch réseau agressif.
-    return redirect("/network", code=303)
+
 
 @app.route("/tools/external-disks/usb/unmount", methods=["POST"])
 def pincabos_tools_usb_unmount_alias():
@@ -17221,6 +16957,17 @@ except Exception as _pincabos_vps_error:
     except Exception:
         pass
 # PINCABOS_VPS_REGISTER END
+
+# PINCABOS_RESEAU_REGISTER BEGIN
+try:
+    from pincabos_webapp_network import register as _pincabos_network_register
+    _pincabos_network_register(app, page, esc)
+except Exception as _pincabos_network_error:
+    try:
+        app.logger.exception("PinCabOS network registration failed: %s", _pincabos_network_error)
+    except Exception:
+        pass
+# PINCABOS_RESEAU_REGISTER END
 
 # PINCABOS_DUDESCAB_CONFIG_PAGE_V3_REGISTER BEGIN
 try:
