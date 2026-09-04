@@ -26,6 +26,7 @@ La séparation n'est pas seulement visuelle. Elle doit exister dans les règles,
 |---|---|
 | PinCabXP fondé sur les résultats | **GO** |
 | Classements, saisons, badges et éliminations | **GO** |
+| Affichage des badges sur PinCabOS.cc et le cabinet personnel | **GO** |
 | PinCabGold gratuit, non achetable et non transférable | **GO en environnement de test** |
 | Récompenses purement numériques sans valeur de revente | **GO après règles publiées** |
 | Cartes-cadeaux contre PinCabGold | **GO conditionnel après validation territoriale** |
@@ -266,6 +267,8 @@ Pour garder le lien propre, les activités génératrices de Gold doivent être 
 8. **Reward Catalog** — SKU, région, stock, coût en Gold et fournisseur.
 9. **Redemption Service** — réservation, commande, livraison et remboursement.
 10. **Compliance Console** — règles publiées, versions acceptées, audits et export.
+11. **Badge Service** — catalogue, critères, attribution, révocation et rareté des badges.
+12. **Profile Sync API** — synchronisation des badges entre PinCabOS.cc et les cabinets liés.
 
 ### 10.2 Séparation des registres
 
@@ -323,6 +326,102 @@ Contraintes importantes :
 ```
 
 Dans cet exemple, le résultat influence XP, mais pas le Gold de base.
+
+### 10.4 Affichage des badges sur PinCabOS.cc et le cabinet personnel
+
+Les badges doivent suivre le compte PinCabOS du joueur, pas une installation locale ni une seule machine. Un joueur qui lie son cabinet personnel à son compte retrouve donc les mêmes badges sur le site et dans l'interface de son PinCabOS.
+
+#### Catégories de badges
+
+| Catégorie | Exemples | Attribution |
+|---|---|---|
+| Progression | Débutant, Challenger, Pro, Maître | Niveau XP atteint |
+| Performance | Première victoire, Série de 5, Score personnel | Résultat vérifié |
+| Tournoi | Participant, Finaliste, Champion de saison | Événement officiel terminé |
+| Communauté | Supporter, Contributeur, Bêta-testeur | Attribution administrative documentée |
+| Ancienneté | Membre fondateur, 1 an, 3 ans | Date du compte |
+| Événement | Halloween 2026, Ligue Québec, Coupe de France | Règles propres à l'événement |
+
+Un badge ayant une valeur seulement honorifique peut dépendre de la performance. Il ne doit pas pouvoir être échangé contre de l'argent ou servir à augmenter le gain de PinCabGold.
+
+#### Affichage sur PinCabOS.cc
+
+Le site doit afficher les badges aux endroits suivants :
+
+- **Mon compte** : collection complète, badges verrouillés et progression vers les prochains badges;
+- **profil public** : jusqu'à trois badges favoris choisis par le joueur;
+- **classements** : un badge principal compact à côté du pseudonyme;
+- **lobby multijoueur** : badges favoris des participants avant le lancement du match;
+- **pages de tournoi** : badge de champion, finaliste ou participant associé à la saison;
+- **notifications** : animation et explication lorsqu'un nouveau badge est obtenu.
+
+Le joueur doit pouvoir choisir quels badges sont publics. Les badges administratifs sensibles, les sanctions et les indicateurs antifraude ne doivent jamais être exposés comme des badges publics.
+
+#### Affichage sur le cabinet personnel
+
+Le cabinet lié doit afficher les badges sans modifier VPX, BGFX ni VPinFE. L'intégration appartient à la WebApp PinCabOS et aux écrans de navigation autour du jeu.
+
+Emplacements recommandés :
+
+- carte du joueur dans la page d'accueil ou la page **Mon profil** du cabinet;
+- bandeau du lobby avant une partie multijoueur;
+- écran de présentation des joueurs sur le backglass;
+- résumé de fin de partie lorsqu'un badge vient d'être débloqué;
+- galerie locale consultable depuis la WebApp du cabinet.
+
+Pendant une partie, l'affichage doit rester discret et ne jamais masquer la table, le DMD, le score ou les contrôles essentiels. Aucun changement ne doit être injecté directement dans une table VPX.
+
+#### Synchronisation et fonctionnement hors ligne
+
+Le site constitue la source officielle des attributions. Le cabinet conserve uniquement une copie de lecture mise en cache.
+
+Flux recommandé :
+
+1. le serveur attribue ou retire un badge à partir d'un événement vérifié;
+2. l'écriture est ajoutée au registre des badges;
+3. PinCabOS.cc met immédiatement à jour le profil et le lobby;
+4. le cabinet lié récupère les changements à sa prochaine synchronisation authentifiée;
+5. les images déjà téléchargées restent visibles hors ligne avec la date de dernière synchronisation;
+6. une attribution locale hors ligne n'est jamais considérée comme officielle avant validation du serveur.
+
+Un événement temps réel peut accélérer l'affichage, mais une resynchronisation complète et idempotente doit toujours permettre de réparer un événement manqué.
+
+#### Modèle de données minimal
+
+```text
+badge_definitions
+  id, code, name_i18n, description_i18n, icon_uri, category,
+  rarity, criteria_version, active, created_at
+
+user_badges
+  id, user_id, badge_id, source_type, source_id, awarded_at,
+  revoked_at, visibility, is_favorite, metadata
+
+cabinet_badge_sync
+  cabinet_id, user_id, badge_revision, synced_at
+```
+
+Contraintes obligatoires :
+
+- code de badge unique et stable;
+- texte français et anglais fourni par le serveur;
+- icône versionnée avec une solution de repli locale;
+- attribution idempotente pour éviter les doublons;
+- révocation conservée dans l'historique au lieu d'une suppression silencieuse;
+- maximum de trois badges favoris publics;
+- cache du cabinet signé ou validé par l'API;
+- aucune donnée personnelle inutile incorporée dans l'image ou les métadonnées du badge.
+
+#### Exemple concret
+
+Julie gagne la finale de la saison Québec 2026. Le serveur lui attribue le badge **Championne — Saison Québec 2026**.
+
+- Sur PinCabOS.cc, le badge apparaît immédiatement dans **Mon compte** et Julie le choisit comme badge favori.
+- Dans le classement et le lobby, une petite icône de championne apparaît près de son pseudonyme.
+- Lorsque Julie ouvre la WebApp de son cabinet lié, celui-ci synchronise la nouvelle révision de son profil.
+- Le backglass présente brièvement le nouveau badge, puis l'ajoute à sa galerie personnelle.
+- Si Internet est coupé plus tard, le badge demeure visible depuis le cache, accompagné de la date de dernière synchronisation.
+- Le badge n'ajoute aucun Gold, ne change pas le classement et ne procure aucun avantage pendant une partie.
 
 ---
 
@@ -676,7 +775,10 @@ Chaque acceptation importante doit être enregistrée avec : version du document
 - registre XP;
 - saisons;
 - classement;
-- badges;
+- catalogue et attribution des badges;
+- affichage des badges sur PinCabOS.cc;
+- synchronisation et affichage sur le cabinet personnel;
+- cache hors ligne en lecture seule;
 - élimination simple;
 - arbitrage et contestations;
 - aucun Gold ni prix de valeur.
