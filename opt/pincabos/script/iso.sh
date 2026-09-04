@@ -3458,8 +3458,7 @@ SYSTEMD_VERIFY_LOG="$(
 systemd-analyze --root="$TARGET" verify \
   pincabos-screen-topology-boot.service \
   pincabos-vpinfe.service \
-  pincabos-dashboard-live.service \\
-  pincabos-fulldmd-no-title.service \
+  pincabos-dashboard-live.service \
   pincabos-switch-graphical-vt.service \
   pincabos-backglass-bridge.service \
   >"$SYSTEMD_VERIFY_LOG" 2>&1 || true
@@ -3736,6 +3735,15 @@ PINCBOS_PAYLOAD_HELPER
 chmod +x "$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh"
 bash -n "$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh" \
   || die "Generated payload helper has a Bash syntax error"
+# PINCABOS_ISO_HELPER_CONTINUATION_GUARD_V1
+# `bash -n` ne voit pas une continuation cassee : une ligne finissant par
+# deux backslashes est du Bash valide (argument litteral « \ ») mais coupe la
+# commande en deux ; avec `set -e` le helper s'arrete et l'installation
+# rend « Payload extraction/install failed (code 1) » (Alpha 3.12 a 3.46,
+# commit adf4c1e du 01/09). On refuse de construire l'ISO dans ce cas.
+if grep -nE '\\\\$' "$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh"; then
+  die "Generated payload helper: a line ends with a double backslash (broken continuation)"
+fi
 echo "GO [OK] generated payload helper syntax valid"
 
 rm -rf "$PAYLOAD_ISO_READY"
