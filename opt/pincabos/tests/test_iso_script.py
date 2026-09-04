@@ -71,3 +71,27 @@ class DropIns(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PreferencesVpx(unittest.TestCase):
+    """PINCABOS_VPX_PREF_PATH_V1 : les preferences VPX vivent sous ~/.pincabos/vpx
+    (-PrefPath). iso.sh doit traiter ce chemin partout ou il traitait les anciens :
+    sans cela le VPinballX.ini du master (noms de cartes audio) partait dans la
+    photo et la garde audio de Karots refusait l'ISO (04/09/2026)."""
+
+    NOUVEAU = "home/pinball/.pincabos/vpx"
+
+    def test_exclu_du_tar_neutralise_et_conserve(self):
+        s = _texte()
+        self.assertIn("--exclude='./home/pinball/.pincabos/vpx/VPinballX.ini'", s)
+        self.assertGreaterEqual(s.count('Path("/home/pinball/.pincabos/vpx")'), 1)
+        self.assertEqual(s.count('target / "home/pinball/.pincabos/vpx"'), 2)
+        self.assertIn('"home/pinball/.pincabos/vpx/VPinballX.ini"', s)
+
+    def test_partout_ou_l_ancien_chemin_est_traite(self):
+        """Chaque bloc qui cite ~/.vpinball/VPinballX.ini cite aussi le nouveau chemin."""
+        lignes = _texte().splitlines()
+        for i, l in enumerate(lignes):
+            if ".vpinball" in l and "VPinballX" in l or 'target / "home/pinball/.vpinball"' in l or 'Path("/home/pinball/.vpinball")' in l:
+                voisinage = "\n".join(lignes[max(0, i - 8): i + 4])
+                self.assertIn(".pincabos/vpx", voisinage, f"ligne {i + 1}: {l.strip()}")

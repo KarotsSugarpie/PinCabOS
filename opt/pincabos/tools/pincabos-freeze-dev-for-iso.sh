@@ -11,7 +11,10 @@ ESS="/opt/pincabos/essentials"
 
 VPX_EXEC="/opt/pincabos/bin/vpx.sh"
 VPX_TABLES="/home/pinball/Tables"
-VPX_INI="/home/pinball/.vpinball/VPinballX.ini"
+# PINCABOS_VPX_PREF_PATH_V1 : preferences VPX sous ~/.pincabos/vpx (-PrefPath),
+# repli sur les anciens emplacements.
+VPX_INI="/home/pinball/.pincabos/vpx/VPinballX.ini"
+[ -f "$VPX_INI" ] || VPX_INI="/home/pinball/.vpinball/VPinballX.ini"
 
 mkdir -p "$ESS"
 
@@ -177,6 +180,7 @@ du -sh \
   /home/pinball/Share \
   /home/pinball/Tables \
   /home/pinball/.vpinball \
+  /home/pinball/.pincabos/vpx \
   2>/dev/null | sort -h || true
 
 echo
