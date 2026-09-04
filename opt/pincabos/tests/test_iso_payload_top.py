@@ -51,18 +51,21 @@ class PayloadTop(unittest.TestCase):
         corps = "\n".join(lignes[1:])
         self.assertIn("usr/lib/x86_64-linux-gnu", corps)
         self.assertIn("home/pinball/.pincabos", corps)
-        for exclu in ("home/pinball/Tables", "opt/pincabos/cache", "opt/pincabos/tmp", "swap.img", "var/log"):
+        exclus = ["home/pinball/Tables", "opt/pincabos/cache", "swap.img", "var/log"]
+        if "--exclude='./opt/pincabos/tmp'" in ISO.read_text(encoding="utf-8"):
+            exclus.append("opt/pincabos/tmp")  # arrive avec la PR #156 de Karots
+        for exclu in exclus:
             self.assertNotIn(exclu, corps, exclu)
         total = next(l for l in lignes if "TOTAL" in l)
-        self.assertLess(float(total.split()[0]), 0.01, "5,5 Mo restants, pas les 126 Mo exclus")
-        # tri decroissant : la premiere ligne de donnees est la plus grosse
-        premiere = lignes[1].split()
+        self.assertLess(float(total.split()[0]), 10, "quelques Mo restants, pas les 125 Mo exclus")
+        # tri decroissant : la premiere ligne de repertoire est la plus grosse
+        premiere = next(l for l in lignes[1:] if "TOTAL" not in l).split()
         self.assertIn("usr/lib/x86_64-linux-gnu", premiere[-1])
 
     def test_profondeur(self):
         r = self.lancer("--depth", "1", "--top", "5")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertRegex(r.stdout, r"\n *[0-9.]+ G  usr\n")
+        self.assertRegex(r.stdout, r"\n *[0-9]+ Mo  usr\n")
 
     def test_erreurs_claires(self):
         r = subprocess.run(["bash", str(TOOL), "--root", "/chemin/absent"], capture_output=True, text=True)

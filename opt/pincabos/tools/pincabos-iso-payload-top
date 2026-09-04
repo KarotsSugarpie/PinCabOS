@@ -51,7 +51,7 @@ tar --one-file-system "${args[@]}" -cf - -C "$ROOT" . 2>/dev/null \
         tot += $3
       }
       END {
-        for (k in sz) printf "%10.2f G  %s\n", sz[k] / 1073741824, k
-        printf "%10.2f G  TOTAL non compresse\n", tot / 1073741824
+        for (k in sz) printf "%9.0f Mo  %s\n", sz[k] / 1048576, k
+        printf "%9.0f Mo  TOTAL non compresse\n", tot / 1048576
       }' \
   | sort -rn | head -n "$TOP"
