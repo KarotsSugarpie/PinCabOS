@@ -584,7 +584,7 @@ USAGE = """usage : pincabos-network status [--json]
         pincabos-network wifi-join <ssid> [--password P] [--security auto|open|wpa-psk|sae|wpa-eap] [--identity U] [--hidden]
         pincabos-network wifi-forget <ssid>
         pincabos-network hostname <nom> [--netbios NOM]
-        pincabos-network netplan-takeover <interface>   (root : NetworkManager seul maître de l'interface)
+        pincabos-network netplan-takeover <interface> [--root DIR]   (root : NetworkManager seul maître de l'interface)
 """
 
 
@@ -644,7 +644,9 @@ def main(argv=None) -> int:
         print("\n".join(journal))
         return 1 if any(l.startswith("NOGO") for l in journal) else 0
     if cmd in ("netplan-takeover", "legacy-takeover") and pos:
-        print("\n".join(legacy_takeover(pos[0])))
+        # --root DIR : arborescence d'une cible d'installation (pas de netplan generate)
+        racine = Path(_opt(args, "--root", "/"))
+        print("\n".join(legacy_takeover(pos[0], root=racine)))
         return 0
     print(USAGE, file=sys.stderr)
     return 2

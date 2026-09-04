@@ -18,6 +18,17 @@ from flask import Flask, Response, jsonify, render_template, request
 
 import screens as pco_screens  # PINCABOS_INSTALLEUR_ECRANS_V1
 
+# PINCABOS_INSTALLEUR_RESEAU_V1 : le moteur réseau du cab (nmcli) sert aussi à
+# l'assistant. Absent de la session (ISO au modèle classique) : l'étape se
+# présente comme indisponible et laisse continuer.
+import sys as _sys
+if "/opt/pincabos/tools" not in _sys.path:
+    _sys.path.insert(0, "/opt/pincabos/tools")
+try:
+    import pincabos_network as pco_net
+except Exception:  # pragma: no cover
+    pco_net = None
+
 BASE = Path(__file__).resolve().parent
 DEMO = os.environ.get("PCO_DEMO") == "1"
 RUN_DIR = Path(os.environ.get("PCO_RUN_DIR", "/run/pincabos"))
@@ -162,6 +173,145 @@ def screens_apply():
     return jsonify(res)
 
 
+# ---------------------------------------------------------------- Réseau
+RESEAU_DEMO = {
+    "interfaces": [
+        {"device": "eno1", "type": "ethernet", "state": "100 (connected)", "method": "auto", "address": "172.18.40.80/24",
+         "gateway": "172.18.40.254", "dns": ["172.18.41.254"], "hwaddr": "04:D4:C4:A8:65:ED",
+         "proposition": {"address": "172.18.40.80/24", "gateway": "172.18.40.254", "dns": ["172.18.41.254"], "source": "dhcp"}},
+        {"device": "wlp3s0", "type": "wifi", "state": "30 (disconnected)", "method": "", "address": "", "gateway": "", "dns": [], "hwaddr": "",
+         "proposition": {"address": "", "gateway": "", "dns": ["9.9.9.9", "1.1.1.1"], "source": "aucune"}},
+    ],
+    "wifi": {"present": True, "radio": "enabled", "devices": ["wlp3s0"], "capacites": {"2ghz": True, "5ghz": False, "wpa2": True}},
+    "hostname": "pincabos-installer", "legacy": False, "disponible": True,
+}
+RESEAU_SCAN_DEMO = [
+    {"ssid": "Maison", "signal": 82, "security": "WPA2", "mode": "wpa-psk", "in_use": False, "freq": 2437, "compatible": True, "raison": ""},
+    {"ssid": "Cafe", "signal": 70, "security": "", "mode": "open", "in_use": False, "freq": 2462, "compatible": True, "raison": ""},
+    {"ssid": "Neuf", "signal": 66, "security": "WPA3", "mode": "sae", "in_use": False, "freq": 5240, "compatible": False, "raison": "réseau 5 GHz, carte 2,4 GHz seulement"},
+]
+
+
+def reseau_etat():
+    if DEMO:
+        return json.loads(json.dumps(RESEAU_DEMO))
+    if pco_net is None:
+        return {"interfaces": [], "wifi": {"present": False, "devices": []}, "hostname": "", "legacy": False, "disponible": False}
+    r = pco_net.resume(run=pco_net.executer)
+    r["disponible"] = True
+    return r
+
+
+@app.route("/api/network")
+def network_status():
+    try:
+        return jsonify(reseau_etat())
+    except Exception as exc:
+        return jsonify({"interfaces": [], "wifi": {"present": False, "devices": []}, "disponible": False, "error": str(exc)})
+
+
+@app.route("/api/network/wifi-scan")
+def network_wifi_scan():
+    if DEMO:
+        return jsonify({"present": True, "reseaux": RESEAU_SCAN_DEMO})
+    if pco_net is None:
+        return jsonify({"present": False, "reseaux": []})
+    mat = pco_net.wifi_materiel(run=pco_net.executer)
+    if not mat["present"] or not mat["devices"]:
+        return jsonify({"present": False, "reseaux": []})
+    caps = pco_net.wifi_capacites(mat["devices"][0], run=pco_net.executer)
+    return jsonify({"present": True, "reseaux": pco_net.wifi_scan(run=pco_net.executer, rescan=True, caps=caps), "capacites": caps})
+
+
+@app.route("/api/network/apply", methods=["POST"])
+def network_apply():
+    """DHCP ou IP fixe, appliqué tout de suite dans la session : le résultat se voit."""
+    a = request.get_json(force=True, silent=True) or {}
+    iface = str(a.get("iface", "")).strip()
+    mode = str(a.get("mode", "dhcp")).strip()
+    if DEMO:
+        if mode == "static":
+            v = pco_net_valider(a)
+            if v["erreurs"]:
+                return jsonify({"ok": False, "journal": ["NOGO: " + e for e in v["erreurs"]]})
+        return jsonify({"ok": True, "demo": True, "journal": [f"GO: {iface} en {'IP fixe' if mode == 'static' else 'DHCP'} (démo)"]})
+    if pco_net is None:
+        return jsonify({"ok": False, "journal": ["NOGO: réseau indisponible dans cette session"]})
+    if iface not in [d["device"] for d in pco_net.peripheriques(run=pco_net.executer)]:
+        return jsonify({"ok": False, "journal": [f"NOGO: interface inconnue : {iface or '(vide)'}"]})
+    journal = []
+    if pco_net.legacy_present(iface):
+        journal += pco_net.legacy_takeover(iface)
+    if mode == "static":
+        v = pco_net_valider(a)
+        if v["erreurs"]:
+            return jsonify({"ok": False, "journal": journal + ["NOGO: " + e for e in v["erreurs"]]})
+        journal += pco_net.appliquer_fixe(iface, v["address"], v["gateway"], v["dns"], run=pco_net.executer)
+    else:
+        journal += pco_net.appliquer_dhcp(iface, run=pco_net.executer)
+    ok = not any(l.startswith("NOGO") for l in journal)
+    etat = pco_net.etat(iface, run=pco_net.executer) if ok else {}
+    return jsonify({"ok": ok, "journal": journal, "etat": etat})
+
+
+def pco_net_valider(a):
+    if pco_net is not None:
+        return pco_net.valider_fixe(a.get("address", ""), a.get("gateway", ""), a.get("dns", ""))
+    # démo sans module : validation minimale
+    import ipaddress
+    erreurs = []
+    try:
+        ipaddress.IPv4Interface(str(a.get("address", "")))
+    except ValueError:
+        erreurs.append("adresse invalide")
+    if not str(a.get("gateway", "")).strip():
+        erreurs.append("passerelle manquante")
+    return {"erreurs": erreurs, "address": a.get("address", ""), "gateway": a.get("gateway", ""), "dns": a.get("dns", "")}
+
+
+@app.route("/api/network/wifi-join", methods=["POST"])
+def network_wifi_join():
+    a = request.get_json(force=True, silent=True) or {}
+    if DEMO:
+        ssid = str(a.get("ssid", "")).strip()
+        if not ssid:
+            return jsonify({"ok": False, "journal": ["NOGO: SSID manquant"]})
+        if ssid == "Neuf":
+            return jsonify({"ok": False, "journal": ["NOGO: réseau « Neuf » incompatible avec la carte : réseau 5 GHz, carte 2,4 GHz seulement"]})
+        return jsonify({"ok": True, "demo": True, "journal": [f"GO: connecté à « {ssid} » (démo)"]})
+    if pco_net is None:
+        return jsonify({"ok": False, "journal": ["NOGO: réseau indisponible dans cette session"]})
+    journal = pco_net.wifi_join(str(a.get("ssid", "")), str(a.get("password", "")), str(a.get("security", "auto") or "auto"),
+                                str(a.get("identity", "")), bool(a.get("hidden")), run=pco_net.executer)
+    return jsonify({"ok": not any(l.startswith("NOGO") for l in journal), "journal": journal})
+
+
+def reseau_vers_fichiers():
+    """Photographie les profils NetworkManager de la session (netplan 90-NM-*.yaml,
+    clés Wi-Fi comprises) et la liste des interfaces configurées, pour la cible."""
+    import shutil
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    dossier = RUN_DIR / "gui-netplan"
+    shutil.rmtree(dossier, ignore_errors=True)
+    dossier.mkdir(parents=True)
+    copies = []
+    if not DEMO:
+        for f in sorted(Path("/etc/netplan").glob("90-NM-*.yaml")):
+            shutil.copy2(f, dossier / f.name)
+            copies.append(f.name)
+    etat = reseau_etat()
+    data = {
+        "source": "PinCabOS installer network step",
+        "interfaces": [{"device": i["device"], "type": i["type"], "method": i.get("method", ""), "address": i.get("address", "")}
+                       for i in etat.get("interfaces", [])],
+        "netplan_files": copies,
+        "wifi_present": bool(etat.get("wifi", {}).get("present")),
+    }
+    f = RUN_DIR / "gui-network.json"
+    f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return {"network_file": str(f), "netplan_dir": str(dossier)}
+
+
 def ecrans_vers_fichiers(a):
     """Les choix validés deviennent screens.json + liaisons EDID, pour la cible."""
     roles, rotation = _roles_depuis(a), _rotation_depuis(a)
@@ -216,6 +366,9 @@ ANSWER_RULES = {
     # l'étape Écrans (le vérificateur CI relit ces moules avec `re` seul).
     "screens_file": re.compile(r"^/run/pincabos/gui-screens\.json$"),
     "bindings_file": re.compile(r"^/run/pincabos/gui-screens-bindings\.json$"),
+    # PINCABOS_INSTALLEUR_RESEAU_V1 : idem, produits par l'étape Réseau
+    "network_file": re.compile(r"^/run/pincabos/gui-network\.json$"),
+    "netplan_dir": re.compile(r"^/run/pincabos/gui-netplan$"),
 }
 
 
@@ -260,6 +413,13 @@ def install():
         # dérivé de la rotation ; shlex.quote les rend inertes comme le reste.
         for cle in ("screens_file", "bindings_file", "orient"):
             reponses[cle] = res[cle]
+
+    # PINCABOS_INSTALLEUR_RESEAU_V1 : ce que la session a configuré part sur la cible
+    if a.get("network") is not False:
+        try:
+            reponses.update(reseau_vers_fichiers())
+        except Exception as exc:
+            app.logger.warning("réseau non photographié : %s", exc)
 
     if "mode" not in reponses:
         return jsonify({"error": "bad-mode"}), 400

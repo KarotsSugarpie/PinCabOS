@@ -184,7 +184,20 @@ button{
     <div style="display:flex;gap:10px">
       <button class="ghost" id="btn-identify" onclick="identifyScreens()" data-i18n="identify"></button>
       <button class="ghost" id="btn-apply" onclick="applyScreens()" data-i18n="apply_layout"></button>
-      <button class="primary" id="screens-next" disabled onclick="go('st-disk')" data-i18n="next"></button>
+      <button class="primary" id="screens-next" disabled onclick="loadNetwork(false);go('st-network')" data-i18n="next"></button>
+    </div></div>
+</section>
+
+<section class="step" id="st-network">
+  <h2 data-i18n="network"></h2>
+  <p style="color:var(--muted);margin-bottom:12px" data-i18n="network_hint"></p>
+  <div id="net-list"></div>
+  <div class="card" id="net-wifi" style="margin-top:14px;display:none"></div>
+  <div class="hint" id="net-status"></div>
+  <div class="btns"><button class="ghost" onclick="go('st-screens')" data-i18n="back"></button>
+    <div style="display:flex;gap:10px">
+      <button class="ghost" onclick="loadNetwork(true)" data-i18n="net_refresh"></button>
+      <button class="primary" id="net-next" onclick="go('st-disk')" data-i18n="next"></button>
     </div></div>
 </section>
 
@@ -200,7 +213,7 @@ button{
       <b data-i18n="mode_up"></b><div class="o-desc" data-i18n="mode_up_d"></div></div>
   </div>
   <div class="hint" id="disk-hint" data-i18n="disk_hint"></div>
-  <div class="btns"><button class="ghost" onclick="go('st-screens')" data-i18n="back"></button>
+  <div class="btns"><button class="ghost" onclick="go('st-network')" data-i18n="back"></button>
   <button class="primary" id="disk-next" disabled onclick="fillSummary();go('st-confirm')" data-i18n="next"></button></div>
 </section>
 
@@ -328,6 +341,70 @@ function applyScreens(){
     if(d.ok){screensApplied=screensKey();setScreensStatus("screens_applied",true)}
     else{screensApplied="";setScreensStatus("screens_failed",false,(d.erreurs||[]).join(" ; "))}})
   .catch(()=>{btn.disabled=false;screensApplied="";setScreensStatus("screens_failed",false)})}
+// PINCABOS_INSTALLEUR_RESEAU_V1 — étape Réseau : DHCP par défaut, IP fixe
+// proposée depuis le bail, Wi-Fi seulement si un matériel est présent. Chaque
+// application est immédiate dans la session (le résultat se voit) ; le réseau
+// n'est pas obligatoire, on peut continuer sans.
+let netState=null,netScan=[];
+S.network={applied:[]};
+function loadNetwork(rescan){
+  const box=document.getElementById("net-list");box.innerHTML="<div class='hint'>…</div>";
+  fetch("/api/network").then(r=>r.json()).then(d=>{netState=d;renderNetwork();
+    if(d.wifi&&d.wifi.present){fetch("/api/network/wifi-scan").then(r=>r.json()).then(s=>{netScan=s.reseaux||[];renderWifi()}).catch(()=>renderWifi())}
+    else{document.getElementById("net-wifi").style.display="none"}})
+  .catch(()=>{box.innerHTML="<div class='hint'>"+t("net_unavailable")+"</div>"})}
+function netStatus(key,ok,extra){const st=document.getElementById("net-status");st.textContent=t(key)+(extra?" "+extra:"");st.style.color=ok?"var(--good)":"var(--muted)"}
+function renderNetwork(){
+  const box=document.getElementById("net-list");box.innerHTML="";
+  if(!netState||!netState.disponible){box.innerHTML="<div class='card hint'>"+t("net_unavailable")+"</div>";return}
+  const ifaces=(netState.interfaces||[]);
+  if(!ifaces.length){box.innerHTML="<div class='card hint'>"+t("net_none")+"</div>"}
+  ifaces.forEach(i=>{const p=i.proposition||{};const fixe=i.method==="manual";
+    const note=t(p.source==="dhcp"?"net_from_dhcp":p.source==="manuel"?"net_manual":p.source==="courant"?"net_current":"net_no_dhcp");
+    const el=document.createElement("div");el.className="card";el.style.marginBottom="10px";
+    el.innerHTML=`<div class="row" style="margin-bottom:6px"><b style="color:var(--accent)">${i.type==="wifi"?"Wi-Fi":"Ethernet"} · ${i.device}</b>
+        <span style="color:var(--muted)">${i.address?i.address+" · "+(i.method==="manual"?t("net_static"):"DHCP"):t("net_noaddr")}</span></div>
+      <div class="row"><label>${t("net_mode")}</label><div class="seg">
+        <button type="button" class="segb ${fixe?"":"sel"}" data-mode="dhcp">${t("net_dhcp")}</button>
+        <button type="button" class="segb ${fixe?"sel":""}" data-mode="static">${t("net_static")}</button></div></div>
+      <div class="fixe" style="display:${fixe?"block":"none"}">
+        <div class="hint" style="margin:0 0 8px">${note}</div>
+        <div class="row"><label>${t("net_address")}</label><input type="text" name="address" value="${p.address||""}" placeholder="192.168.1.50/24"></div>
+        <div class="row"><label>${t("net_gateway")}</label><input type="text" name="gateway" value="${p.gateway||""}" placeholder="192.168.1.1"></div>
+        <div class="row"><label>${t("net_dns")}</label><input type="text" name="dns" value="${(p.dns||[]).join(", ")}" placeholder="9.9.9.9, 1.1.1.1"></div>
+      </div>
+      <div style="text-align:right"><button type="button" class="ghost">${t("net_apply")}</button></div>`;
+    el.querySelectorAll(".segb").forEach(b=>b.onclick=()=>{el.querySelectorAll(".segb").forEach(o=>o.classList.remove("sel"));b.classList.add("sel");
+      el.querySelector(".fixe").style.display=b.dataset.mode==="static"?"block":"none"});
+    el.querySelector("button.ghost").onclick=()=>{
+      const mode=el.querySelector(".segb.sel").dataset.mode;
+      const body={iface:i.device,mode,address:el.querySelector('[name=address]').value,gateway:el.querySelector('[name=gateway]').value,dns:el.querySelector('[name=dns]').value};
+      netStatus("net_applying",false);
+      fetch("/api/network/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json()).then(d=>{
+        netStatus(d.ok?"net_applied":"net_failed",d.ok,(d.journal||[]).join(" ; "));
+        if(d.ok){S.network.applied.push(i.device+":"+mode);loadNetwork(false)}}).catch(()=>netStatus("net_failed",false))};
+    box.appendChild(el)})}
+function renderWifi(){
+  const w=document.getElementById("net-wifi");const caps=(netState.wifi||{}).capacites||{};
+  w.style.display="block";
+  const rows=netScan.map(x=>`<tr><td>${x.ssid}</td><td>${x.signal} %</td><td>${x.security||t("net_open")}</td>
+      <td style="color:${x.in_use?"var(--good)":x.compatible?"inherit":"var(--accent)"}">${x.in_use?t("net_connected"):x.compatible?"":x.raison}</td>
+      <td>${x.compatible?`<button type="button" class="ghost" data-ssid="${x.ssid.replace(/"/g,"&quot;")}" data-mode="${x.mode}">${t("net_join")}</button>`:""}</td></tr>`).join("");
+  w.innerHTML=`<h3 style="color:var(--accent);margin-bottom:8px">Wi-Fi · ${((netState.wifi||{}).devices||[]).join(", ")}</h3>
+    <div class="hint" style="margin:0 0 8px">${t("net_wifi_caps")} ${[caps["2ghz"]!==false?"2,4 GHz":"",caps["5ghz"]?"5 GHz":""].filter(Boolean).join(" · ")||"?"}</div>
+    <table style="width:100%;font-size:.95rem">${rows||"<tr><td class='hint'>"+t("net_wifi_none")+"</td></tr>"}</table>
+    <div class="row" style="margin-top:10px"><label>${t("net_ssid")}</label><input type="text" id="wifi-ssid" placeholder="SSID"></div>
+    <div class="row"><label>${t("net_password")}</label><input type="text" id="wifi-pass" placeholder="••••••••"></div>
+    <div class="row"><label>${t("net_security")}</label><select id="wifi-sec"><option value="auto">${t("net_sec_auto")}</option><option value="open">${t("net_open")}</option><option value="wpa-psk">WPA / WPA2</option><option value="sae">WPA3</option><option value="wpa-eap">802.1X</option></select></div>
+    <div class="row"><label>${t("net_identity")}</label><input type="text" id="wifi-id"></div>
+    <div class="row"><label></label><label style="min-width:0"><input type="checkbox" id="wifi-hidden"> ${t("net_hidden")}</label></div>
+    <div style="text-align:right"><button type="button" class="ghost" id="wifi-join">${t("net_join")}</button></div>`;
+  w.querySelectorAll("button[data-ssid]").forEach(b=>b.onclick=()=>{document.getElementById("wifi-ssid").value=b.dataset.ssid;document.getElementById("wifi-sec").value="auto";document.getElementById("wifi-pass").focus()});
+  document.getElementById("wifi-join").onclick=()=>{
+    const body={ssid:document.getElementById("wifi-ssid").value,password:document.getElementById("wifi-pass").value,security:document.getElementById("wifi-sec").value,identity:document.getElementById("wifi-id").value,hidden:document.getElementById("wifi-hidden").checked};
+    netStatus("net_applying",false);
+    fetch("/api/network/wifi-join",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json()).then(d=>{
+      netStatus(d.ok?"net_applied":"net_failed",d.ok,(d.journal||[]).join(" ; "));if(d.ok)loadNetwork(false)}).catch(()=>netStatus("net_failed",false))}}
 function identifyScreens(){
   const btn=document.getElementById("btn-identify");btn.disabled=true;
   const labels={};ROLE_KEYS.forEach(r=>labels[r]=t("role_"+r));
@@ -355,6 +432,7 @@ function fillSummary(){
   const rows=[[t("locale"),S.locale],[t("keyboard"),S.xkb],[t("timezone"),S.tz],
     [t("screens"),ROLE_KEYS.filter(r=>S.screens.roles[r]).map(r=>t("role_"+r)+" = "+S.screens.roles[r]).join(", ")||"—"],
     [t("orient_q"),t({0:"o_up",180:"o_down",90:"o_90",270:"o_270"}[+S.screens.rotation]||"o_up")],
+    [t("network"),(netState&&netState.interfaces||[]).filter(i=>i.address).map(i=>i.device+" "+i.address+" ("+(i.method==="manual"?t("net_static"):"DHCP")+")").join(", ")||t("net_noaddr")],
     [t("disk"),S.disk+" ("+(S.mode==1?t("mode_erase"):S.mode==3?t("mode_up"):t("mode_dual"))+")"]];
   document.getElementById("summary").innerHTML=rows.map(([k,v])=>
     `<div class="sumline"><span>${k}</span><b>${v}</b></div>`).join("");
