@@ -190,6 +190,13 @@ class ApplicationIPv4(unittest.TestCase):
 
 
 class Heritage(unittest.TestCase):
+    """Les fichiers netplan tiers (installateur, ancienne page) ne doivent plus parler
+    de l'interface : netplan fusionnait leur dhcp4: true avec le profil NM."""
+
+    BASE = "network:\n  version: 2\n  renderer: NetworkManager\n  ethernets:\n    eno1:\n      dhcp4: true\n      dhcp6: true\n      optional: true\n"
+    DEUX = BASE + "    enp2s0:\n      dhcp4: true\n"
+    NM = "network:\n  version: 2\n  ethernets:\n    eno1:\n      renderer: NetworkManager\n      match: {}\n      addresses:\n      - \"172.18.40.80/24\"\n      networkmanager:\n        uuid: \"10838d80\"\n        name: \"netplan-eno1\"\n"
+
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         (self.root / "etc/netplan").mkdir(parents=True)
@@ -197,20 +204,47 @@ class Heritage(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)
 
-    def test_prise_en_charge(self):
-        p = self.root / m.NETPLAN_LEGACY
-        p.write_text("network:\n  version: 2\n  renderer: NetworkManager\n  ethernets:\n    eno1:\n      dhcp4: false\n", encoding="utf-8")
+    def test_detection(self):
+        (self.root / "etc/netplan/01-pincabos-dhcp.yaml").write_text(self.BASE, encoding="utf-8")
+        (self.root / "etc/netplan/90-NM-10838d80.yaml").write_text(self.NM, encoding="utf-8")
+        self.assertEqual([f.name for f in m.takeover_necessaire("eno1", self.root)], ["01-pincabos-dhcp.yaml"])
+        self.assertEqual(m.takeover_necessaire("wlp3s0", self.root), [])
         self.assertTrue(m.legacy_present("eno1", self.root))
+
+    def test_prise_en_main_fichier_dedie(self):
+        p = self.root / "etc/netplan/01-pincabos-dhcp.yaml"
+        p.write_text(self.BASE, encoding="utf-8")
+        (self.root / "etc/netplan/90-NM-10838d80.yaml").write_text(self.NM, encoding="utf-8")
         f = Faux()
         j = m.legacy_takeover("eno1", self.root, f, backup_dir=self.root / "backups")
-        self.assertFalse(p.exists())
-        self.assertEqual(len(list((self.root / "backups").rglob("99-pincabos-network.yaml"))), 1)
+        self.assertFalse(p.exists(), "ne definissait que eno1 : mis de cote")
+        self.assertEqual(len(list((self.root / "backups").rglob("01-pincabos-dhcp.yaml"))), 1)
+        self.assertEqual((self.root / "etc/netplan/90-NM-10838d80.yaml").read_text(encoding="utf-8"), self.NM, "le fichier de NM n'est pas touche")
         self.assertTrue(j[0].startswith("GO:"))
         self.assertEqual(f.commandes, [], "racine de test : ni netplan generate ni reload")
-        self.assertEqual(m.legacy_takeover("eno1", self.root, f), ["OK: aucun fichier netplan hérité"])
+        self.assertEqual(m.legacy_takeover("eno1", self.root, f)[0][:3], "OK:")
+
+    def test_prise_en_main_garde_les_autres_interfaces(self):
+        p = self.root / "etc/netplan/01-pincabos-dhcp.yaml"
+        p.write_text(self.DEUX, encoding="utf-8")
+        m.legacy_takeover("eno1", self.root, Faux(), backup_dir=self.root / "backups")
+        reste = p.read_text(encoding="utf-8")
+        self.assertNotIn("eno1", reste)
+        self.assertIn("    enp2s0:\n      dhcp4: true\n", reste)
+        self.assertIn("renderer: NetworkManager", reste)
+        self.assertEqual(m._stanzas_du_peripherique(reste, "enp2s0"), ["ethernets"])
+
+    def test_ancienne_page(self):
+        p = self.root / m.NETPLAN_LEGACY
+        p.write_text("network:\n  version: 2\n  renderer: NetworkManager\n  ethernets:\n    eno1:\n      dhcp4: false\n      addresses:\n        - 192.168.254.237/24\n", encoding="utf-8")
+        self.assertTrue(m.legacy_present("eno1", self.root))
+        j = m.legacy_takeover("eno1", self.root, Faux(), backup_dir=self.root / "backups")
+        self.assertFalse(p.exists())
+        self.assertTrue(j[0].startswith("GO:"))
 
     def test_absent(self):
         self.assertFalse(m.legacy_present("eno1", self.root))
+        self.assertEqual(m.legacy_takeover("eno1", self.root, Faux())[0][:3], "OK:")
 
 
 class WiFi(unittest.TestCase):

@@ -195,8 +195,8 @@ def network_page():
         reseaux = net.wifi_scan(run=net.executer, rescan=rescan, caps=caps)
         connus = net.wifi_connus(run=net.executer)
     cartes = "".join(carte_interface(e) for e in r["interfaces"]) or "<div class='card'><p class='warn'>Aucune interface réseau (Ethernet ou Wi-Fi) détectée.</p></div>"
-    legacy = (f"<p class='warn'>Un ancien fichier <code>{esc(net.NETPLAN_LEGACY)}</code> est présent : il sera mis de côté "
-              "(sauvegardé) à la prochaine application, NetworkManager prend la main.</p>") if r.get("legacy") else ""
+    legacy = ("<p class='warn'>Un fichier netplan de l'installateur ou de l'ancienne page définit encore une interface : "
+              "à la prochaine application, NetworkManager prend la main (fichier sauvegardé).</p>") if r.get("legacy") else ""
     body = f"""
 {JS}
 <div class="card">
@@ -228,7 +228,9 @@ def network_apply_mode():
         return resultat("Configuration réseau", [f"NOGO: interface inconnue : {iface or '(vide)'}"])
     journal = []
     if net.legacy_present(iface):
-        journal += _sudo("legacy-takeover", iface)
+        journal += _sudo("netplan-takeover", iface)
+        if any(l.startswith("NOGO") for l in journal):
+            return resultat(f"Réseau sur {iface}", journal)
     if mode == "static":
         v = net.valider_fixe(request.form.get("address", ""), request.form.get("gateway", ""), request.form.get("dns", ""))
         if v["erreurs"]:

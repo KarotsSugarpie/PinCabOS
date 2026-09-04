@@ -239,24 +239,102 @@ def connexion_du_peripherique(device: str, run=executer) -> str:
     return nom
 
 
+NETPLAN_DIR = "etc/netplan"
+
+
+def _fichiers_netplan_tiers(root: Path) -> list:
+    """Les fichiers netplan qui ne sont pas ceux de NetworkManager (90-NM-<uuid>.yaml)."""
+    d = root / NETPLAN_DIR
+    if not d.is_dir():
+        return []
+    return sorted(f for f in d.glob("*.yaml") if not f.name.startswith("90-NM-"))
+
+
+def _stanzas_du_peripherique(texte: str, device: str) -> list:
+    """Sections (ethernets/wifis) qui définissent `device`, sans dépendre de PyYAML."""
+    trouvees = []
+    section = None
+    for ligne in texte.splitlines():
+        m = re.match(r"^  (ethernets|wifis|bridges|bonds|vlans):\s*$", ligne)
+        if m:
+            section = m.group(1)
+            continue
+        if re.match(r"^  \S", ligne):
+            section = None
+            continue
+        if section and re.match(rf"^    {re.escape(device)}:\s*$", ligne):
+            trouvees.append(section)
+    return trouvees
+
+
+def takeover_necessaire(device: str, root: Path = Path("/")) -> list:
+    """Fichiers netplan tiers (installateur, ancienne page) qui définissent encore `device`.
+
+    Tant qu'un tel fichier existe, netplan fusionne son `dhcp4: true` avec le
+    profil NetworkManager : une IP fixe devient « DHCP + adresse fixe » (vu
+    sur le cab de Yann, 05/09/2026). NetworkManager doit être seul à parler de
+    l'interface."""
+    out = []
+    for f in _fichiers_netplan_tiers(root):
+        try:
+            texte = f.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _stanzas_du_peripherique(texte, device):
+            out.append(f)
+    return out
+
+
+def _retirer_stanza(texte: str, device: str) -> str:
+    """Retire les blocs `    <device>:` (et leurs lignes indentées) des sections réseau."""
+    lignes = texte.splitlines()
+    out, i = [], 0
+    while i < len(lignes):
+        l = lignes[i]
+        if re.match(rf"^    {re.escape(device)}:\s*$", l):
+            i += 1
+            while i < len(lignes) and (lignes[i].startswith("      ") or not lignes[i].strip()):
+                i += 1
+            continue
+        out.append(l)
+        i += 1
+    # une section devenue vide est retirée
+    res, i = [], 0
+    while i < len(out):
+        m = re.match(r"^  (ethernets|wifis|bridges|bonds|vlans):\s*$", out[i])
+        if m and (i + 1 >= len(out) or not out[i + 1].startswith("    ")):
+            i += 1
+            continue
+        res.append(out[i])
+        i += 1
+    return "\n".join(res).rstrip("\n") + "\n"
+
+
 def legacy_present(device: str, root: Path = Path("/")) -> bool:
-    p = root / NETPLAN_LEGACY
-    if not p.exists():
-        return False
-    texte = p.read_text(encoding="utf-8", errors="replace")
-    return re.search(rf"(?m)^\s*{re.escape(device)}\s*:", texte) is not None or "renderer" in texte
+    return bool(takeover_necessaire(device, root))
 
 
 def legacy_takeover(device: str, root: Path = Path("/"), run=executer, backup_dir: Path | None = None) -> list:
-    """Met de côté /etc/netplan/99-pincabos-network.yaml (ancienne page) et régénère."""
-    p = root / NETPLAN_LEGACY
-    if not p.exists():
-        return ["OK: aucun fichier netplan hérité"]
+    """NetworkManager prend la main sur `device` : les fichiers netplan tiers qui le
+    définissent (01-pincabos-dhcp.yaml de l'installateur, 99-pincabos-network.yaml de
+    l'ancienne page) sont sauvegardés puis débarrassés de sa section, et netplan
+    est régénéré. Idempotent : rien à faire = « OK »."""
+    fichiers = takeover_necessaire(device, root)
+    if not fichiers:
+        return [f"OK: NetworkManager est déjà seul à définir {device}"]
     bdir = Path(backup_dir or BACKUP_DIR) / ("netplan-" + datetime.now().strftime("%Y%m%d-%H%M%S"))
     bdir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(p, bdir / p.name)
-    p.unlink()
-    journal = [f"GO: {NETPLAN_LEGACY} mis de côté dans {bdir} (NetworkManager prend la main sur {device})"]
+    journal = []
+    for f in fichiers:
+        shutil.copy2(f, bdir / f.name)
+        texte = f.read_text(encoding="utf-8", errors="replace")
+        reste = _retirer_stanza(texte, device)
+        if re.search(r"^  (ethernets|wifis|bridges|bonds|vlans):", reste, re.M):
+            f.write_text(reste, encoding="utf-8")
+            journal.append(f"GO: {f.name} : section {device} retirée (sauvegarde {bdir})")
+        else:
+            f.unlink()
+            journal.append(f"GO: {f.name} ne définissait que {device} : mis de côté dans {bdir}")
     if root == Path("/"):
         r = run(["netplan", "generate"])
         journal.append("GO: netplan generate" if r.rc == 0 else f"WARN: netplan generate : {r.err.strip()[-160:]}")
@@ -506,7 +584,7 @@ USAGE = """usage : pincabos-network status [--json]
         pincabos-network wifi-join <ssid> [--password P] [--security auto|open|wpa-psk|sae|wpa-eap] [--identity U] [--hidden]
         pincabos-network wifi-forget <ssid>
         pincabos-network hostname <nom> [--netbios NOM]
-        pincabos-network legacy-takeover <interface>
+        pincabos-network netplan-takeover <interface>   (root : NetworkManager seul maître de l'interface)
 """
 
 
@@ -533,7 +611,7 @@ def main(argv=None) -> int:
             print(f"{e['device']:<10} {e['type']:<9} {e['state']:<22} {e['method'] or '-':<7} {e['address'] or '-':<20} gw {e['gateway'] or '-':<15} dns {','.join(e['dns']) or '-'}")
             print(f"{'':<10} proposition fixe ({p['source']}) : {p['address'] or '?'} gw {p['gateway'] or '?'} dns {','.join(p['dns'])}")
         if r["legacy"]:
-            print(f"WARN: {NETPLAN_LEGACY} présent (ancienne page) : sera mis de côté à la prochaine application")
+            print(f"WARN: un fichier netplan tiers définit encore une interface : NetworkManager prendra la main à la prochaine application")
         return 0
     if cmd == "proposal" and pos:
         p = proposition(etat(pos[0]))
@@ -542,6 +620,10 @@ def main(argv=None) -> int:
     if cmd in ("dhcp", "static") and pos:
         journal = []
         if legacy_present(pos[0]):
+            import os
+            if os.geteuid() != 0:
+                print(f"NOGO: {', '.join(f.name for f in takeover_necessaire(pos[0]))} définit encore {pos[0]} ; lance d'abord : sudo pincabos-network netplan-takeover {pos[0]}")
+                return 1
             journal += legacy_takeover(pos[0])
         journal += appliquer_dhcp(pos[0]) if cmd == "dhcp" else appliquer_fixe(pos[0], *(pos[1:4] + [""] * (4 - len(pos))))
         print("\n".join(journal))
@@ -561,7 +643,7 @@ def main(argv=None) -> int:
         journal = hostname_set(pos[0], _opt(args, "--netbios"))
         print("\n".join(journal))
         return 1 if any(l.startswith("NOGO") for l in journal) else 0
-    if cmd == "legacy-takeover" and pos:
+    if cmd in ("netplan-takeover", "legacy-takeover") and pos:
         print("\n".join(legacy_takeover(pos[0])))
         return 0
     print(USAGE, file=sys.stderr)
