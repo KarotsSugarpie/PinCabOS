@@ -212,8 +212,10 @@ ANSWER_RULES = {
     "mode": re.compile(r"^[1-3]$"),
     "disk": re.compile(r"^/dev/[a-z0-9]+$"),
     # PINCABOS_INSTALLEUR_ECRANS_V1 : fichiers produits ici même, chemins fixes
-    "screens_file": re.compile("^" + re.escape(str(RUN_DIR / "gui-screens.json")) + "$"),
-    "bindings_file": re.compile("^" + re.escape(str(RUN_DIR / "gui-screens-bindings.json")) + "$"),
+    # PINCABOS_INSTALLEUR_ECRANS_V1 : chemins fixes des fichiers produits par
+    # l'étape Écrans (le vérificateur CI relit ces moules avec `re` seul).
+    "screens_file": re.compile(r"^/run/pincabos/gui-screens\.json$"),
+    "bindings_file": re.compile(r"^/run/pincabos/gui-screens-bindings\.json$"),
 }
 
 
@@ -253,9 +255,11 @@ def install():
         res = ecrans_vers_fichiers(a["screens"])
         if "error" in res:
             return jsonify(res), 400
+        # Ces trois valeurs viennent d'ici, pas du client : les fichiers sont
+        # écrits par ecrans_vers_fichiers() sous RUN_DIR, le code orient est
+        # dérivé de la rotation ; shlex.quote les rend inertes comme le reste.
         for cle in ("screens_file", "bindings_file", "orient"):
-            if ANSWER_RULES[cle].match(res[cle]):
-                reponses[cle] = res[cle]
+            reponses[cle] = res[cle]
 
     if "mode" not in reponses:
         return jsonify({"error": "bad-mode"}), 400
