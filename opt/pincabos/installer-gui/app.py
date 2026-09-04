@@ -212,8 +212,8 @@ ANSWER_RULES = {
     "mode": re.compile(r"^[1-3]$"),
     "disk": re.compile(r"^/dev/[a-z0-9]+$"),
     # PINCABOS_INSTALLEUR_ECRANS_V1 : fichiers produits ici même, chemins fixes
-    "screens_file": re.compile(r"^/run/pincabos/gui-screens\.json$"),
-    "bindings_file": re.compile(r"^/run/pincabos/gui-screens-bindings\.json$"),
+    "screens_file": re.compile("^" + re.escape(str(RUN_DIR / "gui-screens.json")) + "$"),
+    "bindings_file": re.compile("^" + re.escape(str(RUN_DIR / "gui-screens-bindings.json")) + "$"),
 }
 
 

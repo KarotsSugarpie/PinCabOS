@@ -190,8 +190,9 @@ class Installation(unittest.TestCase):
         s = (Path(RACINE) / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
         self.assertIn("apply_target_identity() {", s)
         self.assertIn('pincabos_identity.py" apply --root "$TARGET" --no-grub', s)
-        self.assertLess(s.index("  apply_target_orientation\n  apply_target_identity\n  refresh_target_initrd_for_orientation\n"), len(s),
-                        "appelee apres l'orientation et avant la regeneration de l'initrd")
+        a, b, c = s.index("  apply_target_orientation\n"), s.index("  apply_target_identity\n"), s.index("  refresh_target_initrd_for_orientation\n")
+        self.assertLess(a, b, "appelee apres l'orientation")
+        self.assertLess(b, c, "et avant la regeneration de l'initrd")
 
     def test_unite_et_wrapper(self):
         u = (Path(RACINE) / "etc/systemd/system/pincabos-identity.service").read_text(encoding="utf-8")
