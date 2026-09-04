@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# pincabos-iso-payload-top : qu'est-ce qui pese dans le payload d'une ISO ?
+# PINCABOS_ISO_PAYLOAD_TOP_V1
+#
+# Rejoue la commande tar de iso.sh (ses exclusions exactes, --one-file-system)
+# sur une racine, sans rien ecrire, et affiche les repertoires qui pesent le
+# plus dans l'archive. Sert a comprendre pourquoi une ISO fait 5,6 Go quand la
+# reference en fait 2,6 (retex Karots, 04/09/2026) avant d'ajouter une exclusion.
+#
+# usage : pincabos-iso-payload-top [--root /] [--iso /opt/pincabos/script/iso.sh]
+#                                  [--top 25] [--depth 3]
+set -euo pipefail
+
+ROOT="/"
+ISO="/opt/pincabos/script/iso.sh"
+TOP=25
+DEPTH=3
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --root) ROOT="$2"; shift 2 ;;
+    --iso) ISO="$2"; shift 2 ;;
+    --top) TOP="$2"; shift 2 ;;
+    --depth) DEPTH="$2"; shift 2 ;;
+    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    *) echo "argument inconnu : $1" >&2; exit 2 ;;
+  esac
+done
+[ -d "$ROOT" ] || { echo "NOGO: racine introuvable : $ROOT" >&2; exit 1; }
+[ -f "$ISO" ] || { echo "NOGO: iso.sh introuvable : $ISO" >&2; exit 1; }
+
+# Les exclusions vivent entre le marqueur LEAN et la ligne de compression.
+debut=$(grep -n "PINCABOS_ISO_LEAN_EXCLUSIONS_V2" "$ISO" | head -1 | cut -d: -f1)
+[ -n "$debut" ] || { echo "NOGO: marqueur PINCABOS_ISO_LEAN_EXCLUSIONS_V2 absent de $ISO" >&2; exit 1; }
+fin=$(awk -v s="$debut" 'NR>s && /-I .zstd -T0 -10./{print NR; exit}' "$ISO")
+[ -n "$fin" ] || { echo "NOGO: ligne de compression introuvable apres le marqueur" >&2; exit 1; }
+mapfile -t EXCLUSIONS < <(sed -n "${debut},${fin}p" "$ISO" | grep -oE "^  --exclude='[^']*'" | sed -E "s/^  --exclude='([^']*)'/\1/")
+[ "${#EXCLUSIONS[@]}" -gt 0 ] || { echo "NOGO: aucune exclusion lue dans $ISO" >&2; exit 1; }
+
+args=()
+for x in "${EXCLUSIONS[@]}"; do args+=("--exclude=$x"); done
+
+echo "exclusions rejouees : ${#EXCLUSIONS[@]} (depuis $ISO), racine $ROOT, profondeur $DEPTH"
+tar --one-file-system "${args[@]}" -cf - -C "$ROOT" . 2>/dev/null \
+  | tar -tvf - 2>/dev/null \
+  | awk -v depth="$DEPTH" '
+      $1 ~ /^-/ {
+        n = split($6, p, "/")
+        k = p[2]
+        for (i = 3; i <= depth + 1 && i <= n - 1; i++) k = k "/" p[i]
+        sz[k] += $3
+        tot += $3
+      }
+      END {
+        for (k in sz) printf "%10.2f G  %s\n", sz[k] / 1073741824, k
+        printf "%10.2f G  TOTAL non compresse\n", tot / 1073741824
+      }' \
+  | sort -rn | head -n "$TOP"
