@@ -579,6 +579,8 @@ tar \
   --exclude='./root/pincabos-v8.1g-iso-ready/*' \
   --exclude='./opt/pincabos/build' \
   --exclude='./opt/pincabos/build/*' \
+  --exclude='./opt/pincabos/tmp' \
+  --exclude='./opt/pincabos/tmp/*' \
   --exclude='./opt/pincabos/apps/vpxtool' \
   --exclude='./opt/pincabos/apps/vpxtool/*' \
   --exclude='./opt/pincabos/bin/vpxtool' \
@@ -718,13 +720,14 @@ echo "OK: /opt/pincabos/build excluded"
 echo "=== Validation fichiers transitoires exclus ==="
 
 if tar -I zstd -tf "$ARCHIVE" | grep -E -q \
-'^\./opt/pincabos/(\.git-rootfs(/|$)|backups(/|$)|script/.*\.(bak|before)-|web/.*\.(bak|before)-)'
+'^\./opt/pincabos/(\.git-rootfs(/|$)|backups(/|$)|tmp(/|$)|script/.*\.(bak|before)-|web/.*\.(bak|before)-)'
 then
     die "Fichiers transitoires PinCabOS inclus dans le payload"
 fi
 
 echo "OK: .git-rootfs excluded"
 echo "OK: /opt/pincabos/backups excluded"
+echo "OK: /opt/pincabos/tmp excluded"
 echo "OK: script/web backups excluded"
 
 
