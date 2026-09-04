@@ -2552,7 +2552,8 @@ def pincabos_write_manual_screen_roles(playfield_id, backglass_id, fulldmd_id, c
 
     lines = set_ini_key(lines, "Displays", "cabmode", "true" if cabinet_mode else "false")
     lines = set_ini_key(lines, "Displays", "tableorientation", playfield_orientation)
-    lines = set_ini_key(lines, "Displays", "tablerotation", playfield_rotation)
+    # PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation est faite par xrandr ; VPinFE recoit 0.
+    lines = set_ini_key(lines, "Displays", "tablerotation", "0")
 
     ini.parent.mkdir(parents=True, exist_ok=True)
     ini.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -2781,7 +2782,8 @@ def pincabos_gpu_apply_config_to_vpinfe():
     lines = pincabos_gpu_ini_set_key_local(lines, "Displays", "cabmode", "true" if cabinet_mode else "false")
     lines = pincabos_gpu_ini_set_key_local(lines, "Displays", "tablescreenid", str(playfield.get("id", "")))
     lines = pincabos_gpu_ini_set_key_local(lines, "Displays", "tableorientation", playfield_orientation)
-    lines = pincabos_gpu_ini_set_key_local(lines, "Displays", "tablerotation", playfield_rotation)
+    # PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation est faite par xrandr ; VPinFE recoit 0.
+    lines = pincabos_gpu_ini_set_key_local(lines, "Displays", "tablerotation", "0")
 
     lines = pincabos_gpu_ini_set_key_local(
         lines, "Displays", "bgscreenid",
@@ -2821,7 +2823,7 @@ tablescreenid = {playfield.get("id", "")}
 bgscreenid = {backglass.get("id", "") if backglass else ""}
 dmdscreenid = {fulldmd.get("id", "") if fulldmd else ""}
 tableorientation = {playfield_orientation}
-tablerotation = {playfield_rotation}
+tablerotation = 0  (rotation physique {playfield_rotation}° appliquée par xrandr)
 """
 
 

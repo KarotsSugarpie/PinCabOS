@@ -37,8 +37,10 @@ fi
 # (liee a un role) qui est connectee mais eteinte est rallumee a sa geometrie
 # de role. Couvre le cas reel « ecran rallume / rebranche apres le boot »,
 # y compris quand l'applicateur ci-dessus n'a rien retabli.
-python3 - <<'PY' 2>/dev/null | while read -r output mode pos; do
-import json, re
+python3 - <<'PY' 2>/dev/null | while read -r output mode pos rotate mode_alt; do
+import json, re, sys
+sys.path.insert(0, "/opt/pincabos/tools")
+import pincabos_screen_rotation as rotation_pf  # PINCABOS_ROTATION_PHYSIQUE_V1
 try:
     data = json.load(open("/opt/pincabos/config/screens/screens.json"))
 except Exception:
@@ -50,7 +52,10 @@ for role in ("playfield", "backglass", "fulldmd", "topper"):
     name = item.get("name") or ""
     match = re.match(r"^(\d+x\d+)\+(-?\d+)\+(-?\d+)$", str(item.get("geometry") or ""))
     if name and match:
-        print(name, match.group(1), f"{match.group(2)}x{match.group(3)}")
+        rot = rotation_pf.role_rotation(role, data)
+        candidats = rotation_pf.modes_candidats(match.group(1), rot)
+        print(name, match.group(1), f"{match.group(2)}x{match.group(3)}",
+              rotation_pf.xrandr_rotate(rot), candidats[1] if len(candidats) > 1 else "-")
 PY
     [[ -n "$output" ]] || continue
     for auth in "$PCO_XAUTHORITY" /run/lightdm/root/:0; do
@@ -58,9 +63,12 @@ PY
         # la sortie est-elle connectee mais sans geometrie active ?
         state="$(env DISPLAY=:0 XAUTHORITY="$auth" xrandr --query 2>/dev/null | grep "^$output ")"
         if [[ "$state" == "$output connected"* && ! "$state" =~ [0-9]+x[0-9]+\+ ]]; then
+            # la rotation du role suit screens.json (jamais « normal » force)
             env DISPLAY=:0 XAUTHORITY="$auth" \
-                xrandr --output "$output" --mode "$mode" --pos "$pos" >/dev/null 2>&1 || true
-            logger -t pincabos-screen-hotplug "sortie $output rallumee ($mode @$pos)" 2>/dev/null || true
+                xrandr --output "$output" --mode "$mode" --pos "$pos" --rotate "${rotate:-normal}" >/dev/null 2>&1 \
+            || { [[ "${mode_alt:-}" != "-" && -n "${mode_alt:-}" ]] && env DISPLAY=:0 XAUTHORITY="$auth" \
+                xrandr --output "$output" --mode "$mode_alt" --pos "$pos" --rotate "${rotate:-normal}" >/dev/null 2>&1; } || true
+            logger -t pincabos-screen-hotplug "sortie $output rallumee ($mode @$pos, rotation ${rotate:-normal})" 2>/dev/null || true
         fi
         break
     done

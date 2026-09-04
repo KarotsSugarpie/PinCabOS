@@ -243,7 +243,10 @@ def apply_vpinfe() -> str:
     cp.set("Displays", "dmdscreenid", fd_id)
     cp.set("Displays", "cabmode", "true" if cfg.get("cabinet_mode", True) else "false")
     cp.set("Displays", "tableorientation", str(cfg.get("playfield_orientation", "landscape")))
-    cp.set("Displays", "tablerotation", str(cfg.get("playfield_rotation", "0")))
+    # PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation est appliquee par xrandr sur
+    # la sortie ; VPinFE dessine sur un ecran deja dans le bon sens et ne doit
+    # pas tourner une seconde fois (retourne + retourne = a l'envers).
+    cp.set("Displays", "tablerotation", "0")
 
     if not cp.has_section("PinCabOS.Screens"):
         cp.add_section("PinCabOS.Screens")
@@ -483,13 +486,17 @@ def screen_page():
             </select>
           </div>
           <div>
-            <label>Playfield Rotation</label>
+            <label>Sens du playfield</label>
             <select name="playfield_rotation">
-              <option value="0" {"selected" if rot == "0" else ""}>0</option>
-              <option value="90" {"selected" if rot == "90" else ""}>90</option>
-              <option value="180" {"selected" if rot == "180" else ""}>180</option>
-              <option value="270" {"selected" if rot == "270" else ""}>270</option>
+              <option value="0" {"selected" if rot == "0" else ""}>À l'endroit</option>
+              <option value="180" {"selected" if rot == "180" else ""}>À l'envers (retourné de 180°)</option>
+              <option value="90" {"selected" if rot == "90" else ""}>Tourné de 90° (avancé)</option>
+              <option value="270" {"selected" if rot == "270" else ""}>Tourné de 270° (avancé)</option>
             </select>
+            <div style="opacity:.65;font-size:.85em;margin-top:6px">
+              Appliqué à l'écran lui-même, au démarrage et à chaque branchement. VPinFE, VPX et
+              l'écran de démarrage suivent : rien à régler ailleurs.
+            </div>
           </div>
         </div>
 
