@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# pincabos-vpx-input : mapping des boutons VPX (section [Input]) — PINCABOS_VPX_INPUT_V1
+# usage : pincabos-vpx-input devices | show [--json] | detect [--timeout S] [--json] | set <Action> "<mapping>" | defaults | purge-legacy
+exec /usr/bin/python3 /opt/pincabos/tools/pincabos_vpx_input.py "$@"
