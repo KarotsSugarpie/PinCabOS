@@ -37,7 +37,7 @@ class Continuations(unittest.TestCase):
 
     def test_le_bloc_verify_est_une_seule_commande(self):
         """Simule le helper : systemd-analyze remplace par un stub qui echoue sur un
-        argument « \\ » (le vrai rend « Failed to prepare filename \\ »). Avec set -e,
+        argument « \\ » (le vrai rend « Failed to prepare filename \\: Invalid argument' »). Avec set -e,
         le bloc doit rendre 0 grace au `|| true` rattache a la vraie commande."""
         bloc = _bloc_verify()
         script = (
@@ -69,10 +69,6 @@ class DropIns(unittest.TestCase):
         self.assertEqual(exec_, [])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class PreferencesVpx(unittest.TestCase):
     """PINCABOS_VPX_PREF_PATH_V1 : les preferences VPX vivent sous ~/.pincabos/vpx
     (-PrefPath). iso.sh doit traiter ce chemin partout ou il traitait les anciens :
@@ -95,3 +91,15 @@ class PreferencesVpx(unittest.TestCase):
             if ".vpinball" in l and "VPinballX" in l or 'target / "home/pinball/.vpinball"' in l or 'Path("/home/pinball/.vpinball")' in l:
                 voisinage = "\n".join(lignes[max(0, i - 8): i + 4])
                 self.assertIn(".pincabos/vpx", voisinage, f"ligne {i + 1}: {l.strip()}")
+
+    def test_regex_archive_prefpath_est_exacte(self):
+        """La regex doit matcher './home/...' et ne jamais chercher un backslash litteral."""
+        s = _texte()
+        bonne = r"^\./home/pinball/\.pincabos/vpx/VPinballX\.ini$"
+        mauvaise = r"^\\\./home/pinball/\\\.pincabos/vpx/VPinballX\\\.ini$"
+        self.assertIn(bonne, s)
+        self.assertNotIn(mauvaise, s)
+
+
+if __name__ == "__main__":
+    unittest.main()
