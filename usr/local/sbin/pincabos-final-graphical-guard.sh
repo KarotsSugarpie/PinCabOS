@@ -36,6 +36,26 @@ if [ -e "$RUN_ONCE" ] && [ "${1:-}" = "--from-getty" ]; then
 fi
 touch "$RUN_ONCE" 2>/dev/null || true
 
+# PINCABOS_GUARD_FAST_PATH_V1
+# Cette garde repare une installation (lien display-manager, cible graphique,
+# services actives) : une fois faite, elle n'a plus rien a reparer. Elle
+# rejouait pourtant a CHAQUE boot un daemon-reload, une rafale de systemctl
+# enable et 15 s d'attentes fixes (mesure : 18,6 s sur le cab de Yann). Des
+# que le marqueur existe et que les trois invariants tiennent, on sort tout
+# de suite. `--force` rejoue la reparation complete et repose le marqueur.
+MARKER="/opt/pincabos/flags/final-graphical-guard.done"
+if [ "${1:-}" != "--force" ] && [ -e "$MARKER" ]; then
+  LIGHTDM_UNIT="$(readlink -f /usr/lib/systemd/system/lightdm.service 2>/dev/null || readlink -f /lib/systemd/system/lightdm.service 2>/dev/null || true)"
+  DM_LINK="$(readlink -f /etc/systemd/system/display-manager.service 2>/dev/null || true)"
+  if [ -n "$LIGHTDM_UNIT" ] && [ "$DM_LINK" = "$LIGHTDM_UNIT" ] \
+     && [ "$(systemctl get-default 2>/dev/null || true)" = "graphical.target" ] \
+     && [ "$(systemctl is-enabled lightdm.service 2>/dev/null || true)" = "enabled" ]; then
+    echo "GO: installation deja verifiee ($MARKER) : chemin rapide, rien a reparer"
+    exit 0
+  fi
+  echo "WARN: marqueur present mais un invariant a bouge : reparation complete"
+fi
+
 echo
 echo "=== 1) Clear frontend hold flags ==="
 for f in \
@@ -151,4 +171,6 @@ ps -ef | grep -Ei 'lightdm|Xorg|openbox|chrom|vpinfe' | grep -v grep || true
 ss -ltnp 2>/dev/null | grep -E ':80|:8090|:8000|:8001|:8002|:22' || true
 
 echo
+mkdir -p "$(dirname "$MARKER")" 2>/dev/null || true
+touch "$MARKER" 2>/dev/null && echo "GO: marqueur pose : $MARKER (les prochains boots prendront le chemin rapide)" || true
 echo "GO: final LightDM hard graphical guard completed"

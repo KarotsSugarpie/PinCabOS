@@ -1,7 +1,9 @@
 [Unit]
 Description=PinCabOS VPinFE Frontend
 Documentation=https://pincabos.cc/
-After=display-manager.service network-online.target
+# PINCABOS_DEMARRAGE_V1 : le frontend sert en local ; il ne doit pas attendre
+# network-online (jusqu'a 30 s de wait-online sur un cab en Wi-Fi ou sans DHCP).
+After=display-manager.service network.target
 Wants=network-online.target
 
 [Service]

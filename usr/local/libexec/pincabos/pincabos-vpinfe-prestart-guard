@@ -1,44 +1,50 @@
 #!/usr/bin/env bash
 set -u
 
-TMP_ROOT="/var/tmp/pincabos-vpinfe"
-PINBALL_UID="$(id -u pinball)"
+# PINCABOS_PROFILE_GC_ASYNC_V1 : chemins et compte surchargeables pour les tests
+TMP_ROOT="${PINCABOS_VPINFE_PROFILE_ROOT:-/var/tmp/pincabos-vpinfe}"
+TMP_DIR="${PINCABOS_VPINFE_TMP:-/tmp}"
+PINBALL_USER="${PINCABOS_PINBALL_USER:-pinball}"
+PINBALL_UID="$(id -u "$PINBALL_USER" 2>/dev/null || echo 1000)"
+
+gc_async() {
+  # PINCABOS_PROFILE_GC_ASYNC_V1 : renommer (instantane, sort du motif
+  # vpinfe_chromium_*) puis supprimer en arriere-plan, hors du cgroup du
+  # service, en priorite E/S « idle ». PINCABOS_GC_SYNC=1 (tests, systeme
+  # sans systemd-run) supprime en ligne.
+  local dir="$1" rebut
+  rebut="$(dirname -- "$dir")/.gc-$(basename -- "$dir")-$$-$RANDOM"
+  mv -- "$dir" "$rebut" 2>/dev/null || rebut="$dir"
+  if [ "${PINCABOS_GC_SYNC:-0}" = "1" ] || ! command -v systemd-run >/dev/null 2>&1; then
+    rm -rf --one-file-system -- "$rebut"
+    return 0
+  fi
+  systemd-run --quiet --collect --no-block \
+    --unit="pincabos-vpinfe-gc-$(date +%s%N)-$RANDOM" \
+    --nice=19 --property=IOSchedulingClass=idle \
+    /bin/rm -rf --one-file-system -- "$rebut" >/dev/null 2>&1 \
+    || rm -rf --one-file-system -- "$rebut"
+}
 
 echo "=== PinCabOS VPinFE Chrome prestart guard ==="
 
 install -d \
-  -o pinball \
-  -g pinball \
+  -o "$PINBALL_USER" \
+  -g "$PINBALL_USER" \
   -m 0700 \
   "$TMP_ROOT"
 
 find_vpinfe_chrome_pids() {
-  local proc pid owner comm cmdline
+  # pgrep sur le nom exact plutot qu'un balayage bash de /proc (0,6 s au boot)
+  local pid cmdline
 
-  for proc in /proc/[0-9]*; do
-    [ -d "$proc" ] || continue
-
-    pid="${proc##*/}"
-    owner="$(stat -c %u "$proc" 2>/dev/null || true)"
-
-    [ "$owner" = "$PINBALL_UID" ] || continue
-    [ -r "$proc/comm" ] || continue
-    [ -r "$proc/cmdline" ] || continue
-
-    comm="$(cat "$proc/comm" 2>/dev/null || true)"
-    cmdline="$(tr '\0' ' ' < "$proc/cmdline" 2>/dev/null || true)"
-
-    case "$comm" in
-      chrome|google-chrome|chromium|chromium-browser)
-        ;;
-      *)
-        continue
-        ;;
-    esac
+  for pid in $(pgrep -U "$PINBALL_UID" -x 'chrome|google-chrome|chromium|chromium-browser' 2>/dev/null || true); do
+    [ -r "/proc/$pid/cmdline" ] || continue
+    cmdline="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)"
 
     case "$cmdline" in
-      *"--user-data-dir=/tmp/vpinfe_chromium_"*|\
-      *"--user-data-dir=/var/tmp/pincabos-vpinfe/vpinfe_chromium_"*)
+      *"--user-data-dir=${TMP_DIR}/vpinfe_chromium_"*|\
+      *"--user-data-dir=${TMP_ROOT}/vpinfe_chromium_"*)
         printf '%s\n' "$pid"
         ;;
     esac
@@ -77,41 +83,18 @@ fi
 
 echo "Removing stale VPinFE temporary profiles"
 
-find /tmp \
-  -mindepth 1 \
-  -maxdepth 1 \
-  -type d \
-  -name 'vpinfe_chromium_*' \
-  -print \
-  -exec rm -rf -- {} + \
-  2>/dev/null || true
-
-find "$TMP_ROOT" \
-  -mindepth 1 \
-  -maxdepth 1 \
-  -type d \
-  -name 'vpinfe_chromium_*' \
-  -print \
-  -exec rm -rf -- {} + \
-  2>/dev/null || true
+shopt -s nullglob
+for stale in "$TMP_DIR"/vpinfe_chromium_* "$TMP_ROOT"/vpinfe_chromium_*; do
+  [ -d "$stale" ] && [ ! -L "$stale" ] || continue
+  echo "$stale"
+  gc_async "$stale"
+done
+shopt -u nullglob
 
 CHROME_RUNNING=0
-
-for proc in /proc/[0-9]*; do
-  [ -r "$proc/comm" ] || continue
-
-  [ "$(stat -c %u "$proc" 2>/dev/null || true)" = "$PINBALL_UID" ] \
-    || continue
-
-  comm="$(cat "$proc/comm" 2>/dev/null || true)"
-
-  case "$comm" in
-    chrome|google-chrome|chromium|chromium-browser)
-      CHROME_RUNNING=1
-      break
-      ;;
-  esac
-done
+if pgrep -U "$PINBALL_UID" -x 'chrome|google-chrome|chromium|chromium-browser' >/dev/null 2>&1; then
+  CHROME_RUNNING=1
+fi
 
 if [ "$CHROME_RUNNING" -eq 0 ] && \
    [ -d /home/pinball/.config/google-chrome ]; then
@@ -131,8 +114,8 @@ if [ "$CHROME_RUNNING" -eq 0 ] && \
 fi
 
 install -d \
-  -o pinball \
-  -g pinball \
+  -o "$PINBALL_USER" \
+  -g "$PINBALL_USER" \
   -m 0700 \
   "$TMP_ROOT"
 
