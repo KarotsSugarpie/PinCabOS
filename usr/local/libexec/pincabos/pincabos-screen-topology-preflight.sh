@@ -9,7 +9,10 @@ log() {
   echo "pincabos-screen-topology-preflight: $*" >&2
 }
 
-for SECOND in $(seq 1 90); do
+# PINCABOS_DEMARRAGE_V1 : X est pret en general au premier ou deuxieme tick ;
+# une attente par pas d'une seconde coutait jusqu'a 1 s pour rien.
+for TICK in $(seq 1 360); do
+  SECOND=$(( (TICK + 3) / 4 ))
   XRANDR="$(
     /usr/sbin/runuser -u pinball -- \
       /usr/bin/env \
@@ -19,7 +22,7 @@ for SECOND in $(seq 1 90); do
   )"
 
   if grep -Eq '^[^[:space:]]+ connected( primary)? [0-9]+x[0-9]+' <<<"$XRANDR"; then
-    log "X11 prêt après ${SECOND}s : préparation des rôles."
+    log "X11 prêt après ${SECOND}s (tick ${TICK}) : préparation des rôles."
 
     /usr/bin/flock -w 15 "$LOCK" "$ENGINE" --prepare
 
@@ -31,7 +34,7 @@ for SECOND in $(seq 1 90); do
     log "X11 présent, mais aucun Playfield résolu."
   fi
 
-  sleep 1
+  sleep 0.25
 done
 
 log "X11/topologie indisponible après 90 secondes."
