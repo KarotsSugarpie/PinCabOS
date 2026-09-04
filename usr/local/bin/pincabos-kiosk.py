@@ -4,6 +4,8 @@
 Leger (~80 Mo avec ses deps) la ou Chromium/snap est impraticable dans un
 live server. Lance par pincabos-kiosk-session, via xinit.
 """
+from pathlib import Path
+
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -60,6 +62,31 @@ def on_activate(app):
     view.load_uri(URL)
     win.set_child(view)
     win.fullscreen()
+
+    # PINCABOS_KIOSK_SUIT_LE_PLAYFIELD_V1
+    # L'étape Écrans peut changer de playfield et déplacer les sorties : le
+    # wizard écrit la sortie retenue dans /run/pincabos/kiosk-target et le
+    # kiosque s'y replace en plein écran. Sans ce suivi, l'assistant resterait
+    # sur l'ancienne dalle, parfois devenue le fronton.
+    cible = {"connector": ""}
+
+    def suivre_le_playfield():
+        try:
+            nom = Path("/run/pincabos/kiosk-target").read_text(encoding="utf-8").strip()
+        except OSError:
+            return GLib.SOURCE_CONTINUE
+        if nom and nom != cible["connector"]:
+            mons = Gdk.Display.get_default().get_monitors()
+            for i in range(mons.get_n_items()):
+                mon = mons.get_item(i)
+                if mon.get_connector() == nom:
+                    win.unfullscreen()
+                    win.fullscreen_on_monitor(mon)
+                    cible["connector"] = nom
+                    break
+        return GLib.SOURCE_CONTINUE
+
+    GLib.timeout_add(700, suivre_le_playfield)
 
 
 app = Gtk.Application(application_id="org.pincabos.installer.kiosk")
