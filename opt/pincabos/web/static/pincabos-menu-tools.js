@@ -1,10 +1,15 @@
 (function () {
   "use strict";
 
+  // PINCABOS_MENU_PIN_PERSISTENT_V6
+  // Keep the existing key so a user's current preference survives upgrades.
   var KEY = "pincabos_menu_force_pinned_v5";
   var originalCard = null;
   var originalCardElement = null;
   var iniOriginals = new WeakMap();
+  var observer = null;
+  var syncTimer = null;
+  var resizeTimer = null;
 
   function q(sel) {
     return document.querySelector(sel);
@@ -41,40 +46,65 @@
     catch (e) {}
   }
 
+  function cachedMenuCard() {
+    if (
+      originalCardElement &&
+      originalCardElement.isConnected &&
+      originalCardElement.querySelector &&
+      originalCardElement.querySelector(".pco-menu-tools")
+    ) {
+      return originalCardElement;
+    }
+    return null;
+  }
+
   function findFullMenuCard() {
+    var cached = cachedMenuCard();
+    if (cached) return cached;
+
+    var tools = q(".pco-menu-tools");
     var about = q('a[href="/about"]');
-    if (!about) return null;
+    var anchor = tools || about;
+    if (!anchor) return null;
 
     var candidates = [];
-    var cur = about;
+    var cur = anchor;
     while (cur && cur !== document.documentElement) {
       candidates.push(cur);
       cur = cur.parentElement;
     }
 
-    var best = about.parentElement || about;
+    var best = anchor.parentElement || anchor;
     var bestScore = -999999;
     var allowHidden = getPinned();
 
     candidates.forEach(function (el) {
       var isVisible = visible(el);
       if (!isVisible && !allowHidden) return;
-      var r = el.getBoundingClientRect ? el.getBoundingClientRect() : { top: 0, width: 0 };
+
+      var r = el.getBoundingClientRect
+        ? el.getBoundingClientRect()
+        : { top: 0, width: 0, height: 0 };
       var t = txt(el).toLowerCase();
-      var links = el.querySelectorAll ? el.querySelectorAll("a,button,select,input").length : 0;
+      var controls = el.querySelectorAll
+        ? el.querySelectorAll("a,button,select,input").length
+        : 0;
       var hasAbout = el.querySelector && el.querySelector('a[href="/about"]') ? 1 : 0;
       var hasTools = el.querySelector && el.querySelector(".pco-menu-tools") ? 1 : 0;
+      var hasQuickAccess = /acc[eè]s rapides|quick access|ouvrir vpinfe|open vpinfe/i.test(t) ? 1 : 0;
       var hasLang = /lang|fr|en|english|français|francais/.test(t) ? 1 : 0;
 
       var score = 0;
-      score += hasAbout * 1000;
-      score += hasTools * 900;
-      score += hasLang * 350;
-      score += Math.min(links, 30) * 25;
-      score += Math.min(r.width || 0, window.innerWidth || r.width || 0) / 20;
+      score += hasTools * 1600;
+      score += hasAbout * 900;
+      score += hasQuickAccess * 600;
+      score += hasLang * 250;
+      score += Math.min(controls, 40) * 20;
+      score += Math.min(r.width || 0, window.innerWidth || r.width || 0) / 18;
       score += isVisible ? 100 : 0;
+      score -= Math.max(0, (r.height || 0) - 240) * 8;
       score -= Math.abs(r.top || 0) * 2;
-      if (el === document.body) score -= 5000;
+      if (el === document.body) score -= 10000;
 
       if (score > bestScore) {
         best = el;
@@ -94,6 +124,7 @@
   function rememberCard(card) {
     if (!card) return;
     if (originalCard && originalCardElement === card) return;
+
     originalCardElement = card;
     originalCard = {
       position: card.style.position || "",
@@ -109,10 +140,31 @@
     };
   }
 
+  function restoreCard(card) {
+    card.classList.remove("pco-menu-force-fixed");
+
+    if (originalCard && originalCardElement === card) {
+      card.style.position = originalCard.position;
+      card.style.top = originalCard.top;
+      card.style.left = originalCard.left;
+      card.style.right = originalCard.right;
+      card.style.width = originalCard.width;
+      card.style.maxWidth = originalCard.maxWidth;
+      card.style.zIndex = originalCard.zIndex;
+      card.style.boxShadow = originalCard.boxShadow;
+      card.style.borderBottom = originalCard.borderBottom;
+      document.body.style.paddingTop = originalCard.bodyPaddingTop;
+    } else {
+      document.body.style.paddingTop = "";
+    }
+  }
+
   function getMenuHeight(card) {
     if (!card) return 0;
     var h = card.offsetHeight || 0;
-    if (!h && card.getBoundingClientRect) h = Math.ceil(card.getBoundingClientRect().height || 0);
+    if (!h && card.getBoundingClientRect) {
+      h = Math.ceil(card.getBoundingClientRect().height || 0);
+    }
     return h || 90;
   }
 
@@ -206,7 +258,7 @@
   }
 
   function clearIniOffset() {
-    findIniBlocks().forEach(function (el) {
+    qa(".pco-ini-offset-forced").forEach(function (el) {
       var o = iniOriginals.get(el);
       el.classList.remove("pco-ini-offset-forced");
 
@@ -217,9 +269,11 @@
         el.style.boxShadow = o.boxShadow;
         el.style.background = o.background;
       } else {
+        el.style.position = "";
         el.style.top = "";
         el.style.zIndex = "";
         el.style.boxShadow = "";
+        el.style.background = "";
       }
     });
   }
@@ -260,40 +314,17 @@
     rememberCard(card);
 
     if (pinned) {
-      var h = getMenuHeight(card);
+      // The CSS class owns the fixed geometry with !important declarations.
+      // Add it first, then measure the final wrapped height for body offset.
       card.classList.add("pco-menu-force-fixed");
-      card.style.position = "fixed";
-      card.style.top = "0";
-      card.style.left = "0";
-      card.style.right = "0";
-      card.style.width = "100vw";
-      card.style.maxWidth = "none";
-      card.style.zIndex = "2147482999";
-      card.style.boxShadow = "0 12px 32px rgba(0,0,0,.70)";
-      card.style.borderBottom = "3px solid #ff8a00";
+      var h = getMenuHeight(card);
       document.body.style.paddingTop = h + "px";
       setOffset(h);
       forceIniOffset(h);
       return true;
     }
 
-    card.classList.remove("pco-menu-force-fixed");
-
-    if (originalCard && originalCardElement === card) {
-      card.style.position = originalCard.position;
-      card.style.top = originalCard.top;
-      card.style.left = originalCard.left;
-      card.style.right = originalCard.right;
-      card.style.width = originalCard.width;
-      card.style.maxWidth = originalCard.maxWidth;
-      card.style.zIndex = originalCard.zIndex;
-      card.style.boxShadow = originalCard.boxShadow;
-      card.style.borderBottom = originalCard.borderBottom;
-      document.body.style.paddingTop = originalCard.bodyPaddingTop;
-    } else {
-      document.body.style.paddingTop = "";
-    }
-
+    restoreCard(card);
     setOffset(0);
     clearIniOffset();
     return false;
@@ -415,15 +446,50 @@
     enforcePinnedState();
   }
 
-  function boot() {
-    syncMenuTools();
+  function scheduleSync(delay) {
+    window.clearTimeout(syncTimer);
+    syncTimer = window.setTimeout(syncMenuTools, delay || 0);
+  }
 
-    window.addEventListener("scroll", enforcePinnedState, { passive: true });
-    window.addEventListener("resize", function () { setTimeout(syncMenuTools, 80); });
-    window.addEventListener("storage", function (event) {
-      if (event && event.key === KEY) syncMenuTools();
+  function observeMenuChanges() {
+    if (observer || !window.MutationObserver || !document.body) return;
+
+    observer = new MutationObserver(function (mutations) {
+      var relevant = mutations.some(function (mutation) {
+        return mutation.type === "childList" && (
+          mutation.addedNodes.length > 0 ||
+          mutation.removedNodes.length > 0
+        );
+      });
+
+      if (relevant) scheduleSync(40);
     });
-    setInterval(syncMenuTools, 1000);
+
+    // Only observe DOM structure. We deliberately ignore attributes/styles so
+    // applying the pinned class does not create an observer feedback loop.
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  function boot() {
+    // Read localStorage and apply the pinned state immediately on every page.
+    syncMenuTools();
+    observeMenuChanges();
+
+    window.addEventListener("resize", function () {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(syncMenuTools, 80);
+    });
+
+    window.addEventListener("pageshow", function () {
+      scheduleSync(0);
+    });
+
+    window.addEventListener("storage", function (event) {
+      if (event && event.key === KEY) scheduleSync(0);
+    });
   }
 
   if (document.readyState === "loading") {
