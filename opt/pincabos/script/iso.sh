@@ -5097,6 +5097,21 @@ refresh_target_initrd_for_orientation() {
     pco_go "Target initrd regenerated with oriented splash"
 }
 
+apply_target_identity() {
+    echo
+    pco_step "Applying PinCabOS identity to installed system (os-release, issue, GRUB_DISTRIBUTOR)"
+    # PINCABOS_IDENTITE_V1 : le systeme s'appelle PinCabOS partout ou un humain
+    # le lit ; ID=ubuntu et les depots ne bougent pas. update-grub et l'entree
+    # UEFI sont poses par les etapes GRUB de l'installateur (bootloader-id=PinCabOS).
+    if [ -f "$TARGET/opt/pincabos/tools/pincabos_identity.py" ]; then
+        python3 "$TARGET/opt/pincabos/tools/pincabos_identity.py" apply --root "$TARGET" --no-grub \
+            || pco_warn "identity apply failed (non fatal)"
+    else
+        pco_warn "pincabos_identity.py missing in target, identity skipped"
+    fi
+    pco_go "PinCabOS identity applied"
+}
+
 apply_target_orientation() {
     echo
     pco_step "Applying screen orientation to installed PinCabOS"
@@ -5742,6 +5757,7 @@ install_payload() {
 
   apply_target_regional
   apply_target_orientation
+  apply_target_identity
   refresh_target_initrd_for_orientation
 
   test -f "$TARGET/etc/pincabos/orientation.conf"

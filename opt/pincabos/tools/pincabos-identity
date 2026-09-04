@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# pincabos-identity : le systeme s'appelle PinCabOS partout ou un humain le lit — PINCABOS_IDENTITE_V1
+# usage : pincabos-identity status | apply [--efi] [--no-grub] [--root DIR]
+exec /usr/bin/python3 /opt/pincabos/tools/pincabos_identity.py "$@"

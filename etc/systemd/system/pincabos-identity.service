@@ -1,0 +1,16 @@
+[Unit]
+Description=PinCabOS - identité du système (os-release, bannière, GRUB, entrée UEFI)
+Documentation=https://pincabos.cc/
+# PINCABOS_IDENTITE_V1 : rejoué à chaque démarrage, idempotent et rapide ;
+# une mise à jour de base-files ou de GRUB ne peut pas remettre « Ubuntu ».
+ConditionPathExists=/opt/pincabos/config/version.json
+ConditionKernelCommandLine=!pincabos.installer
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/pincabos/tools/pincabos-identity apply --efi
+TimeoutStartSec=2min
+
+[Install]
+WantedBy=multi-user.target
