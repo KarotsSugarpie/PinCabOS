@@ -1,5 +1,6 @@
 // PINCABOS_EXPLORER_DUAL_LAUNCH_V1_JS
 // PINCABOS_EXPLORER_NATIVE_TABLES_V1_JS
+// PINCABOS_EXPLORER_GLOBAL_SEARCH_V1_JS
 (() => {
   "use strict";
 
@@ -25,11 +26,24 @@
 
   let statusTimer = null;
   let requestBusy = false;
+  let globalCatalog = null;
+  let globalCatalogPromise = null;
+  let globalSearchTimer = null;
 
   const COUNT_BADGE_ID = "pco-explorer-installed-table-count";
+  const GLOBAL_SEARCH_PANEL_ID = "pco-explorer-global-search-results";
 
   function normalizedText(node) {
     return String(node?.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function searchText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, " ")
       .trim()
       .toLowerCase();
@@ -381,6 +395,222 @@
     }
   }
 
+  function ensureGlobalSearchPanel() {
+    let panel = document.getElementById(GLOBAL_SEARCH_PANEL_ID);
+    if (panel) return panel;
+
+    const main = document.querySelector(".pcx-main");
+    const head = main?.querySelector(".pcx-head");
+    if (!main || !head) return null;
+
+    panel = document.createElement("section");
+    panel.id = GLOBAL_SEARCH_PANEL_ID;
+    panel.hidden = true;
+    panel.setAttribute("aria-live", "polite");
+    panel.style.margin = "14px 0";
+    panel.style.padding = "12px";
+    panel.style.border = "1px solid rgba(255,176,0,.35)";
+    panel.style.borderRadius = "12px";
+    panel.style.background = "rgba(12,8,20,.88)";
+    head.insertAdjacentElement("afterend", panel);
+    return panel;
+  }
+
+  function setExplorerNativeVisibility(visible) {
+    const targets = [
+      document.getElementById("pcxList"),
+      document.getElementById("pcxGrid"),
+      ...document.querySelectorAll(".pcx-pagination")
+    ].filter(Boolean);
+
+    targets.forEach(node => {
+      if (visible) {
+        node.removeAttribute("data-pco-global-search-hidden");
+        node.hidden = false;
+      } else {
+        node.setAttribute("data-pco-global-search-hidden", "1");
+        node.hidden = true;
+      }
+    });
+  }
+
+  async function loadGlobalCatalog() {
+    if (Array.isArray(globalCatalog)) return globalCatalog;
+    if (globalCatalogPromise) return globalCatalogPromise;
+
+    globalCatalogPromise = json(
+      "/api/explorer/table-test/list?path="
+    ).then(payload => {
+      globalCatalog = Array.isArray(payload.tables)
+        ? payload.tables
+        : [];
+      return globalCatalog;
+    }).finally(() => {
+      globalCatalogPromise = null;
+    });
+
+    return globalCatalogPromise;
+  }
+
+  function tableSearchHaystack(table) {
+    return searchText([
+      table?.name,
+      table?.rel,
+      table?.main_vpx_name,
+      table?.vps_id,
+      table?.content_summary,
+      table?.test_log_status,
+      ...(Array.isArray(table?.problems) ? table.problems : []),
+      ...(Array.isArray(table?.warnings) ? table.warnings : [])
+    ].filter(Boolean).join(" "));
+  }
+
+  function statusLabel(table) {
+    const status = String(table?.test_log_status || "VERIFY").toUpperCase();
+    if (status === "GO") return "✓ GO";
+    if (status === "NOGO") return "✗ NOGO";
+    if (status === "RUNNING") return "● EN TEST";
+    return "! À VÉRIFIER";
+  }
+
+  function renderGlobalResults(query, tables) {
+    const panel = ensureGlobalSearchPanel();
+    if (!panel) return;
+
+    const needle = searchText(query);
+    const matches = tables.filter(table => (
+      tableSearchHaystack(table).includes(needle)
+    ));
+
+    panel.replaceChildren();
+    panel.hidden = false;
+    setExplorerNativeVisibility(false);
+
+    const summary = document.createElement("div");
+    summary.style.marginBottom = "10px";
+    summary.style.fontWeight = "800";
+    summary.textContent = (
+      `${matches.length} résultat${matches.length === 1 ? "" : "s"} `
+      + `sur ${tables.length} tables installées`
+    );
+    panel.appendChild(summary);
+
+    if (!matches.length) {
+      const empty = document.createElement("div");
+      empty.textContent = `Aucune table ne correspond à « ${query} ».`;
+      panel.appendChild(empty);
+      return;
+    }
+
+    const tableNode = document.createElement("table");
+    tableNode.className = "pcx-table";
+
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    ["Nom", "État", "Contenu", "Action"].forEach(label => {
+      const th = document.createElement("th");
+      th.textContent = label;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    tableNode.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    matches.forEach(table => {
+      const tr = document.createElement("tr");
+      tr.className = "pcx-row pco-global-search-row";
+
+      const nameTd = document.createElement("td");
+      const nameLink = document.createElement("a");
+      nameLink.className = "pcx-name";
+      nameLink.href = (
+        "/tools/commander?root=Tables&path="
+        + encodeURIComponent(String(table?.rel || table?.name || ""))
+      );
+      nameLink.textContent = `📁 ${String(table?.name || table?.rel || "Table")}`;
+      nameTd.appendChild(nameLink);
+
+      const statusTd = document.createElement("td");
+      statusTd.textContent = statusLabel(table);
+
+      const contentTd = document.createElement("td");
+      contentTd.textContent = String(
+        table?.content_summary || "Analyse non disponible"
+      );
+
+      const actionTd = document.createElement("td");
+      const openLink = document.createElement("a");
+      openLink.className = "pcx-small";
+      openLink.href = nameLink.href;
+      openLink.textContent = "Ouvrir";
+      actionTd.appendChild(openLink);
+
+      [nameTd, statusTd, contentTd, actionTd].forEach(td => {
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    tableNode.appendChild(tbody);
+    panel.appendChild(tableNode);
+  }
+
+  function clearGlobalSearch() {
+    window.clearTimeout(globalSearchTimer);
+    const panel = document.getElementById(GLOBAL_SEARCH_PANEL_ID);
+    if (panel) {
+      panel.hidden = true;
+      panel.replaceChildren();
+    }
+    setExplorerNativeVisibility(true);
+  }
+
+  function bindGlobalSearch() {
+    if (!isTablesRoot) return;
+
+    const input = document.getElementById("pcxSearch");
+    if (!input || input.dataset.pcoGlobalSearchBound === "1") return;
+
+    input.dataset.pcoGlobalSearchBound = "1";
+    input.placeholder = "Rechercher dans toutes les tables...";
+    input.setAttribute(
+      "aria-label",
+      "Rechercher dans toutes les tables installées"
+    );
+
+    input.addEventListener("input", () => {
+      const query = String(input.value || "").trim();
+      window.clearTimeout(globalSearchTimer);
+
+      if (!query) {
+        clearGlobalSearch();
+        return;
+      }
+
+      globalSearchTimer = window.setTimeout(async () => {
+        try {
+          const tables = await loadGlobalCatalog();
+          if (String(input.value || "").trim() !== query) return;
+          renderGlobalResults(query, tables);
+        } catch (error) {
+          toast(
+            `Recherche globale impossible : ${error.message}`,
+            true
+          );
+        }
+      }, 120);
+    });
+
+    input.addEventListener("keydown", event => {
+      if (event.key !== "Escape") return;
+      input.value = "";
+      clearGlobalSearch();
+      if (typeof window.pcxFilter === "function") {
+        window.pcxFilter();
+      }
+    });
+  }
+
   document.addEventListener("click", event => {
     const control = event.target.closest(
       "[data-pco-action]"
@@ -410,8 +640,12 @@
     }
   });
 
-// PINCABOS_COMMANDER_ZERO_BACKGROUND_V1_JS
-  // Aucun fetch, timer, pageshow ou visibilitychange au chargement.
-  // Play et Stop restent déclenchés uniquement par un clic.
+  // PINCABOS_COMMANDER_ZERO_BACKGROUND_V1_JS
+  // Aucun scan ni polling au chargement. La recherche globale ne charge
+  // le catalogue complet qu'après une saisie explicite de l'utilisateur.
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bindGlobalSearch);
+  } else {
+    bindGlobalSearch();
+  }
 })();
-
