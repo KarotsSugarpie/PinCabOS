@@ -247,6 +247,11 @@ list_file = Path(sys.argv[2])
 sources = []
 
 roots = [
+    # PINCABOS_VPX_PREF_PATH_V1 : preferences VPX (-PrefPath) depuis Alpha 3.0x ;
+    # ~/.local/share/VPinballX/10.8 n'est plus qu'un lien vers ce dossier, et
+    # rglob ne suit pas les liens : sans cette racine le fichier reel partait
+    # dans la photo avec les noms de cartes audio du master (garde audio).
+    Path("/home/pinball/.pincabos/vpx"),
     Path("/home/pinball/.local/share/VPinballX"),
     Path("/home/pinball/.vpinball"),
 ]
@@ -505,6 +510,7 @@ tar \
   --exclude='./opt/pincabos/backups/*audio*/*' \
   --exclude='./home/pinball/.local/share/VPinballX/*/VPinballX.ini' \
   --exclude='./home/pinball/.vpinball/VPinballX.ini' \
+  --exclude='./home/pinball/.pincabos/vpx/VPinballX.ini' \
   --exclude='./opt/pincabos/config/screens/screens.json' \
   --exclude='./opt/pincabos/config/screens/bindings.json' \
   --exclude='./opt/pincabos/config/screens/display-bindings.json' \
@@ -801,7 +807,7 @@ else
   die "VPX executable missing from payload"
 fi
 
-if grep -Eq '^\./home/pinball/\.vpinball/VPinballX\.ini$|^\./home/pinball/\.local/share/VPinballX/.*/VPinballX\.ini$' "$ARCHIVE_LIST_PYWEB"; then
+if grep -Eq '^\./home/pinball/\.vpinball/VPinballX\.ini$|^\./home/pinball/\.local/share/VPinballX/.*/VPinballX\.ini$|^\./home/pinball/\.pincabos/vpx/VPinballX\.ini$' "$ARCHIVE_LIST_PYWEB"; then
   echo "OK: VPX INI present in payload"
 else
   echo "WARNING: VPX INI not found at expected path"
@@ -1238,6 +1244,7 @@ import sys
 target = Path(sys.argv[1])
 
 roots = [
+    target / "home/pinball/.pincabos/vpx",  # PINCABOS_VPX_PREF_PATH_V1
     target / "home/pinball/.local/share/VPinballX",
     target / "home/pinball/.vpinball",
 ]
@@ -2247,6 +2254,7 @@ def sanitize_ini(
 vpx_updated = 0
 
 vpx_roots = [
+    target / "home/pinball/.pincabos/vpx",  # PINCABOS_VPX_PREF_PATH_V1
     target / "home/pinball/.local/share/VPinballX",
     target / "home/pinball/.vpinball",
 ]
@@ -5892,6 +5900,7 @@ PCO_KEEP_PATHS=(
   "home/pinball/.config/vpinfe/vpinfe.ini"
   "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
   "home/pinball/.vpinball/VPinballX.ini"
+  "home/pinball/.pincabos/vpx/VPinballX.ini"
   # audio (volume and mute intent replayed at session start)
   "home/pinball/.config/pincabos/audio-volume-widget.json"
   # PINCABOS_KEEP_AUDIO_SURROUND_V1
