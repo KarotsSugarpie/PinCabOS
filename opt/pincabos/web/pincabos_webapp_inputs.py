@@ -382,7 +382,7 @@ def inputs_vpinfe_restart():
         body = "<div class='card'><h1>VPinFE non redémarré</h1><p class='warn'>Une table VPX est en cours.</p><p><a class='button' href='/inputs/map-commander'>Retour Map Commander</a></p></div>"
         return page("Inputs", body)
     try:
-        subprocess.run(["/usr/bin/sudo", "-n", "/bin/systemctl", "restart", "pincabos-vpinfe.service"], timeout=30, check=False)
+        subprocess.run(["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "restart", "pincabos-vpinfe.service"], timeout=30, check=False)
         body = "<div class='card'><h1>VPinFE redémarré</h1><p class='good'>La navigation utilise les nouveaux boutons.</p><p><a class='button' href='/inputs/map-commander'>Retour Map Commander</a></p></div>"
     except Exception as exc:
         body = "<div class='card'><h1>Erreur</h1><p class='bad'><code>" + inputs_esc(exc) + "</code></p><p><a class='button' href='/inputs/map-commander'>Retour</a></p></div>"
