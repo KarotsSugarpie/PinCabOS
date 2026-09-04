@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# pincabos-vps : identification des tables (base VPS) et diagnostic — PINCABOS_VPS_V1
+# usage : pincabos-vps status | refresh [--force] | identify [--apply] [--force] [--json] [dossier...] | diag <dossier>
+exec /usr/bin/python3 /opt/pincabos/tools/pincabos_vps.py "$@"
