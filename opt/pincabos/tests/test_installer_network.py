@@ -81,7 +81,8 @@ class Assistant(unittest.TestCase):
         html = self.client.get("/").get_data(as_text=True)
         self.assertIn('id="st-network"', html)
         self.assertIn("loadNetwork(false);go('st-network')", html)
-        self.assertIn("go('st-network')", html.split('id="st-disk"')[1][:600], "retour du disque vers le reseau")
+        disque = html.split('id="st-disk"')[1].split('<section', 1)[0]
+        self.assertIn("go('st-network')", disque, "retour du disque vers le reseau")
 
 
 class PriseEnMainHorsLigne(unittest.TestCase):
