@@ -205,6 +205,18 @@ class Theme(unittest.TestCase):
         self.assertNotIn("creep = tick / 600", t)
         self.assertNotIn("target = progress_target", t)
 
+    def test_barre_repliquee_sur_les_autres_dalles(self):
+        # PINCABOS_SPLASH_BARRE_PARTOUT_V1 : masque noir opaque, decouvert au meme rythme partout
+        t = ss.theme(ECRANS_YANN, 0, self.IMAGES)
+        self.assertIn("fun poser_voiles_autres(frac)", t)
+        self.assertIn("poser_voiles_autres(progress_shown);", t)
+        self.assertIn(f"bw2 = fw[i] * {ss.BARRE['paysage']['w']};", t)
+        self.assertIn(f"fh[i] * {ss.BARRE['paysage']['y']} - bar_height / 2", t)
+        self.assertIn("SetOpacity(1.0)", t)
+        self.assertNotIn("0.88", t)
+        self.assertIn("n_total = n;", t)
+        self.assertEqual(t.count("{"), t.count("}"))
+
     def test_media(self):
         # PINCABOS_SPLASH_MEDIA_V1 : sans screens.json, playfield = la plus grande dalle
         ecrans, rot = ss.parametres_media()

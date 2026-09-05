@@ -91,6 +91,7 @@ PAYSAGE = SOURCES / "paysage.png"
 EXTENSIONS = (".png", ".jpg", ".jpeg")
 PREFIXE_PLAYFIELD = "pincabos-playfield-"     # ecrits dans THEME_DIR, deja tournes
 PREFIXE_AUTRES = "pincabos-autres-"           # ecrits dans THEME_DIR, droits
+OPACITE_VOILE = 1.0                           # masque noir opaque sur la barre (Yann)
 PREFIXE_ARRET_PLAYFIELD = "pincabos-arret-playfield-"
 PREFIXE_ARRET_AUTRES = "pincabos-arret-autres-"
 IMAGE_PLAYFIELD = PREFIXE_PLAYFIELD + "0.png"
@@ -404,6 +405,9 @@ def theme(ecrans: dict[str, tuple[int, int]], rot_x11: int, images: dict) -> str
     rot = int(images["rot"])
     pre_tourne = 1 if images.get("pre_tourne", 1) else 0
     barre = BARRE[images["genre_playfield"]]
+    # PINCABOS_SPLASH_BARRE_PARTOUT_V1 : la barre des autres visuels (paysage) est masquee
+    # et decouverte au meme rythme ; masque noir opaque (Yann).
+    barre_autres = BARRE.get(images.get("genre_autres", "paysage"), BARRE["paysage"])
     n_pf = max(1, int(images.get("n_playfield", 1)))
     n_autres = max(1, int(images.get("n_autres", 1)))
     choix_pf = "\n".join(f'if (k_pf == {k}) img_pf = Image("{PREFIXE_PLAYFIELD}{k}.png");' for k in range(n_pf))
@@ -479,6 +483,8 @@ fh = [];
 pf = -1;
 pf_place = 0;
 n_places = 0;
+n_total = 0;
+bar_height = 8;
 
 fun placer() {{
     n = 0;
@@ -509,6 +515,7 @@ fun placer() {{
         # Aucune correspondance : la premiere surface est celle de la sortie primaire.
         if (pf < 0 && n > 0) pf = 0;
     }}
+    n_total = n;
     cx = 0;
     i = 0;
     while (i < n) {{
@@ -580,7 +587,6 @@ fun geometrie_barre() {{
     }}
     sw = pf_sw; sh = pf_sh;
     bar_width = bw * {barre["w"]};
-    bar_height = 8;
     bar_lx = (lw - bw) / 2 + (bw - bar_width) / 2;
     bar_ly = (lh - bh) / 2 + bh * {barre["y"]};
 }}
@@ -591,12 +597,36 @@ fun geometrie_barre() {{
 voile_image = Image("{IMAGE_VOILE}");
 voile = Sprite();
 voile.SetZ(20);
-voile.SetOpacity(0.88);
+voile.SetOpacity({OPACITE_VOILE});
+
+# PINCABOS_SPLASH_BARRE_PARTOUT_V1 : sur chaque autre dalle, le visuel est droit ;
+# sa barre est a {barre_autres["y"]} de la hauteur de l image, large de {barre_autres["w"]} de sa largeur.
+voiles = [];
+fun poser_voiles_autres(frac) {{
+    if (arret == 1) return;
+    i = 0;
+    while (i < n_total) {{
+        if (i != pf && fw[i] > 0) {{
+            bw2 = fw[i] * {barre_autres["w"]};
+            reste = bw2 - bw2 * frac;
+            if (!voiles[i]) {{ voiles[i] = Sprite(); voiles[i].SetZ(20); }}
+            if (reste < 1) {{
+                voiles[i].SetOpacity(0);
+            }} else {{
+                voiles[i].SetOpacity({OPACITE_VOILE});
+                voiles[i].SetImage(voile_image.Scale(reste, bar_height));
+                voiles[i].SetX(fonds[i].GetX() + (fw[i] - bw2) / 2 + bw2 * frac);
+                voiles[i].SetY(fonds[i].GetY() + fh[i] * {barre_autres["y"]} - bar_height / 2);
+            }}
+        }}
+        i++;
+    }}
+}}
 
 fun poser_voile(cw) {{
     reste = bar_width - cw;
     if (reste < 1) {{ voile.SetOpacity(0); return; }}
-    voile.SetOpacity(0.88);
+    voile.SetOpacity({OPACITE_VOILE});
     a = bar_lx + cw;            # debut logique du voile
     b = bar_lx + bar_width;     # fin logique
     y0 = bar_ly - bar_height / 2;
@@ -633,6 +663,7 @@ fun refresh_callback() {{
     progress_shown = tick / ticks_barre;
     if (progress_shown > 1) progress_shown = 1;
     poser_voile(bar_width * progress_shown);
+    poser_voiles_autres(progress_shown);
 }}
 
 fun boot_progress_callback(duration, progress) {{
