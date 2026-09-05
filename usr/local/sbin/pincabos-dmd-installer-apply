@@ -1,0 +1,17 @@
+#!/bin/bash
+# PINCABOS_INSTALLEUR_DMD_V1 — premier demarrage apres une installation ou
+# l'assistant a choisi le DMD materiel : rejoue `pincabos-zedmd apply` (l'unique
+# ecrivain des sections DMD des INI de VPX et VPinFE) au cas ou les INI
+# n'existaient pas encore dans le chroot d'installation. Idempotent.
+set -u
+DRAPEAU=/opt/pincabos/flags/dmd-installer.pending
+OUTIL=/opt/pincabos/tools/pincabos-zedmd
+[ -f "$DRAPEAU" ] || exit 0
+[ -x "$OUTIL" ] || { echo "pincabos-zedmd absent, drapeau conserve"; exit 0; }
+if runuser -u pinball -- "$OUTIL" apply; then
+    rm -f "$DRAPEAU"
+    echo "DMD de l'installateur applique aux INI"
+else
+    echo "application du DMD refusee (voir la page DMD du cab), drapeau conserve"
+fi
+exit 0

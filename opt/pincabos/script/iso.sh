@@ -5138,6 +5138,30 @@ apply_target_network() {
     pco_go "network profiles installed ($n netplan file(s)), first boot keeps the installer's choice"
 }
 
+apply_target_dmd() {
+    # PINCABOS_INSTALLEUR_DMD_V1 : sans full DMD, l'assistant a produit le
+    # zedmd.json (ZeDMD USB/Wi-Fi, PIN2DMD ou aucun). Pose sur la cible, puis
+    # pincabos-zedmd (l'unique ecrivain des sections DMD des INI) l'applique
+    # dans le chroot ; le premier demarrage le rejoue si les INI manquaient
+    # encore (pincabos-dmd-installer.service, drapeau dmd-installer.pending).
+    local src="${PCO_ANS_DMD_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying DMD hardware chosen in the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "DMD file missing or empty: $src (DMD page on the cab will do it)"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/zedmd.json"
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    date -Is > "$TARGET/opt/pincabos/flags/dmd-installer.pending"
+    if [ -x "$TARGET/opt/pincabos/tools/pincabos-zedmd" ]; then
+        chroot "$TARGET" runuser -u pinball -- /opt/pincabos/tools/pincabos-zedmd apply 2>&1 | sed 's/^/    /' || true
+    fi
+    pco_go "zedmd.json installed (mode: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("mode","off"))' "$src" 2>/dev/null || echo '?'))"
+}
+
 apply_target_screens() {
     # PINCABOS_INSTALLEUR_ECRANS_V1 : l'etape Ecrans de l'assistant a produit
     # screens.json (roles, geometrie, rotation) et les liaisons role -> EDID.
@@ -5823,6 +5847,7 @@ install_payload() {
   apply_target_identity
   apply_target_screens
   apply_target_network
+  apply_target_dmd
   refresh_target_initrd_for_orientation
 
   test -f "$TARGET/etc/pincabos/orientation.conf"
