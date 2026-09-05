@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Numérote chaque dalle du cab pendant l'installation (PINCABOS_INSTALLEUR_ECRANS_V1).
 
-Une fenêtre GTK 4 plein écran par moniteur : un grand numéro, le nom de la
-sortie, le rôle proposé, la taille. Fermeture automatique. GTK est déjà là
-pour le kiosque WebKit ; feh/convert/xdotool de l'outil du cab installé ne
-le sont pas dans une session d'installation.
+PINCABOS_INSTALLEUR_IDENTIFY_OVERLAY_V1 (Yann) : un badge dans le coin de chaque
+dalle, par-dessus ce qui s'y affiche, sans prendre le focus ni couvrir
+l'assistant ; plus de fenêtre plein écran. Le placement par dalle est confié à
+openbox (règles « pincabos-identify-N » du kiosk-rc.xml : coin haut gauche du
+moniteur N, calque au-dessus, jamais le focus) : GTK 4 ne positionne pas ses
+fenêtres lui-même sous X11.
 
   python3 identify.py --seconds 6 --labels '{"HDMI-0": {"number": 1, "role": "Playfield"}}'
 """
@@ -18,12 +20,15 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
+TITRE = "pincabos-identify-{n}"     # repris tel quel par kiosk-rc.xml (position par moniteur)
+
 CSS = b"""
 window { background-color: #160a1e; }
-.num { font-size: 260px; font-weight: 900; color: #ff9d3d; }
-.name { font-size: 42px; font-weight: 700; color: #f0e6f4; }
-.role { font-size: 34px; color: #ffb000; }
-.geo { font-size: 24px; color: #8b7697; }
+.badge { padding: 14px 26px 16px 22px; border: 3px solid #ff9d3d; border-radius: 14px; background-color: #160a1e; }
+.num { font-size: 120px; font-weight: 900; color: #ff9d3d; }
+.name { font-size: 26px; font-weight: 700; color: #f0e6f4; }
+.role { font-size: 24px; color: #ffb000; }
+.geo { font-size: 17px; color: #8b7697; }
 """
 
 
@@ -56,16 +61,23 @@ def main():
             role = info.get("role", "")
             win = Gtk.ApplicationWindow(application=app)
             win.set_decorated(False)
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER)
-            for texte, classe in ((str(numero), "num"), (connector, "name"), (role, "role"), (f"{geo.width} × {geo.height}", "geo")):
+            win.set_resizable(False)
+            win.set_title(TITRE.format(n=i + 1))
+            ligne = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18, valign=Gtk.Align.CENTER)
+            ligne.add_css_class("badge")
+            num = Gtk.Label(label=str(numero))
+            num.add_css_class("num")
+            ligne.append(num)
+            colonne = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, valign=Gtk.Align.CENTER)
+            for texte, classe in ((connector, "name"), (role, "role"), (f"{geo.width} × {geo.height}", "geo")):
                 if not texte:
                     continue
-                lab = Gtk.Label(label=texte)
+                lab = Gtk.Label(label=texte, xalign=0)
                 lab.add_css_class(classe)
-                box.append(lab)
-            win.set_child(box)
+                colonne.append(lab)
+            ligne.append(colonne)
+            win.set_child(ligne)
             win.present()
-            win.fullscreen_on_monitor(mon)
         GLib.timeout_add(secondes * 1000, lambda: (app.quit(), GLib.SOURCE_REMOVE)[1])
 
     app.connect("activate", on_activate)

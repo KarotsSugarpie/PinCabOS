@@ -359,6 +359,21 @@ class Assistant(unittest.TestCase):
         self.assertIn('geometrie(mon) != cible["geometrie"]', k)
         self.assertIn("view.grab_focus()", k)
 
+    def test_identification_en_overlay(self):
+        # PINCABOS_INSTALLEUR_IDENTIFY_OVERLAY_V1 (Yann) : badge dans un coin, par-dessus, sans focus
+        src = Path(RACINE, "opt/pincabos/installer-gui/identify.py").read_text(encoding="utf-8")
+        self.assertNotIn("fullscreen_on_monitor", src)
+        self.assertIn('TITRE = "pincabos-identify-{n}"', src)
+        self.assertIn("win.set_title(TITRE.format(n=i + 1))", src)
+        rc = Path(RACINE, "opt/pincabos/installer-gui/kiosk-rc.xml").read_text(encoding="utf-8")
+        for n in (1, 2, 8):
+            self.assertIn(f'<application title="pincabos-identify-{n}">', rc)
+            self.assertIn(f"<monitor>{n}</monitor>", rc)
+        self.assertIn("<layer>above</layer>", rc)
+        self.assertEqual(rc.count("<focus>no</focus>"), 8)
+        import xml.dom.minidom
+        xml.dom.minidom.parseString(rc)
+
     def test_ergonomie_de_l_etape(self):
         # PINCABOS_INSTALLEUR_ECRANS_UX_V1 (Yann : « pas très clair ») : trois gestes numerotes,
         # un bouton d application primaire dans sa carte, un etat qui dit quoi faire, numeros automatiques
@@ -450,8 +465,9 @@ class Integration(unittest.TestCase):
         s = (Path(RACINE) / "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8")
         self.assertIn("kiosk-target", s)
         self.assertIn("fullscreen_on_monitor", s)
+        # PINCABOS_INSTALLEUR_IDENTIFY_OVERLAY_V1 : l identification est un badge de coin, plus une fenetre plein ecran
         s = (Path(RACINE) / "opt/pincabos/installer-gui/identify.py").read_text(encoding="utf-8")
-        self.assertIn("fullscreen_on_monitor", s)
+        self.assertIn("pincabos-identify-", s)
 
 
 if __name__ == "__main__":

@@ -30,5 +30,72 @@
       <focus>yes</focus>
       <layer>normal</layer>
     </application>
+    <!-- PINCABOS_INSTALLEUR_IDENTIFY_OVERLAY_V1 : badge d identification dans le coin
+         haut gauche de CHAQUE dalle (moniteur N pour le titre pincabos-identify-N),
+         au-dessus de tout, sans jamais prendre le focus a l assistant. -->
+    <application title="pincabos-identify-1">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>1</monitor></position>
+    </application>
+    <application title="pincabos-identify-2">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>2</monitor></position>
+    </application>
+    <application title="pincabos-identify-3">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>3</monitor></position>
+    </application>
+    <application title="pincabos-identify-4">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>4</monitor></position>
+    </application>
+    <application title="pincabos-identify-5">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>5</monitor></position>
+    </application>
+    <application title="pincabos-identify-6">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>6</monitor></position>
+    </application>
+    <application title="pincabos-identify-7">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>7</monitor></position>
+    </application>
+    <application title="pincabos-identify-8">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>8</monitor></position>
+    </application>
   </applications>
 </openbox_config>
