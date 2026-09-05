@@ -153,3 +153,12 @@ class ReseauDuMedia(unittest.TestCase):
         self.assertLess(s.index("pincabos-source"), s.index("01-pincabos-live-dhcp.yaml\" <<'NETPLAN'"))
         self.assertIn("renderer: NetworkManager", s)
 
+
+class ArgumentsNoyauDuBanc(unittest.TestCase):
+    """PINCABOS_LIVE_CMDLINE_EXTRA_V1 : arguments noyau d essai, vides en production."""
+
+    def test_extra_optionnel_sur_l_entree_unique(self):
+        s = ISO_LIVE.read_text(encoding="utf-8")
+        self.assertIn('EXTRA="${PCO_LIVE_CMDLINE_EXTRA:-}"', s)
+        self.assertIn("$QUIET $BLACKLIST $EXTRA ---", s)
+

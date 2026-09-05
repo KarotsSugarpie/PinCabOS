@@ -232,6 +232,10 @@ echo "  fonds GRUB : ${#GRUB_FONDS[@]} dans la galerie"
 # vt.global_cursor_default=0 hides the blinking cursor between splash and X.
 COMMON="logo.nologo vt.global_cursor_default=0"
 QUIET="quiet splash loglevel=3"
+# PINCABOS_LIVE_CMDLINE_EXTRA_V1 : arguments noyau supplementaires pour un banc
+# d essai (ex. video=Virtual-2:1280x800e pour forcer une 2e tete QEMU) ; vide en
+# production, jamais ecrit sur le systeme installe.
+EXTRA="${PCO_LIVE_CMDLINE_EXTRA:-}"
 BLACKLIST="modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off"
 
 # PINCABOS_ISO_UN_SEUL_CHEMIN_V1
@@ -244,7 +248,7 @@ set default=0
 set timeout=3
 set timeout_style=menu
 menuentry "Install PinCabOS" {
-    linux /casper/vmlinuz boot=casper $COMMON pincabos.installer=gui systemd.unit=pincabos-gui-install.target $QUIET $BLACKLIST ---
+    linux /casper/vmlinuz boot=casper $COMMON pincabos.installer=gui systemd.unit=pincabos-gui-install.target $QUIET $BLACKLIST $EXTRA ---
     initrd /casper/initrd
 }
 GRUBCFG
