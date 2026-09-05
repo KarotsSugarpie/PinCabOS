@@ -1,2 +1,0 @@
-#!/bin/sh
-/usr/bin/feh --no-fehbg --bg-fill '/opt/pincabos/media/wallpapers/playfield.png' '/opt/pincabos/media/wallpapers/backglass.png' '/opt/pincabos/media/wallpapers/fulldmd.png' 
