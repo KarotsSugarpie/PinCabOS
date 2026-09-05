@@ -1,0 +1,21 @@
+[Unit]
+Description=PinCabOS installer failure notice on tty1
+Documentation=https://pincabos.cc/
+# PINCABOS_INSTALLEUR_PANNE_FRANCHE_V1 : declenche par OnFailure= du kiosque.
+Conflicts=pincabos-gui-kiosk.service getty@tty1.service
+After=pincabos-gui-kiosk.service
+
+[Service]
+Type=simple
+Environment=TERM=linux
+ExecStartPre=-/usr/bin/plymouth quit
+ExecStartPre=-/usr/bin/chvt 1
+ExecStart=/usr/local/sbin/pincabos-installer-failure
+StandardInput=tty-force
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Restart=no

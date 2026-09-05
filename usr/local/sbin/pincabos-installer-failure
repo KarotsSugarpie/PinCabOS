@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# PINCABOS_INSTALLEUR_PANNE_FRANCHE_V1
+# L'assistant graphique ne s'est pas affiche. Il n'y a volontairement pas
+# d'installeur texte de secours : un seul chemin, tenu rock solid. Ici on dit
+# clairement ce qui s'est passe, ou sont les journaux, et on propose de
+# redemarrer (ou un terminal de diagnostic pour le support).
+set -u
+export TERM=linux
+RAPPORT=/run/pincabos/installer-failure.log
+mkdir -p /run/pincabos
+{
+    echo "=== PinCabOS installer failure $(date -Is 2>/dev/null) ==="
+    systemctl --no-pager --full status pincabos-gui-wizard.service pincabos-gui-kiosk.service 2>&1 | head -n 60
+    echo "--- journal ---"
+    journalctl -b --no-pager -u pincabos-gui-wizard -u pincabos-gui-kiosk -n 120 2>&1
+    if [ -f /run/pincabos/install.log ]; then
+        echo "--- install.log ---"
+        tail -n 60 /run/pincabos/install.log
+    fi
+} > "$RAPPORT" 2>&1 || true
+
+printf '\033c'
+cat <<TXT
+
+  ================================================================
+   PinCabOS - the installer could not be displayed
+   PinCabOS - l'assistant d'installation n'a pas pu s'afficher
+  ================================================================
+
+  The graphical installer did not start on this machine.
+  L'assistant graphique n'a pas demarre sur cette machine.
+
+  Report / rapport : $RAPPORT
+  Journal          : journalctl -b -u pincabos-gui-kiosk -u pincabos-gui-wizard
+
+  Last errors / dernieres erreurs :
+TXT
+journalctl -b --no-pager -u pincabos-gui-kiosk -u pincabos-gui-wizard -p err -n 8 2>/dev/null | sed 's/^/    /'
+cat <<'TXT'
+
+  Press Enter to reboot.
+  Appuyez sur Entree pour redemarrer.
+
+  Type "d" then Enter to open a diagnostic shell (support).
+  Tapez "d" puis Entree pour un terminal de diagnostic (support).
+
+TXT
+while true; do
+    printf '  > '
+    if ! read -r REPONSE; then
+        sleep 5
+        continue
+    fi
+    case "$REPONSE" in
+        d|D) exec /bin/bash -l ;;
+        *) systemctl reboot; exit 0 ;;
+    esac
+done

@@ -55,8 +55,8 @@ def on_activate(app):
             present_once()
 
     view.connect("load-changed", on_load_changed)
-    # Filet : une page qui ne repond pas ne doit pas laisser le kiosk invisible,
-    # le repli TUI le prendrait pour un crash.
+    # Filet : une page qui ne repond pas ne doit pas laisser le kiosk invisible
+    # (un kiosk qui ne tient pas finit en panne franche, pincabos-installer-failure).
     GLib.timeout_add(PRESENT_TIMEOUT_MS, present_once)
 
     view.load_uri(URL)

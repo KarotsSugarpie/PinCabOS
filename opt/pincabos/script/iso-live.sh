@@ -174,24 +174,17 @@ COMMON="logo.nologo vt.global_cursor_default=0"
 QUIET="quiet splash loglevel=3"
 BLACKLIST="modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off"
 
+# PINCABOS_ISO_UN_SEUL_CHEMIN_V1
+# Une seule entree : l'assistant graphique. Pas de mode live, pas d'installeur
+# texte, pas de secours dessus. Si l'assistant ne s'affiche pas, la panne est
+# annoncee en clair sur tty1 (pincabos-installer-failure), jamais masquee.
 cat > "$TREE/boot/grub/grub.cfg" <<GRUBCFG
 source /boot/grub/pincabos-branding.cfg
 set default=0
-set timeout=15
+set timeout=3
+set timeout_style=menu
 menuentry "Install PinCabOS" {
     linux /casper/vmlinuz boot=casper $COMMON pincabos.installer=gui systemd.unit=pincabos-gui-install.target $QUIET $BLACKLIST ---
-    initrd /casper/initrd
-}
-menuentry "Try PinCabOS without installing (Live)" {
-    linux /casper/vmlinuz boot=casper $COMMON $QUIET $BLACKLIST ---
-    initrd /casper/initrd
-}
-menuentry "Install PinCabOS - text installer" {
-    linux /casper/vmlinuz boot=casper $COMMON pincabos.installer=tui systemd.unit=multi-user.target $QUIET $BLACKLIST ---
-    initrd /casper/initrd
-}
-menuentry "PinCabOS Live - safe mode (nomodeset)" {
-    linux /casper/vmlinuz boot=casper $COMMON nomodeset modprobe.blacklist=nouveau,nova_core,nova_drm ---
     initrd /casper/initrd
 }
 GRUBCFG
