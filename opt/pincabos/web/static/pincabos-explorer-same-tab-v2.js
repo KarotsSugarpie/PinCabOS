@@ -62,10 +62,27 @@
     );
   }
 
+  function isQuickAccessLink(anchor) {
+    return Boolean(
+      anchor && anchor.closest(".nav-vpinfe-vps-group")
+    );
+  }
+
   function configureAnchor(anchor) {
     if (!(anchor instanceof HTMLAnchorElement)) return;
 
     const url = parseUrl(anchor.getAttribute("href"));
+
+    /*
+     * Les cinq boutons de la rangée ACCÈS RAPIDES doivent toujours
+     * s'ouvrir dans un nouvel onglet, y compris depuis PinCab Explorer.
+     */
+    if (isQuickAccessLink(anchor)) {
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.dataset.pincabosQuickAccessNewTab = "1";
+      return;
+    }
 
     if (isVpsLink(anchor, url)) {
       anchor.target = "_blank";
@@ -80,6 +97,7 @@
      */
     anchor.target = "_self";
     delete anchor.dataset.pincabosVpsNewTab;
+    delete anchor.dataset.pincabosQuickAccessNewTab;
   }
 
   function configureLinks(root) {
