@@ -250,21 +250,49 @@ def appliquer_premier_demarrage(cfg: dict, run=executer, vpx_ini: Path = VPX_INI
         journal.append("pactl : aucun sink (session PipeWire absente ?), VPX garde ses sorties par défaut")
     pf = sink_pour(cfg.get("playfield_device", ""), sinks)
     bg = sink_pour(cfg.get("backbox_device", ""), sinks) or pf
-    if vpx_ini.is_file():
-        texte = vpx_ini.read_text(encoding="utf-8", errors="replace")
+    # PINCABOS_AUDIO_PREMIER_DEMARRAGE_V2 : VPX n'a pas encore écrit son ini au
+    # premier démarrage d'un cab neuf (vu en VM : « absent, rien écrit ») ; on le
+    # crée avec la seule section [Player], VPX complète le reste à son premier
+    # lancement. Sans sink connu on n'écrit rien : rien à traduire.
+    if pf or bg:
+        texte = vpx_ini.read_text(encoding="utf-8", errors="replace") if vpx_ini.is_file() else ""
         nouveau = ecrire_vpx(texte, bg["description"] if bg else "", pf["description"] if pf else "", str(inst.get("sound3d", "0")))
         if nouveau != texte:
-            vpx_ini.write_text(nouveau, encoding="utf-8")
-        journal.append(f"VPX : SoundDevice={pf['description'] if pf else '(défaut)'} ; SoundDeviceBG={bg['description'] if bg else '(défaut)'} ; Sound3D={inst.get('sound3d', '0')}")
+            try:
+                vpx_ini.parent.mkdir(parents=True, exist_ok=True)
+                vpx_ini.write_text(nouveau, encoding="utf-8")
+                if not texte:
+                    _proprietaire_pinball(vpx_ini)
+            except OSError as exc:
+                journal.append(f"VPX : {vpx_ini} non écrit ({exc})")
+        journal.append(f"VPX : SoundDevice={pf['description'] if pf else '(défaut)'} ; SoundDeviceBG={bg['description'] if bg else '(défaut)'} ; "
+                       f"Sound3D={inst.get('sound3d', '0')}{'' if texte else ' (ini créé)'}")
     else:
-        journal.append(f"VPX : {vpx_ini} absent, rien écrit")
+        journal.append("VPX : aucun sink correspondant, rien écrit")
     if pf:
-        rc, out = run(commande_pinball(["/usr/bin/wpctl", "set-default", pf["name"]]), timeout=10)
+        # pactl accepte le NOM du sink ; wpctl set-default veut un identifiant numérique
+        # (vu en VM : « is not a valid number »).
+        rc, out = run(commande_pinball(["/usr/bin/pactl", "set-default-sink", pf["name"]]), timeout=10)
         journal.append(f"sortie par défaut : {pf['name']} ({'ok' if rc == 0 else out.strip()[-80:]})")
         vol = int(inst.get("volume", 70))
-        rc, out = run(commande_pinball(["/usr/bin/wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", f"{vol}%"]), timeout=10)
+        rc, out = run(commande_pinball(["/usr/bin/pactl", "set-sink-volume", pf["name"], f"{vol}%"]), timeout=10)
         journal.append(f"volume : {vol} % ({'ok' if rc == 0 else out.strip()[-80:]})")
     return journal
+
+
+def _proprietaire_pinball(chemin: Path):
+    """Un fichier créé par root dans le dossier de pinball lui appartient (et son dossier)."""
+    import pwd
+    import shutil
+    try:
+        u = pwd.getpwnam("pinball")
+    except KeyError:
+        return
+    for p in (chemin, chemin.parent):
+        try:
+            shutil.chown(p, u.pw_uid, u.pw_gid)
+        except OSError:
+            pass
 
 
 def charger(chemin: Path = CONFIG) -> dict:

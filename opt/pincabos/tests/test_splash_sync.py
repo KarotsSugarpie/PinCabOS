@@ -190,6 +190,21 @@ class Theme(unittest.TestCase):
         self.assertEqual(t.count("{"), t.count("}"))
         self.assertNotIn("{{", t)
 
+    def test_barre_sur_la_tempo_du_splash(self):
+        # PINCABOS_SPLASH_BARRE_TEMPO_V1 : barre pleine a la fin de la tempo, pas en 3 s (Yann : « ne defile pas »)
+        with tempfile.TemporaryDirectory() as d:
+            j = Path(d, "splash.json")
+            self.assertEqual(ss.duree_barre(j), 13)                      # absent : tempo par defaut 15 - 2
+            j.write_text('{"hold_until_uptime": 20}', encoding="utf-8")
+            self.assertEqual(ss.duree_barre(j), 18)
+            j.write_text('{"hold_until_uptime": 3}', encoding="utf-8")
+            self.assertEqual(ss.duree_barre(j), 4)                       # plancher
+        t = ss.theme(ECRANS_YANN, 0, dict(self.IMAGES, duree_barre=13))
+        self.assertIn("ticks_barre = 650;", t)
+        self.assertIn("progress_shown = tick / ticks_barre;", t)
+        self.assertNotIn("creep = tick / 600", t)
+        self.assertNotIn("target = progress_target", t)
+
     def test_media(self):
         # PINCABOS_SPLASH_MEDIA_V1 : sans screens.json, playfield = la plus grande dalle
         ecrans, rot = ss.parametres_media()
