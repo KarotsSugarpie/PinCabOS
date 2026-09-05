@@ -606,7 +606,11 @@ def install():
     # disque : l'installateur charge ce fichier avec « . », en root.
     reponses = {}
     for cle, moule in ANSWER_RULES.items():
-        if cle not in a:
+        # PINCABOS_INSTALLEUR_REPONSE_NULLE_V1 : l'assistant envoie son état
+        # entier, dont des clés qu'aucune étape ne remplit plus (orient, calculé
+        # ici depuis l'étape Écrans) : null = « pas de réponse », pas une réponse
+        # hors moule. Vu en VM : toute installation refusée « bad-orient », en silence.
+        if cle not in a or a[cle] is None:
             continue
         valeur = str(a[cle])
         if not moule.match(valeur):

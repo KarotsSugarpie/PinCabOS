@@ -272,6 +272,32 @@ class Assistant(unittest.TestCase):
                                                    "screens": {"roles": {"playfield": "HDMI-9"}, "rotation": 0}})
         self.assertEqual(r.status_code, 400)
 
+    def test_installation_avec_l_etat_entier_de_l_assistant(self):
+        # PINCABOS_INSTALLEUR_REPONSE_NULLE_V1 : l'assistant envoie tout son état,
+        # orient:null compris (calculé ici depuis Écrans). Vu en VM : refus « bad-orient ».
+        d = self.client.get("/api/screens").get_json()
+        etat = {"lang": "fr", "locale": "fr_FR.UTF-8", "xkb": "fr", "xkb_variant": "", "tz": "Europe/Paris",
+                "orient": None, "mode": "1", "disk": "/dev/nvme0n1", "confirm": "INSTALL PINCABOS",
+                "screens": {"roles": d["roles"], "rotation": 0, "usage": d["usage"]},
+                "dmd": {"type": "none", "device": "", "wifi_addr": ""}, "network": {"applied": []}}
+        r = self.client.post("/api/install", json=etat)
+        self.assertEqual(r.status_code, 200, r.get_json())
+        env = (self.tmp / "gui-answers.env").read_text(encoding="utf-8")
+        self.assertIn("PCO_ANS_ORIENT=1", env)
+        self.assertNotIn("PCO_ANS_ORIENT=None", env)
+        # une vraie valeur hors moule reste refusee
+        r = self.client.post("/api/install", json=dict(etat, orient="9"))
+        self.assertEqual(r.get_json()["error"], "bad-orient")
+
+    def test_le_wizard_affiche_un_refus(self):
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        self.assertIn('id="confirm-status"', w)
+        self.assertIn("launchRefused(d,r.status)", w)
+        self.assertNotIn("if(!r.ok)throw 0", w)
+        i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
+        for l in ("fr", "en", "de", "it", "es"):
+            self.assertIn("install_refused", i18n[l])
+
     def test_usage_dans_l_api(self):
         d = self.client.get("/api/screens").get_json()
         self.assertIn("usage", d)

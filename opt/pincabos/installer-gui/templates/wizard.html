@@ -287,6 +287,7 @@ button{
   <div class="danger-box"><span data-i18n="confirm_warn"></span> <span id="confirm-dev"></span></div>
   <div class="row"><label data-i18n="confirm_hint" style="min-width:100%"></label>
     <input type="text" id="confirm-input" autocomplete="off" spellcheck="false"></div>
+  <div class="hint" id="confirm-status" style="color:var(--danger)"></div>
   <div class="btns"><button class="ghost" onclick="go('st-disk')" data-i18n="back"></button>
   <button class="primary" id="btn-install" disabled onclick="launch()" data-i18n="start"></button></div>
 </section>
@@ -684,10 +685,17 @@ setInterval(()=>{  // le temps ecoule prouve que ca vit, meme quand le moteur se
   document.getElementById("plabel").textContent=
     base+" — "+String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")},1000);
 
+// PINCABOS_INSTALLEUR_REPONSE_NULLE_V1 : un refus du serveur se lit ici même
+// (code + détail), le bouton redevient actif ; avant, il était avalé en silence.
+function launchRefused(d,status){const st=document.getElementById("confirm-status");
+  st.textContent=t("install_refused")+" "+(d&&d.error?d.error:"HTTP "+status)+(d&&d.detail?" — "+[].concat(d.detail).join(" ; "):"");
+  document.getElementById("btn-install").disabled=false}
 function launch(){
+  const st=document.getElementById("confirm-status");st.textContent="";document.getElementById("btn-install").disabled=true;
   fetch("/api/install",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({...S,confirm:document.getElementById("confirm-input").value})})
-  .then(r=>{if(!r.ok)throw 0;go("st-progress");startCreep();t0=Date.now();
+  .then(r=>{if(!r.ok){return r.json().catch(()=>({})).then(d=>launchRefused(d,r.status))}
+    go("st-progress");startCreep();t0=Date.now();
     const es=new EventSource("/api/progress");
     es.onmessage=ev=>{const d=JSON.parse(ev.data);
       floorPct=Math.max(floorPct,d.pct);
@@ -704,7 +712,8 @@ function launch(){
         ln.textContent=txt;pl.appendChild(ln);
         while(pl.childElementCount>400)pl.removeChild(pl.firstChild);
         pl.scrollTop=pl.scrollHeight}
-      if(d.pct>=100){clearInterval(creepTimer);drawPct(100);es.close();applyI18n();go("st-done")}}})}
+      if(d.pct>=100){clearInterval(creepTimer);drawPct(100);es.close();applyI18n();go("st-done")}}})
+  .catch(()=>launchRefused(null,"réseau"))}
 // navigation clavier : Entree/Espace activent les cartes focusees (Tab)
 document.addEventListener("keydown",e=>{
   if((e.key==="Enter"||e.key===" ")&&e.target.matches(".lang,.opt")){
