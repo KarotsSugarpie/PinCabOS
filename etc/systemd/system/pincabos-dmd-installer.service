@@ -1,0 +1,15 @@
+[Unit]
+Description=PinCabOS - apply the DMD hardware chosen in the installer
+Documentation=https://pincabos.cc/
+# PINCABOS_INSTALLEUR_DMD_V1 : ne tourne que si l'installateur a laisse un drapeau.
+ConditionPathExists=/opt/pincabos/flags/dmd-installer.pending
+ConditionKernelCommandLine=!pincabos.installer
+After=local-fs.target
+Before=pincabos-vpinfe.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-dmd-installer-apply
+
+[Install]
+WantedBy=multi-user.target

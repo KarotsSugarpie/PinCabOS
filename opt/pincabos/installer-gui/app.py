@@ -17,6 +17,7 @@ from pathlib import Path
 from flask import Flask, Response, jsonify, render_template, request
 
 import screens as pco_screens  # PINCABOS_INSTALLEUR_ECRANS_V1
+import dmd as pco_dmd  # PINCABOS_INSTALLEUR_DMD_V1
 
 # PINCABOS_INSTALLEUR_RESEAU_V1 : le moteur réseau du cab (nmcli) sert aussi à
 # l'assistant. Absent de la session (ISO au modèle classique) : l'étape se
@@ -178,6 +179,54 @@ def screens_apply():
 
 
 # ---------------------------------------------------------------- Réseau
+# PINCABOS_INSTALLEUR_DMD_V1 : en démo, un ZeDMD S3 (ESP32 natif) est branché
+DMD_DEMO = {
+    "serie": [{"device": "/dev/ttyACM0", "vendor_id": "303a", "product_id": "1001", "model": "USB_JTAG_serial_debug_unit",
+               "serial": "A0:B1:C2", "family": "esp32", "label": "ESP32 natif (Espressif) — ZeDMD probable", "candidate": True,
+               "by_id": "/dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_A0B1C2-if00"}],
+    "pin2dmd": [],
+}
+
+
+def dmd_detection():
+    if DEMO:
+        c = DMD_DEMO["serie"]
+        return {"serie": c, "candidats": c, "pin2dmd": [], "disponible": True,
+                "proposition": pco_dmd.proposer(c, [])}
+    return pco_dmd.detecter()
+
+
+@app.route("/api/dmd")
+def dmd_status():
+    try:
+        d = dmd_detection()
+    except Exception as exc:
+        d = {"serie": [], "candidats": [], "pin2dmd": [], "disponible": False, "error": str(exc),
+             "proposition": pco_dmd.proposer([], [])}
+    d["types"] = [t["id"] for t in pco_dmd.TYPES]
+    return jsonify(d)
+
+
+@app.route("/api/dmd/test", methods=["POST"])
+def dmd_test():
+    a = request.get_json(force=True, silent=True) or {}
+    if DEMO:
+        erreurs, _ = pco_dmd.valider(a)
+        return jsonify({"ok": not erreurs, "sortie": " ; ".join(erreurs) or "mire affichée (démo)"})
+    return jsonify(pco_dmd.tester(a))
+
+
+def dmd_vers_fichier(choix):
+    """Le choix validé devient le zedmd.json de la cible (fichier sous RUN_DIR)."""
+    erreurs, ok = pco_dmd.valider(choix)
+    if erreurs:
+        return {"error": "bad-dmd", "detail": erreurs}
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    f = RUN_DIR / "gui-zedmd.json"
+    f.write_text(json.dumps(pco_dmd.config_json(ok), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return {"dmd_file": str(f)}
+
+
 RESEAU_DEMO = {
     "interfaces": [
         {"device": "eno1", "type": "ethernet", "state": "100 (connected)", "method": "auto", "address": "172.18.40.80/24",
@@ -376,6 +425,8 @@ ANSWER_RULES = {
     # PINCABOS_INSTALLEUR_RESEAU_V1 : idem, produits par l'étape Réseau
     "network_file": re.compile(r"^/run/pincabos/gui-network\.json$"),
     "netplan_dir": re.compile(r"^/run/pincabos/gui-netplan$"),
+    # PINCABOS_INSTALLEUR_DMD_V1 : zedmd.json produit par l'étape Écrans
+    "dmd_file": re.compile(r"^/run/pincabos/gui-zedmd\.json$"),
 }
 
 
@@ -420,6 +471,14 @@ def install():
         # dérivé de la rotation ; shlex.quote les rend inertes comme le reste.
         for cle in ("screens_file", "bindings_file", "orient"):
             reponses[cle] = res[cle]
+        # PINCABOS_INSTALLEUR_DMD_V1 : sans full DMD, le DMD matériel choisi
+        # (ou « aucun ») part sur la cible ; avec un full DMD, rien n'est écrit.
+        usage = pco_screens.usage_depuis(a["screens"])
+        if usage is not None and not usage.get("fulldmd") and isinstance(a.get("dmd"), dict):
+            res = dmd_vers_fichier(a["dmd"])
+            if "error" in res:
+                return jsonify(res), 400
+            reponses["dmd_file"] = res["dmd_file"]
 
     # PINCABOS_INSTALLEUR_RESEAU_V1 : ce que la session a configuré part sur la cible
     if a.get("network") is not False:

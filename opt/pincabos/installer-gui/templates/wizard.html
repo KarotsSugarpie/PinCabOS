@@ -180,6 +180,20 @@ button{
       </div></div>
     <div class="hint" data-i18n="cab_usage_hint"></div>
   </div>
+  <div class="card" id="dmd-card" style="margin-bottom:14px;display:none">
+    <div class="row" style="margin-bottom:6px"><label data-i18n="dmd_title"></label>
+      <div class="seg" id="dmd-types">
+        <button type="button" class="segb" data-dmd="zedmd_usb" data-i18n="dmd_zedmd_usb"></button>
+        <button type="button" class="segb" data-dmd="zedmd_wifi" data-i18n="dmd_zedmd_wifi"></button>
+        <button type="button" class="segb" data-dmd="pin2dmd" data-i18n="dmd_pin2dmd"></button>
+        <button type="button" class="segb" data-dmd="none" data-i18n="dmd_none"></button>
+      </div></div>
+    <div class="hint" data-i18n="dmd_hint" style="margin-top:0"></div>
+    <div class="hint" id="dmd-detected"></div>
+    <div class="row" id="dmd-port-row" style="display:none;margin-top:10px"><label data-i18n="dmd_port"></label><select id="dmd-port"></select></div>
+    <div class="row" id="dmd-addr-row" style="display:none;margin-top:10px"><label data-i18n="dmd_addr"></label><input type="text" id="dmd-addr" placeholder="192.168.1.50" autocomplete="off" spellcheck="false"></div>
+    <div class="row" id="dmd-test-row" style="display:none;margin:10px 0 0"><button type="button" class="ghost" id="dmd-test" onclick="testDmd()" data-i18n="dmd_test"></button><span class="hint" id="dmd-status" style="margin:0"></span></div>
+  </div>
   <div class="grid screens" id="screen-list"></div>
   <div class="card" style="margin-top:14px">
     <div class="row" style="margin-bottom:8px"><label data-i18n="orient_q"></label>
@@ -321,11 +335,44 @@ function renderUsage(){document.querySelectorAll("#cab-usage .segb[data-use]").f
 function toggleUsage(role){
   S.screens.usage[role]=!S.screens.usage[role];
   if(!S.screens.usage[role]){S.screens.roles[role]=""}else{autoAssign(role)}
-  renderUsage();renderScreens();refreshScreensStatus()}
+  renderUsage();renderScreens();renderDmd();refreshScreensStatus()}
 function refreshScreensStatus(){
   const miss=missingRoles();
   if(miss.length){setScreensStatus("screens_missing",false,miss.map(r=>t("role_"+r)).join(", "))}
+  else if(!dmdValid()){setScreensStatus("dmd_addr_invalid",false)}
   else{setScreensStatus("screens_pending",false)}}
+// PINCABOS_INSTALLEUR_DMD_V1 — sans full DMD, le DMD est une matrice LED (ZeDMD,
+// PIN2DMD) ou rien : détecté par l'outil du cab, proposé, testable ici même.
+S.dmd={type:"none",device:"",wifi_addr:""};
+let dmdDet=null;
+function dmdShown(){return !S.screens.usage.fulldmd}
+function dmdValid(){return !dmdShown()||S.dmd.type!=="zedmd_wifi"||/^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$/.test(S.dmd.wifi_addr||"")}
+function loadDmd(){fetch("/api/dmd").then(r=>r.json()).then(d=>{dmdDet=d;
+    if(d.proposition&&!S.dmd.touched){S.dmd={...S.dmd,...d.proposition}}
+    renderDmd()}).catch(()=>{dmdDet={serie:[],candidats:[],pin2dmd:[]};renderDmd()})}
+function renderDmd(){
+  const card=document.getElementById("dmd-card");card.style.display=dmdShown()?"":"none";
+  if(!dmdShown())return;
+  document.querySelectorAll("#dmd-types .segb").forEach(b=>b.classList.toggle("sel",b.dataset.dmd===S.dmd.type));
+  const det=dmdDet||{serie:[],candidats:[],pin2dmd:[]};
+  const vus=[].concat((det.candidats||[]).map(p=>"ZeDMD "+(p.device||"")+(p.model?" ("+p.model+")":"")),
+                      (det.pin2dmd||[]).map(p=>(p.product||"PIN2DMD")+(p.serial?" #"+p.serial:"")));
+  document.getElementById("dmd-detected").textContent=vus.length?t("dmd_detected")+" "+vus.join(", "):t("dmd_none_detected");
+  const sel=document.getElementById("dmd-port");sel.innerHTML="";
+  [["",t("dmd_port_auto")]].concat((det.serie||[]).map(p=>[p.by_id||p.device,(p.device||"")+" · "+(p.label||"")]))
+    .forEach(([v,l])=>sel.add(new Option(l,v,false,v===(S.dmd.device||""))));
+  document.getElementById("dmd-port-row").style.display=S.dmd.type==="zedmd_usb"?"":"none";
+  document.getElementById("dmd-addr-row").style.display=S.dmd.type==="zedmd_wifi"?"":"none";
+  document.getElementById("dmd-addr").value=S.dmd.wifi_addr||"";
+  document.getElementById("dmd-test-row").style.display=(S.dmd.type==="zedmd_usb"||S.dmd.type==="zedmd_wifi")?"":"none"}
+document.querySelectorAll("#dmd-types .segb").forEach(b=>b.onclick=()=>{S.dmd.type=b.dataset.dmd;S.dmd.touched=true;renderDmd();refreshScreensStatus()});
+document.getElementById("dmd-port").onchange=e=>{S.dmd.device=e.target.value;S.dmd.touched=true};
+document.getElementById("dmd-addr").oninput=e=>{S.dmd.wifi_addr=e.target.value.trim();S.dmd.touched=true;refreshScreensStatus()};
+function testDmd(){const st=document.getElementById("dmd-status"),btn=document.getElementById("dmd-test");
+  btn.disabled=true;st.textContent=t("dmd_testing");
+  fetch("/api/dmd/test",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(S.dmd)})
+  .then(r=>r.json()).then(d=>{btn.disabled=false;st.textContent=d.ok?t("dmd_test_ok"):t("dmd_test_failed")+" "+(d.sortie||"")})
+  .catch(()=>{btn.disabled=false;st.textContent=t("dmd_test_failed")})}
 document.querySelectorAll("#cab-usage .segb[data-use]").forEach(b=>b.onclick=()=>toggleUsage(b.dataset.use));
 function loadScreens(){
   const box=document.getElementById("screen-list");box.innerHTML="<div class='hint'>…</div>";
@@ -334,7 +381,7 @@ function loadScreens(){
     if(d.error||!screensMon.length){box.innerHTML="<div class='hint'>"+t("screens_none")+"</div>";return}
     if(!Object.keys(S.screens.roles).length){S.screens.roles=d.roles||{};S.screens.rotation=d.rotation||0;S.screens.usage=d.usage||usageFromRoles()}
     document.querySelectorAll("#rot-seg .segb").forEach(b=>b.classList.toggle("sel",+b.dataset.rot===+S.screens.rotation));
-    renderUsage();renderScreens();refreshScreensStatus()})
+    renderUsage();renderScreens();loadDmd();refreshScreensStatus()})
   .catch(()=>{box.innerHTML="<div class='hint'>"+t("screens_none")+"</div>"})}
 function roleOf(name){return ROLE_KEYS.find(r=>S.screens.roles[r]===name)||""}
 function renderScreens(){
@@ -366,7 +413,7 @@ document.querySelectorAll("#rot-seg .segb").forEach(b=>b.onclick=()=>{
   S.screens.rotation=+b.dataset.rot;renderPreview();refreshScreensStatus()});
 function setScreensStatus(key,ok,extra){const st=document.getElementById("screens-status");
   st.textContent=t(key)+(extra?" "+extra:"");st.style.color=ok?"var(--good)":"var(--muted)";
-  document.getElementById("screens-next").disabled=!(ok&&screensApplied===screensKey()&&S.screens.roles.playfield&&!missingRoles().length)}
+  document.getElementById("screens-next").disabled=!(ok&&screensApplied===screensKey()&&S.screens.roles.playfield&&!missingRoles().length&&dmdValid())}
 function applyScreens(){
   if(!S.screens.roles.playfield){setScreensStatus("screens_need_pf",false);return}
   if(missingRoles().length){refreshScreensStatus();return}
@@ -467,6 +514,7 @@ function fillSummary(){
   const rows=[[t("locale"),S.locale],[t("keyboard"),S.xkb],[t("timezone"),S.tz],
     [t("screens"),ROLE_KEYS.filter(r=>S.screens.roles[r]).map(r=>t("role_"+r)+" = "+S.screens.roles[r]).join(", ")||"—"],
     [t("orient_q"),t({0:"o_up",180:"o_down",90:"o_90",270:"o_270"}[+S.screens.rotation]||"o_up")],
+    [t("dmd_title"),S.screens.usage.fulldmd?t("role_fulldmd"):t("dmd_"+S.dmd.type)+(S.dmd.type==="zedmd_usb"&&S.dmd.device?" · "+S.dmd.device:S.dmd.type==="zedmd_wifi"?" · "+S.dmd.wifi_addr:"")],
     [t("network"),(netState&&netState.interfaces||[]).filter(i=>i.address).map(i=>i.device+" "+i.address+" ("+(i.method==="manual"?t("net_static"):"DHCP")+")").join(", ")||t("net_noaddr")],
     [t("disk"),S.disk+" ("+(S.mode==1?t("mode_erase"):S.mode==3?t("mode_up"):t("mode_dual"))+")"]];
   document.getElementById("summary").innerHTML=rows.map(([k,v])=>
