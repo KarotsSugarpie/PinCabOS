@@ -1,4 +1,4 @@
-/* PinCabOS menu tools — pinned menu click-safe V8 */
+/* PinCabOS menu tools — simple fixed menu V9 */
 :root {
   --pco-menu-pinned-offset: 0px;
 }
@@ -10,7 +10,6 @@
   margin-left: 10px !important;
   vertical-align: middle !important;
   position: relative !important;
-  z-index: 2 !important;
 }
 
 .pco-menu-tool-btn {
@@ -36,8 +35,6 @@
   appearance: none !important;
   -webkit-appearance: none !important;
   position: relative !important;
-  z-index: 3 !important;
-  pointer-events: auto !important;
 }
 
 .pco-menu-pin-btn {
@@ -68,46 +65,32 @@
 }
 
 /*
- * The fixed NAV surface itself is intentionally click-through.
- * Only actual controls/links inside the menu receive pointer events.
- * This prevents an invisible 100vw fixed box from blocking the UI.
+ * V9: the existing .pincabos-nav stays exactly where Flask rendered it.
+ * No clone, no reparenting, no click-through surface and no pointer-event hack.
  */
-.pco-menu-force-fixed,
-.pco-menu-viewport-fixed-v8 {
+.pincabos-nav.pco-menu-pinned-v9 {
   position: fixed !important;
   top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: auto !important;
-  width: 100vw !important;
+  left: 18px !important;
+  right: 18px !important;
+  width: auto !important;
   max-width: none !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
   margin: 0 !important;
-  z-index: 100000 !important;
+  z-index: 2000 !important;
   box-sizing: border-box !important;
-  overflow: visible !important;
-  transform: none !important;
-  filter: none !important;
-  isolation: isolate !important;
-  pointer-events: none !important;
-  box-shadow: 0 12px 32px rgba(0,0,0,.70) !important;
-  border-bottom: 3px solid #ff8a00 !important;
-}
-
-.pco-menu-viewport-fixed-v8 a,
-.pco-menu-viewport-fixed-v8 button,
-.pco-menu-viewport-fixed-v8 input,
-.pco-menu-viewport-fixed-v8 select,
-.pco-menu-viewport-fixed-v8 textarea,
-.pco-menu-viewport-fixed-v8 summary,
-.pco-menu-viewport-fixed-v8 [role="button"],
-.pco-menu-viewport-fixed-v8 [tabindex] {
   pointer-events: auto !important;
 }
 
-/* Legacy V7 class must never keep the old giant stacking behavior. */
-.pco-menu-viewport-fixed-v7 {
-  z-index: 100000 !important;
+/* Explicitly neutralize every legacy V7/V8 fixed class if stale HTML/JS left one. */
+.pincabos-nav.pco-menu-force-fixed:not(.pco-menu-pinned-v9),
+.pincabos-nav.pco-menu-viewport-fixed-v7:not(.pco-menu-pinned-v9),
+.pincabos-nav.pco-menu-viewport-fixed-v8:not(.pco-menu-pinned-v9) {
+  position: static !important;
+  width: auto !important;
+  max-width: 1220px !important;
+  margin: 18px auto 0 auto !important;
+  z-index: auto !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  filter: none !important;
 }
