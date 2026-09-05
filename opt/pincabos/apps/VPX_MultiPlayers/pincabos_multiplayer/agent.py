@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import pwd
 import sys
 import time
 from pathlib import Path
@@ -127,7 +128,12 @@ def run(args: argparse.Namespace) -> dict | None:
             }
         if args.detach:
             return {"ok": True, "engine_pid": layout.launch_detached(args.table)}
-        environment = layout.isolated_environment()
+        runtime_uid = os.geteuid()
+        if os.geteuid() == 0:
+            account = pwd.getpwnam("pinball")
+            runtime_uid = account.pw_uid
+            layout.prepare_pinball_launch_paths(account.pw_uid, account.pw_gid)
+        environment = layout.isolated_environment(runtime_uid)
         drop_to_pinball()
         os.chdir(layout.engine)
         os.execve(command[0], command, environment)
