@@ -95,6 +95,20 @@ FORBIDDEN = {
     "opt/pincabos/config/version.json",
 }
 
+# Some distribution-managed configuration fragments are links back to their
+# read-only package/runtime source (for example OpenSSH's
+# ../../../usr/lib/systemd/ssh_config.d/20-systemd-ssh-proxy.conf).  They are
+# safe to preserve as links, but arbitrary destinations remain forbidden.
+TRUSTED_SYMLINK_DESTINATIONS = (
+    "usr/lib",
+    "usr/share",
+    "lib",
+    "run",
+)
+TRUSTED_SYMLINK_FILES = {
+    "dev/null",
+}
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -133,13 +147,25 @@ def selector_for(rel: str) -> str | None:
 
 
 def safe_symlink_target(rel: str, link_target: str) -> bool:
-    if not link_target or "\x00" in link_target or link_target.startswith("/"):
+    if not link_target or "\x00" in link_target:
         return False
     selector = selector_for(rel)
     if selector is None or rel == selector:
         return False
-    destination = posixpath.normpath(posixpath.join(posixpath.dirname(rel), link_target))
-    return destination == selector or destination.startswith(selector + "/")
+    if link_target.startswith("/"):
+        destination = posixpath.normpath(link_target).lstrip("/")
+    else:
+        destination = posixpath.normpath(posixpath.join(posixpath.dirname(rel), link_target))
+    if not destination or destination == ".." or destination.startswith("../"):
+        return False
+    if destination == selector or destination.startswith(selector + "/"):
+        return True
+    if destination in TRUSTED_SYMLINK_FILES:
+        return True
+    return any(
+        destination == prefix or destination.startswith(prefix + "/")
+        for prefix in TRUSTED_SYMLINK_DESTINATIONS
+    )
 
 
 def validate_job(job_id: str, stamp: str) -> tuple[Path, str]:

@@ -46,10 +46,6 @@ JOBS_KEY = "pco_backupcfg_jobs_v1"
 _operation_lock = threading.Lock()
 
 
-def _admin_ok() -> bool:
-    return bool(session.get("pincabos_admin_logged"))
-
-
 def _csrf() -> str:
     token = session.get(CSRF_KEY)
     if not isinstance(token, str) or len(token) < 32:
@@ -296,8 +292,6 @@ def _page_body() -> str:
 
 @route("/backupcfg", methods=["GET"])
 def backupcfg_page():
-    if not _admin_ok():
-        return redirect("/admin?next=/backupcfg", code=302)
     return page("Backup Config", _page_body())
 
 
@@ -308,8 +302,6 @@ def backupcfg_tools_alias():
 
 @route("/api/backupcfg/backup", methods=["POST"])
 def backupcfg_start():
-    if not _admin_ok():
-        return jsonify({"ok": False, "error": "Connexion administrateur requise."}), 403
     if not _csrf_ok():
         return jsonify({"ok": False, "error": "Session Backup Config invalide. Recharge la page."}), 403
     payload = request.get_json(silent=True) or {}
@@ -325,8 +317,6 @@ def backupcfg_start():
 
 @route("/api/backupcfg/restore-upload", methods=["POST"])
 def backupcfg_restore_upload():
-    if not _admin_ok():
-        return jsonify({"ok": False, "error": "Connexion administrateur requise."}), 403
     if not _csrf_ok():
         return jsonify({"ok": False, "error": "Session Backup Config invalide. Recharge la page."}), 403
     upload = request.files.get("archive")
@@ -356,8 +346,6 @@ def backupcfg_restore_upload():
 
 @route("/api/backupcfg/restore-local", methods=["POST"])
 def backupcfg_restore_local():
-    if not _admin_ok():
-        return jsonify({"ok": False, "error": "Connexion administrateur requise."}), 403
     if not _csrf_ok():
         return jsonify({"ok": False, "error": "Session Backup Config invalide. Recharge la page."}), 403
     if not LOCAL_ARCHIVE.is_file() or LOCAL_ARCHIVE.is_symlink():
@@ -370,8 +358,6 @@ def backupcfg_restore_local():
 
 @route("/api/backupcfg/status/<job_id>", methods=["GET"])
 def backupcfg_status(job_id: str):
-    if not _admin_ok():
-        return jsonify({"ok": False, "error": "Connexion administrateur requise."}), 403
     job = _known_job(job_id)
     if job is None:
         return jsonify({"ok": False, "error": "Tâche Backup Config inconnue."}), 404
@@ -399,8 +385,6 @@ def backupcfg_status(job_id: str):
 
 @route("/api/backupcfg/download/<job_id>", methods=["GET"])
 def backupcfg_download(job_id: str):
-    if not _admin_ok():
-        return jsonify({"ok": False, "error": "Connexion administrateur requise."}), 403
     job = _known_job(job_id)
     if job is None or job.get("action") != "create-download":
         return jsonify({"ok": False, "error": "Téléchargement Backup Config inconnu."}), 404
