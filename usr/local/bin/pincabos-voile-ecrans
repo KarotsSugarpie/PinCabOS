@@ -113,6 +113,13 @@ def main(argv) -> int:
     except OSError as exc:
         print(f"voile : libX11 absente ({exc}), rien a faire")
         return 0
+    # lightdm ecrit le cookie de la session (XAUTHORITY) un peu apres avoir lance X :
+    # sans lui, libX11 refuse la connexion en le disant bruyamment. On l attend.
+    xauth = os.environ.get("XAUTHORITY", "")
+    for _ in range(100):
+        if not xauth or (os.path.isfile(xauth) and os.path.getsize(xauth) > 0):
+            break
+        time.sleep(0.2)
     dpy = None
     for _ in range(100):                       # X peut arriver quelques secondes apres nous
         dpy = lib.XOpenDisplay(None)
