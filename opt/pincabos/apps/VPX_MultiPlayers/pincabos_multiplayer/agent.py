@@ -60,6 +60,27 @@ def state_payload(
     return value
 
 
+def acknowledge_control(server: ServerClient, value: dict, local_control: dict) -> dict | None:
+    control = value.get("control")
+    session = value.get("session")
+    if not isinstance(control, dict) or not isinstance(session, dict):
+        return None
+
+    session_id = str(session.get("session_id") or "")
+    desired = str(control.get("desired") or "released").strip().lower()
+    local_state = str(local_control.get("state") or "").strip().lower()
+    if not session_id or local_state != desired:
+        return None
+
+    return server.control_ack(
+        session_id,
+        control.get("generation"),
+        local_state,
+        ok=True,
+        detail=None,
+    )
+
+
 def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser(prog="pincabos-multiplayer-agent")
     commands = value.add_subparsers(dest="command", required=True)
@@ -156,7 +177,11 @@ def run(args: argparse.Namespace) -> dict | None:
         while True:
             try:
                 value = state_payload(server, layout, control)
-                value["local_control"] = control.reconcile(value)
+                local_control = control.reconcile(value)
+                value["local_control"] = local_control
+                acknowledgement = acknowledge_control(server, value, local_control)
+                if acknowledgement is not None:
+                    value["control_ack"] = acknowledgement
             except (MultiplayerClientError, RuntimeIsolationError) as exc:
                 # Une panne réseau ne libère jamais le cabinet à l'aveugle :
                 # on conserve le dernier lease et on attend le prochain état serveur.
