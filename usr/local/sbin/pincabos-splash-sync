@@ -156,7 +156,17 @@ def executer(args, timeout=120):
         return 99, str(exc)
 
 
-def commande_rotation(src: Path, dst: Path, degres: int) -> list | None:
+def outil_images(outil: str | None = None) -> str:
+    """ffmpeg de preference, sinon ImageMagick ; "" si aucun. Injectable (tests, CI sans ffmpeg)."""
+    if outil is not None:
+        return outil
+    for nom in ("ffmpeg", "convert"):
+        if shutil.which(nom):
+            return nom
+    return ""
+
+
+def commande_rotation(src: Path, dst: Path, degres: int, outil: str | None = None) -> list | None:
     """La commande qui tourne src de `degres` dans le sens horaire vers dst.
 
     ffmpeg : transpose=1 = 90 horaire, transpose=2 = 90 anti-horaire (= 270).
@@ -164,10 +174,11 @@ def commande_rotation(src: Path, dst: Path, degres: int) -> list | None:
     """
     if degres % 360 == 0:
         return None
-    if shutil.which("ffmpeg"):
+    outil = outil_images(outil)
+    if outil == "ffmpeg":
         vf = {90: "transpose=1", 180: "transpose=1,transpose=1", 270: "transpose=2"}[degres % 360]
         return ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(src), "-vf", vf, str(dst)]
-    if shutil.which("convert"):
+    if outil == "convert":
         return ["convert", str(src), "-rotate", str(degres % 360), str(dst)]
     return []
 
@@ -230,13 +241,14 @@ def sources_images(theme_dir: Path = THEME_DIR, portrait: Path = PORTRAIT, paysa
     return {"playfield": pf, "autres": autres}
 
 
-def commande_conversion(src: Path, dst: Path) -> list | None:
+def commande_conversion(src: Path, dst: Path, outil: str | None = None) -> list | None:
     """JPEG -> PNG (Plymouth ne lit que le PNG) ; None si deja du PNG."""
     if src.suffix.lower() == ".png":
         return None
-    if shutil.which("ffmpeg"):
+    outil = outil_images(outil)
+    if outil == "ffmpeg":
         return ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(src), str(dst)]
-    if shutil.which("convert"):
+    if outil == "convert":
         return ["convert", str(src), str(dst)]
     return []
 
@@ -261,7 +273,7 @@ def purger(theme_dir: Path, prefixe: str, garder: int):
 
 
 def preparer_images(rot_x11: int, theme_dir: Path = THEME_DIR, run=executer,
-                    portrait: Path = PORTRAIT, paysage: Path = PAYSAGE) -> dict:
+                    portrait: Path = PORTRAIT, paysage: Path = PAYSAGE, outil: str | None = None) -> dict:
     """Ecrit les galeries du theme ; renvoie ce que le script doit savoir.
 
     L illustration historique (paysage, un seul visuel pour tout) garde son
@@ -275,9 +287,9 @@ def preparer_images(rot_x11: int, theme_dir: Path = THEME_DIR, run=executer,
     n_pf = 0
     for k, src in enumerate(pf["sources"]):
         dst = theme_dir / f"{PREFIXE_PLAYFIELD}{k}.png"
-        cmd = commande_rotation(src, dst, degres)
+        cmd = commande_rotation(src, dst, degres, outil)
         if cmd is None:
-            cmd = commande_conversion(src, dst)
+            cmd = commande_conversion(src, dst, outil)
         if cmd is None:
             shutil.copyfile(src, dst)
         elif cmd:
@@ -300,7 +312,7 @@ def preparer_images(rot_x11: int, theme_dir: Path = THEME_DIR, run=executer,
     n_autres = 0
     for k, src in enumerate(autres["sources"]):
         dst = theme_dir / f"{PREFIXE_AUTRES}{k}.png"
-        cmd = commande_conversion(src, dst)
+        cmd = commande_conversion(src, dst, outil)
         if cmd is None:
             shutil.copyfile(src, dst)
         elif cmd:
@@ -320,10 +332,10 @@ def preparer_images(rot_x11: int, theme_dir: Path = THEME_DIR, run=executer,
         w, h = dimensions(src)
         if h > w:
             dst = theme_dir / f"{PREFIXE_ARRET_PLAYFIELD}{n_arret_pf}.png"
-            cmd = commande_rotation(src, dst, rotation_effective(rot_x11)) or commande_conversion(src, dst)
+            cmd = commande_rotation(src, dst, rotation_effective(rot_x11), outil) or commande_conversion(src, dst, outil)
         else:
             dst = theme_dir / f"{PREFIXE_ARRET_AUTRES}{n_arret_autres}.png"
-            cmd = commande_conversion(src, dst)
+            cmd = commande_conversion(src, dst, outil)
         if cmd is None:
             shutil.copyfile(src, dst)
         elif cmd:

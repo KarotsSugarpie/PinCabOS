@@ -52,7 +52,7 @@ class Images(unittest.TestCase):
         return 0, ""
 
     def test_portrait_pre_tourne_pour_le_playfield(self):
-        r = ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.portrait, paysage=self.paysage)
+        r = ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.portrait, paysage=self.paysage, outil="ffmpeg")
         self.assertEqual((r["genre_playfield"], r["genre_autres"], r["rot"], r["pre_tourne"]), ("portrait", "paysage", 270, 1))
         self.assertEqual(len(self.appels), 1)
         cmd = self.appels[0]
@@ -65,7 +65,7 @@ class Images(unittest.TestCase):
         self.assertEqual((self.theme / ss.IMAGE_AUTRES).read_bytes(), b"PAYSAGE")
 
     def test_dalle_a_l_envers(self):
-        r = ss.preparer_images(180, theme_dir=self.theme, run=self.run_ok, portrait=self.portrait, paysage=self.paysage)
+        r = ss.preparer_images(180, theme_dir=self.theme, run=self.run_ok, portrait=self.portrait, paysage=self.paysage, outil="ffmpeg")
         self.assertEqual(r["rot"], 90)
         self.assertTrue("transpose=1" in self.appels[0] or "90" in self.appels[0])
 
@@ -90,7 +90,7 @@ class Images(unittest.TestCase):
         # portrait0.png + portrait1.jpg + paysage.jpg : tout devient PNG numerote, tire au sort au boot
         (self.tmp / "portrait0.png").write_bytes(b"P0"); (self.tmp / "portrait1.jpg").write_bytes(b"P1")
         (self.tmp / "paysage.jpg").write_bytes(b"L0"); self.portrait.unlink(); self.paysage.unlink()
-        r = ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.tmp / "portrait.png", paysage=self.tmp / "paysage.png")
+        r = ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.tmp / "portrait.png", paysage=self.tmp / "paysage.png", outil="ffmpeg")
         self.assertEqual((r["n_playfield"], r["n_autres"], r["genre_playfield"], r["genre_autres"]), (2, 1, "portrait", "paysage"))
         self.assertEqual(sorted(p.name for p in self.theme.glob("pincabos-*-*.png")),
                          ["pincabos-autres-0.png", "pincabos-playfield-0.png", "pincabos-playfield-1.png"])
@@ -121,7 +121,7 @@ class Images(unittest.TestCase):
         (self.tmp / "arret0.png").write_bytes(png(941, 1672))
         (self.tmp / "arret1.png").write_bytes(png(1672, 941))
         self.assertEqual(ss.dimensions(self.tmp / "arret0.png"), (941, 1672))
-        r = ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.portrait, paysage=self.paysage)
+        r = ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.portrait, paysage=self.paysage, outil="ffmpeg")
         self.assertEqual((r["n_arret_playfield"], r["n_arret_autres"]), (1, 1))
         self.assertTrue((self.theme / "pincabos-arret-playfield-0.png").exists())
         self.assertTrue((self.theme / "pincabos-arret-autres-0.png").exists())
@@ -144,6 +144,9 @@ class Images(unittest.TestCase):
         self.assertEqual(ss.dimensions(self.tmp / "x.jpg"), (1672, 941))
 
     def test_commande_rotation(self):
+        self.assertEqual(ss.commande_rotation(Path("a"), Path("b"), 270, outil=""), [])   # sans outil : Plymouth tournera
+        self.assertIn("transpose=2", ss.commande_rotation(Path("a"), Path("b"), 270, outil="ffmpeg"))
+        self.assertEqual(ss.commande_rotation(Path("a"), Path("b"), 90, outil="convert")[2:4], ["-rotate", "90"])
         self.assertIsNone(ss.commande_rotation(Path("a"), Path("b"), 0))
         self.assertIsNone(ss.commande_rotation(Path("a"), Path("b"), 360))
 

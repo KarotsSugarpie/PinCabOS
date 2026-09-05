@@ -185,6 +185,9 @@ def sha256(path):
 # les cabinets encore en 3.43 ou moins.
 PENDING_PREFIXES = (
     'opt/pincabos/launchers/',
+    # PINCABOS_SPLASH_FROM_SCREENS_V3 : visuels de demarrage, release N ; a
+    # retirer d ici (donc a livrer) a la release suivante.
+    'opt/pincabos/media/splash/',
 )
 
 def allowed_for_build(rel):
@@ -209,8 +212,8 @@ def allowed(rel):
       'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/media/audio-voix/',
       'opt/pincabos/installer-gui/','opt/pincabos/apps/VPX_MultiPlayers/',
       # PINCABOS_SPLASH_FROM_SCREENS_V3 : visuels de demarrage (galeries portrait,
-      # paysage, fonds GRUB). Livres avec le prefixe : depuis 3.44 l updater se met
-      # a jour d abord, le parc est en 3.5x ou plus.
+      # paysage, fonds GRUB). Prefixe en attente d abord (PENDING_PREFIXES), les
+      # fichiers partent a la release suivante : la CI le verifie.
       'opt/pincabos/media/splash/',
       'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
       'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',
