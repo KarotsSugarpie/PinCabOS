@@ -1,3 +1,0 @@
-/etc/systemd/system/systemd-suspend.service.wants/nvidia-resume.service
-/etc/systemd/system/systemd-hibernate.service.wants/nvidia-resume.service
-/etc/systemd/system/systemd-suspend-then-hibernate.service.wants/nvidia-resume.service

@@ -1,6 +1,0 @@
-Files located in this directory can set kernel parameters using the
-sysctl(8) or systemd-sysctl(8) tool which is typically run with a
-unit/init file started during the boot sequence.
-
-For details regarding the configuration files refer to
-sysctl.d(5) or sysctl.conf(5)

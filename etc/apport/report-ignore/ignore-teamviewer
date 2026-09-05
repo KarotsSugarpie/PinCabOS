@@ -1,4 +1,0 @@
-# Ignore TeamViewer crashes as it causes a crash in GDB
-# due to a custom shared library they ship which misses
-# the .text section (LP: #2041830)
-/opt/teamviewer/tv_bin/TeamViewer

@@ -1,2 +1,0 @@
-/etc/systemd/user/sockets.target.wants/pipewire.socket
-/etc/systemd/user/default.target.wants/pipewire.service

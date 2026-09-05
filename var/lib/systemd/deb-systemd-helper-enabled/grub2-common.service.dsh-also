@@ -1,5 +1,0 @@
-/etc/systemd/system/multi-user.target.wants/grub2-common.service
-/etc/systemd/system/suspend.target.wants/grub2-common.service
-/etc/systemd/system/hibernate.target.wants/grub2-common.service
-/etc/systemd/system/hybrid-sleep.target.wants/grub2-common.service
-/etc/systemd/system/suspend-then-hibernate.target.wants/grub2-common.service

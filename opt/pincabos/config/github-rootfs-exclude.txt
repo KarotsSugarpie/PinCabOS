@@ -185,3 +185,76 @@
 
 # Ancienne cle CA generee par les tests Sunshine
 /opt/pincabos/apps/sunshine-stream-test/**/cakey.pem
+
+# ------------------------------------------------------------
+# PINCABOS_DEPOT_PURGE_OS_V1 (05/09/2026) : fichiers de l'OS hors
+# perimetre PinCabOS — jamais livres par l'OTA, deja dans le rootfs
+# de l'ISO. Retires du depot ; la synchro cab -> GitHub ne les
+# ramene pas. Les fichiers PinCabOS (nom *pincabos*, sudoers.d,
+# xdg/openbox, netplan, NetworkManager, plymouth, udev, xorg.conf.d,
+# lightdm.conf.d) restent suivis.
+# ------------------------------------------------------------
+/bin
+/sbin
+/lib64
+/etc/mtab
+/etc/os-release
+/etc/resolv.conf
+/etc/passwd
+/etc/passwd-
+/etc/group
+/etc/group-
+/etc/shadow
+/etc/shadow-
+/etc/gshadow
+/etc/gshadow-
+/etc/subuid
+/etc/subgid
+/etc/hostname
+/etc/hosts
+/etc/machine-id
+/etc/machine-info
+/etc/motd
+/etc/fstab
+/etc/alternatives/
+/etc/ssl/
+/etc/apparmor.d/
+/etc/fonts/
+/etc/console-setup/
+/etc/pam.d/
+/etc/init.d/
+/etc/rc0.d/
+/etc/rc1.d/
+/etc/rc2.d/
+/etc/rc3.d/
+/etc/rc4.d/
+/etc/rc5.d/
+/etc/rc6.d/
+/etc/rcS.d/
+/etc/libibverbs.d/
+/etc/needrestart/
+/etc/cloud/
+/etc/kernel/
+/etc/logrotate.d/
+/etc/ImageMagick-7/
+/etc/ppp/
+/etc/security/
+/etc/lvm/
+/etc/dpkg/
+/etc/grub.d/
+/etc/profile.d/*
+!/etc/profile.d/pincabos-*
+/etc/cron.d/
+/etc/cron.daily/
+/etc/cron.hourly/
+/etc/cron.weekly/
+/etc/cron.monthly/
+/etc/update-motd.d/
+/etc/ghostscript/
+/etc/menu-methods/
+/etc/initramfs-tools/
+/etc/logcheck/
+/etc/apport/
+/var/lib/*
+!/var/lib/pincabos*
+/var/spool/

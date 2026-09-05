@@ -1,2 +1,0 @@
-/etc/systemd/user/pipewire-session-manager.service
-/etc/systemd/user/pipewire.service.wants/wireplumber.service

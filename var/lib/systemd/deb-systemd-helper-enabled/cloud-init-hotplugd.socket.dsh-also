@@ -1,1 +1,0 @@
-/etc/systemd/system/cloud-config.target.wants/cloud-init-hotplugd.socket
