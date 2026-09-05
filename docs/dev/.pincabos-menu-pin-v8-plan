@@ -1,0 +1,1 @@
+PinCabOS menu pin V8: viewport fixed menu with click-through transparent surface and explicit interactive hit targets. Removes INI sticky/z-index forcing from the menu pin path.
