@@ -1,0 +1,168 @@
+/*
+ * PINCABOS_DUDESCAB_DARK_EXCEPTION_V1
+ * DudesCab reste volontairement hors du theme visuel global PinCabOS.
+ * Identite conservee, mais surfaces beaucoup plus sombres et 100 % opaques.
+ */
+
+html body .dc-app {
+  --pink: #b12a92 !important;
+  --pink2: #84206f !important;
+  --magenta: #66175b !important;
+  --panel: #151218 !important;
+  --panel2: #0e0c11 !important;
+  --black: #050506 !important;
+  --ink: #f4f1f4 !important;
+  --muted: #b9aeb8 !important;
+  --line: #713166 !important;
+  --green: #56ef93 !important;
+  --yellow: #ffd43b !important;
+  --red: #ff5b62 !important;
+
+  background: #050506 !important;
+  color: var(--ink) !important;
+  border-color: #262029 !important;
+  border-radius: 0 !important;
+  box-shadow: 0 18px 60px rgba(0,0,0,.82) !important;
+}
+
+/* Surfaces principales : opaques, noir/anthracite. */
+html body .dc-app .dc-main-layout,
+html body .dc-app .dc-device-strip,
+html body .dc-app .dc-command-strip,
+html body .dc-app .dc-status-strip,
+html body .dc-app .dc-side-tabs,
+html body .dc-app .dc-panel-top-form,
+html body .dc-app .dc-outputs-top,
+html body .dc-app .dc-mx-settings {
+  background: #080709 !important;
+}
+
+html body .dc-app .dc-content-area {
+  background: #111014 !important;
+}
+
+html body .dc-app .dc-tab-panel {
+  background: #151218 !important;
+}
+
+html body .dc-app .dc-original-header {
+  background-color: #19141b !important;
+  background-image: none !important;
+  border-bottom-color: #2b252d !important;
+}
+
+/* Panneaux internes : aucune transparence. */
+html body .dc-app :is(
+  .dc-firmware-box,
+  .dc-led-color-row,
+  .dc-file-actions,
+  .dc-output-card,
+  .dc-output-test,
+  .dc-mx-lane,
+  .dc-mx-strip,
+  .dc-local-row,
+  .dc-input-row,
+  .dc-warning-box,
+  .dc-safe-note
+) {
+  background: #111014 !important;
+  border-color: #352b36 !important;
+}
+
+html body .dc-app .dc-input-row:nth-child(even) {
+  background: #17141a !important;
+}
+
+html body .dc-app .dc-inputs-heading,
+html body .dc-app .dc-mx-lane > header {
+  background: #1b171d !important;
+  border-color: #403344 !important;
+}
+
+/* Navigation laterale : accent magenta discret seulement. */
+html body .dc-app .dc-side-tabs button {
+  background: #111014 !important;
+  color: #e8e2e8 !important;
+  border-bottom-color: #2d2730 !important;
+  text-shadow: none !important;
+}
+
+html body .dc-app .dc-side-tabs button:hover,
+html body .dc-app .dc-side-tabs button.is-active {
+  background: #261b26 !important;
+  color: #fff !important;
+  border-left: 3px solid var(--pink) !important;
+}
+
+/* Boutons DudesCab : ne pas reprendre les boutons du theme global. */
+html body .dc-app button,
+html body .dc-app .dc-small-button,
+html body .dc-app .dc-link-button {
+  background: #171519 !important;
+  color: #f4f1f4 !important;
+  border-color: #4b3a4c !important;
+  border-radius: 4px !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.06) !important;
+}
+
+html body .dc-app button:hover,
+html body .dc-app .dc-small-button:hover,
+html body .dc-app .dc-link-button:hover {
+  background: #2a202a !important;
+  border-color: #8c4b80 !important;
+}
+
+html body .dc-app button.is-active,
+html body .dc-app .dc-output-selector.is-active {
+  background: #642052 !important;
+  color: #fff !important;
+  border-color: #a84d93 !important;
+}
+
+/* Champs : noir opaque. */
+html body .dc-app input[type="text"],
+html body .dc-app input[type="number"],
+html body .dc-app input[type="file"],
+html body .dc-app select,
+html body .dc-app textarea {
+  background: #0b0a0c !important;
+  color: #f4f1f4 !important;
+  border-color: #3d363f !important;
+  border-radius: 4px !important;
+}
+
+html body .dc-app input[type="range"],
+html body .dc-app input[type="checkbox"],
+html body .dc-app input[type="radio"] {
+  accent-color: var(--pink) !important;
+}
+
+/* Elements roses historiques ramenes a un accent contenu. */
+html body .dc-app .dc-input-name > span,
+html body .dc-app .dc-dof-number {
+  background: #6c205a !important;
+  color: #fff !important;
+}
+
+html body .dc-app .dc-toggle {
+  background: #161217 !important;
+  border-color: #5f465d !important;
+}
+
+html body .dc-app .dc-check-row input:checked + .dc-toggle::after,
+html body .dc-app .dc-check input:checked + span {
+  background: #a23b8a !important;
+}
+
+html body .dc-app .dc-status-strip,
+html body .dc-app .dc-panel-top-form,
+html body .dc-app .dc-outputs-top,
+html body .dc-app .dc-mx-settings {
+  border-bottom-color: #5b2850 !important;
+}
+
+html body .dc-app .dc-warning-box,
+html body .dc-app .dc-safe-note {
+  color: #ffd96a !important;
+  border-color: #7a6631 !important;
+}
