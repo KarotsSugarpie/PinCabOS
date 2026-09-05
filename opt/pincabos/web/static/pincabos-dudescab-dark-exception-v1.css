@@ -1,0 +1,206 @@
+/*
+ * PINCABOS_DUDESCAB_DARK_EXCEPTION_V1
+ * DudesCab reste volontairement hors du theme visuel global PinCabOS.
+ * Identite conservee, mais surfaces beaucoup plus sombres et 100 % opaques.
+ */
+
+html body .dc-app {
+  --pink: #9b397f !important;
+  --pink2: #6f2a5e !important;
+  --magenta: #55204a !important;
+  --panel: #141216 !important;
+  --panel2: #0d0c0f !important;
+  --black: #040405 !important;
+  --ink: #f2eff2 !important;
+  --muted: #aaa2aa !important;
+  --line: #5a3a54 !important;
+  --green: #56ef93 !important;
+  --yellow: #ffd43b !important;
+  --red: #ff5b62 !important;
+
+  background: #040405 !important;
+  color: var(--ink) !important;
+  border-color: #252126 !important;
+  border-radius: 0 !important;
+  box-shadow: 0 18px 60px rgba(0,0,0,.88) !important;
+}
+
+/* Le theme PinCabOS global ne doit pas recolorer DudesCab. */
+html body .dc-app :is(h1,h2,h3,h4,strong,label,span,p,small,output) {
+  color: inherit;
+}
+
+html body .dc-app h1,
+html body .dc-app h2,
+html body .dc-app h3,
+html body .dc-app .dc-page-slogan {
+  color: #f2eff2 !important;
+}
+
+html body .dc-app a {
+  color: #d9cfd8 !important;
+}
+
+/* Surfaces principales : noir / anthracite, sans transparence. */
+html body .dc-app .dc-main-layout,
+html body .dc-app .dc-device-strip,
+html body .dc-app .dc-command-strip,
+html body .dc-app .dc-status-strip,
+html body .dc-app .dc-side-tabs,
+html body .dc-app .dc-panel-top-form,
+html body .dc-app .dc-outputs-top,
+html body .dc-app .dc-mx-settings {
+  background: #070708 !important;
+}
+
+html body .dc-app .dc-content-area {
+  background: #0f0e11 !important;
+}
+
+html body .dc-app .dc-tab-panel {
+  background: #141216 !important;
+}
+
+html body .dc-app .dc-original-header {
+  background: #171419 !important;
+  border-bottom-color: #2b262c !important;
+  text-shadow: none !important;
+}
+
+/* Panneaux internes : couleurs pleines seulement. */
+html body .dc-app :is(
+  .dc-firmware-box,
+  .dc-led-color-row,
+  .dc-file-actions,
+  .dc-output-card,
+  .dc-output-test,
+  .dc-mx-lane,
+  .dc-mx-strip,
+  .dc-local-row,
+  .dc-input-row,
+  .dc-warning-box,
+  .dc-safe-note
+) {
+  background: #111013 !important;
+  border-color: #302b31 !important;
+  box-shadow: none !important;
+}
+
+html body .dc-app .dc-input-row:nth-child(even) {
+  background: #171519 !important;
+}
+
+html body .dc-app .dc-inputs-heading,
+html body .dc-app .dc-mx-lane > header {
+  background: #1a171b !important;
+  border-color: #39323a !important;
+}
+
+/* Navigation laterale : presque noire, magenta uniquement en selection. */
+html body .dc-app .dc-side-tabs button {
+  background: #0e0d10 !important;
+  color: #ddd8dd !important;
+  border: 0 !important;
+  border-bottom: 1px solid #29252a !important;
+  border-radius: 0 !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+html body .dc-app .dc-side-tabs button:hover {
+  background: #1b181d !important;
+  color: #fff !important;
+}
+
+html body .dc-app .dc-side-tabs button.is-active {
+  background: #251c24 !important;
+  color: #fff !important;
+  border-left: 3px solid #8f3a79 !important;
+}
+
+/* Boutons : gris fonce solides, sans gradient rose. */
+html body .dc-app button,
+html body .dc-app .dc-small-button,
+html body .dc-app .dc-link-button {
+  background: #171619 !important;
+  background-image: none !important;
+  color: #f2eff2 !important;
+  border-color: #413b42 !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+html body .dc-app button:hover,
+html body .dc-app .dc-small-button:hover,
+html body .dc-app .dc-link-button:hover {
+  background: #242126 !important;
+  border-color: #73566d !important;
+}
+
+html body .dc-app button.is-active,
+html body .dc-app .dc-output-selector.is-active {
+  background: #493040 !important;
+  color: #fff !important;
+  border-color: #875775 !important;
+}
+
+/* Champs : opaques, presque noirs. */
+html body .dc-app input[type="text"],
+html body .dc-app input[type="number"],
+html body .dc-app input[type="file"],
+html body .dc-app select,
+html body .dc-app textarea {
+  background: #0a090b !important;
+  background-image: none !important;
+  color: #f2eff2 !important;
+  border-color: #373238 !important;
+  border-radius: 4px !important;
+}
+
+html body .dc-app input[type="range"],
+html body .dc-app input[type="checkbox"],
+html body .dc-app input[type="radio"] {
+  accent-color: #8f3a79 !important;
+}
+
+/* Les anciennes zones roses deviennent de petits accents sombres. */
+html body .dc-app .dc-input-name > span,
+html body .dc-app .dc-dof-number {
+  background: #493040 !important;
+  color: #fff !important;
+}
+
+html body .dc-app .dc-toggle {
+  background: #151317 !important;
+  border-color: #4d444d !important;
+}
+
+html body .dc-app .dc-check-row input:checked + .dc-toggle::after,
+html body .dc-app .dc-check input:checked + span {
+  background: #8f3a79 !important;
+}
+
+html body .dc-app .dc-status-strip,
+html body .dc-app .dc-panel-top-form,
+html body .dc-app .dc-outputs-top,
+html body .dc-app .dc-mx-settings {
+  border-bottom-color: #4a3345 !important;
+}
+
+/* Conserver les alertes lisibles sans recreer de grands blocs colores. */
+html body .dc-app .dc-warning-box,
+html body .dc-app .dc-safe-note {
+  background: #17150f !important;
+  color: #e8d690 !important;
+  border-color: #5e5432 !important;
+}
+
+/* Etats materiels conserves. */
+html body .dc-app .dc-live-led.is-active {
+  background: #65ff9a !important;
+  box-shadow: 0 0 8px #65ff9a !important;
+}
+
+html body .dc-app .dc-danger-button {
+  border-color: #a74f55 !important;
+}

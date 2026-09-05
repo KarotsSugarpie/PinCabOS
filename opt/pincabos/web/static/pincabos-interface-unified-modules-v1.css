@@ -1,0 +1,299 @@
+/*
+ * PINCABOS_INTERFACE_UNIFIED_MODULES_V1
+ * Adapte les modules specialises historiques aux variables Apparence.
+ * Aucune grille, dimension, position ou logique JavaScript n'est modifiee.
+ */
+
+/* ============================================================
+   DASHBOARD / LOBBY
+   ============================================================ */
+#pco-lobby {
+  --bg: var(--pco-appearance-input-bg) !important;
+  --panel: var(--pco-appearance-card-bg) !important;
+  --panel2: var(--pco-appearance-nav-panel-bg) !important;
+  --line: var(--pco-appearance-card-border) !important;
+  --accent: var(--pco-appearance-accent) !important;
+  --text: var(--pco-appearance-page-text) !important;
+  --muted: var(--pco-appearance-muted-text) !important;
+  --ok: var(--pco-appearance-ok) !important;
+  --warn: var(--pco-appearance-warn) !important;
+  --bad: var(--pco-appearance-bad) !important;
+}
+
+#pco-lobby :is(
+  .pco-lobby-head,
+  .pco-card,
+  .pco-modal-panel,
+  .pco-catalog-item,
+  .pco-tool-image,
+  .pco-catalog-preview,
+  .pco-native-table-tools,
+  .pco-table-test-box
+) {
+  background: var(--pco-appearance-card-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+#pco-lobby :is(.pco-card-head, .pco-inputs-heading) {
+  background: var(--pco-appearance-nav-panel-bg) !important;
+  border-color: var(--pco-appearance-nav-panel-border) !important;
+}
+
+#pco-lobby :is(.pco-title h2, .pco-tool strong, .pco-tool-glyph,
+  .pco-category h3, .pco-modal-panel h2, .pco-lobby-head h1,
+  .pco-value) {
+  color: var(--pco-appearance-accent) !important;
+}
+
+#pco-lobby :is(.pco-title p, .pco-caption, .pco-kv span,
+  .pco-meter small, .pco-tool small, .pco-catalog-item small) {
+  color: var(--pco-appearance-muted-text) !important;
+}
+
+#pco-lobby :is(.pco-kv, .pco-list li, .pco-log li) {
+  border-color: var(--pco-appearance-card-border) !important;
+  background: var(--pco-appearance-table-bg) !important;
+}
+
+#pco-lobby .pco-meter i {
+  background: var(--pco-appearance-input-bg) !important;
+}
+
+#pco-lobby .pco-meter em { background: var(--pco-appearance-ok) !important; }
+#pco-lobby .pco-meter em.warn { background: var(--pco-appearance-warn) !important; }
+#pco-lobby .pco-meter em.bad { background: var(--pco-appearance-bad) !important; }
+
+#pco-lobby .pco-modal {
+  background: color-mix(in srgb, var(--pco-appearance-input-bg) 88%, transparent) !important;
+}
+
+/* Audio widget */
+#pco-lobby :is(.pco-av-card, .pco-av-check) {
+  background: var(--pco-appearance-card-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
+
+#pco-lobby .pco-audio-volume-config:not([hidden]) {
+  background: var(--pco-appearance-card-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+#pco-lobby .pco-av-check input {
+  accent-color: var(--pco-appearance-accent) !important;
+}
+
+/* ============================================================
+   SERVICES / TASK MANAGER
+   ============================================================ */
+html body :is(.svc-full-card, .svc-block) {
+  background: var(--pco-appearance-card-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+html body .svc-desc { color: var(--pco-appearance-muted-text) !important; }
+
+html body .svc-btn {
+  background: var(--pco-appearance-button-bg) !important;
+  color: var(--pco-appearance-button-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
+
+/* ============================================================
+   EXPLORER / TABLE TEST
+   ============================================================ */
+html body :is(
+  .pco-table-test-box,
+  .pco-native-table-tools,
+  #pco-explorer-installed-table-count,
+  .pco-table-test-toast,
+  .pco-native-table-toast
+) {
+  background: var(--pco-appearance-card-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+html body :is(.pco-table-test-summary, .pco-native-inventory-text) {
+  color: var(--pco-appearance-muted-text) !important;
+}
+
+html body :is(.pco-native-button, .pco-table-test-box button, .pco-table-test-box a) {
+  background: var(--pco-appearance-button-bg) !important;
+  color: var(--pco-appearance-button-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
+
+html body #pco-explorer-installed-table-count .pco-explorer-table-count-value {
+  color: var(--pco-appearance-accent) !important;
+}
+
+html body .pco-native-status.is-go,
+html body .pco-table-test-badge.is-go {
+  color: var(--pco-appearance-ok) !important;
+  border-color: var(--pco-appearance-ok) !important;
+}
+
+html body :is(.pco-native-status.is-warning, .pco-native-status.is-indexing,
+  .pco-table-test-badge.is-warning) {
+  color: var(--pco-appearance-warn) !important;
+  border-color: var(--pco-appearance-warn) !important;
+}
+
+html body :is(.pco-native-status.is-problem, .pco-table-test-badge.is-problem) {
+  color: var(--pco-appearance-bad) !important;
+  border-color: var(--pco-appearance-bad) !important;
+}
+
+/* ============================================================
+   SMART IMPORT
+   ============================================================ */
+html body :is(
+  .pco-smart-import-queue,
+  .pco-smart-import-file-row,
+  .pco-smart-import-queue-count,
+  .pco-smart-import-queue-empty
+) {
+  background: var(--pco-appearance-card-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
+
+html body .pco-smart-import-file-vps span {
+  color: var(--pco-appearance-accent) !important;
+}
+
+html body .pco-smart-import-file-vps-input {
+  background: var(--pco-appearance-input-bg) !important;
+  color: var(--pco-appearance-input-text) !important;
+  border-color: var(--pco-appearance-input-border) !important;
+}
+
+html body .pco-smart-import-file-type {
+  background: var(--pco-appearance-secondary-bg) !important;
+  color: var(--pco-appearance-secondary-text) !important;
+}
+
+html body .pco-smart-import-file-info strong { color: var(--pco-appearance-page-text) !important; }
+html body .pco-smart-import-file-info small { color: var(--pco-appearance-muted-text) !important; }
+
+/* ============================================================
+   FULLDMD
+   ============================================================ */
+html body :is(.fulldmd-fields-row, .fulldmd-actions-column) {
+  background: var(--pco-appearance-card-bg) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  color: var(--pco-appearance-page-text) !important;
+}
+
+html body :is(.fulldmd-section-label, .fulldmd-field label) {
+  color: var(--pco-appearance-accent) !important;
+}
+
+/* ============================================================
+   DOF
+   ============================================================ */
+html body.pincabos-dof-pro :is(
+  .card,
+  #pincabos-dof-import-manual-card,
+  #dof-driver-pack-status-card,
+  #dof-live-panel,
+  details
+) {
+  background: var(--pco-appearance-card-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+html body.pincabos-dof-pro :is(h2, h3, details summary) {
+  color: var(--pco-appearance-accent) !important;
+}
+
+html body.pincabos-dof-pro #pincabos-dof-import-manual-card form {
+  background: var(--pco-appearance-nav-panel-bg) !important;
+  border-color: var(--pco-appearance-nav-panel-border) !important;
+}
+
+/* ============================================================
+   SYSTEM MESSAGE TRAY
+   ============================================================ */
+html body #pco-system-message-tray {
+  background: var(--pco-appearance-card-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+html body #pco-system-message-tray .pco-system-tray-message {
+  background: var(--pco-appearance-nav-panel-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
+
+html body #pco-system-message-tray .pco-system-tray-message.is-success {
+  color: var(--pco-appearance-ok) !important;
+  border-color: var(--pco-appearance-ok) !important;
+}
+
+html body #pco-system-message-tray .pco-system-tray-message.is-warning {
+  color: var(--pco-appearance-warn) !important;
+  border-color: var(--pco-appearance-warn) !important;
+}
+
+html body #pco-system-message-tray .pco-system-tray-message.is-error {
+  color: var(--pco-appearance-bad) !important;
+  border-color: var(--pco-appearance-bad) !important;
+}
+
+html body #pco-system-message-tray .pco-system-message-close {
+  background: var(--pco-appearance-button-bg) !important;
+  color: var(--pco-appearance-button-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
+
+/* ============================================================
+   BATCH IMPORT / EXPORT STATUS
+   ============================================================ */
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+> #pcos-bxp6-language-status {
+  background: var(--pco-appearance-card-bg) !important;
+  color: var(--pco-appearance-page-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+  box-shadow: var(--pco-appearance-card-shadow) !important;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+:is(.pcos-bxp6-pct, .pcos-bip-global-pct) {
+  color: var(--pco-appearance-accent) !important;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+:is(.pcos-bxp6-current, .pcos-bip-global-current) {
+  color: var(--pco-appearance-muted-text) !important;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+:is(.pcos-bxp6-track, .pcos-bip-global-track) {
+  background: var(--pco-appearance-input-bg) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
+
+html.pco-single-batch-status-owner
+#pco-impexp-live-menu-slot.pco-batch-float-active
+:is(button, a.button) {
+  background: var(--pco-appearance-button-bg) !important;
+  color: var(--pco-appearance-button-text) !important;
+  border-color: var(--pco-appearance-card-border) !important;
+}
