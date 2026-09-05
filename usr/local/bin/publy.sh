@@ -1,1 +1,1 @@
-/opt/pincabos/tools/publy.sh
+../../../opt/pincabos/tools/publy.sh

@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-openbox.sh
+../../../opt/pincabos/install/packages/pkg-openbox.sh

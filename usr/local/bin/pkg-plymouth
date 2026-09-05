@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-plymouth.sh
+../../../opt/pincabos/install/packages/pkg-plymouth.sh

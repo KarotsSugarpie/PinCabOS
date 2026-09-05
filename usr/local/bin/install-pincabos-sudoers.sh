@@ -1,1 +1,1 @@
-/opt/pincabos/tools/install-pincabos-sudoers.sh
+../../../opt/pincabos/tools/install-pincabos-sudoers.sh

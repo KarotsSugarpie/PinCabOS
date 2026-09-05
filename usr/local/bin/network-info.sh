@@ -1,1 +1,1 @@
-/opt/pincabos/tools/network-info.sh
+../../../opt/pincabos/tools/network-info.sh

@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-apt-base.sh
+../../../opt/pincabos/install/packages/pkg-apt-base.sh

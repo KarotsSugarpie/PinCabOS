@@ -1,1 +1,1 @@
-/opt/pincabos/tools/wifi-scan.sh
+../../../opt/pincabos/tools/wifi-scan.sh

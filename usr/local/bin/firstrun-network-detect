@@ -1,1 +1,1 @@
-/opt/pincabos/tools/firstrun-network-detect.sh
+../../../opt/pincabos/tools/firstrun-network-detect.sh

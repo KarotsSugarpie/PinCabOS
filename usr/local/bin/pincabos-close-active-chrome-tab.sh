@@ -1,1 +1,1 @@
-/opt/pincabos/bin/pincabos-close-active-chrome-tab.sh
+../../../opt/pincabos/bin/pincabos-close-active-chrome-tab.sh

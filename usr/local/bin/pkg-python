@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-python.sh
+../../../opt/pincabos/install/packages/pkg-python.sh

@@ -1,1 +1,0 @@
-/opt/pincabos/install/.completed-final-20260620-020509/01-install-system.sh

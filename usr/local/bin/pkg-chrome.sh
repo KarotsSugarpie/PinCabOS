@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-chrome.sh
+../../../opt/pincabos/install/packages/pkg-chrome.sh

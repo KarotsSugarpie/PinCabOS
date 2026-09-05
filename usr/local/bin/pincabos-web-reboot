@@ -1,1 +1,1 @@
-/opt/pincabos/bin/pincabos-web-reboot.sh
+../../../opt/pincabos/bin/pincabos-web-reboot.sh

@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-monitoring.sh
+../../../opt/pincabos/install/packages/pkg-monitoring.sh

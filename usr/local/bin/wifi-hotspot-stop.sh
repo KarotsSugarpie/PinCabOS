@@ -1,1 +1,1 @@
-/opt/pincabos/tools/wifi-hotspot-stop.sh
+../../../opt/pincabos/tools/wifi-hotspot-stop.sh

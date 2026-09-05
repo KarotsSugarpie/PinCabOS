@@ -1,1 +1,1 @@
-/opt/pincabos/tools/pincabos-exit-firstboot-safe.sh
+../../../opt/pincabos/tools/pincabos-exit-firstboot-safe.sh

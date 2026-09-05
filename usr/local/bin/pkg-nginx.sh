@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-nginx.sh
+../../../opt/pincabos/install/packages/pkg-nginx.sh

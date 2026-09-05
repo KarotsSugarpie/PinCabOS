@@ -1,1 +1,1 @@
-/opt/pincabos/tools/launch-dmd-calibrator.sh
+../../../opt/pincabos/tools/launch-dmd-calibrator.sh

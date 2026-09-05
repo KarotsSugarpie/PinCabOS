@@ -1,1 +1,1 @@
-/opt/pincabos/tools/pincabos-freeze-dev-for-iso.sh
+../../../opt/pincabos/tools/pincabos-freeze-dev-for-iso.sh

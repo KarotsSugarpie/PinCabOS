@@ -1,1 +1,1 @@
-/etc/systemd/system/pincabos-link-heartbeat.timer
+../pincabos-link-heartbeat.timer

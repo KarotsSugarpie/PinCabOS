@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-lib.sh
+../../../opt/pincabos/install/packages/pkg-lib.sh

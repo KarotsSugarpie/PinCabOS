@@ -1,1 +1,1 @@
-/opt/pincabos/tools/detect-gpu.sh
+../../../opt/pincabos/tools/detect-gpu.sh

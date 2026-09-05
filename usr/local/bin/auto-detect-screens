@@ -1,1 +1,1 @@
-/opt/pincabos/tools/auto-detect-screens.sh
+../../../opt/pincabos/tools/auto-detect-screens.sh

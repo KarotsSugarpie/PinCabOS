@@ -1,1 +1,1 @@
-/etc/systemd/system/pincabos-finalize-firstboot.timer
+../pincabos-finalize-firstboot.timer

@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-system-validation.sh
+../../../opt/pincabos/install/packages/pkg-system-validation.sh

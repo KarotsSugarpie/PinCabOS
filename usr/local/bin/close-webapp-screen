@@ -1,1 +1,1 @@
-/opt/pincabos/tools/close-webapp-screen.sh
+../../../opt/pincabos/tools/close-webapp-screen.sh

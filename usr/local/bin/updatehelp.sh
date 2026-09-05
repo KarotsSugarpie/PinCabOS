@@ -1,1 +1,1 @@
-/opt/pincabos/script/updatehelp.sh
+../../../opt/pincabos/script/updatehelp.sh
