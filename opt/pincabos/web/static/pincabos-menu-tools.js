@@ -1,15 +1,20 @@
 (function () {
   "use strict";
 
-  // PINCABOS_MENU_PIN_SIMPLE_V9
-  // One menu, one DOM location, no overlay, no MutationObserver.
+  // PINCABOS_MENU_PIN_HEADER_V10
+  // One header, one DOM location, no clone/reparenting/overlay.
   var KEY = "pincabos_menu_force_pinned_v5";
   var NAV_SELECTOR = ".pincabos-nav";
-  var PIN_CLASS = "pco-menu-pinned-v9";
+  var HEADER_SELECTOR = ".top";
+  var PIN_CLASS = "pco-menu-pinned-v10";
+  var HEADER_PIN_CLASS = "pco-header-pinned-v10";
 
   var bodyPaddingInline = null;
   var bodyPaddingBasePx = 0;
+  var headerFlowMarginPx = 0;
+  var layoutRemembered = false;
   var resizeTimer = null;
+  var settleTimer = null;
 
   function q(sel) {
     return document.querySelector(sel);
@@ -17,6 +22,15 @@
 
   function getMenu() {
     return q(NAV_SELECTOR);
+  }
+
+  function getHeader() {
+    var menu = getMenu();
+    if (menu && typeof menu.closest === "function") {
+      var closestHeader = menu.closest(HEADER_SELECTOR);
+      if (closestHeader) return closestHeader;
+    }
+    return q(HEADER_SELECTOR);
   }
 
   function getPinned() {
@@ -33,23 +47,37 @@
     } catch (e) {}
   }
 
-  function rememberBodyPadding() {
-    if (!document.body || bodyPaddingInline !== null) return;
-    bodyPaddingInline = document.body.style.paddingTop || "";
-    var computed = window.getComputedStyle(document.body).paddingTop || "0";
-    bodyPaddingBasePx = parseFloat(computed) || 0;
+  function px(value) {
+    var n = parseFloat(value || "0");
+    return Number.isFinite(n) ? n : 0;
   }
 
-  function menuHeight(menu) {
-    if (!menu) return 0;
-    var rect = menu.getBoundingClientRect();
-    return Math.max(0, Math.ceil(rect.height || menu.offsetHeight || 0));
+  function rememberLayoutBase() {
+    if (layoutRemembered || !document.body) return;
+
+    bodyPaddingInline = document.body.style.paddingTop || "";
+    bodyPaddingBasePx = px(window.getComputedStyle(document.body).paddingTop);
+
+    var header = getHeader();
+    if (header) {
+      var computed = window.getComputedStyle(header);
+      headerFlowMarginPx = px(computed.marginTop) + px(computed.marginBottom);
+    }
+
+    layoutRemembered = true;
+  }
+
+  function elementHeight(el) {
+    if (!el) return 0;
+    var rect = el.getBoundingClientRect();
+    return Math.max(0, Math.ceil(rect.height || el.offsetHeight || 0));
   }
 
   function updateBodyOffset() {
-    var menu = getMenu();
-    if (!document.body || !menu || !menu.classList.contains(PIN_CLASS)) return;
-    var h = menuHeight(menu);
+    var header = getHeader();
+    if (!document.body || !header || !header.classList.contains(HEADER_PIN_CLASS)) return;
+
+    var h = Math.max(0, Math.ceil(elementHeight(header) + headerFlowMarginPx));
     document.body.style.paddingTop = Math.ceil(bodyPaddingBasePx + h) + "px";
     document.documentElement.style.setProperty("--pco-menu-pinned-offset", h + "px");
     document.body.classList.add("pco-menu-is-pinned");
@@ -68,27 +96,19 @@
 
     btn.classList.toggle("pco-pinned", pinned);
     btn.textContent = pinned ? "📍" : "📌";
-    btn.title = pinned ? "Menu épinglé" : "Épingler le menu";
+    btn.title = pinned ? "Désépingler le menu" : "Épingler le menu";
     btn.setAttribute("aria-label", btn.title);
     btn.setAttribute("aria-pressed", pinned ? "true" : "false");
   }
 
-  function applyPinnedState() {
-    var menu = getMenu();
-    var pinned = getPinned();
+  function clearLegacyMenuGeometry(menu) {
+    if (!menu) return;
 
-    updatePinButton(pinned);
-    if (!menu) return false;
-
-    rememberBodyPadding();
-    menu.classList.toggle(PIN_CLASS, pinned);
-
-    // Remove every legacy pin class left by V7/V8. No DOM move is performed.
     menu.classList.remove("pco-menu-force-fixed");
     menu.classList.remove("pco-menu-viewport-fixed-v7");
     menu.classList.remove("pco-menu-viewport-fixed-v8");
+    menu.classList.remove("pco-menu-pinned-v9");
 
-    // Remove legacy inline geometry/hit-testing written by V7/V8.
     [
       "position", "top", "left", "right", "bottom", "width", "max-width",
       "height", "min-height", "max-height", "margin", "z-index", "box-sizing",
@@ -97,10 +117,54 @@
     ].forEach(function (prop) {
       menu.style.removeProperty(prop);
     });
+  }
+
+  function keepControlsInteractive(root) {
+    if (!root) return;
+
+    root.style.removeProperty("pointer-events");
+    root.querySelectorAll("a, button, select, input, form, label").forEach(function (el) {
+      el.style.removeProperty("pointer-events");
+    });
+  }
+
+  function settlePinnedLayout() {
+    window.clearTimeout(settleTimer);
+    if (!getPinned()) return;
+
+    if (typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(function () {
+        if (getPinned()) updateBodyOffset();
+      });
+    }
+
+    settleTimer = window.setTimeout(function () {
+      if (getPinned()) updateBodyOffset();
+    }, 80);
+  }
+
+  function applyPinnedState() {
+    var menu = getMenu();
+    var header = getHeader();
+    var pinned = getPinned();
+
+    updatePinButton(pinned);
+    if (!menu || !header) return false;
+
+    rememberLayoutBase();
+    clearLegacyMenuGeometry(menu);
+
+    menu.classList.toggle(PIN_CLASS, pinned);
+    header.classList.toggle(HEADER_PIN_CLASS, pinned);
+
+    keepControlsInteractive(menu);
+    keepControlsInteractive(header);
 
     if (pinned) {
       updateBodyOffset();
+      settlePinnedLayout();
     } else {
+      window.clearTimeout(settleTimer);
       restoreBodyOffset();
     }
 
@@ -112,6 +176,7 @@
       ev.preventDefault();
       ev.stopPropagation();
     }
+
     setPinnedStored(!getPinned());
     applyPinnedState();
     return false;
@@ -236,7 +301,7 @@
   }
 
   function boot() {
-    rememberBodyPadding();
+    rememberLayoutBase();
     ensurePowerButton();
     applyPinnedState();
 
