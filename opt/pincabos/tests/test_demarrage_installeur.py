@@ -162,3 +162,11 @@ class ArgumentsNoyauDuBanc(unittest.TestCase):
         self.assertIn('EXTRA="${PCO_LIVE_CMDLINE_EXTRA:-}"', s)
         self.assertIn("$QUIET $BLACKLIST $EXTRA ---", s)
 
+
+class RedemarrageDuMedia(unittest.TestCase):
+    """PINCABOS_MEDIA_NOPROMPT_V1 : pas d invite « retirez le media » cachee sous le splash."""
+
+    def test_noprompt_sur_l_entree_unique(self):
+        s = ISO_LIVE.read_text(encoding="utf-8")
+        self.assertIn('QUIET="quiet splash loglevel=3 noprompt"', s)
+

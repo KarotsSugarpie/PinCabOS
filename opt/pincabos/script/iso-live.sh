@@ -231,7 +231,10 @@ echo "  fonds GRUB : ${#GRUB_FONDS[@]} dans la galerie"
 # logo.nologo drops the kernel's Tux; the PinCabOS Plymouth splash stays.
 # vt.global_cursor_default=0 hides the blinking cursor between splash and X.
 COMMON="logo.nologo vt.global_cursor_default=0"
-QUIET="quiet splash loglevel=3"
+# PINCABOS_MEDIA_NOPROMPT_V1 : au redemarrage, casper demandait « retirez le
+# media puis Entree », invisible sous le splash : ecran noir sans fin (vu en
+# VM). noprompt : le media est ejecte et la machine redemarre d elle-meme.
+QUIET="quiet splash loglevel=3 noprompt"
 # PINCABOS_LIVE_CMDLINE_EXTRA_V1 : arguments noyau supplementaires pour un banc
 # d essai (ex. video=Virtual-2:1280x800e pour forcer une 2e tete QEMU) ; vide en
 # production, jamais ecrit sur le systeme installe.
