@@ -43,12 +43,16 @@ try:
             # colonnes : sortie, largeur, hauteur, x, y, primaire, rate,
             # mot-cle xrandr de rotation, mode inverse a essayer (90/270)
             candidats = rotation_pf.modes_candidats(f'{s["width"]}x{s["height"]}', rot)
+            # PINCABOS_LIGHTDM_CHAMPS_VIDES_V1 : un champ vide s'ecrit « - » ;
+            # pour `read`, la tabulation est un blanc et deux tabulations
+            # collees ne font qu'un separateur : le rate vide decalait les
+            # colonnes (--rate normal) et xrandr refusait la sortie.
             print("\t".join(map(str, [
                 s["name"], s["width"], s["height"],
                 s["x"], s["y"], int(bool(s.get("is_primary"))),
-                str(pref.get("rate") or ""),
+                str(pref.get("rate") or "") or "-",
                 rotation_pf.xrandr_rotate(rot),
-                candidats[1] if len(candidats) > 1 else "",
+                (candidats[1] if len(candidats) > 1 else "") or "-",
             ])))
 except Exception:
     pass
@@ -97,6 +101,10 @@ has_mode() {
 while IFS=$'\t' read -r OUT W H X Y PRIMARY RATE_CFG ROTATE MODE_ALT; do
   [ -n "${OUT:-}" ] || continue
   is_connected "$OUT" || continue
+  # PINCABOS_LIGHTDM_CHAMPS_VIDES_V1 : « - » = champ vide
+  [ "${RATE_CFG:-}" = "-" ] && RATE_CFG=""
+  [ "${MODE_ALT:-}" = "-" ] && MODE_ALT=""
+  [ "${ROTATE:-}" = "-" ] && ROTATE=""
 
   MODE="${W}x${H}"
   ARGS=(--output "$OUT")

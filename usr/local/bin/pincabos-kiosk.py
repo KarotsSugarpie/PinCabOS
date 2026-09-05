@@ -23,6 +23,7 @@ PRESENT_TIMEOUT_MS = 4000
 
 def on_activate(app):
     win = Gtk.ApplicationWindow(application=app)
+    win.set_title("pincabos-kiosk")   # DECOR_FOCUS_V1 : decor.py lui rend le focus par ce titre
     win.set_decorated(False)
 
     # PINCABOS_KIOSK_THEME_SOMBRE_V1

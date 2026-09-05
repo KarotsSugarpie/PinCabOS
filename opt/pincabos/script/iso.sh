@@ -5162,11 +5162,12 @@ apply_target_network() {
     echo
     pco_step "Applying network chosen in the installer to the target"
     install -d -m 0755 "$TARGET/etc/netplan"
-    local n=0
+    local n=0 poses=""
     if [ -n "$dossier" ] && [ -d "$dossier" ]; then
         for f in "$dossier"/90-NM-*.yaml; do
             [ -f "$f" ] || continue
             install -m 0600 "$f" "$TARGET/etc/netplan/$(basename "$f")"
+            poses="$poses $(basename "$f")"
             n=$((n + 1))
         done
     fi
@@ -5175,8 +5176,50 @@ apply_target_network() {
         [ -f "$outil" ] && python3 "$outil" netplan-takeover "$iface" --root "$TARGET" || true
     done
     install -d -m 0755 "$TARGET/opt/pincabos/flags"
-    date -Is > "$TARGET/opt/pincabos/flags/network-installer.done"
-    pco_go "network profiles installed ($n netplan file(s)), first boot keeps the installer's choice"
+    local iface f
+    if [ "$n" -gt 0 ]; then
+        # PINCABOS_INSTALLEUR_RESEAU_V2 : sur une interface que la session a
+        # configuree, son profil est le seul. Un autre 90-NM-*.yaml de la cible
+        # (mise a jour : ancien profil du cab remis par la restauration) serait
+        # en concurrence au demarrage.
+        for iface in $(python3 -c 'import json,sys;print(" ".join(i.get("device","") for i in json.load(open(sys.argv[1])).get("interfaces",[])))' "$fichier" 2>/dev/null); do
+            for f in "$TARGET"/etc/netplan/90-NM-*.yaml; do
+                [ -f "$f" ] || continue
+                case " $poses " in *" $(basename "$f") "*) continue ;; esac
+                if grep -qE "^[[:space:]]+(${iface}:|name:[[:space:]]*\"?${iface}\"?)[[:space:]]*$" "$f"; then
+                    rm -f "$f"
+                    pco_go "older NetworkManager profile of $iface removed from the target: $(basename "$f")"
+                fi
+            done
+        done
+        date -Is > "$TARGET/opt/pincabos/flags/network-installer.done"
+        pco_go "network profiles installed ($n netplan file(s)), first boot keeps the installer's choice"
+        return 0
+    fi
+    # PINCABOS_INSTALLEUR_RESEAU_V2 : DHCP laisse tel quel dans la session = aucun
+    # profil persiste (NetworkManager garde sa connexion automatique en memoire).
+    # Le drapeau ne doit alors pas etre pose : il faisait sauter le DHCP generique
+    # du premier demarrage et la cible demarrait sans reseau (Alpha 3.77).
+    rm -f "$TARGET/opt/pincabos/flags/network-installer.done"
+    local eth
+    eth=$(python3 -c 'import json,sys;print(" ".join(i.get("device","") for i in json.load(open(sys.argv[1])).get("interfaces",[]) if i.get("type","")=="ethernet"))' "$fichier" 2>/dev/null)
+    if [ -n "$eth" ] && ! ls "$TARGET"/etc/netplan/*.yaml >/dev/null 2>&1; then
+        # Cible sans aucun fichier netplan (installation neuve, ou cab mis a jour
+        # apres 3.77) : DHCP tout de suite sur les interfaces ethernet de la session.
+        {
+            echo "network:"
+            echo "  version: 2"
+            echo "  renderer: NetworkManager"
+            echo "  ethernets:"
+            for iface in $eth; do
+                printf '    %s:\n      dhcp4: true\n      dhcp6: true\n      optional: true\n' "$iface"
+            done
+        } > "$TARGET/etc/netplan/01-pincabos-dhcp.yaml"
+        chmod 600 "$TARGET/etc/netplan/01-pincabos-dhcp.yaml"
+        pco_go "no network profile persisted in the session: DHCP netplan written for$(printf ' %s' $eth)"
+        return 0
+    fi
+    pco_go "no network profile persisted in the session: the target keeps its own network (generic DHCP at first boot)"
 }
 
 apply_target_dmd() {
@@ -6279,8 +6322,17 @@ restore_user_settings() {
   for p in "${PCO_KEEP_PATHS[@]}"; do
     [ -e "$PCO_KEEP_DIR/$p" ] || continue
     mkdir -p "$TARGET/$(dirname "$p")"
-    rm -rf "$TARGET/$p"
-    cp -a "$PCO_KEEP_DIR/$p" "$TARGET/$p"
+    if [ -d "$PCO_KEEP_DIR/$p" ] && [ ! -L "$PCO_KEEP_DIR/$p" ]; then
+      # PINCABOS_KEEP_MERGE_V1 : un dossier est fusionne. Les fichiers du cab
+      # remplacent ceux de l'image, mais ce que l'installateur vient d'ecrire
+      # dans la cible reste (drapeaux dmd/reseau/son, profils netplan de la
+      # session) : rm -rf les effacait a chaque mise a jour.
+      mkdir -p "$TARGET/$p"
+      cp -a "$PCO_KEEP_DIR/$p/." "$TARGET/$p/"
+    else
+      rm -rf "$TARGET/$p"
+      cp -a "$PCO_KEEP_DIR/$p" "$TARGET/$p"
+    fi
     restored=$((restored + 1))
   done
   # Owners are not carried by the archive: give the pinball files back.
@@ -6332,6 +6384,9 @@ upgrade_install() {
   # outside the image (tables, media next to them) is left alone.
   install_payload "upgrade"
   restore_user_settings
+  # PINCABOS_INSTALLEUR_RESEAU_V2 : la restauration ramene les profils netplan et
+  # les drapeaux du cab ; le choix reseau fait dans l'installateur est rejoue.
+  apply_target_network
   write_fstab "$ROOT_PART" "$EFI_PART"
   final_boot_refresh "upgrade"
 }

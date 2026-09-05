@@ -112,6 +112,10 @@ class Integration(unittest.TestCase):
         self.assertIn("  apply_target_screens\n  apply_target_network\n  apply_target_dmd\n  apply_target_audio\n  apply_target_dof\n  apply_target_toys\n  refresh_target_initrd_for_orientation\n", s)
         self.assertIn('netplan-takeover "$iface" --root "$TARGET"', s)
         self.assertIn("network-installer.done", s)
+        # PINCABOS_INSTALLEUR_RESEAU_V2 : a la mise a jour, le choix reseau est rejoue apres la restauration
+        self.assertRegex(s, r"  restore_user_settings\n(?:  #.*\n)*  apply_target_network\n")
+        # PINCABOS_KEEP_MERGE_V1 : un dossier conserve est fusionne, pas remplace
+        self.assertIn('cp -a "$PCO_KEEP_DIR/$p/." "$TARGET/$p/"', s)
         self.assertLess(s.index("Network configured by the installer / NetworkManager: generic DHCP netplan skipped."),
                         s.index('echo "=== Write generic DHCP netplan ==="'), "la garde precede l'ecriture du fichier generique au premier boot")
 
@@ -120,6 +124,90 @@ class Integration(unittest.TestCase):
         for lang, keys in d.items():
             for k in ("network", "network_hint", "net_dhcp", "net_static", "net_no_dhcp", "net_join", "net_hidden"):
                 self.assertIn(k, keys, f"{lang}: {k}")
+
+
+def _fonction_iso(nom):
+    s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+    a = s.index(f"\n{nom}() {{\n") + 1
+    b = s.index("\n}\n", a) + 3
+    return s[a:b]
+
+
+class CibleReseau(unittest.TestCase):
+    """apply_target_network (PINCABOS_INSTALLEUR_RESEAU_V2) : ce que la session a
+    persiste part sur la cible ; sinon la cible ne doit surtout pas recevoir le
+    drapeau qui fait sauter le DHCP generique du premier demarrage (Alpha 3.77 :
+    installation neuve en DHCP = cab sans reseau)."""
+
+    ETH = {"interfaces": [{"device": "enp0s2", "type": "ethernet", "method": "auto", "address": ""}]}
+    NM_NEW = 'network:\n  version: 2\n  ethernets:\n    NM-1111:\n      renderer: NetworkManager\n      match:\n        name: "enp0s2"\n      dhcp4: true\n'
+    NM_OLD = 'network:\n  version: 2\n  ethernets:\n    enp0s2:\n      renderer: NetworkManager\n      match: {}\n      addresses:\n      - "192.168.1.50/24"\n'
+    NM_WIFI = 'network:\n  version: 2\n  wifis:\n    NM-2222:\n      renderer: NetworkManager\n      match:\n        name: "wlp3s0"\n      dhcp4: true\n'
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.cible = self.tmp / "cible"
+        (self.cible / "etc/netplan").mkdir(parents=True)
+        self.dossier = self.tmp / "gui-netplan"
+        self.dossier.mkdir()
+        self.fichier = self.tmp / "gui-network.json"
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _run(self, gui=None, session=None, cible=None, drapeau=False):
+        self.fichier.write_text(json.dumps(gui or self.ETH), encoding="utf-8")
+        for nom, txt in (session or {}).items():
+            (self.dossier / nom).write_text(txt, encoding="utf-8")
+        for nom, txt in (cible or {}).items():
+            (self.cible / "etc/netplan" / nom).write_text(txt, encoding="utf-8")
+        if drapeau:
+            (self.cible / "opt/pincabos/flags").mkdir(parents=True)
+            (self.cible / "opt/pincabos/flags/network-installer.done").write_text("x")
+        script = ("set -u\npco_step(){ :; }\npco_go(){ echo \"GO: $*\"; }\npco_warn(){ echo \"WARN: $*\"; }\n"
+                  + _fonction_iso("apply_target_network") + "\napply_target_network\n")
+        env = dict(os.environ, TARGET=str(self.cible), PCO_ANS_NETWORK_FILE=str(self.fichier), PCO_ANS_NETPLAN_DIR=str(self.dossier))
+        r = subprocess.run(["bash", "-c", script], capture_output=True, text=True, env=env)
+        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+        return r.stdout
+
+    def _netplan(self):
+        return sorted(p.name for p in (self.cible / "etc/netplan").iterdir())
+
+    def _drapeau(self):
+        return (self.cible / "opt/pincabos/flags/network-installer.done").exists()
+
+    def test_dhcp_laisse_tel_quel_installation_neuve(self):
+        out = self._run()
+        self.assertEqual(self._netplan(), ["01-pincabos-dhcp.yaml"])
+        y = (self.cible / "etc/netplan/01-pincabos-dhcp.yaml").read_text(encoding="utf-8")
+        self.assertIn("renderer: NetworkManager", y)
+        self.assertIn("    enp0s2:\n      dhcp4: true", y)
+        self.assertFalse(self._drapeau(), "sans profil persiste, le premier demarrage garde son DHCP generique")
+        self.assertIn("DHCP netplan written for enp0s2", out)
+
+    def test_dhcp_laisse_tel_quel_retire_un_ancien_drapeau(self):
+        self._run(drapeau=True)
+        self.assertFalse(self._drapeau())
+
+    def test_dhcp_laisse_tel_quel_cab_deja_configure(self):
+        out = self._run(cible={"90-NM-old.yaml": self.NM_OLD})
+        self.assertEqual(self._netplan(), ["90-NM-old.yaml"], "le reseau du cab n'est pas touche")
+        self.assertFalse(self._drapeau())
+        self.assertIn("keeps its own network", out)
+
+    def test_wifi_seul_sans_profil_n_ecrit_rien(self):
+        gui = {"interfaces": [{"device": "wlp3s0", "type": "wifi", "method": "auto", "address": ""}]}
+        self._run(gui=gui)
+        self.assertEqual(self._netplan(), [])
+        self.assertFalse(self._drapeau())
+
+    def test_profil_de_la_session_remplace_celui_du_cab_sur_la_meme_interface(self):
+        out = self._run(session={"90-NM-new.yaml": self.NM_NEW}, cible={"90-NM-old.yaml": self.NM_OLD, "90-NM-wifi.yaml": self.NM_WIFI})
+        self.assertEqual(self._netplan(), ["90-NM-new.yaml", "90-NM-wifi.yaml"])
+        self.assertTrue(self._drapeau())
+        self.assertIn("older NetworkManager profile of enp0s2 removed", out)
+        self.assertIn("network profiles installed (1 netplan file(s))", out)
 
 
 if __name__ == "__main__":

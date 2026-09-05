@@ -79,6 +79,18 @@ class Decouverte(unittest.TestCase):
         self.assertFalse(s[2]["connected"])
         self.assertEqual(sc.parse_query(QUERY_INVERTED)[0]["rotation"], 180)
 
+    def test_sans_mode_prefere_le_mode_courant(self):
+        """PINCABOS_INSTALLEUR_MODE_COURANT_V1 : sortie sans « + » (pas d'EDID) : le mode
+        courant, pas le premier de la liste (5120x2160 applique sur un backglass en VM)."""
+        q = QUERY.replace("DP-2 connected 1920x1080+3840+0", "Virtual-2 connected 1280x800+3840+0").replace(
+            "   1920x1080     60.00*+\n", "   5120x2160     50.00\n   1920x1440     60.00\n   1280x800      74.99*\n")
+        s = {x["name"]: x for x in sc.parse_query(q)}
+        self.assertEqual(s["Virtual-2"]["preferred"], "1280x800")
+        self.assertEqual(sc.mode_de(sc.moniteurs(q, PROPS)[2]), (1280, 800))
+        # courant absent de la liste (sortie eteinte) : premier mode, comme avant
+        q2 = q.replace("Virtual-2 connected 1280x800+3840+0", "Virtual-2 connected")
+        self.assertEqual({x["name"]: x for x in sc.parse_query(q2)}["Virtual-2"]["preferred"], "5120x2160")
+
     def test_edid(self):
         e = sc.parse_edids(PROPS)
         self.assertEqual(set(e), {"HDMI-0", "DP-0"})
@@ -372,6 +384,37 @@ class Assistant(unittest.TestCase):
         self.assertIn('PCO_ANS_CALIBRATIONS_FILE', s)
         self.assertIn('rm -f "$TARGET/opt/pincabos/config/fulldmd-calibration.json"', s)
 
+    def test_decor_des_dalles_secondaires(self):
+        # PINCABOS_INSTALLEUR_DECOR_V1 (Yann) : backglass / full DMD / topper habilles pendant l installation
+        import random
+        with tempfile.TemporaryDirectory() as d:
+            g = Path(d)
+            for n in ("paysage0.png", "paysage1.jpg", "portrait0.png", "grub0.jpg"):
+                (g / n).write_bytes(b"x")
+            mons = sc.moniteurs(QUERY, PROPS)
+            imgs = sc.images_decor(mons, {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0"}, g, random.Random(1))
+            self.assertEqual(sorted(imgs), ["DP-0", "DP-2"])                       # jamais le playfield
+            self.assertTrue(all(Path(v).name.startswith("paysage") for v in imgs.values()))
+            self.assertEqual(sc.images_decor(mons, {"playfield": "HDMI-0"}, Path(d, "vide"), random.Random(1)), {})
+        src = Path(RACINE, "opt/pincabos/installer-gui/decor.py").read_text(encoding="utf-8")
+        self.assertIn('TITRE = "pincabos-decor-{n}"', src)
+        # PINCABOS_INSTALLEUR_DECOR_FOCUS_V1 : present() demandait l'activation, openbox donnait
+        # le focus clavier au decor (rien ne s'ecrivait dans l'assistant apres « Appliquer »)
+        self.assertNotIn("win.present()", src)
+        self.assertIn("win.set_focusable(False)", src)
+        self.assertIn("win.set_visible(True)", src)
+        self.assertIn('KIOSQUE = "pincabos-kiosk"', src)
+        self.assertIn("GLib.timeout_add(700, rendre_le_focus_au_kiosque)", src)
+        self.assertIn('win.set_title("pincabos-kiosk")', Path(RACINE, "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8"))
+        self.assertIn("Gtk.ContentFit.COVER", src)
+        rc = Path(RACINE, "opt/pincabos/installer-gui/kiosk-rc.xml").read_text(encoding="utf-8")
+        self.assertIn('<application title="pincabos-decor-1">', rc)
+        self.assertEqual(rc.count("<layer>below</layer>"), 8)
+        import xml.dom.minidom
+        xml.dom.minidom.parseString(rc)
+        a = Path(RACINE, "opt/pincabos/installer-gui/app.py").read_text(encoding="utf-8")
+        self.assertIn('res["decor"] = pco_screens.lancer_decor(mons, roles)', a)
+
     def test_egerie_sur_chaque_page(self):
         # PINCABOS_INSTALLEUR_EGERIE_V3 (Yann : repartie de facon homogene sur les pages)
         w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
@@ -383,7 +426,8 @@ class Assistant(unittest.TestCase):
             self.assertTrue(Path(RACINE, "opt/pincabos/installer-gui/static/egerie", p + ".webp").is_file(), p)
         self.assertIn('class="egerie egerie-page" id="egerie"', w)
         self.assertIn("main{position:relative;z-index:1}", w)
-        self.assertIn("go=function(id){_goSansEgerie(id);egeriePour(id)}", w)
+        self.assertIn('go=function(id){_goSansEgerie(id);egeriePour(id);document.body.classList.toggle("on-st-done",id==="st-done")}', w)
+        self.assertIn("body.on-st-done .egerie-page{max-height:90vh", w)
 
     def test_rotation_de_lecture_jamais_ecrite(self):
         # PINCABOS_INSTALLEUR_LECTURE_V1 (Yann) : l assistant tourne, la config reste standard
@@ -435,7 +479,7 @@ class Assistant(unittest.TestCase):
             self.assertIn(f'<application title="pincabos-identify-{n}">', rc)
             self.assertIn(f"<monitor>{n}</monitor>", rc)
         self.assertIn("<layer>above</layer>", rc)
-        self.assertEqual(rc.count("<focus>no</focus>"), 8)
+        self.assertEqual(rc.count("<focus>no</focus>"), 16)   # 8 badges d identification + 8 decors (PINCABOS_INSTALLEUR_DECOR_V1)
         import xml.dom.minidom
         xml.dom.minidom.parseString(rc)
 
