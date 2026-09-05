@@ -102,7 +102,8 @@ DEFAUTS = {
 SOUND3D = (
     ("0", "2 canaux, avant"), ("1", "2 canaux, arrière"),
     ("2", "jusqu'à 6 canaux, arrière au lockbar"), ("3", "jusqu'à 6 canaux, avant au lockbar"),
-    ("4", "6 canaux, latéral et arrière, mixage historique"), ("5", "6 canaux, latéral et arrière, nouveau mixage"),
+    ("4", "7.1 (8 canaux) : latéraux + arrière, avant = fronton, mixage historique"),
+    ("5", "7.1 (8 canaux) : latéraux + arrière, avant = fronton, nouveau mixage (SSF)"),
 )
 APLAY_RE = re.compile(r"^(?:card|carte)\s+(\d+)\s*:\s*(.+?)\s+\[(.+?)\]\s*,\s*(?:device|périphérique|peripherique)\s+(\d+)\s*:\s*(.+?)\s+\[(.+?)\]", re.IGNORECASE)
 HW_RE = re.compile(r"^hw:(\d+),(\d+)$")
@@ -228,8 +229,12 @@ CHMAP = {2: "FL,FR", 4: "FL,FR,RL,RR", 6: "FL,FR,RL,RR,FC,LFE", 8: "FL,FR,RL,RR,
 
 
 def canaux_pour_mode(sound3d: str) -> int:
-    """Nombre de canaux qu'exige le mode VPX : 2 en stereo (0, 1), 6 pour les modes SSF."""
-    return 2 if str(sound3d) in ("0", "1") else 6
+    """Nombre de canaux qu'exige le mode VPX : 2 en stereo (0, 1), 6 pour 2 et 3, 8 pour les
+    modes 7.1 (4, 5 : effets avant sur les lateraux, arriere sur l arriere, fronton sur l avant).
+    PINCABOS_AUDIO_71_V1 (retex cab de Yann : 3 paires + basses = 7.1, les lateraux n etaient
+    meme pas sur le schema)."""
+    s = str(sound3d)
+    return 2 if s in ("0", "1") else 8 if s in ("4", "5") else 6
 
 
 def tester_canal(ident: str, canaux: int, canal: int, run=executer) -> dict:
@@ -420,9 +425,13 @@ def appliquer_premier_demarrage(cfg: dict, run=executer, vpx_ini: Path = VPX_INI
     # PINCABOS_AUDIO_SSF_GARDE_V1 (Yann : « le SSF ne joue pas les sons ») : un mode a 6 canaux
     # sur une sortie stereo laisse des sons muets ; on retombe en stereo et on le dit.
     voulu = str(inst.get("sound3d", "0"))
-    if pf and voulu not in ("0", "1") and 0 < canaux_du_sink(out, pf["name"]) < 6:
+    exige = canaux_pour_mode(voulu)
+    if pf and exige > 2 and 0 < canaux_du_sink(out, pf["name"]) < exige:
         # PINCABOS_AUDIO_PROFIL_SURROUND_V1 : la carte offre peut-etre un profil multicanal
-        bascule = assurer_profil_surround(pf, 6, run)
+        bascule = assurer_profil_surround(pf, exige, run)
+        if exige == 8 and not any("active pour le SSF" in l for l in bascule):
+            # pas de 7.1 sur cette carte : le 5.1 au moins (lateraux muets, on le dira)
+            bascule += assurer_profil_surround(pf, 6, run)
         journal += bascule
         if any("active pour le SSF" in l for l in bascule):
             rc, out = run(commande_pinball(["/usr/bin/pactl", "list", "sinks"]), timeout=15)
@@ -434,6 +443,12 @@ def appliquer_premier_demarrage(cfg: dict, run=executer, vpx_ini: Path = VPX_INI
         if canaux and canaux < 6:
             journal.append(f"Sound3D {voulu} demande mais la sortie {pf['name']} n'a que {canaux} canaux : mode stereo (0) applique")
             inst = dict(inst, sound3d="0", sound3d_voulu=voulu)
+        elif canaux and canaux < exige:
+            # PINCABOS_AUDIO_71_V1 : 7.1 demande sur une sortie 5.1 : VPX joue lockbar + arriere +
+            # basses, les lateraux (fronton) restent muets. Le mode est garde, on le dit.
+            journal.append(f"WARN: Sound3D {voulu} (7.1) demande mais la sortie {pf['name']} n'a que {canaux} canaux : "
+                           "les canaux lateraux (fronton) seront muets ; il faut une sortie 7.1 (prise line-in retaskee en "
+                           "sortie laterale) ou une sortie backbox separee")
     # PINCABOS_AUDIO_PREMIER_DEMARRAGE_V2 : VPX n'a pas encore écrit son ini au
     # premier démarrage d'un cab neuf (vu en VM : « absent, rien écrit ») ; on le
     # crée avec la seule section [Player], VPX complète le reste à son premier

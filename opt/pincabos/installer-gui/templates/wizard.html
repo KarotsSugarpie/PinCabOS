@@ -549,13 +549,13 @@ document.getElementById("snd-mode").onchange=e=>{S.sound.sound3d=e.target.value;
 document.getElementById("snd-vol").oninput=e=>{S.sound.volume=+e.target.value;S.sound.touched=true;document.getElementById("snd-vol-val").textContent=S.sound.volume+" %"};
 document.getElementById("snd-vol").onchange=e=>{fetch("/api/sound/volume",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:S.sound.playfield,volume:S.sound.volume})}).catch(()=>{})};
 const HP_NOMS={FL:"hp_fl",FR:"hp_fr",RL:"hp_rl",RR:"hp_rr",C:"hp_c",LFE:"hp_lfe",SL:"hp_sl",SR:"hp_sr"};
-const HP_ORDRE={2:["FL","FR"],6:["FL","FR","RL","RR","C","LFE"]};
-function canauxPourMode(m){return (String(m)==="0"||String(m)==="1")?2:6}
+const HP_ORDRE={2:["FL","FR"],6:["FL","FR","RL","RR","C","LFE"],8:["FL","FR","RL","RR","C","LFE","SL","SR"]};
+function canauxPourMode(m){const s=String(m);return (s==="0"||s==="1")?2:(s==="4"||s==="5")?8:6}
 function renderSpeakers(){const box=document.getElementById("snd-speakers");box.innerHTML="";
   const n=canauxPourMode(S.sound.sound3d);
   HP_ORDRE[n].forEach((hp,i)=>{const b=document.createElement("button");b.type="button";b.className="segb";b.textContent=t(HP_NOMS[hp]);
     b.disabled=!S.sound.playfield;b.onclick=()=>testSpeaker(i,n,b);box.appendChild(b)});
-  document.getElementById("snd-speakers-hint").textContent=t(n===2?"snd_speakers_hint2":"snd_speakers_hint6")}
+  document.getElementById("snd-speakers-hint").textContent=t(n===2?"snd_speakers_hint2":n===8?"snd_speakers_hint8":"snd_speakers_hint6")}
 function testSpeaker(i,n,btn){const st=document.getElementById("snd-speakers-hint");
   document.querySelectorAll("#snd-speakers .segb").forEach(b=>b.disabled=true);st.textContent=t("snd_testing")+" "+btn.textContent;
   fetch("/api/sound/test-channel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:S.sound.playfield,channels:n,channel:i})})

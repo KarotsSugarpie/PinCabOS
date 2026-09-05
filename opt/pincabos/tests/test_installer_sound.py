@@ -172,14 +172,19 @@ class Audio(unittest.TestCase):
         self.assertFalse(pa.tester_canal("hw:1,3", 3, 0, run)["ok"])
         r = pa.tester_canal("hw:0,0", 6, 0, lambda a, timeout=20: (1, "Channels count (6) not available for playbacks: Invalid argument"))
         self.assertFalse(r["ok"]); self.assertIn("n'offre pas 6 canaux", r["sortie"])
-        self.assertEqual(pa.canaux_pour_mode("0"), 2); self.assertEqual(pa.canaux_pour_mode("5"), 6)
+        self.assertEqual(pa.canaux_pour_mode("0"), 2); self.assertEqual(pa.canaux_pour_mode("3"), 6)
+        # PINCABOS_AUDIO_71_V1 : les modes 4 et 5 sont du 7.1 (lateraux = fronton)
+        self.assertEqual(pa.canaux_pour_mode("4"), 8); self.assertEqual(pa.canaux_pour_mode("5"), 8)
+        self.assertEqual(pa.tester_canal("hw:1,3", 8, 6, run)["canal"], "SL")
         a = Path(RACINE, "opt/pincabos/installer-gui/app.py").read_text(encoding="utf-8")
         self.assertIn('@app.route("/api/sound/test-channel", methods=["POST"])', a)
         w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
         self.assertIn('id="snd-speakers"', w); self.assertIn("function testSpeaker(", w)
+        self.assertIn('8:["FL","FR","RL","RR","C","LFE","SL","SR"]', w)   # PINCABOS_AUDIO_71_V1
+        self.assertIn('SL:"hp_sl"', w); self.assertIn('(s==="4"||s==="5")?8:6', w)
         i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
         for l in ("fr", "en", "de", "it", "es"):
-            for k in ("hp_fl", "hp_lfe", "snd_speakers_hint6", "snd_speaker_ok"):
+            for k in ("hp_fl", "hp_lfe", "hp_sl", "snd_speakers_hint6", "snd_speakers_hint8", "snd_speaker_ok"):
                 self.assertIn(k, i18n[l], (l, k))
 
     CARDS = ("Card #54\n\tName: alsa_card.pci-0000_00_05.0\n\tDriver: alsa\n\tProperties:\n\t\talsa.card = \"0\"\n\tProfiles:\n"
@@ -213,12 +218,36 @@ class Audio(unittest.TestCase):
             return (0, "")
         with tempfile.TemporaryDirectory() as d:
             ini = Path(d, "VPinballX.ini")
-            j = pa.appliquer_premier_demarrage({"playfield_device": "hw:0,0", "backbox_device": "", "installer": {"sound3d": "4", "volume": 70}}, run=run, vpx_ini=ini)
+            j = pa.appliquer_premier_demarrage({"playfield_device": "hw:0,0", "backbox_device": "", "installer": {"sound3d": "3", "volume": 70}}, run=run, vpx_ini=ini)
             t = ini.read_text(encoding="utf-8")
-            self.assertIn("Sound3D = 4", t); self.assertIn("SoundDevice = Built-in Audio Analog Surround 5.1", t)
+            self.assertIn("Sound3D = 3", t); self.assertIn("SoundDevice = Built-in Audio Analog Surround 5.1", t)
             self.assertTrue(any(a[-3:] == ["set-card-profile", "alsa_card.pci-0000_00_05.0", "output:analog-surround-51"] for a in appels), appels)
             self.assertTrue(any("profil output:analog-surround-51 active" in l for l in j), j)
             self.assertFalse(any("stereo (0) applique" in l for l in j), j)
+
+    def test_71_sur_carte_51_garde_le_mode_et_previent(self):
+        """PINCABOS_AUDIO_71_V1 (cab de Yann : ALC1220 = 5.1 maxi, mode 4 demande) : profil 5.1 active,
+        mode garde, avertissement sur les lateraux."""
+        etat = {"profil": "stereo"}
+        stereo = ("Sink #1\n\tName: alsa_output.pci-0000_00_05.0.analog-stereo\n\tDescription: Built-in Audio Analog Stereo\n"
+                  "\tSample Specification: s16le 2ch 48000Hz\n\tProperties:\n\t\talsa.card = \"0\"\n\t\talsa.device = \"0\"\n")
+        appels = []
+
+        def run(args, timeout=20):
+            appels.append(list(args)); c = " ".join(args)
+            if "list cards" in c:
+                return (0, self.CARDS)
+            if "list sinks" in c:
+                return (0, self.SINKS_51 if etat["profil"] == "51" else stereo)
+            if "set-card-profile" in c:
+                etat["profil"] = "51"
+            return (0, "")
+        with tempfile.TemporaryDirectory() as d:
+            ini = Path(d, "VPinballX.ini")
+            j = pa.appliquer_premier_demarrage({"playfield_device": "hw:0,0", "backbox_device": "", "installer": {"sound3d": "4", "volume": 70}}, run=run, vpx_ini=ini)
+            self.assertIn("Sound3D = 4", ini.read_text(encoding="utf-8"))
+            self.assertTrue(any("lateraux (fronton) seront muets" in l for l in j), j)
+            self.assertTrue(any(a[-1] == "output:analog-surround-51" for a in appels if "set-card-profile" in a), appels)
 
     def test_ssf_sur_sortie_stereo_retombe_en_stereo(self):
         # PINCABOS_AUDIO_SSF_GARDE_V1 (Yann : « le SSF ne joue pas les sons »)

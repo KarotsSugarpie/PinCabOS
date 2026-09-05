@@ -189,6 +189,7 @@
     "hp_sr": "Latéral droit",
     "snd_speakers_hint2": "Chaque bouton fait parler un seul haut-parleur (la voix annonce le canal en anglais). Vérifiez que c'est bien celui-là qui parle.",
     "snd_speakers_hint6": "Mode 6 canaux : chaque bouton fait parler un seul haut-parleur (voix en anglais). Si la sortie refuse 6 canaux, elle est stéréo : choisissez un mode 2 canaux ou une autre sortie.",
+    "snd_speakers_hint8": "Mode 7.1 : 8 haut-parleurs — avant = fronton, latéraux = lockbar, arrière = fond du cab, centre + caisson = basses. Il faut une sortie 7.1 (sur une carte 5.1 : prise line-in retaskée en sortie latérale) ou une sortie backbox séparée pour le fronton.",
     "snd_speaker_ok": "Joué sur :"
   },
   "en": {
@@ -381,6 +382,7 @@
     "hp_sr": "Side right",
     "snd_speakers_hint2": "Each button makes a single speaker talk (the voice names the channel). Check that the right one speaks.",
     "snd_speakers_hint6": "6-channel mode: each button makes a single speaker talk. If the output refuses 6 channels it is stereo: pick a 2-channel mode or another output.",
+    "snd_speakers_hint8": "7.1 mode: 8 speakers — front = backbox, side = lockbar, rear = back of the cab, center + LFE = bass. Needs a 7.1 output (on a 5.1 card: line-in jack retasked as side output) or a separate backbox output.",
     "snd_speaker_ok": "Played on:"
   },
   "de": {
@@ -573,6 +575,7 @@
     "hp_sr": "Seite rechts",
     "snd_speakers_hint2": "Jede Taste lässt einen einzelnen Lautsprecher sprechen (die Stimme nennt den Kanal auf Englisch). Prüfen Sie, dass der richtige spricht.",
     "snd_speakers_hint6": "6-Kanal-Modus: jede Taste lässt einen einzelnen Lautsprecher sprechen. Lehnt der Ausgang 6 Kanäle ab, ist er Stereo: 2-Kanal-Modus oder anderen Ausgang wählen.",
+    "snd_speakers_hint8": "7.1-Modus: 8 Lautsprecher — vorne = Backbox, seitlich = Lockbar, hinten = Cab-Rückseite, Center + LFE = Bass. Braucht einen 7.1-Ausgang (bei einer 5.1-Karte: Line-In-Buchse als Seitenausgang umbelegt) oder einen separaten Backbox-Ausgang.",
     "snd_speaker_ok": "Gespielt auf:"
   },
   "it": {
@@ -765,6 +768,7 @@
     "hp_sr": "Laterale destro",
     "snd_speakers_hint2": "Ogni pulsante fa parlare un solo altoparlante (la voce dice il canale in inglese). Verifica che parli quello giusto.",
     "snd_speakers_hint6": "Modalità 6 canali: ogni pulsante fa parlare un solo altoparlante. Se l'uscita rifiuta 6 canali è stereo: scegli una modalità a 2 canali o un'altra uscita.",
+    "snd_speakers_hint8": "Modalità 7.1: 8 altoparlanti — anteriori = backbox, laterali = lockbar, posteriori = fondo del cab, centro + LFE = bassi. Serve un'uscita 7.1 (su una scheda 5.1: presa line-in riassegnata come uscita laterale) o un'uscita backbox separata.",
     "snd_speaker_ok": "Riprodotto su:"
   },
   "es": {
@@ -957,6 +961,7 @@
     "hp_sr": "Lateral derecho",
     "snd_speakers_hint2": "Cada botón hace hablar a un solo altavoz (la voz dice el canal en inglés). Comprueba que hable el correcto.",
     "snd_speakers_hint6": "Modo 6 canales: cada botón hace hablar a un solo altavoz. Si la salida rechaza 6 canales es estéreo: elige un modo de 2 canales u otra salida.",
+    "snd_speakers_hint8": "Modo 7.1: 8 altavoces — delanteros = backbox, laterales = lockbar, traseros = fondo del cab, centro + LFE = graves. Requiere una salida 7.1 (en una tarjeta 5.1: toma line-in reasignada como salida lateral) o una salida backbox separada.",
     "snd_speaker_ok": "Reproducido en:"
   }
 }
