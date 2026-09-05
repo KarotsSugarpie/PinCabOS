@@ -87,12 +87,24 @@ echo "=== 1) Live rootfs preparation ==="
 mount_pseudo
 # casper drives the live boot; it must live inside the image we are about to
 # compress, not on the build host.
-if [ ! -x "$ROOTFS/usr/share/initramfs-tools/scripts/casper" ] \
-   && [ ! -d "$ROOTFS/usr/share/casper" ]; then
-  echo "  installing casper into the rootfs"
+# PINCABOS_ISO_LIVE_OUTILS_V1 : grub-mkrescue tourne dans le chroot (section 6),
+# le rootfs doit donc porter GRUB EFI/BIOS, xorriso et mtools ; un cab ne les a
+# pas forcement. On n installe que ce qui manque.
+MANQUANTS=""
+[ -x "$ROOTFS/usr/share/initramfs-tools/scripts/casper" ] || [ -d "$ROOTFS/usr/share/casper" ] || MANQUANTS="$MANQUANTS casper"
+[ -x "$ROOTFS/usr/bin/grub-mkrescue" ] || MANQUANTS="$MANQUANTS grub-common"
+[ -d "$ROOTFS/usr/lib/grub/x86_64-efi" ] || MANQUANTS="$MANQUANTS grub-efi-amd64-bin"
+[ -d "$ROOTFS/usr/lib/grub/i386-pc" ] || MANQUANTS="$MANQUANTS grub-pc-bin"
+[ -x "$ROOTFS/usr/bin/xorriso" ] || MANQUANTS="$MANQUANTS xorriso"
+[ -x "$ROOTFS/usr/bin/mformat" ] || MANQUANTS="$MANQUANTS mtools"
+if [ -n "$MANQUANTS" ]; then
+  echo "  installing into the rootfs:$MANQUANTS"
+  cp -a /etc/resolv.conf "$ROOTFS/etc/resolv.conf" 2>/dev/null || true
+  chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1 || true
+  # shellcheck disable=SC2086
   chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y -qq casper >/dev/null 2>&1 \
-    || die "cannot install casper (no network in chroot?)"
+    apt-get install -y -qq $MANQUANTS >/dev/null 2>&1 \
+    || die "cannot install$MANQUANTS (no network in chroot?)"
 fi
 
 cat > "$ROOTFS/etc/casper.conf" <<'CASPER'

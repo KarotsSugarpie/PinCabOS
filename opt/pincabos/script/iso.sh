@@ -33,6 +33,25 @@ OUT_DIR="$BUILD_BASE/output"
 OUT_ISO="$OUT_DIR/PinCabOS-beta-Installer.iso"
 VOLID="PINCABOS_V81G"
 
+# PINCABOS_ISO_MODELE_LIVE_V1
+# Deux modeles d ISO :
+#   classic (defaut) : base Ubuntu live-server + payload en morceaux, l installeur
+#                      texte/graphique tourne dans la base Ubuntu ;
+#   live (--live ou PCO_ISO_MODEL=live) : le payload EST le systeme live
+#                      (casper/filesystem.squashfs), meme noyau, memes pilotes,
+#                      memes outils que le cab installe ; l assistant graphique y
+#                      voit le vrai materiel. Sections 9-11 et 14-20 sautees, ISO
+#                      produite par iso-live.sh. Decision Yann + Karots 05/09/2026.
+PCO_ISO_MODEL="${PCO_ISO_MODEL:-classic}"
+for pco_arg in "$@"; do
+  case "$pco_arg" in
+    --live) PCO_ISO_MODEL="live" ;;
+    --classic) PCO_ISO_MODEL="classic" ;;
+  esac
+done
+LIVE_ROOTFS="$WORK/live-rootfs"
+echo "ISO model: $PCO_ISO_MODEL"
+
 LOG_DIR="$BUILD_BASE/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/iso-v8.1g-$(date +%Y%m%d-%H%M%S).log"
@@ -3783,6 +3802,19 @@ echo "ISO-ready payload:"
 ls -lh "$PAYLOAD_ISO_READY"
 du -sh "$PAYLOAD_ISO_READY"
 
+if [ "$PCO_ISO_MODEL" = "live" ]; then
+  echo
+  echo "=== 9L) Live model: the payload becomes the live root filesystem ==="
+  echo "PINCABOS_ISO_MODELE_LIVE_V1"
+  rm -rf "$LIVE_ROOTFS" "$ISO_DIR"
+  mkdir -p "$LIVE_ROOTFS" "$ISO_DIR/casper"
+  tar --zstd -xpf "$ARCHIVE" -C "$LIVE_ROOTFS" --numeric-owner
+  test -d "$LIVE_ROOTFS/opt/pincabos" || die "live rootfs incomplete: $LIVE_ROOTFS/opt/pincabos missing"
+  test -d "$LIVE_ROOTFS/lib/modules" || die "live rootfs incomplete: no kernel modules"
+  ROOTFS_DIR="$LIVE_ROOTFS"
+  echo "GO [OK] live rootfs unpacked in $LIVE_ROOTFS (sections 9-11 skipped: no Ubuntu base)"
+else
+
 echo
 echo "=== 9) Download or validate Ubuntu base ISO ==="
 mkdir -p "$CACHE_DIR"
@@ -3876,6 +3908,8 @@ echo "Selected live squashfs:"
 ls -lh "$SQUASHFS"
 
 unsquashfs -d "$ROOTFS_DIR" "$SQUASHFS"
+
+fi   # PCO_ISO_MODEL classic (sections 9-11)
 
 echo
 echo "=== 12) Ensure required live installer tools inside squashfs ==="
@@ -6573,6 +6607,26 @@ PINCBOS_SERVICE
 ln -sfn ../pincabos-live-installer-tty.service \
   "$ROOTFS_DIR/etc/systemd/system/multi-user.target.wants/pincabos-live-installer-tty.service"
 
+if [ "$PCO_ISO_MODEL" = "live" ]; then
+  echo
+  echo "=== 14L) Live model: ISO built by iso-live.sh ==="
+  cleanup_mounts
+  rm -f "$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop"
+  LIVE_SH="$(dirname "$(readlink -f "$0")")/iso-live.sh"
+  [ -f "$LIVE_SH" ] || LIVE_SH="/opt/pincabos/script/iso-live.sh"
+  test -f "$LIVE_SH" || die "iso-live.sh not found next to iso.sh nor in /opt/pincabos/script"
+  mkdir -p "$OUT_DIR"
+  bash "$LIVE_SH" --rootfs "$ROOTFS_DIR" --payload "$PAYLOAD_FULL" --out "$OUT_ISO" \
+    || die "iso-live.sh failed"
+  test -f "$OUT_ISO" || die "live ISO was not created"
+  ls -lh "$OUT_ISO"
+  sha256sum "$OUT_ISO" | tee "$OUT_ISO.sha256"
+  echo
+  echo "==============================================================="
+  echo " ISO CREATED OK (live model)"
+  echo "==============================================================="
+else
+
 echo
 echo "=== 14) No live desktop, no manual launcher (PINCABOS_ISO_UN_SEUL_CHEMIN_V1) ==="
 rm -f "$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop"
@@ -7256,6 +7310,8 @@ echo "OK: nettoyage post-build terminé."
 
 
 # ======================================================================
+fi   # PCO_ISO_MODEL classic (sections 14-20)
+
 # PINCABOS_OPTIONAL_WEB_PUBLISH_V1
 # Publication optionnelle de l'ISO apres un build reussi.
 # Demande IP/login/password une seule fois.
