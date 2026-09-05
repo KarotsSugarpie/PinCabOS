@@ -1,4 +1,4 @@
-/* PinCabOS menu tools FORCE INI offset v5 */
+/* PinCabOS menu tools — pinned menu click-safe V8 */
 :root {
   --pco-menu-pinned-offset: 0px;
 }
@@ -10,7 +10,7 @@
   margin-left: 10px !important;
   vertical-align: middle !important;
   position: relative !important;
-  z-index: 2147483000 !important;
+  z-index: 2 !important;
 }
 
 .pco-menu-tool-btn {
@@ -36,7 +36,7 @@
   appearance: none !important;
   -webkit-appearance: none !important;
   position: relative !important;
-  z-index: 2147483001 !important;
+  z-index: 3 !important;
   pointer-events: auto !important;
 }
 
@@ -67,25 +67,47 @@
   background: #ff1f1f !important;
 }
 
-.pco-menu-force-fixed {
+/*
+ * The fixed NAV surface itself is intentionally click-through.
+ * Only actual controls/links inside the menu receive pointer events.
+ * This prevents an invisible 100vw fixed box from blocking the UI.
+ */
+.pco-menu-force-fixed,
+.pco-menu-viewport-fixed-v8 {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
+  bottom: auto !important;
   width: 100vw !important;
   max-width: none !important;
-  z-index: 2147482999 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  z-index: 100000 !important;
   box-sizing: border-box !important;
+  overflow: visible !important;
+  transform: none !important;
+  filter: none !important;
+  isolation: isolate !important;
+  pointer-events: none !important;
   box-shadow: 0 12px 32px rgba(0,0,0,.70) !important;
   border-bottom: 3px solid #ff8a00 !important;
 }
 
-/* JS applies this class to the INI Navigation/Safe editor block */
-.pco-ini-offset-forced {
-  z-index: 2147482500 !important;
-  box-sizing: border-box !important;
+.pco-menu-viewport-fixed-v8 a,
+.pco-menu-viewport-fixed-v8 button,
+.pco-menu-viewport-fixed-v8 input,
+.pco-menu-viewport-fixed-v8 select,
+.pco-menu-viewport-fixed-v8 textarea,
+.pco-menu-viewport-fixed-v8 summary,
+.pco-menu-viewport-fixed-v8 [role="button"],
+.pco-menu-viewport-fixed-v8 [tabindex] {
+  pointer-events: auto !important;
 }
 
-body.pco-menu-is-pinned .pco-ini-offset-forced {
-  top: calc(var(--pco-menu-pinned-offset) + 12px) !important;
+/* Legacy V7 class must never keep the old giant stacking behavior. */
+.pco-menu-viewport-fixed-v7 {
+  z-index: 100000 !important;
 }
