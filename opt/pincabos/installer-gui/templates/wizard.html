@@ -210,8 +210,28 @@ button{
     <div style="display:flex;gap:10px">
       <button class="ghost" id="btn-identify" onclick="identifyScreens()" data-i18n="identify"></button>
       <button class="ghost" id="btn-apply" onclick="applyScreens()" data-i18n="apply_layout"></button>
-      <button class="primary" id="screens-next" disabled onclick="loadNetwork(false);go('st-network')" data-i18n="next"></button>
+      <button class="primary" id="screens-next" disabled onclick="loadSound();go('st-sound')" data-i18n="next"></button>
     </div></div>
+</section>
+
+<section class="step" id="st-sound">
+  <h2 data-i18n="sound_title"></h2>
+  <p style="color:var(--muted);margin-bottom:12px" data-i18n="sound_hint"></p>
+  <div class="card" id="snd-card" style="margin-bottom:14px">
+    <div class="row"><label data-i18n="snd_output"></label><select id="snd-out"></select></div>
+    <div class="row"><label data-i18n="snd_backbox"></label><select id="snd-bg"></select></div>
+    <div class="row"><label data-i18n="snd_mode"></label><select id="snd-mode"></select></div>
+    <div class="row"><label data-i18n="snd_volume"></label><input type="range" id="snd-vol" min="0" max="100" step="5" style="flex:1"><b id="snd-vol-val" style="min-width:3.5em;text-align:right">70 %</b></div>
+    <div class="row" style="margin:6px 0 0"><button type="button" class="ghost" id="snd-test" onclick="testSound()" data-i18n="snd_test"></button><span class="hint" id="snd-status" style="margin:0"></span></div>
+  </div>
+  <div class="card" id="dof-card">
+    <div class="row" style="margin-bottom:6px"><label data-i18n="dof_title"></label>
+      <div class="seg"><button type="button" class="segb" id="dof-enable" onclick="toggleDof()" data-i18n="dof_enable"></button></div></div>
+    <div class="hint" data-i18n="dof_hint" style="margin-top:0"></div>
+    <div class="hint" id="dof-detected"></div>
+  </div>
+  <div class="btns"><button class="ghost" onclick="go('st-screens')" data-i18n="back"></button>
+    <button class="primary" onclick="loadNetwork(false);go('st-network')" data-i18n="next"></button></div>
 </section>
 
 <section class="step" id="st-network">
@@ -220,7 +240,7 @@ button{
   <div id="net-list"></div>
   <div class="card" id="net-wifi" style="margin-top:14px;display:none"></div>
   <div class="hint" id="net-status"></div>
-  <div class="btns"><button class="ghost" onclick="go('st-screens')" data-i18n="back"></button>
+  <div class="btns"><button class="ghost" onclick="go('st-sound')" data-i18n="back"></button>
     <div style="display:flex;gap:10px">
       <button class="ghost" onclick="loadNetwork(true)" data-i18n="net_refresh"></button>
       <button class="primary" id="net-next" onclick="go('st-disk')" data-i18n="next"></button>
@@ -423,6 +443,39 @@ function applyScreens(){
     if(d.ok){screensApplied=screensKey();setScreensStatus("screens_applied",true)}
     else{screensApplied="";setScreensStatus("screens_failed",false,(d.erreurs||[]).join(" ; "))}})
   .catch(()=>{btn.disabled=false;screensApplied="";setScreensStatus("screens_failed",false)})}
+// PINCABOS_INSTALLEUR_SON_DOF_V1 — étape Son et DOF : sorties ALSA de la
+// session (mêmes cartes que le système installé), test immédiat, mode VPX,
+// volume ; cartes DOF détectées, DOF activé si l'une d'elles est vue.
+S.sound={playfield:"",backbox:"",sound3d:"0",volume:70};
+S.dof={enabled:true};
+let sndDevs=[],sndModes=[],dofDet=[];
+function loadSound(){fetch("/api/sound").then(r=>r.json()).then(d=>{
+    sndDevs=(d.audio&&d.audio.devices)||[];sndModes=(d.audio&&d.audio.modes)||[];dofDet=(d.dof&&d.dof.detected)||[];
+    if(!S.sound.touched&&d.audio&&d.audio.proposition){S.sound={...S.sound,...d.audio.proposition}}
+    if(!S.dof.touched&&d.dof&&d.dof.proposition){S.dof.enabled=!!d.dof.proposition.enabled}
+    renderSound()}).catch(()=>{sndDevs=[];sndModes=[];dofDet=[];renderSound()})}
+function renderSound(){
+  const out=document.getElementById("snd-out"),bg=document.getElementById("snd-bg"),mode=document.getElementById("snd-mode");
+  out.innerHTML="";bg.innerHTML="";mode.innerHTML="";
+  if(!sndDevs.length){out.add(new Option(t("snd_none"),""));bg.add(new Option(t("snd_none"),""))}
+  else{sndDevs.forEach(d=>out.add(new Option(d.label,d.id,false,d.id===S.sound.playfield)));
+    bg.add(new Option(t("snd_same"),"",false,!S.sound.backbox||S.sound.backbox===S.sound.playfield));
+    sndDevs.forEach(d=>bg.add(new Option(d.label,d.id,false,d.id===S.sound.backbox&&d.id!==S.sound.playfield)))}
+  sndModes.forEach(([v,l])=>mode.add(new Option(t("sound3d_"+v)||l,v,false,v===String(S.sound.sound3d))));
+  document.getElementById("snd-vol").value=S.sound.volume;document.getElementById("snd-vol-val").textContent=S.sound.volume+" %";
+  document.getElementById("snd-test").disabled=!S.sound.playfield;
+  document.getElementById("dof-enable").classList.toggle("sel",!!S.dof.enabled);
+  document.getElementById("dof-detected").textContent=dofDet.length?t("dof_detected")+" "+dofDet.map(c=>c.kind+(c.serial?" #"+c.serial:"")).join(", ")+(dofDet.some(c=>c.strip)?" — "+t("dof_strip_note"):""):t("dof_none")}
+document.getElementById("snd-out").onchange=e=>{S.sound.playfield=e.target.value;S.sound.touched=true;if(S.sound.backbox===S.sound.playfield)S.sound.backbox="";renderSound()};
+document.getElementById("snd-bg").onchange=e=>{S.sound.backbox=e.target.value;S.sound.touched=true};
+document.getElementById("snd-mode").onchange=e=>{S.sound.sound3d=e.target.value;S.sound.touched=true};
+document.getElementById("snd-vol").oninput=e=>{S.sound.volume=+e.target.value;S.sound.touched=true;document.getElementById("snd-vol-val").textContent=S.sound.volume+" %"};
+document.getElementById("snd-vol").onchange=e=>{fetch("/api/sound/volume",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:S.sound.playfield,volume:S.sound.volume})}).catch(()=>{})};
+function testSound(){const st=document.getElementById("snd-status"),btn=document.getElementById("snd-test");btn.disabled=true;st.textContent=t("snd_testing");
+  fetch("/api/sound/test",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:S.sound.playfield})})
+  .then(r=>r.json()).then(d=>{btn.disabled=false;st.textContent=d.ok?t("snd_test_ok"):t("snd_test_failed")+" "+(d.sortie||"")})
+  .catch(()=>{btn.disabled=false;st.textContent=t("snd_test_failed")})}
+function toggleDof(){S.dof.enabled=!S.dof.enabled;S.dof.touched=true;renderSound()}
 // PINCABOS_INSTALLEUR_RESEAU_V1 — étape Réseau : DHCP par défaut, IP fixe
 // proposée depuis le bail, Wi-Fi seulement si un matériel est présent. Chaque
 // application est immédiate dans la session (le résultat se voit) ; le réseau
@@ -515,6 +568,8 @@ function fillSummary(){
     [t("screens"),ROLE_KEYS.filter(r=>S.screens.roles[r]).map(r=>t("role_"+r)+" = "+S.screens.roles[r]).join(", ")||"—"],
     [t("orient_q"),t({0:"o_up",180:"o_down",90:"o_90",270:"o_270"}[+S.screens.rotation]||"o_up")],
     [t("dmd_title"),S.screens.usage.fulldmd?t("role_fulldmd"):t("dmd_"+S.dmd.type)+(S.dmd.type==="zedmd_usb"&&S.dmd.device?" · "+S.dmd.device:S.dmd.type==="zedmd_wifi"?" · "+S.dmd.wifi_addr:"")],
+    [t("sound_title"),(sndDevs.find(d=>d.id===S.sound.playfield)||{}).label||"—"],
+    [t("dof_title"),S.dof.enabled?t("dof_enable"):t("role_none")],
     [t("network"),(netState&&netState.interfaces||[]).filter(i=>i.address).map(i=>i.device+" "+i.address+" ("+(i.method==="manual"?t("net_static"):"DHCP")+")").join(", ")||t("net_noaddr")],
     [t("disk"),S.disk+" ("+(S.mode==1?t("mode_erase"):S.mode==3?t("mode_up"):t("mode_dual"))+")"]];
   document.getElementById("summary").innerHTML=rows.map(([k,v])=>

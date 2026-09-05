@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""pincabos-audio : son du cab, en ligne de commande (PINCABOS_AUDIO_MODULE_V1).
+
+  detect                    sorties ALSA (JSON)
+  test <hw:C,D>             joue le signal de test sur cette sortie
+  volume <hw:C,D> <pct>     volume ALSA de la carte (session live)
+  apply-firstboot           traduit audio-router.json (choix de l installeur) en
+                            sorties VPX et volume de la session PipeWire (root)
+"""
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pincabos_audio as pa  # noqa: E402
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else "detect"
+    if cmd == "detect":
+        print(json.dumps(pa.detecter(), indent=2, ensure_ascii=False)); return 0
+    if cmd == "test" and len(argv) > 2:
+        r = pa.tester(argv[2]); print(r["sortie"]); return 0 if r["ok"] else 1
+    if cmd == "volume" and len(argv) > 3:
+        r = pa.volume_alsa(argv[2], int(argv[3])); print(r["sortie"]); return 0 if r["ok"] else 1
+    if cmd == "apply-firstboot":
+        cfg = pa.charger()
+        if not cfg:
+            print("audio-router.json absent ou vide : rien a faire"); return 0
+        for ligne in pa.appliquer_premier_demarrage(cfg):
+            print(ligne)
+        return 0
+    print(__doc__); return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
