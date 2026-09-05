@@ -1,0 +1,377 @@
+/*
+ * PINCABOS_INTERFACE_UNIFIED_V1
+ *
+ * Couche visuelle commune de toute la WebApp PinCabOS.
+ * Chargee APRES les CSS propres aux pages.
+ *
+ * REGLES:
+ * - Apparence reste l'unique source de verite pour les couleurs, rayons et ombres.
+ * - Aucun changement de grille, position, largeur, densite ou comportement.
+ * - Les CSS locaux gardent uniquement leur structure et leur logique technique.
+ */
+
+:root {
+  --pco-ui-accent: var(--pco-appearance-accent, #ff8a1f);
+  --pco-ui-accent2: var(--pco-appearance-accent2, #9464ff);
+  --pco-ui-text: var(--pco-appearance-page-text, #f7f8ff);
+  --pco-ui-muted: var(--pco-appearance-muted-text, #8d94aa);
+  --pco-ui-card: var(--pco-appearance-card-bg, #0e1019);
+  --pco-ui-border: var(--pco-appearance-card-border, #2a2e3f);
+  --pco-ui-radius: var(--pco-appearance-card-radius, 5px);
+  --pco-ui-shadow: var(--pco-appearance-card-shadow, 0 18px 55px rgba(0,0,0,.34));
+  --pco-ui-nav: var(--pco-appearance-nav-panel-bg, #141724);
+  --pco-ui-nav-border: var(--pco-appearance-nav-panel-border, #2a2e3f);
+  --pco-ui-input: var(--pco-appearance-input-bg, #05060a);
+  --pco-ui-input-border: var(--pco-appearance-input-border, #9464ff);
+  --pco-ui-input-text: var(--pco-appearance-input-text, #f7f8ff);
+  --pco-ui-table: var(--pco-appearance-table-bg, #0e1019);
+  --pco-ui-ok: var(--pco-appearance-ok, #00ff99);
+  --pco-ui-warn: var(--pco-appearance-warn, #ff8a1f);
+  --pco-ui-bad: var(--pco-appearance-bad, #ff5555);
+
+  /* Compatibilite avec les pages historiques qui declarent leurs propres
+     variables locales. Le !important permet a Apparence, chargee en dernier,
+     de rester prioritaire sans modifier le HTML/JS de ces modules. */
+  --pco-bg: var(--pco-ui-input) !important;
+  --pco-panel: var(--pco-ui-card) !important;
+  --pco-panel-2: var(--pco-ui-nav) !important;
+  --pco-border: var(--pco-ui-border) !important;
+  --pco-border-soft: var(--pco-ui-nav-border) !important;
+  --pco-text: var(--pco-ui-text) !important;
+  --pco-dim: var(--pco-ui-muted) !important;
+  --pco-accent: var(--pco-ui-accent) !important;
+  --pco-accent-2: var(--pco-ui-accent2) !important;
+  --pco-ok: var(--pco-ui-ok) !important;
+  --pco-warn: var(--pco-ui-warn) !important;
+  --pco-bad: var(--pco-ui-bad) !important;
+  --pco-shadow: var(--pco-ui-shadow) !important;
+
+  --pco-orange: var(--pco-ui-accent) !important;
+  --pco-orange2: var(--pco-ui-accent2) !important;
+  --pco-purple: var(--pco-appearance-purple, var(--pco-ui-accent2)) !important;
+  --pco-bg-card: var(--pco-ui-card) !important;
+
+  --pco-st-orange: var(--pco-ui-accent) !important;
+  --pco-st-violet: var(--pco-appearance-purple, var(--pco-ui-accent2)) !important;
+  --pco-st-line: var(--pco-ui-border) !important;
+  --pco-st-text: var(--pco-ui-text) !important;
+  --pco-st-muted: var(--pco-ui-muted) !important;
+  --pco-st-panel: var(--pco-ui-card) !important;
+  --pco-st-panel-2: var(--pco-ui-nav) !important;
+}
+
+/* Base visuelle commune. Aucun espacement ni dimension impose ici. */
+html body {
+  color: var(--pco-ui-text) !important;
+}
+
+html body ::selection {
+  background: var(--pco-ui-accent) !important;
+  color: var(--pco-appearance-button-text, #05060a) !important;
+}
+
+/* Titres et texte secondaire */
+html body :is(h1, h2, h3, .title, .page-title, .panel-title, .card-title,
+  .pco-panel-title, .pco-st-title, .pco-st-heading, .nav-label) {
+  color: var(--pco-ui-accent) !important;
+}
+
+html body :is(.muted, .dim, .subtle, .subtitle, .description, .hint, .help,
+  .small-muted, .pco-msg, .pco-mini, .pco-note, .pco-card-label,
+  .pco-step-state, .pco-reboot-sub, .pco-up-sub, .pco-st-muted,
+  .pcx-imgstudio-head p, .pcx-imgstudio-meta, .pcx-imgstudio-group label) {
+  color: var(--pco-ui-muted) !important;
+}
+
+html body a:not(.button):not(.btn):not([class*="button"]):not([class*="btn"]) {
+  color: var(--pco-ui-accent) !important;
+}
+
+/* Cartes / panneaux. Les classes couvrent les familles actuellement presentes
+   dans Dashboard, Tools, Updates, Smart Import, Explorer, DOF, VPX Ball,
+   Image Studio et les pages de configuration. */
+html body :is(
+  .card, .panel, .box, .tile, .metric, .stat, .widget,
+  .tool-card, .dashboard-card, .dashboard-system-card,
+  .pco-card, .pco-panel, .pco-category, .pco-catalog-item,
+  .pco-live-card, .pco-live-widget, .pco-dashboard-widget,
+  .pco-st-panel, .pco-st-card, .pco-st-hero, .pco-st-partner,
+  .pco-st-summary, .pco-st-result,
+  .pcx-card, .pcx-top, .pcx-side, .pcx-main,
+  .dof-card, .dof-pro-card, .dof-pro-panel,
+  .vpxbc-shell, .vpxbc-hero, .vpxbc-picker, .vpxbc-preview,
+  .firstrun-step, .firstrun-hero,
+  .pcx-imgstudio, .pcx-imgstudio-group
+) {
+  background-color: var(--pco-ui-card) !important;
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-border) !important;
+  border-radius: var(--pco-ui-radius) !important;
+  box-shadow: var(--pco-ui-shadow) !important;
+}
+
+/* Les sous-panneaux restent visuellement lies a la meme interface, sans forcer
+   leur mise en page. */
+html body :is(
+  .card-header, .card-footer, .panel-head, .panel-header, .panel-footer,
+  .pco-card-head, .pco-panel-head, .pco-log-tools,
+  .toolbar, .tools, .actions-bar,
+  .pcx-imgstudio-toolbar
+) {
+  background-color: var(--pco-ui-nav) !important;
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-nav-border) !important;
+}
+
+/* Updates : remplace les gradients/couleurs historiques par Apparence tout en
+   conservant exactement les grilles, hauteurs et animations du module. */
+html body .pco-up-hero,
+html body .pco-up-wrap .pco-card,
+html body .pco-up-wrap .pco-panel {
+  background: var(--pco-ui-card) !important;
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-border) !important;
+  border-radius: var(--pco-ui-radius) !important;
+  box-shadow: var(--pco-ui-shadow) !important;
+}
+
+html body :is(.pco-badge, .pco-status, .pco-step, .pco-reboot) {
+  background-color: var(--pco-ui-nav) !important;
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-nav-border) !important;
+}
+
+html body .pco-progress {
+  background: var(--pco-ui-input) !important;
+  border-color: var(--pco-ui-border) !important;
+}
+
+html body .pco-progress-bar {
+  background: linear-gradient(90deg, var(--pco-ui-accent), var(--pco-ui-accent2), var(--pco-ui-accent)) !important;
+  background-size: 200% 100% !important;
+}
+
+/* Boutons */
+html body :is(
+  button,
+  .button,
+  .btn,
+  .pco-btn,
+  .pcx-btn,
+  .pco-action,
+  .pco-catalog-add,
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"]
+) {
+  background-color: var(--pco-appearance-button-bg) !important;
+  background-image: none !important;
+  color: var(--pco-appearance-button-text) !important;
+  border-color: var(--pco-ui-border) !important;
+  border-radius: var(--pco-appearance-button-radius) !important;
+  box-shadow: none;
+}
+
+html body :is(
+  .secondary, .alt,
+  button.secondary, button.alt,
+  .button.secondary, .button.alt,
+  .btn.secondary, .btn.alt,
+  .pco-btn.alt,
+  .pco-st-secondary
+) {
+  background-color: var(--pco-appearance-secondary-bg) !important;
+  color: var(--pco-appearance-secondary-text) !important;
+  border-color: var(--pco-ui-accent2) !important;
+}
+
+html body :is(button, .button, .btn, .pco-btn, .pcx-btn, .pco-action):not(:disabled):hover {
+  border-color: var(--pco-ui-accent) !important;
+  filter: brightness(1.06);
+}
+
+html body :is(button, .button, .btn, .pco-btn, .pcx-btn, .pco-action):disabled {
+  opacity: .5;
+}
+
+/* Etats semantiques : la logique GO/WARN/NOGO est preservee, seules les
+   couleurs proviennent d'Apparence. */
+html body :is(.good, .ok, .success, .is-ok, .pco-good, .pco-step.go) {
+  border-color: var(--pco-ui-ok) !important;
+}
+
+html body :is(button.good, button.ok, .button.good, .button.ok,
+  .btn.good, .btn.ok, .pco-action.good, .pco-status.success) {
+  background-color: color-mix(in srgb, var(--pco-ui-ok) 18%, var(--pco-ui-card)) !important;
+  color: var(--pco-ui-ok) !important;
+}
+
+html body :is(.warn, .warning, .is-warn, .pco-warn, .pco-step.running) {
+  border-color: var(--pco-ui-warn) !important;
+}
+
+html body :is(button.warn, .button.warn, .btn.warn, .pco-action.warn,
+  .pco-status.running) {
+  background-color: color-mix(in srgb, var(--pco-ui-warn) 18%, var(--pco-ui-card)) !important;
+  color: var(--pco-ui-warn) !important;
+}
+
+html body :is(.bad, .danger, .error, .is-error, .pco-step.nogo) {
+  border-color: var(--pco-ui-bad) !important;
+}
+
+html body :is(button.danger, button.bad, .button.danger, .button.bad,
+  .btn.danger, .btn.bad, .pco-btn.danger, .pco-action.danger,
+  .pco-status.error) {
+  background-color: color-mix(in srgb, var(--pco-ui-bad) 18%, var(--pco-ui-card)) !important;
+  color: var(--pco-ui-bad) !important;
+}
+
+/* Formulaires */
+html body :is(
+  input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea
+) {
+  background-color: var(--pco-ui-input) !important;
+  background-image: none !important;
+  color: var(--pco-ui-input-text) !important;
+  border-color: var(--pco-ui-input-border) !important;
+  border-radius: var(--pco-appearance-button-radius) !important;
+}
+
+html body :is(input, select, textarea)::placeholder {
+  color: var(--pco-ui-muted) !important;
+  opacity: 1;
+}
+
+html body :is(input, select, textarea, button, .button, .btn, a):focus-visible {
+  outline: 2px solid var(--pco-ui-accent) !important;
+  outline-offset: 2px !important;
+}
+
+html body :is(input[type="checkbox"], input[type="radio"], input[type="range"]) {
+  accent-color: var(--pco-ui-accent) !important;
+}
+
+/* Tableaux */
+html body table {
+  background-color: var(--pco-ui-table) !important;
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-border) !important;
+}
+
+html body table :is(th, thead td) {
+  background-color: var(--pco-ui-nav) !important;
+  color: var(--pco-ui-accent) !important;
+  border-color: var(--pco-ui-border) !important;
+}
+
+html body table td {
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-border) !important;
+}
+
+html body table tbody tr:hover > * {
+  background-color: color-mix(in srgb, var(--pco-ui-accent) 8%, var(--pco-ui-table)) !important;
+}
+
+/* Logs / code */
+html body :is(
+  pre, code, .log, .task-log, .update-log, .progress-log,
+  .pco-log, .console, .terminal, .output
+) {
+  background-color: var(--pco-ui-input) !important;
+  color: var(--pco-ui-input-text) !important;
+  border-color: var(--pco-ui-border) !important;
+}
+
+/* Details, modales et dialogues */
+html body :is(details, dialog, .modal-content, .modal-panel, .pco-modal-panel,
+  .drawer, .popover) {
+  background-color: var(--pco-ui-card) !important;
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-border) !important;
+  border-radius: var(--pco-ui-radius) !important;
+  box-shadow: var(--pco-ui-shadow) !important;
+}
+
+html body details > summary {
+  color: var(--pco-ui-accent) !important;
+}
+
+/* Badges, chips, tabs et indicateurs */
+html body :is(.badge, .pill, .chip, .tag, .status, .pco-badge) {
+  background-color: var(--pco-ui-nav) !important;
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-nav-border) !important;
+}
+
+html body :is(.tabs, .tab-list, [role="tablist"]) {
+  border-color: var(--pco-ui-nav-border) !important;
+}
+
+html body :is(.tab, [role="tab"]) {
+  background-color: var(--pco-appearance-secondary-bg) !important;
+  color: var(--pco-appearance-secondary-text) !important;
+  border-color: var(--pco-ui-nav-border) !important;
+}
+
+html body :is(.tab.active, .tab.is-active, [role="tab"][aria-selected="true"]) {
+  background-color: var(--pco-appearance-nav-active-bg) !important;
+  color: var(--pco-appearance-nav-active-text) !important;
+  border-color: var(--pco-ui-accent) !important;
+}
+
+/* Image Studio : garde son damier/canvas et sa structure, harmonise seulement
+   le chrome de l'outil. */
+html body .pcx-imgstudio {
+  background: var(--pco-ui-card) !important;
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-border) !important;
+  box-shadow: var(--pco-ui-shadow) !important;
+}
+
+html body .pcx-imgstudio .pcx-imgstudio-toolbar,
+html body .pcx-imgstudio .pcx-imgstudio-group {
+  background: var(--pco-ui-nav) !important;
+  border-color: var(--pco-ui-nav-border) !important;
+}
+
+html body .pcx-imgstudio-head {
+  border-bottom-color: var(--pco-ui-border) !important;
+}
+
+html body .pcx-imgstudio-head h2,
+html body .pcx-imgstudio-meta code {
+  color: var(--pco-ui-accent) !important;
+}
+
+/* Navigation commune */
+html body .pincabos-nav {
+  background-color: var(--pco-ui-nav) !important;
+  color: var(--pco-ui-text) !important;
+  border-color: var(--pco-ui-nav-border) !important;
+}
+
+html body .pincabos-nav :is(a, button):not(.screen-toggle-on):not(.active):not(.pco-pinned) {
+  border-color: var(--pco-ui-nav-border) !important;
+}
+
+html body .pincabos-nav :is(a.active, .active, .screen-toggle-on, .pco-pinned) {
+  background-color: var(--pco-appearance-nav-active-bg) !important;
+  color: var(--pco-appearance-nav-active-text) !important;
+  border-color: var(--pco-ui-accent) !important;
+}
+
+/* Respect des preferences d'accessibilite : aucune animation visuelle ajoutee. */
+@media (prefers-reduced-motion: reduce) {
+  html body *,
+  html body *::before,
+  html body *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .001ms !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
