@@ -31,15 +31,68 @@ from pathlib import Path
 
 try:
     data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    screen = data["backglass"]
-    values = [int(screen[key]) for key in ("x", "y", "width", "height")]
 except Exception:
     raise SystemExit(1)
 
-x, y, width, height = values
-if width < 640 or height < 360:
+
+def rect(value):
+    if not isinstance(value, dict):
+        return None
+    try:
+        x = int(value.get("x", 0))
+        y = int(value.get("y", 0))
+        width = int(value["width"])
+        height = int(value["height"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if width < 320 or height < 240:
+        return None
+    return x, y, width, height
+
+
+backglass = rect(data.get("backglass"))
+if backglass is not None:
+    x, y, width, height = backglass
+    if width >= 640 and height >= 360:
+        print("BACKGLASS", x, y, width, height)
+        raise SystemExit(0)
+
+# Single-screen cabinet fallback. Prefer the configured playfield, then the
+# first valid physical screen. The Lobby A/V remains visible as an overlay
+# instead of taking over the whole playfield once VPX starts.
+base = rect(data.get("playfield"))
+if base is None:
+    screens = data.get("all_screens")
+    if isinstance(screens, list):
+        for screen in screens:
+            base = rect(screen)
+            if base is not None:
+                break
+
+if base is None:
     raise SystemExit(1)
-print(x, y, width, height)
+
+x, y, width, height = base
+margin = max(12, min(width, height) // 60)
+
+# Large enough for the existing responsive Lobby A/V page, while leaving
+# the majority of the playfield visible on a one-screen cabinet.
+overlay_w = min(1280, max(720, int(width * 0.68)))
+overlay_h = min(720, max(405, int(overlay_w * 9 / 16)))
+
+# Never exceed the physical screen bounds.
+overlay_w = min(overlay_w, max(320, width - (margin * 2)))
+overlay_h = min(overlay_h, max(240, height - (margin * 2)))
+
+# If height clipping changed the aspect too much, reduce width as well.
+ideal_w = int(overlay_h * 16 / 9)
+if ideal_w < overlay_w:
+    overlay_w = max(320, ideal_w)
+
+pos_x = x + width - overlay_w - margin
+pos_y = y + margin
+
+print("OVERLAY", pos_x, pos_y, overlay_w, overlay_h)
 PY
 }
 
@@ -76,10 +129,14 @@ start_watchdog() {
     printf '%s\n' "$!" >"$WATCHDOG_PID"
 }
 
-fullscreen_window() {
+place_window() {
     command -v wmctrl >/dev/null 2>&1 || return 0
 
-    local window_id=""
+    local mode="" x="" y="" width="" height="" window_id=""
+    if ! read -r mode x y width height < <(geometry); then
+        return 0
+    fi
+
     for attempt in {1..30}; do
         window_id="$(
             DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
@@ -87,8 +144,17 @@ fullscreen_window() {
             awk '/PinCabOS Lobby Audio \/ Vidéo|pincabos-lobby-av-backglass/ {print $1; exit}'
         )"
         if [[ -n "$window_id" ]]; then
-            DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
-                wmctrl -i -r "$window_id" -b add,fullscreen,above >/dev/null 2>&1 || true
+            if [[ "$mode" == "BACKGLASS" ]]; then
+                DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
+                    wmctrl -i -r "$window_id" -b add,fullscreen,above >/dev/null 2>&1 || true
+            else
+                DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
+                    wmctrl -i -r "$window_id" -b remove,fullscreen >/dev/null 2>&1 || true
+                DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
+                    wmctrl -i -r "$window_id" -e "0,$x,$y,$width,$height" >/dev/null 2>&1 || true
+                DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
+                    wmctrl -i -r "$window_id" -b add,above >/dev/null 2>&1 || true
+            fi
             return 0
         fi
         sleep 0.15
@@ -118,13 +184,13 @@ open_window() {
     if pgrep -f -- "--user-data-dir=${PROFILE}" >/dev/null 2>&1; then
         touch "$MARKER"
         chmod 0644 "$MARKER" || true
-        fullscreen_window
+        place_window
         start_watchdog
         echo "OPEN"
         return 0
     fi
 
-    if ! read -r SCREEN_X SCREEN_Y SCREEN_W SCREEN_H < <(geometry); then
+    if ! read -r WINDOW_MODE SCREEN_X SCREEN_Y SCREEN_W SCREEN_H < <(geometry); then
         runtime_leave
         die
     fi
@@ -150,6 +216,11 @@ open_window() {
     touch "$MARKER"
     chmod 0644 "$MARKER"
 
+    EXTRA_ARGS=()
+    if [[ "$WINDOW_MODE" == "BACKGLASS" ]]; then
+        EXTRA_ARGS+=(--kiosk --start-fullscreen)
+    fi
+
     /usr/sbin/runuser -u pinball -- env \
         DISPLAY=:0 \
         XAUTHORITY=/home/pinball/.Xauthority \
@@ -157,8 +228,7 @@ open_window() {
         XDG_RUNTIME_DIR=/run/user/1000 \
         nohup "$CHROME_BIN" \
         --app="$URL" \
-        --kiosk \
-        --start-fullscreen \
+        "${EXTRA_ARGS[@]}" \
         --window-name=pincabos-lobby-av-backglass \
         --window-position="$SCREEN_X,$SCREEN_Y" \
         --window-size="$SCREEN_W,$SCREEN_H" \
@@ -188,7 +258,7 @@ open_window() {
 
     for attempt in {1..40}; do
         if pgrep -f -- "--user-data-dir=${PROFILE}" >/dev/null 2>&1; then
-            fullscreen_window
+            place_window
             start_watchdog
             echo "OPEN"
             return 0
