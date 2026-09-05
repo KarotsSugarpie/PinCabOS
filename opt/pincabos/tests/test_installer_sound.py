@@ -96,6 +96,30 @@ class Audio(unittest.TestCase):
         n2 = pa.ecrire_vpx(n, "Built-in Audio Analog Stereo", "HDA NVidia HDMI 1", "2")
         self.assertEqual(n2.count("par PinCabOS fonction("), 3)      # un commentaire par cle, jamais empile
 
+    def test_ssf_sur_sortie_stereo_retombe_en_stereo(self):
+        # PINCABOS_AUDIO_SSF_GARDE_V1 (Yann : « le SSF ne joue pas les sons »)
+        sinks = ("Sink #1\n\tName: alsa_output.pci-0000_00_05.0.analog-stereo\n\tDescription: Built-in Audio Analog Stereo\n"
+                 "\tSample Specification: s16le 2ch 48000Hz\n\tProperties:\n\t\talsa.card = \"0\"\n\t\talsa.device = \"0\"\n"
+                 "Sink #2\n\tName: alsa_output.usb-7.1\n\tDescription: USB 7.1\n\tSample Specification: s16le 8ch 48000Hz\n\tProperties:\n\t\talsa.card = \"1\"\n\t\talsa.device = \"0\"\n")
+        self.assertEqual(pa.canaux_du_sink(sinks, "alsa_output.pci-0000_00_05.0.analog-stereo"), 2)
+        self.assertEqual(pa.canaux_du_sink(sinks, "alsa_output.usb-7.1"), 8)
+        self.assertEqual(pa.canaux_du_sink(sinks, "inconnu"), 0)
+        with tempfile.TemporaryDirectory() as d:
+            ini = Path(d, "VPinballX.ini")
+
+            def run(args, timeout=20):
+                return (0, sinks if "list" in args else "")
+            j = pa.appliquer_premier_demarrage({"playfield_device": "hw:0,0", "backbox_device": "", "installer": {"sound3d": "5", "volume": 70}}, run=run, vpx_ini=ini)
+            self.assertIn("Sound3D = 0", ini.read_text(encoding="utf-8"))
+            self.assertTrue(any("2 canaux" in l and "stereo" in l for l in j), j)
+            j = pa.appliquer_premier_demarrage({"playfield_device": "hw:1,0", "backbox_device": "", "installer": {"sound3d": "5", "volume": 70}}, run=run, vpx_ini=ini)
+            self.assertIn("Sound3D = 5", ini.read_text(encoding="utf-8"))
+        i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
+        for l in ("fr", "en", "de", "it", "es"):
+            for k in range(6):
+                self.assertIn(f"sound3d_hint_{k}", i18n[l], (l, k))
+            self.assertIn("SSF", i18n[l]["sound3d_5"])
+
     def test_premier_demarrage_cree_l_ini_vpx_absent(self):
         # PINCABOS_AUDIO_PREMIER_DEMARRAGE_V2 : cab neuf, VPX n a pas encore ecrit son ini (vu en VM)
         with tempfile.TemporaryDirectory() as d:

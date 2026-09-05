@@ -235,6 +235,17 @@ def ecrire_vpx(texte: str, backglass: str, playfield: str, sound3d: str) -> str:
     return "\n".join(lines)
 
 
+def canaux_du_sink(texte: str, nom: str) -> int:
+    """Nombre de canaux du sink `nom` dans `pactl list sinks` (Sample Specification: s16le 2ch 48000Hz), 0 si inconnu."""
+    bloc = ""
+    for morceau in re.split(r"(?m)^Sink #", texte):
+        if re.search(r"(?m)^\s*Name:\s*" + re.escape(nom) + r"\s*$", morceau):
+            bloc = morceau
+            break
+    m = re.search(r"Sample Specification:.*?(\d+)ch", bloc)
+    return int(m.group(1)) if m else 0
+
+
 def commande_pinball(args: list) -> list:
     return ["runuser", "-u", "pinball", "--", "env", "XDG_RUNTIME_DIR=/run/user/1000",
             "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus", *args]
@@ -250,6 +261,14 @@ def appliquer_premier_demarrage(cfg: dict, run=executer, vpx_ini: Path = VPX_INI
         journal.append("pactl : aucun sink (session PipeWire absente ?), VPX garde ses sorties par défaut")
     pf = sink_pour(cfg.get("playfield_device", ""), sinks)
     bg = sink_pour(cfg.get("backbox_device", ""), sinks) or pf
+    # PINCABOS_AUDIO_SSF_GARDE_V1 (Yann : « le SSF ne joue pas les sons ») : un mode a 6 canaux
+    # sur une sortie stereo laisse des sons muets ; on retombe en stereo et on le dit.
+    voulu = str(inst.get("sound3d", "0"))
+    if pf and voulu not in ("0", "1"):
+        canaux = canaux_du_sink(out, pf["name"])
+        if canaux and canaux < 6:
+            journal.append(f"Sound3D {voulu} demande mais la sortie {pf['name']} n'a que {canaux} canaux : mode stereo (0) applique")
+            inst = dict(inst, sound3d="0", sound3d_voulu=voulu)
     # PINCABOS_AUDIO_PREMIER_DEMARRAGE_V2 : VPX n'a pas encore écrit son ini au
     # premier démarrage d'un cab neuf (vu en VM : « absent, rien écrit ») ; on le
     # crée avec la seule section [Player], VPX complète le reste à son premier

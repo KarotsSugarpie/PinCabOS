@@ -193,7 +193,7 @@ class Fichier(unittest.TestCase):
         d = sc.screens_json(mons, self.ROLES, 180)
         self.assertEqual(d["playfield_rotation"], "180")
         self.assertEqual(d["mode"], "installer")
-        self.assertEqual(d["roles"]["playfield"], {"output": "HDMI-0", "mode": "3840x2160", "rate": ""})
+        self.assertEqual(d["roles"]["playfield"], {"output": "HDMI-0", "mode": "3840x2160", "rate": "143.99"})   # PINCABOS_INSTALLEUR_CADENCE_V1
         pf = d["playfield"]
         for k in ("name", "x", "y", "width", "height", "area", "is_primary", "raw", "edid_sha256", "geometry", "id", "screen_id", "available"):
             self.assertIn(k, pf, k)
@@ -345,6 +345,46 @@ class Assistant(unittest.TestCase):
         self.assertEqual(d["HDMI-0"]["mode"], "3840x2160")
         self.assertEqual(d["DP-2"]["x"], 3840)
 
+    def test_cadence_preferee_et_calibrations(self):
+        # PINCABOS_INSTALLEUR_CADENCE_V1 / CALIBRATIONS_V1 (retex cab de Yann : 23,98 Hz, full DMD du cab source)
+        mons = sc.moniteurs(QUERY, PROPS)
+        par_nom = {m["name"]: m for m in mons}
+        self.assertEqual(par_nom["HDMI-0"]["preferred_rate"], "143.99")
+        self.assertEqual(par_nom["DP-0"]["preferred_rate"], "60.00")
+        roles = {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}
+        data = sc.screens_json(mons, roles, 0)
+        self.assertEqual(data["roles"]["backglass"]["rate"], "60.00")
+        self.assertEqual(data["roles"]["playfield"]["rate"], "143.99")
+        cal = sc.calibrations_json(data)
+        fd = data["fulldmd"]
+        self.assertEqual(cal["fulldmd"]["geometry_x11"], f"{fd['width']}x{fd['height']}+{fd['x']}+{fd['y']}")
+        self.assertEqual(cal["fulldmd"]["screen_id"], str(fd["id"]))
+        self.assertEqual(cal["dmd"]["width"], (fd["width"] * 2) // 3)
+        self.assertEqual(cal["dmd"]["height"], cal["dmd"]["width"] // 4)
+        self.assertGreaterEqual(cal["dmd"]["x"], fd["x"])
+        # sans full DMD : DMD en haut du backglass
+        sans = sc.screens_json(mons, {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "", "topper": ""}, 0)
+        cal2 = sc.calibrations_json(sans)
+        self.assertIsNone(cal2["fulldmd"])
+        self.assertEqual(cal2["dmd"]["screen_id"], str(sans["backglass"]["id"]))
+        self.assertEqual(cal2["dmd"]["width"], sans["backglass"]["width"] // 2)
+        s = Path(RACINE, "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        self.assertIn('PCO_ANS_CALIBRATIONS_FILE', s)
+        self.assertIn('rm -f "$TARGET/opt/pincabos/config/fulldmd-calibration.json"', s)
+
+    def test_egerie_sur_chaque_page(self):
+        # PINCABOS_INSTALLEUR_EGERIE_V3 (Yann : repartie de facon homogene sur les pages)
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        ids = re.findall(r'<section class="step(?: active)?" id="(st-[a-z]+)"', w)
+        pages = dict(re.findall(r'"(st-[a-z]+)":"(pose-[a-z0-9-]+)"', w.split("const EGERIE_PAGES=")[1].split(";")[0]))
+        self.assertEqual(sorted(ids), sorted(pages))                      # une pose par page, toutes les pages
+        self.assertEqual(len(set(pages.values())), len(pages))            # toutes differentes
+        for p in pages.values():
+            self.assertTrue(Path(RACINE, "opt/pincabos/installer-gui/static/egerie", p + ".webp").is_file(), p)
+        self.assertIn('class="egerie egerie-page" id="egerie"', w)
+        self.assertIn("main{position:relative;z-index:1}", w)
+        self.assertIn("go=function(id){_goSansEgerie(id);egeriePour(id)}", w)
+
     def test_rotation_de_lecture_jamais_ecrite(self):
         # PINCABOS_INSTALLEUR_LECTURE_V1 (Yann) : l assistant tourne, la config reste standard
         mons = sc.moniteurs(QUERY, PROPS)
@@ -418,15 +458,9 @@ class Assistant(unittest.TestCase):
     def test_egerie_et_credits(self):
         # PINCABOS_INSTALLEUR_EGERIE_V1 / CREDITS_V1 : emplacements Miss Tilt (Langue, Progression, Terminé), auteurs
         w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
-        self.assertEqual(w.count('data-slot="'), 3)
-        # PINCABOS_INSTALLEUR_EGERIE_V2 : chaque pose citee existe dans static/egerie (WebP 900 px, ~100 Ko)
-        for nom in re.findall(r'"(pose-[a-z0-9-]+)"', w.split("const EGERIE=")[1].split(";")[0]):
-            f = Path(RACINE, "opt/pincabos/installer-gui/static/egerie", nom + ".webp")
-            self.assertTrue(f.is_file(), nom)
-            self.assertLess(f.stat().st_size, 400_000, nom)
-        self.assertIn('class="egerie egerie-lang"', w)
-        self.assertIn('class="egerie egerie-done"', w)
-        self.assertIn("egerie-filigrane", w)
+        for f in Path(RACINE, "opt/pincabos/installer-gui/static/egerie").glob("*.webp"):
+            self.assertLess(f.stat().st_size, 400_000, f.name)
+        self.assertEqual(len(list(Path(RACINE, "opt/pincabos/installer-gui/static/egerie").glob("*.webp"))), 15)
         self.assertIn('<footer class="credits">', w)
         self.assertIn("Karots SugarPie &amp; YaNFoX", w)
         i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))

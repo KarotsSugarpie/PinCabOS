@@ -539,7 +539,9 @@ def ecrans_vers_fichiers(a):
     f2 = RUN_DIR / "gui-screens-bindings.json"
     f1.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     f2.write_text(json.dumps(liaisons, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return {"screens_file": str(f1), "bindings_file": str(f2), "orient": pco_screens.code_orient(rotation)}
+    f3 = RUN_DIR / "gui-calibrations.json"
+    f3.write_text(json.dumps(pco_screens.calibrations_json(data), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return {"screens_file": str(f1), "bindings_file": str(f2), "calibrations_file": str(f3), "orient": pco_screens.code_orient(rotation)}
 
 
 @app.route("/api/keyboard", methods=["POST"])
@@ -576,6 +578,8 @@ ANSWER_RULES = {
     # PINCABOS_INSTALLEUR_ECRANS_V1 : chemins fixes des fichiers produits par
     # l'étape Écrans (le vérificateur CI relit ces moules avec `re` seul).
     "screens_file": re.compile(r"^/run/pincabos/gui-screens\.json$"),
+    # PINCABOS_INSTALLEUR_CALIBRATIONS_V1 : rectangles FullDMD / DMD derives de la disposition
+    "calibrations_file": re.compile(r"^/run/pincabos/gui-calibrations\.json$"),
     "bindings_file": re.compile(r"^/run/pincabos/gui-screens-bindings\.json$"),
     # PINCABOS_INSTALLEUR_RESEAU_V1 : idem, produits par l'étape Réseau
     "network_file": re.compile(r"^/run/pincabos/gui-network\.json$"),
@@ -633,7 +637,7 @@ def install():
         # Ces trois valeurs viennent d'ici, pas du client : les fichiers sont
         # écrits par ecrans_vers_fichiers() sous RUN_DIR, le code orient est
         # dérivé de la rotation ; shlex.quote les rend inertes comme le reste.
-        for cle in ("screens_file", "bindings_file", "orient"):
+        for cle in ("screens_file", "bindings_file", "calibrations_file", "orient"):
             reponses[cle] = res[cle]
         # PINCABOS_INSTALLEUR_DMD_V1 : sans full DMD, le DMD matériel choisi
         # (ou « aucun ») part sur la cible ; avec un full DMD, rien n'est écrit.

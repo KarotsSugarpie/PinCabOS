@@ -66,6 +66,7 @@ def parse_query(texte: str) -> list:
                 "width": int(d["w"]) if d["w"] else 0, "height": int(d["h"]) if d["h"] else 0,
                 "x": int(d["x"]) if d["x"] else 0, "y": int(d["y"]) if d["y"] else 0,
                 "rotation": ROTATE_XRANDR.get(d["rot"] or "normal", 0), "modes": [], "preferred": "", "raw": ligne.strip(),
+                "preferred_rate": "",
             }
             mm = re.search(r"(\d+)mm x (\d+)mm", ligne)
             courante["mm"] = (int(mm.group(1)), int(mm.group(2))) if mm else (0, 0)
@@ -79,6 +80,10 @@ def parse_query(texte: str) -> list:
                 courante["modes"].append(mode)
             if "+" in rates and not courante["preferred"]:
                 courante["preferred"] = mode
+                # PINCABOS_INSTALLEUR_CADENCE_V1 : la cadence marquee « + » (preferee EDID),
+                # sinon la premiere ; sans elle, le cab tirait 23,98 Hz sur un backglass.
+                m_rate = re.search(r"(\d+(?:\.\d+)?)[*]?\+", rates)
+                courante["preferred_rate"] = m_rate.group(1) if m_rate else (re.findall(r"\d+(?:\.\d+)?", rates) or [""])[0]
     for s in sorties:
         if not s["preferred"] and s["modes"]:
             s["preferred"] = s["modes"][0]
@@ -117,7 +122,7 @@ def moniteurs(query: str, props: str) -> list:
         out.append({
             "app_index": len(out), "name": s["name"], "x": s["x"], "y": s["y"], "width": w, "height": h,
             "area": w * h, "is_primary": s["primary"], "raw": s["raw"], "rotation": s["rotation"],
-            "preferred": s["preferred"] or f"{w}x{h}", "modes": s["modes"], "mm": s["mm"],
+            "preferred": s["preferred"] or f"{w}x{h}", "preferred_rate": s.get("preferred_rate", ""), "modes": s["modes"], "mm": s["mm"],
             "edid_sha256": edids.get(s["name"], f"connector:{s['name']}"),
         })
     return out
@@ -352,7 +357,7 @@ def screens_json(monitors: list, roles: dict, rotation: int) -> dict:
         if not nom or nom not in dispo:
             continue
         m, d = par_nom[nom], dispo[nom]
-        data["roles"][role] = {"output": nom, "mode": d["mode"], "rate": ""}
+        data["roles"][role] = {"output": nom, "mode": d["mode"], "rate": str(m.get("preferred_rate") or "")}
         data[role] = {
             "name": nom, "output": nom, "x": d["x"], "y": d["y"], "width": d["width"], "height": d["height"],
             "area": d["width"] * d["height"], "is_primary": d["primary"], "raw": m["raw"],
@@ -360,6 +365,40 @@ def screens_json(monitors: list, roles: dict, rotation: int) -> dict:
             "id": m["app_index"], "screen_id": m["app_index"], "available": True,
         }
     return data
+
+
+def calibrations_json(data: dict) -> dict:
+    """PINCABOS_INSTALLEUR_CALIBRATIONS_V1 : les rectangles FullDMD et DMD derives de la disposition.
+
+    La topologie recopie ces rectangles (coordonnees X11 ABSOLUES) dans les
+    INI de VPinFE et VPX. Sans eux, un cab neuf heritait de la calibration du
+    cab source de l image (vu chez Yann : full DMD en 1016x619 sur le playfield).
+    Full DMD = toute sa dalle ; DMD PinMAME = centre du full DMD (ratio 4:1,
+    deux tiers de la largeur), sinon haut du backglass (moitie de la largeur).
+    """
+    def rect(role):
+        e = data.get(role)
+        return e if isinstance(e, dict) and e.get("width") and e.get("height") else None
+
+    def dico(screen_id, x, y, w, h, note):
+        return {"screen_id": str(screen_id), "x": int(x), "y": int(y), "width": int(w), "height": int(h),
+                "geometry": f"{int(x)},{int(y)},{int(w)},{int(h)}", "geometry_x11": f"{int(w)}x{int(h)}+{int(x)}+{int(y)}",
+                "note": note, "source": "PinCabOS installer screens step"}
+
+    fd, bg = rect("fulldmd"), rect("backglass")
+    out = {"fulldmd": None, "dmd": None}
+    if fd:
+        out["fulldmd"] = dico(fd["id"], fd["x"], fd["y"], fd["width"], fd["height"], "PinCabOS FullDMD visible area calibration")
+        w = (fd["width"] * 2) // 3
+        h = w // 4
+        out["dmd"] = dico(fd["id"], fd["x"] + (fd["width"] - w) // 2, fd["y"] + (fd["height"] - h) // 2, w, h,
+                          "PinCabOS DMD window (centre du full DMD)")
+    elif bg:
+        w = bg["width"] // 2
+        h = w // 4
+        out["dmd"] = dico(bg["id"], bg["x"] + (bg["width"] - w) // 2, bg["y"] + max(20, bg["height"] // 20), w, h,
+                          "PinCabOS DMD window (haut du backglass)")
+    return out
 
 
 def bindings_json(data: dict) -> dict:

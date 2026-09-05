@@ -5281,6 +5281,27 @@ apply_target_screens() {
     fi
     pco_go "screens.json and EDID bindings installed (playfield rotation: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("playfield_rotation","0"))' "$src" 2>/dev/null || echo '?'))"
 
+    # PINCABOS_INSTALLEUR_CALIBRATIONS_V1 : les rectangles FullDMD / DMD viennent de la
+    # disposition choisie ; ceux du cab source (dans l'image) sont retires, pas herites.
+    local cal="${PCO_ANS_CALIBRATIONS_FILE:-}"
+    rm -f "$TARGET/opt/pincabos/config/fulldmd-calibration.json" "$TARGET/opt/pincabos/config/dmd-calibration.json" \
+          "$TARGET/opt/pincabos/config/display-aliases.env" "$TARGET/opt/pincabos/config/fulldmd-background.env"
+    if [ -n "$cal" ] && [ -s "$cal" ]; then
+        python3 - "$cal" "$TARGET/opt/pincabos/config" <<'PY'
+import json, sys, datetime
+cal = json.load(open(sys.argv[1])); cfg = sys.argv[2]
+meta = {"modified_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "modified_by": "PinCabOS installer"}
+for nom, cle in (("fulldmd-calibration.json", "fulldmd"), ("dmd-calibration.json", "dmd")):
+    d = cal.get(cle)
+    if d:
+        d = dict(d, _pincabos_meta=meta)
+        json.dump(d, open(cfg + "/" + nom, "w"), indent=2, ensure_ascii=False)
+        print("  " + nom + " : " + d["geometry_x11"] + " (ecran " + str(d["screen_id"]) + ")")
+PY
+        chown 1000:1000 "$TARGET/opt/pincabos/config/fulldmd-calibration.json" "$TARGET/opt/pincabos/config/dmd-calibration.json" 2>/dev/null || true
+        pco_go "FullDMD / DMD windows derived from the chosen layout"
+    fi
+
     # PINCABOS_SPLASH_CIBLE_V1 : le premier demarrage montre deja les galeries
     # du cab installe (playfield reconnu a sa resolution, rotation choisie), pas
     # le theme du media ; pincabos-splash-sync regenere lui-meme l initrd cible.
