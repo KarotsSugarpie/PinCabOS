@@ -6,6 +6,8 @@ Documentation=https://pincabos.cc/
 # steals the VT from the installer kiosk.
 Requires=basic.target pincabos-gui-install-prepare.service
 After=basic.target pincabos-gui-install-prepare.service systemd-logind.service
-Wants=systemd-logind.service pincabos-gui-wizard.service pincabos-gui-kiosk.service
+# PINCABOS_INSTALLEUR_RESEAU_LIVE_V1 : l etape Reseau parle a NetworkManager, que
+# basic.target ne demarre pas ; sans lui, « aucune interface » sur le media.
+Wants=systemd-logind.service NetworkManager.service pincabos-gui-wizard.service pincabos-gui-kiosk.service
 Conflicts=getty@tty1.service graphical.target multi-user.target
 AllowIsolate=yes
