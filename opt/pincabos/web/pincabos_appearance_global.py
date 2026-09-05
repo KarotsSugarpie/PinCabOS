@@ -23,6 +23,7 @@ _BRIDGE_PATH = "/static/pincabos-appearance-dashboard-menu-v2.css?v=appearance-g
 _UNIFIED_PATH = "/static/pincabos-interface-unified-v1.css?v=appearance-global-v2"
 _MODULES_PATH = "/static/pincabos-interface-unified-modules-v1.css?v=appearance-global-v2"
 _DUDESCAB_PATH = "/static/pincabos-dudescab-dark-exception-v1.css?v=appearance-global-v2"
+_BACKGROUND_PATH = "/static/pincabos-background-rotator-v1.js?v=background-rotator-v1"
 
 
 def install_appearance_global(app):
@@ -106,6 +107,15 @@ def install_appearance_global(app):
                 assets.append(
                     f'<link rel="stylesheet" href="{_DUDESCAB_PATH}" '
                     'data-pincabos-dudescab-dark-exception="v1">'
+                )
+
+            # 7) Background aleatoire global de la WebApp. Le script verifie
+            # les assets avant de les appliquer et conserve le fond historique
+            # lorsqu'aucun background n'est disponible.
+            if "pincabos-background-rotator-v1.js" not in html:
+                assets.append(
+                    f'<script src="{_BACKGROUND_PATH}" '
+                    'data-pincabos-background-rotator="v1"></script>'
                 )
 
             if not assets:
