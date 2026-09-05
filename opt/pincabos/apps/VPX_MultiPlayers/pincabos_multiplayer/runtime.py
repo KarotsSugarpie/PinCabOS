@@ -8,6 +8,7 @@ import os
 import pwd
 import signal
 import shutil
+import stat
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -17,6 +18,14 @@ from pathlib import Path
 DEFAULT_ROOT = Path("/opt/pincabos/apps/VPX_MultiPlayers")
 ENGINE_NAMES = ("VPinballX_BGFX", "VPinballX-BGFX", "VPinballX")
 WRITABLE_NAMES = ("home", "config", "data", "cache", "logs", "sessions", "tables-test")
+LAUNCH_WRITABLE_NAMES = ("home", "config", "data", "cache", "logs", "sessions")
+DESKTOP_ENV_KEYS = (
+    "DISPLAY",
+    "WAYLAND_DISPLAY",
+    "XAUTHORITY",
+    "DBUS_SESSION_BUS_ADDRESS",
+    "PULSE_SERVER",
+)
 
 
 class RuntimeIsolationError(RuntimeError):
@@ -62,6 +71,84 @@ class RuntimeLayout:
             path.mkdir(parents=True, exist_ok=True)
             path.chmod(0o750)
 
+    def prepare_pinball_launch_paths(self, uid: int, gid: int) -> None:
+        """Rend uniquement les données du LAB accessibles au processus VPX pinball."""
+        if os.geteuid() != 0:
+            return
+
+        def grant_owner_access(path: Path, directory: bool) -> None:
+            if path.is_symlink():
+                return
+            os.chown(path, uid, gid)
+            mode = stat.S_IMODE(path.stat().st_mode) | stat.S_IRUSR | stat.S_IWUSR
+            if directory:
+                mode |= stat.S_IXUSR
+            path.chmod(mode)
+
+        for name in LAUNCH_WRITABLE_NAMES:
+            root = self.root / name
+            root.mkdir(parents=True, exist_ok=True)
+            for directory, directories, files in os.walk(root, followlinks=False):
+                current = Path(directory)
+                grant_owner_access(current, True)
+                directories[:] = [
+                    item for item in directories if not (current / item).is_symlink()
+                ]
+                for filename in files:
+                    grant_owner_access(current / filename, False)
+
+    @staticmethod
+    def desktop_environment(uid: int) -> dict[str, str]:
+        """Découvre la session graphique pinball sans réutiliser HOME ni XDG privés."""
+        best: dict[str, str] = {}
+        best_score = -1
+        proc_root = Path("/proc")
+        if proc_root.is_dir():
+            for process in proc_root.iterdir():
+                if not process.name.isdigit():
+                    continue
+                try:
+                    if process.stat().st_uid != uid:
+                        continue
+                    raw = (process / "environ").read_bytes()
+                except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
+                    continue
+                values: dict[str, str] = {}
+                for entry in raw.split(b"\0"):
+                    if b"=" not in entry:
+                        continue
+                    key, value = entry.split(b"=", 1)
+                    try:
+                        name = key.decode("ascii")
+                        decoded = value.decode("utf-8")
+                    except UnicodeDecodeError:
+                        continue
+                    if name in DESKTOP_ENV_KEYS and decoded:
+                        values[name] = decoded
+                if not (values.get("DISPLAY") or values.get("WAYLAND_DISPLAY")):
+                    continue
+                score = sum(bool(values.get(key)) for key in DESKTOP_ENV_KEYS)
+                if score > best_score:
+                    best = values
+                    best_score = score
+
+        runtime_dir = f"/run/user/{uid}"
+        best["XDG_RUNTIME_DIR"] = runtime_dir
+        best.setdefault("DBUS_SESSION_BUS_ADDRESS", f"unix:path={runtime_dir}/bus")
+        best["DISPLAY"] = os.environ.get(
+            "PINCABOS_MULTIPLAYER_DISPLAY", best.get("DISPLAY", ":0")
+        )
+
+        if not best.get("XAUTHORITY"):
+            for candidate in (
+                Path(f"/run/user/{uid}/gdm/Xauthority"),
+                Path(pwd.getpwuid(uid).pw_dir) / ".Xauthority",
+            ):
+                if candidate.is_file():
+                    best["XAUTHORITY"] = str(candidate)
+                    break
+        return best
+
     def engine_binary(self) -> Path:
         if not self.engine.is_dir():
             raise RuntimeIsolationError("isolated_engine_missing")
@@ -89,8 +176,11 @@ class RuntimeLayout:
             raise RuntimeIsolationError("test_table_missing")
         return resolved
 
-    def isolated_environment(self) -> dict[str, str]:
+    def isolated_environment(self, runtime_uid: int | None = None) -> dict[str, str]:
+        if runtime_uid is None:
+            runtime_uid = os.geteuid()
         environment = dict(os.environ)
+        environment.update(self.desktop_environment(runtime_uid))
         environment.update(
             {
                 "HOME": str(self.root / "home"),
@@ -168,13 +258,20 @@ class RuntimeLayout:
                 raise RuntimeIsolationError("isolated_engine_already_running")
 
         command = self.launch_command(relative_table)
-        environment = self.isolated_environment()
-        log_path = self.root / "logs" / "vpx-multiplayer.log"
-        log_handle = log_path.open("ab", buffering=0)
         options: dict[str, object] = {}
+        runtime_uid = os.geteuid()
         if os.geteuid() == 0:
             account = pwd.getpwnam("pinball")
-            options.update(user=account.pw_uid, group=account.pw_gid)
+            runtime_uid = account.pw_uid
+            self.prepare_pinball_launch_paths(account.pw_uid, account.pw_gid)
+            options.update(
+                user=account.pw_uid,
+                group=account.pw_gid,
+                extra_groups=os.getgrouplist(account.pw_name, account.pw_gid),
+            )
+        environment = self.isolated_environment(runtime_uid)
+        log_path = self.root / "logs" / "vpx-multiplayer.log"
+        log_handle = log_path.open("ab", buffering=0)
         try:
             process = subprocess.Popen(
                 command,
