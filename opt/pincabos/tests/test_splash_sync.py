@@ -14,6 +14,7 @@ from pathlib import Path
 from _charge import charger, RACINE
 
 ss = charger("usr/local/sbin/pincabos-splash-sync", "pco_splash_sync")
+R = Path(RACINE)
 
 ECRANS_YANN = {"playfield": (3840, 2160), "backglass": (1920, 1080), "fulldmd": (1920, 1080)}
 
