@@ -60,9 +60,12 @@ def assurer_pref_vpx(vpx_ini: Path = VPX_INI, legacy_ini: Path = VPX_LEGACY_INI)
                 shutil.move(str(element), str(cible))
             shutil.rmtree(legacy, ignore_errors=True)
             etat = "dossier VPX repare depuis l ancien chemin (ini minimal ecarte)"
-    if not legacy.exists() and not legacy.is_symlink():
-        legacy.parent.mkdir(parents=True, exist_ok=True)
+    # Lien de compatibilite ~/.local/share/VPinballX/10.8 -> ~/.pincabos/vpx, seulement
+    # si ~/.local/share existe deja (jamais creer l arborescence d un autre compte :
+    # la CI tourne sans /home/pinball et le mkdir y echouait en PermissionError).
+    if not legacy.exists() and not legacy.is_symlink() and legacy.parent.parent.is_dir():
         try:
+            legacy.parent.mkdir(parents=True, exist_ok=True)
             legacy.symlink_to(pref)
         except OSError:
             pass
