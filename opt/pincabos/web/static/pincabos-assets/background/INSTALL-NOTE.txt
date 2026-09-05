@@ -1,0 +1,1 @@
+Binary WebP backgrounds are added in this feature branch via Git data blobs.
