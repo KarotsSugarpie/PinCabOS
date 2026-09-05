@@ -11,6 +11,8 @@ Le programme reste jusqu'à ce qu'on le tue (nouvelle application, redémarrage)
 """
 import argparse
 import json
+import shutil
+import subprocess
 import sys
 
 import gi
@@ -20,6 +22,23 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
 TITRE = "pincabos-decor-{n}"     # repris tel quel par kiosk-rc.xml (calque en dessous, jamais le focus)
+KIOSQUE = "pincabos-kiosk"        # titre de la fenetre de l'assistant (pincabos-kiosk.py)
+
+
+def rendre_le_focus_au_kiosque():
+    """PINCABOS_INSTALLEUR_DECOR_FOCUS_V1 : une fenetre GTK4 qui apparait demande
+    l'activation ; openbox la donnait au decor et le clavier de l'assistant se
+    perdait (phrase INSTALL PINCABOS, mot de passe Wi-Fi, IP fixe : rien ne
+    s'ecrivait). Une fois les fonds poses, le kiosque reprend le focus."""
+    xdotool = shutil.which("xdotool")
+    if not xdotool:
+        return False
+    try:
+        subprocess.run([xdotool, "search", "--name", f"^{KIOSQUE}$", "windowactivate"],
+                       check=False, timeout=5, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return False   # une seule fois (GLib.timeout_add)
 
 
 def main():
@@ -43,15 +62,20 @@ def main():
             win = Gtk.ApplicationWindow(application=app)
             win.set_decorated(False)
             win.set_title(TITRE.format(n=i + 1))
+            win.set_focusable(False)
             pic = Gtk.Picture.new_for_filename(chemin)
             pic.set_content_fit(Gtk.ContentFit.COVER)
             win.set_child(pic)
-            win.present()
             win.fullscreen_on_monitor(mon)
+            # set_visible, pas present() : present() demande l'activation et openbox
+            # donnait le focus clavier au decor (DECOR_FOCUS_V1).
+            win.set_visible(True)
             poses += 1
         if poses == 0:
             print("aucune dalle a habiller", file=sys.stderr)
             app.quit()
+            return
+        GLib.timeout_add(700, rendre_le_focus_au_kiosque)
 
     app.connect("activate", on_activate)
     app.run(None)
