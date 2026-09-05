@@ -323,12 +323,12 @@ class Assistant(unittest.TestCase):
 
     def test_kiosque_un_bureau_sans_liaisons_et_suit_la_geometrie(self):
         # PINCABOS_KIOSK_OPENBOX_V1 / PINCABOS_KIOSK_SUIT_LA_GEOMETRIE_V1 (Yann : molette = changement de bureau, coince)
-        rc = Path(RACINE, "usr/local/share/pincabos/kiosk-rc.xml").read_text(encoding="utf-8")
+        rc = Path(RACINE, "opt/pincabos/installer-gui/kiosk-rc.xml").read_text(encoding="utf-8")
         self.assertIn("<number>1</number>", rc)
         self.assertNotIn("GoToDesktop", rc)
         self.assertNotIn("mousebind", rc)
         sess = Path(RACINE, "usr/local/bin/pincabos-kiosk-session").read_text(encoding="utf-8")
-        self.assertIn("openbox --config-file /usr/local/share/pincabos/kiosk-rc.xml", sess)
+        self.assertIn("openbox --config-file /opt/pincabos/installer-gui/kiosk-rc.xml", sess)
         k = Path(RACINE, "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8")
         self.assertIn('geometrie(mon) != cible["geometrie"]', k)
         self.assertIn("view.grab_focus()", k)
