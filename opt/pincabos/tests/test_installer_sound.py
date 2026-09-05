@@ -46,6 +46,16 @@ class Audio(unittest.TestCase):
         self.assertTrue(d[3]["hdmi"]); self.assertTrue(d[1]["digital"]); self.assertFalse(d[0]["hdmi"])
         self.assertEqual(pa.peripheriques_alsa(APLAY_FR)[0]["id"], "hw:1,7")
 
+    def test_chargement_des_pilotes(self):
+        # le media d installation met snd_hda_intel sur liste noire : charge a la demande
+        appels = []
+        def run(args, timeout=20, **kw):
+            appels.append(args); return (0 if args[1] == "snd_hda_intel" else 1), ""
+        import unittest.mock as um
+        with um.patch("time.sleep"):
+            self.assertEqual(pa.charger_pilotes(run=run), ["snd_hda_intel"])
+        self.assertEqual([a[1] for a in appels], ["snd_hda_intel", "snd_usb_audio"])
+
     def test_proposition_analogique_d_abord(self):
         d = pa.peripheriques_alsa(APLAY)
         self.assertEqual(pa.proposer(d), {"playfield": "hw:0,0", "backbox": "hw:0,0", "sound3d": "0", "volume": 70})

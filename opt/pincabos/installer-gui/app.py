@@ -252,6 +252,11 @@ def son_detection():
     """Sorties audio et cartes DOF de la machine (ou de la démo)."""
     if pco_audio is None or pco_dof is None:
         return {"disponible": False, "audio": {"devices": [], "proposition": {}, "modes": []}, "dof": {"detected": [], "proposition": {"enabled": False}}}
+    if not DEMO:
+        # Le media d installation demarre avec snd_hda_intel sur liste noire
+        # (ligne de commande du noyau) : sans lui, ni HDMI ni analogique interne
+        # ne sont visibles. On le charge a la demande, ici seulement.
+        pco_audio.charger_pilotes()
     devs = pco_audio.peripheriques_alsa(APLAY_DEMO) if DEMO else pco_audio.detecter()
     det = DOF_DEMO if DEMO else pco_dof.detecter()
     return {"disponible": True,

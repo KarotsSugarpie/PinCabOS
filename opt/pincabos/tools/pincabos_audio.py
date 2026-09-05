@@ -48,6 +48,23 @@ def executer(args, timeout=20, **kw):
 
 
 # ---------------------------------------------------------------- détection
+PILOTES = ("snd_hda_intel", "snd_usb_audio")
+
+
+def charger_pilotes(run=executer, pilotes=PILOTES) -> list:
+    """Charge les pilotes son absents (media d installation : snd_hda_intel est
+    sur liste noire au demarrage). Best effort, attend que les cartes remontent."""
+    charges = []
+    for p in pilotes:
+        rc, _ = run(["modprobe", p], timeout=20)
+        if rc == 0:
+            charges.append(p)
+    if charges:
+        import time
+        time.sleep(1.5)
+    return charges
+
+
 def peripheriques_alsa(texte: str) -> list:
     """Sorties de `aplay -l` (anglais ou français)."""
     out = []
