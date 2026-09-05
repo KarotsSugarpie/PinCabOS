@@ -1,0 +1,16 @@
+[Unit]
+Description=PinCabOS - replay the installer choices that need the running system (DOF, audio)
+Documentation=https://pincabos.cc/
+# PINCABOS_INSTALLEUR_PREMIER_DEMARRAGE_V1 : ne tourne que si un drapeau attend
+ConditionPathExistsGlob=/opt/pincabos/flags/*-installer.pending
+ConditionKernelCommandLine=!pincabos.installer
+After=display-manager.service
+Before=pincabos-vpinfe.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-installer-firstboot
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

@@ -109,7 +109,7 @@ class Integration(unittest.TestCase):
     def test_iso_sh(self):
         s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
         self.assertIn("apply_target_network() {", s)
-        self.assertIn("  apply_target_screens\n  apply_target_network\n  apply_target_dmd\n  refresh_target_initrd_for_orientation\n", s)
+        self.assertIn("  apply_target_screens\n  apply_target_network\n  apply_target_dmd\n  apply_target_audio\n  apply_target_dof\n  refresh_target_initrd_for_orientation\n", s)
         self.assertIn('netplan-takeover "$iface" --root "$TARGET"', s)
         self.assertIn("network-installer.done", s)
         self.assertLess(s.index("Network configured by the installer / NetworkManager: generic DHCP netplan skipped."),

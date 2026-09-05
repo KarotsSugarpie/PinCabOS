@@ -5162,6 +5162,44 @@ apply_target_dmd() {
     pco_go "zedmd.json installed (mode: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("mode","off"))' "$src" 2>/dev/null || echo '?'))"
 }
 
+apply_target_audio() {
+    # PINCABOS_INSTALLEUR_SON_DOF_V1 : l assistant a choisi les sorties ALSA, le
+    # mode VPX et le volume. audio-router.json (source de la page Audio) part sur
+    # la cible ; le premier demarrage (pincabos-installer-firstboot) le traduit en
+    # noms de sorties VPX et en volume de la session PipeWire.
+    local src="${PCO_ANS_AUDIO_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying audio chosen in the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "audio file missing or empty: $src (Audio page on the cab will do it)"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/audio-router.json"
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    date -Is > "$TARGET/opt/pincabos/flags/audio-installer.pending"
+    pco_go "audio-router.json installed (playfield: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("playfield_device",""))' "$src" 2>/dev/null || echo '?'))"
+}
+
+apply_target_dof() {
+    # PINCABOS_INSTALLEUR_SON_DOF_V1 : DOF active ou non, cartes vues. Le premier
+    # demarrage pose [Plugin.DOF] Enable (VPX) et [DOF] enabledof (VPinFE).
+    local src="${PCO_ANS_DOF_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying DOF choice from the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "DOF file missing or empty: $src"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config/dof"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/dof/installer.json"
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    date -Is > "$TARGET/opt/pincabos/flags/dof-installer.pending"
+    pco_go "dof/installer.json installed (enabled: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("enabled"))' "$src" 2>/dev/null || echo '?'))"
+}
+
 apply_target_screens() {
     # PINCABOS_INSTALLEUR_ECRANS_V1 : l'etape Ecrans de l'assistant a produit
     # screens.json (roles, geometrie, rotation) et les liaisons role -> EDID.
@@ -5848,6 +5886,8 @@ install_payload() {
   apply_target_screens
   apply_target_network
   apply_target_dmd
+  apply_target_audio
+  apply_target_dof
   refresh_target_initrd_for_orientation
 
   test -f "$TARGET/etc/pincabos/orientation.conf"

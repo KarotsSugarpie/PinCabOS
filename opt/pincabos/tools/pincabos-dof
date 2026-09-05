@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""pincabos-dof : cartes DOF et activation, en ligne de commande (PINCABOS_DOF_MODULE_V1).
+
+  detect            cartes de sortie vues (JSON, via dof-cabinet)
+  apply-firstboot   pose [Plugin.DOF] Enable (VPX) et [DOF] enabledof (VPinFE)
+                    d apres /opt/pincabos/config/dof/installer.json
+"""
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pincabos_dof as pd  # noqa: E402
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else "detect"
+    if cmd == "detect":
+        print(json.dumps(pd.resume(pd.detecter()), indent=2, ensure_ascii=False)); return 0
+    if cmd == "apply-firstboot":
+        cfg = pd.charger()
+        if not cfg:
+            print("dof/installer.json absent ou vide : rien a faire"); return 0
+        for ligne in pd.appliquer_premier_demarrage(cfg):
+            print(ligne)
+        return 0
+    print(__doc__); return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

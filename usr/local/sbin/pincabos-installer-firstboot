@@ -1,0 +1,17 @@
+#!/bin/bash
+# PINCABOS_INSTALLEUR_PREMIER_DEMARRAGE_V1
+# Rejoue au premier demarrage ce que l assistant d installation a laisse en
+# attente (drapeaux /opt/pincabos/flags/*-installer.pending) et qui ne pouvait
+# pas se faire dans le chroot : le DOF (interrupteurs VPX et VPinFE) et le son
+# (les sorties VPX portent les noms PipeWire de la session pinball).
+set -u
+FLAGS=/opt/pincabos/flags
+T=/opt/pincabos/tools
+if [ -f "$FLAGS/dof-installer.pending" ]; then
+    if python3 "$T/pincabos-dof" apply-firstboot; then rm -f "$FLAGS/dof-installer.pending"; fi
+fi
+if [ -f "$FLAGS/audio-installer.pending" ]; then
+    for _ in $(seq 1 60); do [ -S /run/user/1000/pipewire-0 ] && break; sleep 1; done
+    if python3 "$T/pincabos-audio" apply-firstboot; then rm -f "$FLAGS/audio-installer.pending"; fi
+fi
+exit 0

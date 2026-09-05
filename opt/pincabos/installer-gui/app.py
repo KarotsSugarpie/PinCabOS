@@ -23,12 +23,20 @@ import dmd as pco_dmd  # PINCABOS_INSTALLEUR_DMD_V1
 # l'assistant. Absent de la session (ISO au modèle classique) : l'étape se
 # présente comme indisponible et laisse continuer.
 import sys as _sys
-if "/opt/pincabos/tools" not in _sys.path:
-    _sys.path.insert(0, "/opt/pincabos/tools")
+for _d in ("/opt/pincabos/tools", str(Path(__file__).resolve().parent.parent / "tools")):
+    if _d not in _sys.path:
+        _sys.path.insert(0, _d)
 try:
     import pincabos_network as pco_net
 except Exception:  # pragma: no cover
     pco_net = None
+# PINCABOS_INSTALLEUR_SON_DOF_V1 : son (ALSA en session live, PipeWire au
+# premier démarrage) et DOF (cartes de sortie), modules du cab
+try:
+    import pincabos_audio as pco_audio
+    import pincabos_dof as pco_dof
+except Exception:  # pragma: no cover
+    pco_audio = pco_dof = None
 
 BASE = Path(__file__).resolve().parent
 DEMO = os.environ.get("PCO_DEMO") == "1"
@@ -225,6 +233,98 @@ def dmd_vers_fichier(choix):
     f = RUN_DIR / "gui-zedmd.json"
     f.write_text(json.dumps(pco_dmd.config_json(ok), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return {"dmd_file": str(f)}
+
+
+# PINCABOS_INSTALLEUR_SON_DOF_V1 : en démo, le cab de Yann (Intel analogique + HDMI NVIDIA, DudesCab + Teensy)
+APLAY_DEMO = """**** List of PLAYBACK Hardware Devices ****
+card 0: PCH [HDA Intel PCH], device 0: ALC1220 Analog [ALC1220 Analog]
+card 0: PCH [HDA Intel PCH], device 1: ALC1220 Digital [ALC1220 Digital]
+card 1: NVidia [HDA NVidia], device 3: HDMI 0 [RTK FHD]
+card 1: NVidia [HDA NVidia], device 7: HDMI 1 [LG TV SSCR2]
+"""
+DOF_DEMO = [
+    {"dev": "/dev/hidraw5", "vid": "2e8a", "model": "DudesCab", "serial": "DE646CC2", "kind": "DudesCab", "auto_config": True},
+    {"dev": "/dev/ttyACM0", "vid": "16c0", "model": "USB_Serial", "serial": "15672630", "kind": "TeensyStripController (strip adressable)", "auto_config": False},
+]
+
+
+def son_detection():
+    """Sorties audio et cartes DOF de la machine (ou de la démo)."""
+    if pco_audio is None or pco_dof is None:
+        return {"disponible": False, "audio": {"devices": [], "proposition": {}, "modes": []}, "dof": {"detected": [], "proposition": {"enabled": False}}}
+    if not DEMO:
+        # Le media d installation demarre avec snd_hda_intel sur liste noire
+        # (ligne de commande du noyau) : sans lui, ni HDMI ni analogique interne
+        # ne sont visibles. On le charge a la demande, ici seulement.
+        pco_audio.charger_pilotes()
+    devs = pco_audio.peripheriques_alsa(APLAY_DEMO) if DEMO else pco_audio.detecter()
+    det = DOF_DEMO if DEMO else pco_dof.detecter()
+    return {"disponible": True,
+            "audio": {"devices": devs, "proposition": pco_audio.proposer(devs), "modes": [list(m) for m in pco_audio.SOUND3D]},
+            "dof": {"detected": pco_dof.resume(det), "proposition": pco_dof.proposer(det)}}
+
+
+@app.route("/api/sound")
+def sound_status():
+    try:
+        return jsonify(son_detection())
+    except Exception as exc:
+        return jsonify({"disponible": False, "error": str(exc), "audio": {"devices": [], "proposition": {}, "modes": []},
+                        "dof": {"detected": [], "proposition": {"enabled": False}}})
+
+
+@app.route("/api/sound/test", methods=["POST"])
+def sound_test():
+    a = request.get_json(force=True, silent=True) or {}
+    ident = str(a.get("device") or "")
+    if pco_audio is None:
+        return jsonify({"ok": False, "sortie": "module audio absent"})
+    if not pco_audio.HW_RE.match(ident):
+        return jsonify({"ok": False, "sortie": "sortie invalide"})
+    if DEMO:
+        return jsonify({"ok": True, "sortie": "son joué (démo) sur " + ident})
+    return jsonify(pco_audio.tester(ident))
+
+
+@app.route("/api/sound/volume", methods=["POST"])
+def sound_volume():
+    a = request.get_json(force=True, silent=True) or {}
+    ident = str(a.get("device") or "")
+    try:
+        vol = max(0, min(100, int(a.get("volume", 70))))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "sortie": "volume invalide"})
+    if pco_audio is None or not pco_audio.HW_RE.match(ident):
+        return jsonify({"ok": False, "sortie": "sortie invalide"})
+    if DEMO:
+        return jsonify({"ok": True, "sortie": f"volume {vol} % (démo)"})
+    return jsonify(pco_audio.volume_alsa(ident, vol))
+
+
+def son_vers_fichiers(a):
+    """Les choix Son et DOF deviennent audio-router.json et dof/installer.json pour la cible."""
+    if pco_audio is None or pco_dof is None:
+        return {}
+    det = son_detection()
+    devs = det["audio"]["devices"]
+    reponses = {}
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    if isinstance(a.get("sound"), dict):
+        erreurs, ok = pco_audio.valider(a["sound"], devs)
+        if erreurs:
+            return {"error": "bad-sound", "detail": erreurs}
+        f = RUN_DIR / "gui-audio.json"
+        f.write_text(json.dumps(pco_audio.config_json(ok, devs), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        reponses["audio_file"] = str(f)
+    if isinstance(a.get("dof"), dict):
+        erreurs, ok = pco_dof.valider(a["dof"])
+        if erreurs:
+            return {"error": "bad-dof", "detail": erreurs}
+        brut = DOF_DEMO if DEMO else pco_dof.detecter()
+        f = RUN_DIR / "gui-dof.json"
+        f.write_text(json.dumps(pco_dof.config_json(ok, brut), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        reponses["dof_file"] = str(f)
+    return reponses
 
 
 RESEAU_DEMO = {
@@ -427,6 +527,9 @@ ANSWER_RULES = {
     "netplan_dir": re.compile(r"^/run/pincabos/gui-netplan$"),
     # PINCABOS_INSTALLEUR_DMD_V1 : zedmd.json produit par l'étape Écrans
     "dmd_file": re.compile(r"^/run/pincabos/gui-zedmd\.json$"),
+    # PINCABOS_INSTALLEUR_SON_DOF_V1 : produits par l'étape Son et DOF
+    "audio_file": re.compile(r"^/run/pincabos/gui-audio\.json$"),
+    "dof_file": re.compile(r"^/run/pincabos/gui-dof\.json$"),
 }
 
 
@@ -479,6 +582,13 @@ def install():
             if "error" in res:
                 return jsonify(res), 400
             reponses["dmd_file"] = res["dmd_file"]
+
+    # PINCABOS_INSTALLEUR_SON_DOF_V1 : son et DOF choisis dans l'assistant
+    if isinstance(a.get("sound"), dict) or isinstance(a.get("dof"), dict):
+        res = son_vers_fichiers(a)
+        if "error" in res:
+            return jsonify(res), 400
+        reponses.update(res)
 
     # PINCABOS_INSTALLEUR_RESEAU_V1 : ce que la session a configuré part sur la cible
     if a.get("network") is not False:
