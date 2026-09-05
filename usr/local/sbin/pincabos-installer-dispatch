@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
-# Aiguillage GUI/TUI du live installer PinCabOS.
-# GRUB passe pincabos.installer=gui (entree par defaut) ou =tui.
-# Si le GUI ne demarre pas (GPU recalcitrant, cage/webkit KO), repli TUI automatique.
+# PINCABOS_INSTALLEUR_UN_SEUL_CHEMIN_V1
+# Lanceur de l'assistant graphique depuis tty1 (modele ISO classique, ou
+# GRUB force multi-user.target). Il n'y a plus d'installeur texte : si
+# l'assistant ne s'affiche pas, la panne est annoncee en clair
+# (pincabos-installer-failure), jamais masquee par un repli.
 set -u
 
-MODE="tui"
-grep -qw "pincabos.installer=gui" /proc/cmdline && MODE="gui"
-
-if [ "$MODE" = "gui" ]; then
-    systemctl start pincabos-gui-wizard.service
-    # le wizard Flask doit repondre vite ; sinon on bascule
-    for _ in $(seq 1 20); do
-        curl -fs -o /dev/null http://127.0.0.1:8046/ && OK=1 && break
+systemctl start pincabos-gui-wizard.service
+# le wizard Flask doit repondre avant que le kiosque charge la page
+for _ in $(seq 1 30); do
+    curl -fs -o /dev/null http://127.0.0.1:8046/ && OK=1 && break
+    sleep 1
+done
+if [ "${OK:-0}" = "1" ]; then
+    systemctl start pincabos-gui-kiosk.service 2>/dev/null || true
+    # le kiosque est relance par systemd en cas de chute (StartLimitBurst) :
+    # on attend qu'il tienne 5 s d'affilee, ou que systemd le declare en panne.
+    STABLE=0
+    for _ in $(seq 1 60); do
+        ETAT=$(systemctl is-active pincabos-gui-kiosk.service 2>/dev/null || true)
+        case "$ETAT" in
+            active) STABLE=$((STABLE + 1)); [ "$STABLE" -ge 5 ] && exit 0 ;;
+            failed) break ;;
+            *) STABLE=0 ;;
+        esac
         sleep 1
     done
-    if [ "${OK:-0}" = "1" ] && systemctl start pincabos-gui-kiosk.service; then
-        # le kiosk doit RESTER vivant (un crash immediat "reussit" quand meme)
-        sleep 3
-        if systemctl is-active --quiet pincabos-gui-kiosk.service; then
-            exit 0
-        fi
-        echo "PinCabOS: le kiosk GUI est retombe, repli sur l'installeur texte." >&2
-    fi
-    echo "PinCabOS: GUI indisponible, repli sur l'installeur texte." >&2
-    systemctl stop pincabos-gui-wizard.service 2>/dev/null
+    echo "PinCabOS: le kiosque graphique ne tient pas." >&2
+else
+    echo "PinCabOS: le wizard ne repond pas sur 127.0.0.1:8046." >&2
 fi
-
-exec /usr/local/sbin/pincabos-live-installer-console
+exec /usr/local/sbin/pincabos-installer-failure

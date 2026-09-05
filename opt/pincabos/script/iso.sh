@@ -4025,13 +4025,17 @@ install -m 755 /usr/local/bin/pincabos-kiosk.py \
   "$ROOTFS_DIR/usr/local/bin/pincabos-kiosk.py"
 install -m 755 /usr/local/bin/pincabos-kiosk-session \
   "$ROOTFS_DIR/usr/local/bin/pincabos-kiosk-session"
-install -m 755 /usr/local/sbin/pincabos-gui-fallback \
-  "$ROOTFS_DIR/usr/local/sbin/pincabos-gui-fallback"
-cp /etc/systemd/system/pincabos-tui-fallback.service \
-   "$ROOTFS_DIR/etc/systemd/system/"
+# PINCABOS_INSTALLEUR_UN_SEUL_CHEMIN_V1 : plus d'installeur texte de secours ;
+# si le kiosque ne tient pas, la panne est annoncee en clair sur tty1.
+install -m 755 /usr/local/sbin/pincabos-installer-failure \
+  "$ROOTFS_DIR/usr/local/sbin/pincabos-installer-failure"
 cp /etc/systemd/system/pincabos-gui-wizard.service \
    /etc/systemd/system/pincabos-gui-kiosk.service \
+   /etc/systemd/system/pincabos-installer-failure.service \
    "$ROOTFS_DIR/etc/systemd/system/"
+rm -f "$ROOTFS_DIR/usr/local/sbin/pincabos-gui-fallback" \
+      "$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-console" \
+      "$ROOTFS_DIR/etc/systemd/system/pincabos-tui-fallback.service"
 mkdir -p "$ROOTFS_DIR/etc/X11/xorg.conf.d"
 cat > "$ROOTFS_DIR/etc/X11/xorg.conf.d/10-pincabos-kiosk.conf" <<'PCO_XORG'
 Section "Device"
@@ -6453,59 +6457,14 @@ PINCABOS_LIVE_WAIT
 chmod 755 \
   "$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-wait"
 
-cat >"$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-console" <<'PINCABOS_LIVE_CONSOLE'
-#!/usr/bin/env bash
-set +e
-
-export TERM=linux
-
-printf '\033c'
-echo "==============================================================="
-echo " PINCABOS — STARTING TEXT INSTALLER"
-echo "==============================================================="
-echo
-
-/usr/local/sbin/pincabos-live-installer-wait
-WAIT_RC=$?
-
-if [ "$WAIT_RC" -ne 0 ]; then
-  echo
-  echo "NOGO: live media payload initialization failed."
-  echo "A rescue shell is opening on tty1."
-  echo
-  exec /bin/bash -l
-fi
-
-# PINCABOS_LIVE_CLEAN_TTY_CONSOLE_V1
-# Le démarrage Ubuntu/Casper reste sur tty2.
-# tty1 est réservé exclusivement à l’interface PinCabOS.
-dmesg -n 3 >/dev/null 2>&1 || true
-printf '\033c\033[2J\033[H'
-clear 2>/dev/null || true
-
-/usr/local/sbin/pincabos-live-installer
-INSTALLER_RC=$?
-
-echo
-echo "==============================================================="
-echo " PINCABOS INSTALLER STOPPED — CODE $INSTALLER_RC"
-echo "==============================================================="
-echo "A rescue shell is opening on tty1."
-echo
-
-exec /bin/bash -l
-PINCABOS_LIVE_CONSOLE
-
-chmod 755 \
-  "$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-console"
-
+# PINCABOS_INSTALLEUR_UN_SEUL_CHEMIN_V1 : l'installeur texte (console tty1)
+# n'existe plus ; tty1 lance l'assistant graphique via le dispatch.
 cat >"$ROOTFS_DIR/etc/systemd/system/pincabos-live-installer-tty.service" <<'PINCBOS_SERVICE'
 [Unit]
-Description=PinCabOS text installer on tty1
+Description=PinCabOS installer launcher on tty1
 After=local-fs.target
 Before=getty.target
-ConditionKernelCommandLine=!pincabos.rescue=1
-ConditionPathExists=/usr/local/sbin/pincabos-live-installer-console
+ConditionPathExists=/usr/local/sbin/pincabos-installer-dispatch
 
 [Service]
 Type=simple
@@ -6530,21 +6489,8 @@ ln -sfn ../pincabos-live-installer-tty.service \
   "$ROOTFS_DIR/etc/systemd/system/multi-user.target.wants/pincabos-live-installer-tty.service"
 
 echo
-echo "=== 14) Add manual fallback launcher ==="
-mkdir -p "$ROOTFS_DIR/etc/skel/Desktop"
-
-cat >"$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop" <<'PINCBOS_DESKTOP'
-[Desktop Entry]
-Type=Application
-Name=Install PinCabOS
-Comment=Install PinCabOS to disk
-Exec=sudo /usr/local/sbin/pincabos-live-installer
-Terminal=true
-Icon=system-software-install
-Categories=System;
-PINCBOS_DESKTOP
-
-chmod 755 "$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop"
+echo "=== 14) No live desktop, no manual launcher (PINCABOS_ISO_UN_SEUL_CHEMIN_V1) ==="
+rm -f "$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop"
 
 echo
 echo "=== 15) Repack live squashfs ==="
@@ -6657,9 +6603,13 @@ echo "GO [OK] $GRUB_FONT_REAL"
 echo "GO [OK] $GRUB_FONT_COMPAT"
 
 
+# PINCABOS_ISO_UN_SEUL_CHEMIN_V1
+# Une seule entree : l'assistant graphique. Pas de mode live, pas d'installeur
+# texte, pas de secours dessus. Si l'assistant ne s'affiche pas, la panne est
+# annoncee en clair sur tty1 (pincabos-installer-failure), jamais masquee.
 cat >"$ISO_DIR/boot/grub/grub.cfg" <<PINCABOS_GRUB
 set default=0
-set timeout=10
+set timeout=3
 set timeout_style=menu
 
 if loadfont /boot/grub/fonts/unicode.pf2 ; then
@@ -6672,36 +6622,10 @@ fi
 set menu_color_normal=white/black
 set menu_color_highlight=black/light-gray
 
-menuentry "Install PinCabOS V8.1G (graphical)" {
+menuentry "Install PinCabOS" {
   set gfxpayload=keep
   linux $KERNEL_REL boot=casper noprompt pincabos.installer=gui modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off nouveau.modeset=0 systemd.unit=multi-user.target cloud-init=disabled quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
   initrd $INITRD_REL
-}
-
-menuentry "Install PinCabOS V8.1G (text mode)" {
-  set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt pincabos.installer=tui modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off nouveau.modeset=0 systemd.unit=multi-user.target cloud-init=disabled quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
-  initrd $INITRD_REL
-}
-
-menuentry "Install PinCabOS V8.1G - safe graphics" {
-  set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt nomodeset modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off systemd.unit=multi-user.target cloud-init=disabled quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
-  initrd $INITRD_REL
-}
-
-menuentry "PinCabOS rescue shell" {
-  set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt systemd.unit=multi-user.target cloud-init=disabled plymouth.enable=0 rd.plymouth=0 noplymouth console=tty1 modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off nouveau.modeset=0 loglevel=4 systemd.show_status=true rd.systemd.show_status=true vt.global_cursor_default=1 pincabos.rescue=1 ---
-  initrd $INITRD_REL
-}
-
-menuentry "Reboot" {
-  reboot
-}
-
-menuentry "Power off" {
-  halt
 }
 PINCABOS_GRUB
 

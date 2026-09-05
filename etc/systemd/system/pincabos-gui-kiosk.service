@@ -2,6 +2,12 @@
 Description=PinCabOS GUI installer kiosk (X11 + openbox + WebKitGTK)
 After=pincabos-gui-wizard.service
 Requires=pincabos-gui-wizard.service
+# PINCABOS_INSTALLEUR_UN_SEUL_CHEMIN_V1 : plus d'installeur texte de secours.
+# Le kiosque est relance quelques fois par systemd ; s'il ne tient pas, la
+# panne est annoncee en clair sur tty1 (pincabos-installer-failure).
+StartLimitIntervalSec=300
+StartLimitBurst=3
+OnFailure=pincabos-installer-failure.service
 
 [Service]
 Type=simple
@@ -11,8 +17,7 @@ Environment=XDG_RUNTIME_DIR=%t/pincabos-kiosk
 ExecStartPre=-/usr/bin/plymouth quit
 ExecStartPre=-/usr/bin/chvt 1
 ExecStart=/usr/bin/xinit /usr/local/bin/pincabos-kiosk-session -- :1 vt1 -nolisten tcp
-Restart=no
+Restart=on-failure
+RestartSec=3
 StandardOutput=journal
 StandardError=journal
-# quoi qu'il arrive au kiosk, l'utilisateur retrouve un installeur
-ExecStopPost=/usr/local/sbin/pincabos-gui-fallback
