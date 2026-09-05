@@ -1,2 +1,0 @@
-/etc/systemd/system/sshd.service
-/etc/systemd/system/multi-user.target.wants/ssh.service

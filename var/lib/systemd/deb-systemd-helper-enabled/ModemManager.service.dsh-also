@@ -1,2 +1,0 @@
-/etc/systemd/system/dbus-org.freedesktop.ModemManager1.service
-/etc/systemd/system/multi-user.target.wants/ModemManager.service

@@ -1,2 +1,0 @@
-/etc/systemd/system/chronyd.service
-/etc/systemd/system/multi-user.target.wants/chrony.service

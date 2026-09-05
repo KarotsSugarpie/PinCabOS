@@ -1,4 +1,0 @@
-/etc/systemd/system/multi-user.target.wants/grub-initrd-fallback.service
-/etc/systemd/system/rescue.target.wants/grub-initrd-fallback.service
-/etc/systemd/system/emergency.target.wants/grub-initrd-fallback.service
-/etc/systemd/system/sleep.target.wants/grub-initrd-fallback.service

@@ -1,9 +1,0 @@
-69dabfafcceff8920c71d41b783eb532  /etc/chrony/chrony.conf
-f1b4d934b0b1264a9c65c03b83e5e665  /etc/chrony/chrony.keys
-dd955b5a90f4ff1cd49d6cc6ae6b9ef5  /etc/chrony/sources.d/ubuntu-ntp-pools.sources
-1c261d6541420797f8b824d65ac5c197  /etc/apt/apt.conf.d/20auto-upgrades
-3d0030023f128b0e45ce298ae41e0304  /etc/apt/apt.conf.d/50unattended-upgrades
-37ddc52cda9639765e79d16af8f91c94  /etc/default/kdump-tools
-72a09b2f30c4b1cab7e9a366ee50988c  /etc/default/sysstat
-770470dd6dd03a9029912d338eb3b62d  /etc/samba/smb.conf
-a17e0f75cdc0e7e56343448db99c6723  /etc/ssh/sshd_config

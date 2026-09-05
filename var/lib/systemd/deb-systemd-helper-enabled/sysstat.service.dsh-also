@@ -1,4 +1,0 @@
-/etc/systemd/system/sysstat.service.wants/sysstat-collect.timer
-/etc/systemd/system/sysstat.service.wants/sysstat-summary.timer
-/etc/systemd/system/sysstat.service.wants/sysstat-rotate.timer
-/etc/systemd/system/multi-user.target.wants/sysstat.service
