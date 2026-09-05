@@ -25,6 +25,11 @@ def on_activate(app):
     win = Gtk.ApplicationWindow(application=app)
     win.set_decorated(False)
 
+    # PINCABOS_KIOSK_THEME_SOMBRE_V1
+    # Les listes deroulantes (<select>) du wizard sont des popups GTK natifs :
+    # sans ceci elles sortent en Adwaita clair, noir sur blanc, hors du theme.
+    Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", True)
+
     css = Gtk.CssProvider()
     css.load_from_data(
         ("window, window > * { background-color: %s; }" % BACKGROUND).encode())

@@ -124,6 +124,20 @@ class Roles(unittest.TestCase):
         r = sc.proposer_roles(sc.moniteurs(q, PROPS))
         self.assertEqual(r, {"playfield": "HDMI-0", "backglass": "", "fulldmd": "", "topper": ""})
 
+    def test_usage_propose_et_valide(self):
+        # PINCABOS_INSTALLEUR_CAB_USAGE_V1 : le cab de Yann = backglass + full DMD, pas de topper
+        mons = sc.moniteurs(QUERY, PROPS)
+        roles = sc.proposer_roles(mons)
+        self.assertEqual(sc.usage_propose(roles), {"backglass": True, "fulldmd": True, "topper": False})
+        self.assertEqual(sc.valider_usage(sc.usage_propose(roles), roles), [])
+        # declare un topper sans ecran, nie le backglass qui a un ecran
+        erreurs = sc.valider_usage({"backglass": False, "fulldmd": True, "topper": True}, roles)
+        self.assertEqual(len(erreurs), 2)
+        self.assertTrue(any(e.startswith("topper") and "aucun écran" in e for e in erreurs))
+        self.assertTrue(any(e.startswith("backglass") and "absent" in e for e in erreurs))
+        self.assertIsNone(sc.usage_depuis({}))
+        self.assertEqual(sc.usage_depuis({"usage": {"topper": 1}}), {"backglass": False, "fulldmd": False, "topper": True})
+
     def test_validation(self):
         mons = sc.moniteurs(QUERY, PROPS)
         self.assertEqual(sc.valider_roles({"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}, mons), [])
@@ -258,9 +272,23 @@ class Assistant(unittest.TestCase):
                                                    "screens": {"roles": {"playfield": "HDMI-9"}, "rotation": 0}})
         self.assertEqual(r.status_code, 400)
 
+    def test_usage_dans_l_api(self):
+        d = self.client.get("/api/screens").get_json()
+        self.assertIn("usage", d)
+        self.assertEqual(set(d["usage"]), {"backglass", "fulldmd", "topper"})
+        # un topper declare sans ecran : l'application est refusee
+        rep = self.client.post("/api/screens/apply", json={"roles": d["roles"], "rotation": 0,
+                               "usage": dict(d["usage"], topper=True)}).get_json()
+        self.assertFalse(rep["ok"])
+        self.assertTrue(any("topper" in e for e in rep["erreurs"]))
+        rep = self.client.post("/api/screens/apply", json={"roles": d["roles"], "rotation": 0, "usage": d["usage"]}).get_json()
+        self.assertTrue(rep["ok"])
+
     def test_page(self):
         html = self.client.get("/").get_data(as_text=True)
         self.assertIn('id="st-screens"', html)
+        self.assertIn('id="cab-usage"', html)
+        self.assertIn("toggleUsage", html)
         self.assertNotIn('id="st-orient"', html)
         self.assertIn("applyScreens", html)
         self.assertIn("screens-next", html)
@@ -278,8 +306,14 @@ class Integration(unittest.TestCase):
     def test_i18n_complet(self):
         d = json.loads((Path(RACINE) / "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
         for lang, keys in d.items():
-            for k in ("screens", "identify", "apply_layout", "orient_q", "o_up", "o_down", "role_playfield", "screens_applied", "screens_none"):
+            for k in ("screens", "identify", "apply_layout", "orient_q", "o_up", "o_down", "role_playfield", "screens_applied", "screens_none",
+                      "cab_usage", "cab_usage_hint", "screens_missing"):
                 self.assertIn(k, keys, f"{lang}: {k}")
+
+    def test_kiosque_theme_sombre(self):
+        # PINCABOS_KIOSK_THEME_SOMBRE_V1 : les <select> natifs suivent le theme
+        src = (Path(RACINE) / "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8")
+        self.assertIn("gtk-application-prefer-dark-theme", src)
 
     def test_kiosque_suit_le_playfield(self):
         s = (Path(RACINE) / "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8")

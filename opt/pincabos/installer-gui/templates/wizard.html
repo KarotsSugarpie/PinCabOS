@@ -78,6 +78,8 @@ button:disabled,.primary:disabled{opacity:.32;filter:grayscale(.9);cursor:not-al
 .pv-scr{border:2px solid var(--border);border-radius:6px;background:#0d0318;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
 .pv-scr span{font-weight:900;color:var(--accent);font-size:1.2rem}.pv-scr small{color:var(--muted);font-size:.7rem;text-align:center}
 .pv-scr.playfield{border-color:var(--accent)}
+/* PINCABOS_INSTALLEUR_CAB_USAGE_V1 : le playfield est toujours là, chip fixe */
+#cab-usage .segb:disabled{opacity:1;filter:none;cursor:default}
 .mon{width:74px;height:48px;border:3px solid var(--accent);border-radius:6px;margin:0 auto 10px;position:relative;transition:.2s}
 .mon::after{content:"";position:absolute;inset:6px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:3px;opacity:.7}
 .rot90{transform:rotate(90deg)}.rot270{transform:rotate(-90deg)}.rot180{transform:rotate(180deg)}
@@ -168,6 +170,16 @@ button{
 <section class="step" id="st-screens">
   <h2 data-i18n="screens"></h2>
   <p style="color:var(--muted);margin-bottom:12px" data-i18n="screens_hint"></p>
+  <div class="card" style="margin-bottom:14px">
+    <div class="row" style="margin-bottom:0"><label data-i18n="cab_usage"></label>
+      <div class="seg" id="cab-usage">
+        <button type="button" class="segb sel" disabled data-i18n="role_playfield"></button>
+        <button type="button" class="segb" data-use="backglass" data-i18n="role_backglass"></button>
+        <button type="button" class="segb" data-use="fulldmd" data-i18n="role_fulldmd"></button>
+        <button type="button" class="segb" data-use="topper" data-i18n="role_topper"></button>
+      </div></div>
+    <div class="hint" data-i18n="cab_usage_hint"></div>
+  </div>
   <div class="grid screens" id="screen-list"></div>
   <div class="card" style="margin-top:14px">
     <div class="row" style="margin-bottom:8px"><label data-i18n="orient_q"></label>
@@ -290,24 +302,46 @@ function applyKbd(){fetch("/api/keyboard",{method:"POST",
 // xrandr, « Continuer » ne s'ouvre qu'après une application réussie des choix
 // courants. L'assistant suit lui-même l'écran désigné comme playfield.
 const ROLE_KEYS=["playfield","backglass","fulldmd","topper"];
-S.screens={roles:{},rotation:0};
+// PINCABOS_INSTALLEUR_CAB_USAGE_V1 — le propriétaire déclare ce que son cab
+// possède (backglass, full DMD, topper) ; les rôles attribuables, la proposition
+// et les réglages d'affichage en aval en découlent.
+S.screens={roles:{},rotation:0,usage:{backglass:true,fulldmd:true,topper:false}};
 let screensMon=[],screensApplied="";
-function screensKey(){return JSON.stringify([S.screens.roles,S.screens.rotation])}
+function screensKey(){return JSON.stringify([S.screens.roles,S.screens.rotation,S.screens.usage])}
+function usageFromRoles(){const u={};ROLE_KEYS.filter(r=>r!=="playfield").forEach(r=>u[r]=!!S.screens.roles[r]);return u}
+function usedRoles(){return ROLE_KEYS.filter(r=>r==="playfield"||S.screens.usage[r])}
+function missingRoles(){return usedRoles().filter(r=>!S.screens.roles[r])}
+function freeMonitors(){const pris=new Set(Object.values(S.screens.roles).filter(Boolean));return screensMon.filter(m=>!pris.has(m.name))}
+function autoAssign(role){
+  const libres=freeMonitors();if(!libres.length)return;
+  const ratio=m=>m.height?m.width/m.height:0;
+  const choix=role==="fulldmd"?libres.slice().sort((a,b)=>ratio(b)-ratio(a))[0]:libres.slice().sort((a,b)=>b.width*b.height-a.width*a.height)[0];
+  S.screens.roles[role]=choix.name}
+function renderUsage(){document.querySelectorAll("#cab-usage .segb[data-use]").forEach(b=>b.classList.toggle("sel",!!S.screens.usage[b.dataset.use]))}
+function toggleUsage(role){
+  S.screens.usage[role]=!S.screens.usage[role];
+  if(!S.screens.usage[role]){S.screens.roles[role]=""}else{autoAssign(role)}
+  renderUsage();renderScreens();refreshScreensStatus()}
+function refreshScreensStatus(){
+  const miss=missingRoles();
+  if(miss.length){setScreensStatus("screens_missing",false,miss.map(r=>t("role_"+r)).join(", "))}
+  else{setScreensStatus("screens_pending",false)}}
+document.querySelectorAll("#cab-usage .segb[data-use]").forEach(b=>b.onclick=()=>toggleUsage(b.dataset.use));
 function loadScreens(){
   const box=document.getElementById("screen-list");box.innerHTML="<div class='hint'>…</div>";
   fetch("/api/screens").then(r=>r.json()).then(d=>{
     screensMon=d.monitors||[];
     if(d.error||!screensMon.length){box.innerHTML="<div class='hint'>"+t("screens_none")+"</div>";return}
-    if(!Object.keys(S.screens.roles).length){S.screens.roles=d.roles||{};S.screens.rotation=d.rotation||0}
+    if(!Object.keys(S.screens.roles).length){S.screens.roles=d.roles||{};S.screens.rotation=d.rotation||0;S.screens.usage=d.usage||usageFromRoles()}
     document.querySelectorAll("#rot-seg .segb").forEach(b=>b.classList.toggle("sel",+b.dataset.rot===+S.screens.rotation));
-    renderScreens();setScreensStatus("screens_pending",false)})
+    renderUsage();renderScreens();refreshScreensStatus()})
   .catch(()=>{box.innerHTML="<div class='hint'>"+t("screens_none")+"</div>"})}
 function roleOf(name){return ROLE_KEYS.find(r=>S.screens.roles[r]===name)||""}
 function renderScreens(){
   const box=document.getElementById("screen-list");box.innerHTML="";
   screensMon.forEach(m=>{
     const el=document.createElement("div");el.className="scr"+(roleOf(m.name)==="playfield"?" sel":"");
-    const opts=[["",t("role_none")]].concat(ROLE_KEYS.map(r=>[r,t("role_"+r)]))
+    const opts=[["",t("role_none")]].concat(usedRoles().map(r=>[r,t("role_"+r)]))
       .map(([v,l])=>`<option value="${v}" ${roleOf(m.name)===v?"selected":""}>${l}</option>`).join("");
     el.innerHTML=`<div class="num">${m.app_index+1}</div><div class="name">${m.name}</div>
       <div class="geo">${m.width} × ${m.height}</div>
@@ -316,7 +350,7 @@ function renderScreens(){
       const name=e.target.dataset.name,role=e.target.value;
       ROLE_KEYS.forEach(r=>{if(S.screens.roles[r]===name)S.screens.roles[r]=""});
       if(role){S.screens.roles[role]=name}
-      renderScreens();setScreensStatus("screens_pending",false)};
+      renderScreens();refreshScreensStatus()};
     box.appendChild(el)});
   renderPreview()}
 function renderPreview(){
@@ -329,12 +363,13 @@ function renderPreview(){
     return `<div class="pv-scr ${r}" style="width:${w}px;height:${h}px"><span>${m.app_index+1}</span><small>${t("role_"+r)}${r==="playfield"&&rot?" · "+rot+"°":""}</small></div>`}).join("")}
 document.querySelectorAll("#rot-seg .segb").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#rot-seg .segb").forEach(o=>o.classList.remove("sel"));b.classList.add("sel");
-  S.screens.rotation=+b.dataset.rot;renderPreview();setScreensStatus("screens_pending",false)});
+  S.screens.rotation=+b.dataset.rot;renderPreview();refreshScreensStatus()});
 function setScreensStatus(key,ok,extra){const st=document.getElementById("screens-status");
   st.textContent=t(key)+(extra?" "+extra:"");st.style.color=ok?"var(--good)":"var(--muted)";
-  document.getElementById("screens-next").disabled=!(ok&&screensApplied===screensKey()&&S.screens.roles.playfield)}
+  document.getElementById("screens-next").disabled=!(ok&&screensApplied===screensKey()&&S.screens.roles.playfield&&!missingRoles().length)}
 function applyScreens(){
   if(!S.screens.roles.playfield){setScreensStatus("screens_need_pf",false);return}
+  if(missingRoles().length){refreshScreensStatus();return}
   const btn=document.getElementById("btn-apply");btn.disabled=true;setScreensStatus("screens_applying",false);
   fetch("/api/screens/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(S.screens)})
   .then(r=>r.json()).then(d=>{btn.disabled=false;

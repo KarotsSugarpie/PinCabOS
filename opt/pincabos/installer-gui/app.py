@@ -129,7 +129,8 @@ def screens_list():
         return jsonify({"error": "no-x", "detail": str(exc), "monitors": [], "roles": {}}), 200
     roles = pco_screens.proposer_roles(mons)
     pf = next((m for m in mons if m["name"] == roles.get("playfield")), None)
-    return jsonify({"monitors": mons, "roles": roles, "rotation": pf["rotation"] if pf else 0, "demo": DEMO})
+    return jsonify({"monitors": mons, "roles": roles, "usage": pco_screens.usage_propose(roles),
+                    "rotation": pf["rotation"] if pf else 0, "demo": DEMO})
 
 
 @app.route("/api/screens/identify", methods=["POST"])
@@ -159,6 +160,9 @@ def screens_apply():
     except Exception as exc:
         return jsonify({"ok": False, "erreurs": [str(exc)]}), 200
     erreurs = pco_screens.valider_roles(roles, mons)
+    usage = pco_screens.usage_depuis(a)
+    if usage is not None:
+        erreurs += pco_screens.valider_usage(usage, roles)
     if erreurs:
         return jsonify({"ok": False, "erreurs": erreurs}), 200
     if DEMO:
@@ -319,6 +323,9 @@ def ecrans_vers_fichiers(a):
         return {"error": "bad-screens"}
     mons = ecrans_detectes()
     erreurs = pco_screens.valider_roles(roles, mons)
+    usage = pco_screens.usage_depuis(a.get("screens") if isinstance(a.get("screens"), dict) else a)
+    if usage is not None:
+        erreurs += pco_screens.valider_usage(usage, roles)
     if erreurs:
         return {"error": "bad-screens", "detail": erreurs}
     data = pco_screens.screens_json(mons, roles, rotation)
