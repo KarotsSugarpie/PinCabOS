@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from pincabos_multiplayer.runtime import (
     RuntimeIsolationError,
@@ -54,6 +55,30 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(command[-2:], ["-play", str(table)])
             for key in ("HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME"):
                 self.assertTrue(environment[key].startswith(str(layout.root)))
+
+    def test_launch_environment_includes_pinball_desktop_session(self):
+        with tempfile.TemporaryDirectory() as directory:
+            layout = RuntimeLayout(Path(directory) / "VPX_MultiPlayers")
+            layout.prepare_writable_directories()
+            runtime_uid = os.geteuid()
+
+            with mock.patch.dict(
+                os.environ, {"PINCABOS_MULTIPLAYER_DISPLAY": ":9"}, clear=False
+            ):
+                environment = layout.isolated_environment(runtime_uid)
+
+            self.assertEqual(environment["DISPLAY"], ":9")
+            self.assertEqual(
+                environment["XDG_RUNTIME_DIR"], f"/run/user/{runtime_uid}"
+            )
+            self.assertEqual(
+                environment["DBUS_SESSION_BUS_ADDRESS"],
+                f"unix:path=/run/user/{runtime_uid}/bus",
+            )
+            self.assertEqual(environment["HOME"], str(layout.root / "home"))
+            self.assertEqual(
+                environment["XDG_CONFIG_HOME"], str(layout.root / "config")
+            )
 
     def test_table_escape_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
