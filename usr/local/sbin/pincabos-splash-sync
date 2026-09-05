@@ -77,6 +77,7 @@ IMAGE_PLAYFIELD = PREFIXE_PLAYFIELD + "0.png"
 IMAGE_AUTRES = PREFIXE_AUTRES + "0.png"
 ECART = 4096                                  # vide entre surfaces dans l espace virtuel
 IMAGE_HISTORIQUE = "pincabos.png"
+IMAGE_VOILE = "pincabos-voile.png"           # carre noir : voile de la barre (PINCABOS_SPLASH_BARRE_VOILE_V1)
 EMPREINTE = Path("/var/lib/pincabos/splash-screens.sha256")
 ROLES = ("playfield", "backglass", "fulldmd", "topper")
 
@@ -240,6 +241,18 @@ def commande_conversion(src: Path, dst: Path) -> list | None:
     return []
 
 
+def png_uni(chemin: Path, rgba=(0, 0, 0, 255), taille: int = 8):
+    """Un PNG uni (RGBA 8 bits), sans bibliotheque : le voile de la barre."""
+    import struct
+    import zlib
+
+    def chunk(nom, data):
+        return struct.pack(">I", len(data)) + nom + data + struct.pack(">I", zlib.crc32(nom + data) & 0xFFFFFFFF)
+    brut = b"".join(b"\x00" + bytes(rgba) * taille for _ in range(taille))
+    ihdr = struct.pack(">IIBBBBB", taille, taille, 8, 6, 0, 0, 0)
+    chemin.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(brut, 9)) + chunk(b"IEND", b""))
+
+
 def purger(theme_dir: Path, prefixe: str, garder: int):
     for p in theme_dir.glob(prefixe + "*.png"):
         num = p.name[len(prefixe):-4]
@@ -326,6 +339,8 @@ def preparer_images(rot_x11: int, theme_dir: Path = THEME_DIR, run=executer,
             n_arret_autres += 1
     purger(theme_dir, PREFIXE_ARRET_PLAYFIELD, n_arret_pf)
     purger(theme_dir, PREFIXE_ARRET_AUTRES, n_arret_autres)
+
+    png_uni(theme_dir / IMAGE_VOILE)
 
     if n_pf == 0:
         shutil.copyfile(theme_dir / IMAGE_HISTORIQUE, theme_dir / IMAGE_PLAYFIELD); n_pf = 1
@@ -508,38 +523,43 @@ fun geometrie_barre() {{
     }}
     sw = pf_sw; sh = pf_sh;
     bar_width = bw * {barre["w"]};
-    bar_height = 6;
+    bar_height = 8;
     bar_lx = (lw - bw) / 2 + (bw - bar_width) / 2;
     bar_ly = (lh - bh) / 2 + bh * {barre["y"]};
 }}
 
-box_image = Image("progress_box.png");
-bar_image = Image("progress_bar.png");
+# PINCABOS_SPLASH_BARRE_VOILE_V1 : le visuel porte deja sa barre, pleine. Un
+# voile sombre la couvre et recule de gauche a droite (en coordonnees logiques)
+# a mesure que le demarrage avance : c est elle qui semble se remplir.
+voile_image = Image("{IMAGE_VOILE}");
+voile = Sprite();
+voile.SetZ(20);
+voile.SetOpacity(0.88);
 
-box_sprite = Sprite();
-box_sprite.SetZ(10);
-
-fun poser_cadre() {{
+fun poser_voile(cw) {{
+    reste = bar_width - cw;
+    if (reste < 1) {{ voile.SetOpacity(0); return; }}
+    voile.SetOpacity(0.88);
+    a = bar_lx + cw;            # debut logique du voile
+    b = bar_lx + bar_width;     # fin logique
+    y0 = bar_ly - bar_height / 2;
     if (rot == 0) {{
-        box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-        box_sprite.SetX(pf_ox + bar_lx); box_sprite.SetY(pf_oy + bar_ly);
+        voile.SetImage(voile_image.Scale(reste, bar_height));
+        voile.SetX(pf_ox + a); voile.SetY(pf_oy + y0);
     }}
     if (rot == 180) {{
-        box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-        box_sprite.SetX(pf_ox + sw - bar_lx - bar_width); box_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
+        voile.SetImage(voile_image.Scale(reste, bar_height));
+        voile.SetX(pf_ox + sw - b); voile.SetY(pf_oy + sh - y0 - bar_height);
     }}
     if (rot == 90) {{
-        box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-        box_sprite.SetX(pf_ox + sw - bar_ly - bar_height); box_sprite.SetY(pf_oy + bar_lx);
+        voile.SetImage(voile_image.Scale(bar_height, reste));
+        voile.SetX(pf_ox + sw - y0 - bar_height); voile.SetY(pf_oy + a);
     }}
     if (rot == 270) {{
-        box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-        box_sprite.SetX(pf_ox + bar_ly); box_sprite.SetY(pf_oy + sh - bar_lx - bar_width);
+        voile.SetImage(voile_image.Scale(bar_height, reste));
+        voile.SetX(pf_ox + y0); voile.SetY(pf_oy + sh - b);
     }}
 }}
-
-bar_sprite = Sprite();
-bar_sprite.SetZ(11);
 
 progress_target = 0;
 progress_shown = 0;
@@ -549,31 +569,14 @@ fun refresh_callback() {{
     placer();
     if (pf_place != 1) return;
     geometrie_barre();
-    poser_cadre();
     tick++;
-    creep = tick / 1500;
+    # sans information de Plymouth, la barre avance quand meme (95 % en ~12 s a 50 Hz)
+    creep = tick / 600;
     if (creep > 0.95) creep = 0.95;
     target = progress_target;
     if (target < creep) target = creep;
     progress_shown = progress_shown + (target - progress_shown) * 0.08;
-    cw = bar_width * progress_shown;
-    if (cw < 1) cw = 1;
-    if (rot == 0) {{
-        bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(pf_ox + bar_lx); bar_sprite.SetY(pf_oy + bar_ly);
-    }}
-    if (rot == 180) {{
-        bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(pf_ox + sw - bar_lx - cw); bar_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
-    }}
-    if (rot == 90) {{
-        bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(pf_ox + sw - bar_ly - bar_height); bar_sprite.SetY(pf_oy + bar_lx);
-    }}
-    if (rot == 270) {{
-        bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(pf_ox + bar_ly); bar_sprite.SetY(pf_oy + sh - bar_lx - cw);
-    }}
+    poser_voile(bar_width * progress_shown);
 }}
 
 fun boot_progress_callback(duration, progress) {{

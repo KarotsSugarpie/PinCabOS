@@ -101,6 +101,12 @@ class Images(unittest.TestCase):
         self.assertIn('if (k_pf == 1) img_pf = Image("pincabos-playfield-1.png");', t)
         self.assertIn("k_autres = Math.Int(Math.Random() * 1);", t)
 
+    def test_voile_genere(self):
+        ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.portrait, paysage=self.paysage)
+        v = (self.theme / ss.IMAGE_VOILE).read_bytes()
+        self.assertTrue(v.startswith(b"\x89PNG"))
+        self.assertEqual(ss.dimensions(self.theme / ss.IMAGE_VOILE), (8, 8))
+
     def test_purge_des_anciennes_images(self):
         (self.theme / "pincabos-playfield-7.png").write_bytes(b"vieux")
         ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.portrait, paysage=self.paysage)
@@ -159,6 +165,10 @@ class Theme(unittest.TestCase):
         self.assertNotIn("Rotate(rot * PI / 180);\n    }\n  }", t)
         self.assertIn(f"bar_width = bw * {ss.BARRE['portrait']['w']};", t)
         self.assertIn(f"bh * {ss.BARRE['portrait']['y']};", t)
+        # PINCABOS_SPLASH_BARRE_VOILE_V1 : un voile qui recule, plus de barre rapportee
+        self.assertIn('Image("pincabos-voile.png")', t)
+        self.assertNotIn("progress_bar.png", t)
+        self.assertIn("fun poser_voile(cw)", t)
 
     def test_playfield_tourne_par_x11(self):
         images = dict(self.IMAGES, rot=90)
