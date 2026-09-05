@@ -8,14 +8,15 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Callable
 
-from .runtime import RuntimeIsolationError, RuntimeLayout, sha256_file
+from .runtime import RuntimeLayout, sha256_file
 
 
 VPINFE_SERVICE = "pincabos-vpinfe.service"
-ACTIVE_PHASES = {"ready", "running", "handoff"}
-RUNNING_PHASES = {"running", "handoff"}
+CONTROL_STATES = {"released", "armed", "linked", "video", "running", "handoff"}
+LEASED_STATES = {"armed", "linked", "video", "running", "handoff"}
+VIDEO_STATES = {"video", "running", "handoff"}
 
 
 class CabinetControlError(RuntimeError):
@@ -81,9 +82,7 @@ def _matching_table(layout: RuntimeLayout, manifest_hash: str) -> str:
 
     matches: list[Path] = []
     for path in sorted(layout.tables.rglob("*.vpx")):
-        if not path.is_file():
-            continue
-        if sha256_file(path).lower() == expected:
+        if path.is_file() and sha256_file(path).lower() == expected:
             matches.append(path)
 
     if len(matches) != 1:
@@ -93,12 +92,11 @@ def _matching_table(layout: RuntimeLayout, manifest_hash: str) -> str:
 
 
 class CabinetControlManager:
-    """Fait de la phase serveur l'autorité de possession du cabinet.
+    """Applique uniquement le `control.desired` émis par PinCabOS.CC.
 
-    READY   -> arrête VPinFE et prend le lease.
-    RUNNING -> garde VPinFE arrêté et lance le VPX isolé une seule fois.
-    STOPPED/WAITING/PREPARING/aucune session -> libère le lease et restaure
-    VPinFE seulement s'il était actif avant la prise de contrôle.
+    Le cabinet ne déduit jamais sa prise de contrôle de la phase Multiplayer seule.
+    Cela permet à .CC d'attendre les READY du Lobby, d'armer les cabinets, de les
+    linker, d'ouvrir l'A/V, puis de lancer VPX dans cet ordre.
     """
 
     def __init__(
@@ -151,24 +149,26 @@ class CabinetControlManager:
     def _phase(session: dict) -> str:
         return str(session.get("phase") or "").strip().lower()
 
-    def acquire(self, session: dict) -> dict:
+    def acquire(self, session: dict, desired: str, generation: object = None) -> dict:
         session_id = str(session.get("session_id") or "")
         if not session_id:
             raise CabinetControlError("multiplayer_session_missing")
         if not self._member(session):
             raise CabinetControlError("cabinet_not_member")
+        if desired not in LEASED_STATES:
+            raise CabinetControlError("control_desired_invalid")
 
         current = self.lease()
         same_lease = (
             current.get("owner") == "multiplayer"
             and current.get("session_id") == session_id
-            and current.get("state") in {"armed", "running", "handoff"}
+            and current.get("state") in LEASED_STATES
         )
-
-        if same_lease:
-            was_active = bool(current.get("vpinfe_was_active"))
-        else:
-            was_active = self.service_active()
+        was_active = (
+            bool(current.get("vpinfe_was_active"))
+            if same_lease
+            else self.service_active()
+        )
 
         if self.service_active():
             self.stop_service()
@@ -179,17 +179,12 @@ class CabinetControlManager:
             role = topology.get("role") or topology.get("local_role")
 
         phase = self._phase(session)
-        state = "running" if phase == "running" else phase or "armed"
-        if state not in {"ready", "running", "handoff"}:
-            state = "armed"
-        if state == "ready":
-            state = "armed"
-
         return self._write_lease(
             {
                 "owner": "multiplayer",
                 "session_id": session_id,
-                "state": state,
+                "generation": generation,
+                "state": desired,
                 "phase": phase,
                 "role": role,
                 "room_code": session.get("room_code"),
@@ -197,27 +192,25 @@ class CabinetControlManager:
                 "vpinfe_service": VPINFE_SERVICE,
                 "vpinfe_was_active": was_active,
                 "vpinfe_active": self.service_active(),
-                "video_desired": phase in ACTIVE_PHASES,
-                "video_state": "pending-hook",
+                "video_desired": desired in VIDEO_STATES,
+                "video_state": "pending-hook" if desired in VIDEO_STATES else "idle",
             }
         )
 
-    def ensure_running(self, session: dict) -> dict:
-        lease = self.acquire(session)
-        phase = self._phase(session)
-        if phase not in RUNNING_PHASES:
-            return lease
+    def ensure_running(self, session: dict, generation: object = None) -> dict:
+        if self._phase(session) != "running":
+            raise CabinetControlError("server_session_not_running")
 
+        lease = self.acquire(session, "running", generation)
         pid = _engine_pid(self.layout)
         table = None
-        if phase == "running" and pid is None:
+        if pid is None:
             table = _matching_table(self.layout, str(session.get("manifest_hash") or ""))
             pid = self.layout.launch_detached(table)
 
         lease.update(
             {
-                "state": phase,
-                "phase": phase,
+                "state": "running",
                 "engine_pid": pid,
                 "table": table or lease.get("table"),
                 "vpinfe_active": self.service_active(),
@@ -225,7 +218,7 @@ class CabinetControlManager:
         )
         return self._write_lease(lease)
 
-    def release(self, reason: str) -> dict:
+    def release(self, reason: str, generation: object = None) -> dict:
         current = self.lease()
         stopped = self.layout.stop_detached()
 
@@ -240,6 +233,7 @@ class CabinetControlManager:
             {
                 "owner": None,
                 "session_id": current.get("session_id"),
+                "generation": generation,
                 "state": "released",
                 "reason": reason,
                 "engine_stopped": stopped,
@@ -253,12 +247,25 @@ class CabinetControlManager:
 
     def reconcile(self, state: dict) -> dict:
         session = state.get("session")
-        if not isinstance(session, dict) or not session.get("session_id"):
-            return self.release("no-session")
-        if not self._member(session):
-            return self.release("cabinet-not-member")
+        control = state.get("control")
 
-        phase = self._phase(session)
-        if phase in ACTIVE_PHASES:
-            return self.ensure_running(session)
-        return self.release(f"phase-{phase or 'unknown'}")
+        if not isinstance(control, dict):
+            return self.release("control-contract-missing")
+
+        desired = str(control.get("desired") or "released").strip().lower()
+        generation = control.get("generation")
+        if desired not in CONTROL_STATES:
+            raise CabinetControlError("control_desired_invalid")
+
+        if desired == "released":
+            return self.release("server-release", generation)
+
+        if not isinstance(session, dict) or not session.get("session_id"):
+            return self.release("no-session", generation)
+        if not self._member(session):
+            return self.release("cabinet-not-member", generation)
+
+        if desired == "running":
+            return self.ensure_running(session, generation)
+
+        return self.acquire(session, desired, generation)
