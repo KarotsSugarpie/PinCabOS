@@ -93,7 +93,7 @@
     "net_identity": "Identifiant (802.1X)",
     "net_hidden": "SSID caché",
     "cab_usage": "Votre cab utilise…",
-    "cab_usage_hint": "Le playfield est toujours là. Dites ce que votre cab possède : les rôles proposés, la disposition et les réglages d'affichage (VPX, VPinFE, DMD) en découlent.",
+    "cab_usage_hint": "Le playfield et le backglass sont toujours là (fonctionnement minimal). Dites ce que votre cab possède en plus : les rôles proposés, la disposition et les réglages d'affichage (VPX, VPinFE, DMD) en découlent.",
     "screens_missing": "Aucun écran attribué pour :",
     "dmd_title": "DMD matériel",
     "dmd_hint": "Pas de full DMD : le DMD peut être une matrice LED. Choisissez-la, PinCabOS la configure pour VPX et VPinFE. Sans matériel, le DMD est dessiné sur le backglass.",
@@ -161,7 +161,8 @@
     "toys_err_none": "Contrôleur %n : aucun ruban déclaré.",
     "disk_found": "PinCabOS %v déjà installé",
     "disk_keep": "Mise à jour : tables et médias, ROMs, écrans, son, réseau, DOF, boutons, DMD et réglages de la webapp sont conservés.",
-    "install_refused": "Installation refusée :"
+    "install_refused": "Installation refusée :",
+    "progress_start": "Préparation"
   },
   "en": {
     "choose_lang": "Choose your language",
@@ -257,7 +258,7 @@
     "net_identity": "Identity (802.1X)",
     "net_hidden": "Hidden SSID",
     "cab_usage": "Your cab uses…",
-    "cab_usage_hint": "The playfield is always there. Tell us what your cab has: the proposed roles, the layout and the display settings (VPX, VPinFE, DMD) follow from it.",
+    "cab_usage_hint": "The playfield and the backglass are always there (minimum setup). Tell us what else your cab has: the proposed roles, the layout and the display settings (VPX, VPinFE, DMD) follow from it.",
     "screens_missing": "No screen assigned for:",
     "dmd_title": "DMD hardware",
     "dmd_hint": "No full DMD: the DMD can be a LED matrix. Pick it, PinCabOS sets it up for VPX and VPinFE. Without hardware, the DMD is drawn on the backglass.",
@@ -325,7 +326,8 @@
     "toys_err_none": "Controller %n: no strip declared.",
     "disk_found": "PinCabOS %v already installed",
     "disk_keep": "Update: tables and media, ROMs, screens, sound, network, DOF, buttons, DMD and web app settings are kept.",
-    "install_refused": "Installation refused:"
+    "install_refused": "Installation refused:",
+    "progress_start": "Preparing"
   },
   "de": {
     "choose_lang": "Sprache auswählen",
@@ -421,7 +423,7 @@
     "net_identity": "Benutzer (802.1X)",
     "net_hidden": "Verstecktes SSID",
     "cab_usage": "Ihr Cab verwendet…",
-    "cab_usage_hint": "Das Playfield ist immer dabei. Geben Sie an, was Ihr Cab besitzt: Rollen, Anordnung und Anzeigeeinstellungen (VPX, VPinFE, DMD) ergeben sich daraus.",
+    "cab_usage_hint": "Playfield und Backglass sind immer dabei (Mindestausstattung). Geben Sie an, was Ihr Cab zusätzlich besitzt: Rollen, Anordnung und Anzeigeeinstellungen (VPX, VPinFE, DMD) ergeben sich daraus.",
     "screens_missing": "Kein Bildschirm zugewiesen für:",
     "dmd_title": "DMD-Hardware",
     "dmd_hint": "Kein Full DMD: das DMD kann eine LED-Matrix sein. Wählen Sie sie aus, PinCabOS richtet sie für VPX und VPinFE ein. Ohne Hardware wird das DMD auf dem Backglass gezeichnet.",
@@ -489,7 +491,8 @@
     "toys_err_none": "Controller %n: kein Streifen angegeben.",
     "disk_found": "PinCabOS %v bereits installiert",
     "disk_keep": "Aktualisierung: Tische und Medien, ROMs, Bildschirme, Ton, Netzwerk, DOF, Tasten, DMD und Web-App-Einstellungen bleiben erhalten.",
-    "install_refused": "Installation abgelehnt:"
+    "install_refused": "Installation abgelehnt:",
+    "progress_start": "Vorbereitung"
   },
   "it": {
     "choose_lang": "Scegli la tua lingua",
@@ -585,7 +588,7 @@
     "net_identity": "Identità (802.1X)",
     "net_hidden": "SSID nascosto",
     "cab_usage": "Il tuo cab usa…",
-    "cab_usage_hint": "Il playfield c'è sempre. Indica cosa possiede il tuo cab: ruoli proposti, disposizione e impostazioni di visualizzazione (VPX, VPinFE, DMD) ne derivano.",
+    "cab_usage_hint": "Il playfield e il backglass ci sono sempre (configurazione minima). Indica cos'altro possiede il tuo cab: ruoli proposti, disposizione e impostazioni di visualizzazione (VPX, VPinFE, DMD) ne derivano.",
     "screens_missing": "Nessuno schermo assegnato per:",
     "dmd_title": "DMD hardware",
     "dmd_hint": "Nessun full DMD: il DMD può essere una matrice LED. Scegli quale, PinCabOS la configura per VPX e VPinFE. Senza hardware il DMD viene disegnato sul backglass.",
@@ -653,7 +656,8 @@
     "toys_err_none": "Controller %n: nessuna striscia dichiarata.",
     "disk_found": "PinCabOS %v già installato",
     "disk_keep": "Aggiornamento: tavoli e media, ROM, schermi, audio, rete, DOF, pulsanti, DMD e impostazioni della web app vengono conservati.",
-    "install_refused": "Installazione rifiutata:"
+    "install_refused": "Installazione rifiutata:",
+    "progress_start": "Preparazione"
   },
   "es": {
     "choose_lang": "Elige tu idioma",
@@ -749,7 +753,7 @@
     "net_identity": "Identidad (802.1X)",
     "net_hidden": "SSID oculto",
     "cab_usage": "Tu cab usa…",
-    "cab_usage_hint": "El playfield siempre está. Indica qué tiene tu cab: los roles propuestos, la disposición y los ajustes de pantalla (VPX, VPinFE, DMD) se derivan de ello.",
+    "cab_usage_hint": "El playfield y el backglass siempre están (configuración mínima). Indica qué más tiene tu cab: los roles propuestos, la disposición y los ajustes de pantalla (VPX, VPinFE, DMD) se derivan de ello.",
     "screens_missing": "Ninguna pantalla asignada para:",
     "dmd_title": "DMD físico",
     "dmd_hint": "Sin full DMD: el DMD puede ser una matriz LED. Elígela, PinCabOS la configura para VPX y VPinFE. Sin hardware, el DMD se dibuja en el backglass.",
@@ -817,6 +821,7 @@
     "toys_err_none": "Controlador %n: ninguna tira declarada.",
     "disk_found": "PinCabOS %v ya instalado",
     "disk_keep": "Actualización: mesas y medios, ROM, pantallas, sonido, red, DOF, botones, DMD y ajustes de la web app se conservan.",
-    "install_refused": "Instalación rechazada:"
+    "install_refused": "Instalación rechazada:",
+    "progress_start": "Preparando"
   }
 }

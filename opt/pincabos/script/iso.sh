@@ -5125,6 +5125,11 @@ regional_setup() {
 
 refresh_target_initrd_for_orientation() {
     [ "${REG_FBROTATE:-0}" != "0" ] || return 0
+    # PINCABOS_SPLASH_CIBLE_V1 : deja fait par pincabos-splash-sync (theme + initrd)
+    if [ "${PCO_TARGET_INITRD_FRESH:-0}" = "1" ]; then
+        pco_go "Target initrd already regenerated with the splash of the installed cab"
+        return 0
+    fi
     pco_step "Regenerating target initrd (oriented splash must live in initrd)"
     for d in /proc /sys /dev; do
         mount --bind "$d" "$TARGET$d" 2>/dev/null || true
@@ -5272,6 +5277,21 @@ apply_target_screens() {
         install -o 1000 -g 1000 -m 0664 "$liaisons" "$TARGET/opt/pincabos/config/screens/display-role-bindings.json"
     fi
     pco_go "screens.json and EDID bindings installed (playfield rotation: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("playfield_rotation","0"))' "$src" 2>/dev/null || echo '?'))"
+
+    # PINCABOS_SPLASH_CIBLE_V1 : le premier demarrage montre deja les galeries
+    # du cab installe (playfield reconnu a sa resolution, rotation choisie), pas
+    # le theme du media ; pincabos-splash-sync regenere lui-meme l initrd cible.
+    if [ -x "$TARGET/usr/local/sbin/pincabos-splash-sync" ]; then
+        local d
+        for d in /proc /sys /dev; do mount --bind "$d" "$TARGET$d" 2>/dev/null || true; done
+        if chroot "$TARGET" /usr/local/sbin/pincabos-splash-sync --force; then
+            PCO_TARGET_INITRD_FRESH=1
+            pco_go "Boot splash of the installed cab generated (galleries, per-screen)"
+        else
+            pco_warn "splash sync on target failed (first boot will regenerate it)"
+        fi
+        for d in /dev /sys /proc; do umount "$TARGET$d" 2>/dev/null || true; done
+    fi
 }
 
 apply_target_identity() {

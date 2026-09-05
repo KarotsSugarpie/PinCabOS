@@ -163,9 +163,16 @@ def proposer_roles(monitors: list) -> dict:
 USAGE_ROLES = tuple(r for r in ROLES if r != "playfield")
 
 
+# PINCABOS_INSTALLEUR_MINIMUM_V1 (Yann, 05/09/2026) : le fonctionnement minimal
+# d'un cab est playfield + backglass ; sans ces deux écrans, pas d'installation.
+ROLES_MINIMUM = ("playfield", "backglass")
+
+
 def usage_propose(roles: dict) -> dict:
-    """Ce qui a reçu un écran est réputé utilisé : point de départ de la déclaration."""
-    return {r: bool(roles.get(r)) for r in USAGE_ROLES}
+    """Ce qui a reçu un écran est réputé utilisé ; le backglass l'est toujours (minimum)."""
+    u = {r: bool(roles.get(r)) for r in USAGE_ROLES}
+    u["backglass"] = True
+    return u
 
 
 def usage_depuis(a) -> dict | None:
@@ -179,6 +186,8 @@ def usage_depuis(a) -> dict | None:
 def valider_usage(usage: dict, roles: dict) -> list:
     """Chaque rôle déclaré utilisé a un écran ; un rôle déclaré absent n'en a pas."""
     erreurs = []
+    if not usage.get("backglass"):
+        erreurs.append("backglass : obligatoire (fonctionnement minimal = playfield + backglass)")
     for role in USAGE_ROLES:
         attribue = bool(roles.get(role))
         if usage.get(role) and not attribue:
@@ -194,6 +203,8 @@ def valider_roles(roles: dict, monitors: list) -> list:
     erreurs = []
     if not roles.get("playfield"):
         erreurs.append("le playfield est obligatoire")
+    if not roles.get("backglass"):
+        erreurs.append("le backglass est obligatoire (fonctionnement minimal = playfield + backglass)")
     vus = {}
     for role in ROLES:
         nom = roles.get(role) or ""

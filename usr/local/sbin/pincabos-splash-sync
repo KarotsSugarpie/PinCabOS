@@ -135,6 +135,16 @@ def resolution_physique(taille: tuple[int, int], rotation: int) -> tuple[int, in
     return largeur, hauteur
 
 
+def parametres_media() -> tuple[dict[str, tuple[int, int]], int]:
+    """PINCABOS_SPLASH_MEDIA_V1 : media d installation, aucun screens.json.
+
+    Le playfield n a pas de resolution connue (0x0 : le theme prend la plus
+    grande dalle) et la dalle est supposee a l endroit (rotation 0) : le
+    portrait est tourne comme sur un cab standard, le paysage va ailleurs.
+    """
+    return {"playfield": (0, 0)}, 0
+
+
 def rotation_effective(rotation_x11: int) -> int:
     """Rotation de l image portrait vers le framebuffer natif du playfield.
 
@@ -369,6 +379,8 @@ def preparer_images(rot_x11: int, theme_dir: Path = THEME_DIR, run=executer,
 def theme(ecrans: dict[str, tuple[int, int]], rot_x11: int, images: dict) -> str:
     pf_w, pf_h = resolution_physique(ecrans["playfield"], rot_x11)
     resume = ", ".join(f"{role} {w}x{h}" for role, (w, h) in ecrans.items())
+    if pf_w == 0:
+        resume = "media d installation (aucun screens.json) : playfield = la plus grande dalle"
     rot = int(images["rot"])
     pre_tourne = 1 if images.get("pre_tourne", 1) else 0
     barre = BARRE[images["genre_playfield"]]
@@ -460,6 +472,17 @@ fun placer() {{
             # HiDPI : Plymouth presente une dalle 4K a la moitie de sa resolution
             if (pf < 0 && Window.GetWidth(i) * 2 == pf_w && Window.GetHeight(i) * 2 == pf_h) pf = i;
             i++;
+        }}
+        # PINCABOS_SPLASH_MEDIA_V1 : media d installation, aucune resolution
+        # connue (pf_w = 0) : le playfield est la plus grande dalle.
+        if (pf < 0 && pf_w == 0) {{
+            best = 0;
+            i = 0;
+            while (i < n) {{
+                a = Window.GetWidth(i) * Window.GetHeight(i);
+                if (a > best) {{ best = a; pf = i; }}
+                i++;
+            }}
         }}
         # Aucune correspondance : la premiere surface est celle de la sortie primaire.
         if (pf < 0 && n > 0) pf = 0;
@@ -632,21 +655,27 @@ def main() -> int:
                         help="ecrire le theme sans regenerer l initrd")
     parser.add_argument("--stdout", action="store_true",
                         help="afficher le theme sans rien ecrire")
+    parser.add_argument("--media", action="store_true",
+                        help="media d installation (sans screens.json) : playfield = la plus grande dalle, "
+                             "dalle supposee a l endroit ; l empreinte n est pas ecrite")
     args = parser.parse_args()
 
-    if not SCREENS.is_file():
-        print(f"  {SCREENS} absent : theme inchange")
-        return 0
+    if args.media:
+        ecrans, rot = parametres_media()
+    else:
+        if not SCREENS.is_file():
+            print(f"  {SCREENS} absent : theme inchange")
+            return 0
 
-    try:
-        ecrans, rot = configuration()
-    except (json.JSONDecodeError, OSError, ValueError) as exc:
-        print(f"  screens.json illisible ({exc}) : theme inchange")
-        return 0
+        try:
+            ecrans, rot = configuration()
+        except (json.JSONDecodeError, OSError, ValueError) as exc:
+            print(f"  screens.json illisible ({exc}) : theme inchange")
+            return 0
 
-    if "playfield" not in ecrans:
-        print("  role playfield absent de screens.json : theme inchange")
-        return 0
+        if "playfield" not in ecrans:
+            print("  role playfield absent de screens.json : theme inchange")
+            return 0
 
     if args.stdout:
         srcs = sources_images()
@@ -669,7 +698,7 @@ def main() -> int:
         "arret": [[p.name, empreinte_fichier(p)] for p in galerie(SOURCES, "arret")],
         "historique": empreinte_fichier(THEME_DIR / IMAGE_HISTORIQUE),
     }, sort_keys=True).encode()).hexdigest()
-    if not args.force and EMPREINTE.is_file() \
+    if not args.media and not args.force and EMPREINTE.is_file() \
             and EMPREINTE.read_text(encoding="utf-8").strip() == signature:
         print("  configuration d ecrans et visuels inchanges : rien a faire")
         return 0
@@ -688,6 +717,10 @@ def main() -> int:
     if not args.no_initrd and not regenerer_initrd():
         print("  empreinte non enregistree : le theme sera repose au prochain essai")
         return 1
+
+    # Media : pas d empreinte, le systeme installe regenerera le sien au premier passage.
+    if args.media:
+        return 0
 
     EMPREINTE.parent.mkdir(parents=True, exist_ok=True)
     EMPREINTE.write_text(signature + "\n", encoding="utf-8")

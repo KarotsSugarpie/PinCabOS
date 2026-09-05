@@ -124,3 +124,32 @@ class PlusDeRepliTexte(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SplashDuMedia(unittest.TestCase):
+    """PINCABOS_SPLASH_MEDIA_V1 : le media demarre avec les galeries aleatoires du cab."""
+
+    def test_theme_prepare_avant_l_initrd_casper(self):
+        s = ISO_LIVE.read_text(encoding="utf-8")
+        self.assertIn("pincabos-splash-sync --media --no-initrd --force", s)
+        self.assertLess(s.index("pincabos-splash-sync --media"), s.index("mkinitramfs -o /tmp/initrd-live.img"))
+
+    def test_cible_recoit_son_splash_a_l_installation(self):
+        # PINCABOS_SPLASH_CIBLE_V1 : premier demarrage = galeries du cab installe, initrd non refait deux fois
+        s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        appel = 'chroot "$TARGET" /usr/local/sbin/pincabos-splash-sync --force'
+        self.assertIn(appel, s)
+        self.assertLess(s.index("apply_target_screens() {"), s.index(appel))
+        self.assertIn("PCO_TARGET_INITRD_FRESH=1", s)
+        self.assertLess(s.index("refresh_target_initrd_for_orientation() {"), s.index('"${PCO_TARGET_INITRD_FRESH:-0}" = "1"'))
+
+
+class ReseauDuMedia(unittest.TestCase):
+    """PINCABOS_MEDIA_RESEAU_V1 : NetworkManager seul maitre du reseau sur le media."""
+
+    def test_netplan_du_cab_d_origine_mis_de_cote(self):
+        s = ISO_LIVE.read_text(encoding="utf-8")
+        self.assertIn('mv -f "$f" "$ROOTFS/etc/netplan/pincabos-source/"', s)
+        self.assertLess(s.index("pincabos-source"), s.index("01-pincabos-live-dhcp.yaml\" <<'NETPLAN'"))
+        self.assertIn("renderer: NetworkManager", s)
+

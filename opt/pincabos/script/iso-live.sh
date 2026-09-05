@@ -121,7 +121,19 @@ CASPER
 # it right after unsquashfs, so an installed system behaves normally.
 echo "PinCabOS live media" > "$ROOTFS/etc/pincabos-live"
 
+# PINCABOS_MEDIA_RESEAU_V1 : les fichiers netplan du cab d origine (IP fixe,
+# renderer networkd) rendraient NetworkManager muet sur le media (devices
+# « strictly unmanaged », vu en VM : « No suitable device found ») et suivraient
+# le systeme installe. Mis de cote dans un sous-dossier que netplan ignore.
 mkdir -p "$ROOTFS/etc/netplan"
+if ls "$ROOTFS"/etc/netplan/*.yaml >/dev/null 2>&1; then
+  mkdir -p "$ROOTFS/etc/netplan/pincabos-source"
+  for f in "$ROOTFS"/etc/netplan/*.yaml; do
+    case "$(basename "$f")" in 01-pincabos-live-dhcp.yaml) continue ;; esac
+    echo "  netplan du cab d origine mis de cote : $(basename "$f")"
+    mv -f "$f" "$ROOTFS/etc/netplan/pincabos-source/"
+  done
+fi
 cat > "$ROOTFS/etc/netplan/01-pincabos-live-dhcp.yaml" <<'NETPLAN'
 network:
   version: 2
@@ -142,6 +154,14 @@ if [ -z "$KERNEL_VERSION" ]; then
 fi
 [ -n "$KERNEL_VERSION" ] || die "no kernel found under $ROOTFS/lib/modules"
 echo "  kernel: $KERNEL_VERSION"
+
+# PINCABOS_SPLASH_MEDIA_V1 : le media demarre avec les memes galeries
+# aleatoires que le cab (portrait sur la plus grande dalle, paysage ailleurs).
+# Le theme doit etre dans le rootfs AVANT l initrd casper, qui l embarque.
+if [ -x "$ROOTFS/usr/local/sbin/pincabos-splash-sync" ]; then
+  chroot "$ROOTFS" /usr/local/sbin/pincabos-splash-sync --media --no-initrd --force \
+    || echo "  AVERTISSEMENT : splash du media non prepare (theme existant conserve)"
+fi
 
 # Built to /tmp on purpose: /boot must keep the initrd of the installed system.
 chroot "$ROOTFS" mkinitramfs -o /tmp/initrd-live.img "$KERNEL_VERSION" \

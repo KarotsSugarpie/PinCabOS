@@ -190,6 +190,20 @@ class Theme(unittest.TestCase):
         self.assertEqual(t.count("{"), t.count("}"))
         self.assertNotIn("{{", t)
 
+    def test_media(self):
+        # PINCABOS_SPLASH_MEDIA_V1 : sans screens.json, playfield = la plus grande dalle
+        ecrans, rot = ss.parametres_media()
+        self.assertEqual((ecrans, rot), ({"playfield": (0, 0)}, 0))
+        self.assertEqual(ss.rotation_effective(rot), 270)     # portrait tourne comme un cab a l endroit
+        t = ss.theme(ecrans, rot, self.IMAGES)
+        self.assertIn("pf_w = 0;", t)
+        self.assertIn("if (pf < 0 && pf_w == 0)", t)
+        self.assertIn("a = Window.GetWidth(i) * Window.GetHeight(i);", t)
+        self.assertIn("la plus grande dalle", t)
+        self.assertEqual(t.count("{"), t.count("}"))
+        # un cab configure garde la reconnaissance par resolution
+        self.assertIn("pf_w = 3840;", ss.theme(ECRANS_YANN, 0, self.IMAGES))
+
 
 class Perimetre(unittest.TestCase):
     def test_visuels_dans_le_perimetre_de_l_updater(self):

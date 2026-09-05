@@ -132,9 +132,11 @@ class Roles(unittest.TestCase):
         self.assertEqual(sc.valider_usage(sc.usage_propose(roles), roles), [])
         # declare un topper sans ecran, nie le backglass qui a un ecran
         erreurs = sc.valider_usage({"backglass": False, "fulldmd": True, "topper": True}, roles)
-        self.assertEqual(len(erreurs), 2)
+        # PINCABOS_INSTALLEUR_MINIMUM_V1 : nier le backglass est en plus une faute en soi
+        self.assertEqual(len(erreurs), 3)
         self.assertTrue(any(e.startswith("topper") and "aucun écran" in e for e in erreurs))
         self.assertTrue(any(e.startswith("backglass") and "absent" in e for e in erreurs))
+        self.assertTrue(any(e.startswith("backglass") and "obligatoire" in e for e in erreurs))
         self.assertIsNone(sc.usage_depuis({}))
         self.assertEqual(sc.usage_depuis({"usage": {"topper": 1}}), {"backglass": False, "fulldmd": False, "topper": True})
 
@@ -288,6 +290,38 @@ class Assistant(unittest.TestCase):
         # une vraie valeur hors moule reste refusee
         r = self.client.post("/api/install", json=dict(etat, orient="9"))
         self.assertEqual(r.get_json()["error"], "bad-orient")
+
+    def test_minimum_playfield_et_backglass(self):
+        # PINCABOS_INSTALLEUR_MINIMUM_V1 : sans backglass, ni test de disposition ni installation
+        d = self.client.get("/api/screens").get_json()
+        self.assertTrue(d["usage"]["backglass"])
+        sans = dict(d["roles"], backglass="")
+        rep = self.client.post("/api/screens/apply", json={"roles": sans, "rotation": 0,
+                               "usage": dict(d["usage"], backglass=False)}).get_json()
+        self.assertFalse(rep["ok"])
+        self.assertTrue(any("backglass" in e for e in rep["erreurs"]))
+        r = self.client.post("/api/install", json={"lang": "fr", "mode": "1", "disk": "/dev/nvme0n1", "confirm": "INSTALL PINCABOS",
+                                                   "screens": {"roles": sans, "rotation": 0, "usage": dict(d["usage"], backglass=False)}})
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.get_json()["error"], "bad-screens")
+        self.assertEqual(sc.usage_propose({"playfield": "HDMI-0"}), {"backglass": True, "fulldmd": False, "topper": False})
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        self.assertIn('class="segb sel" disabled data-use="backglass"', w)
+        self.assertIn('if(role==="backglass")return;', w)
+
+    def test_egerie_et_credits(self):
+        # PINCABOS_INSTALLEUR_EGERIE_V1 / CREDITS_V1 : emplacements Miss Tilt (Langue, Progression, Terminé), auteurs
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        self.assertEqual(w.count('src="/static/egerie.png"'), 3)
+        self.assertIn('class="egerie egerie-lang"', w)
+        self.assertIn('class="egerie egerie-done"', w)
+        self.assertIn("egerie-filigrane", w)
+        self.assertIn('<footer class="credits">', w)
+        self.assertIn("Karots", w)
+        i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
+        for l in ("fr", "en", "de", "it", "es"):
+            self.assertIn("progress_start", i18n[l])
+            self.assertIn("backglass", i18n[l]["cab_usage_hint"].lower())
 
     def test_le_wizard_affiche_un_refus(self):
         w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
