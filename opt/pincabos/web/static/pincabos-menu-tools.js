@@ -1,11 +1,21 @@
 (function () {
   "use strict";
 
-  // PINCABOS_MENU_PIN_PERSISTENT_V7
+  // PINCABOS_MENU_PIN_PERSISTENT_V8
   // Keep the historical key so the user's preference survives upgrades.
   var KEY = "pincabos_menu_force_pinned_v5";
   var NAV_SELECTOR = "nav.pincabos-nav, .pincabos-nav";
-  var VIEWPORT_CLASS = "pco-menu-viewport-fixed-v7";
+  var VIEWPORT_CLASS = "pco-menu-viewport-fixed-v8";
+  var HIT_SELECTOR = [
+    "a",
+    "button",
+    "input",
+    "select",
+    "textarea",
+    "summary",
+    "[role='button']",
+    "[tabindex]"
+  ].join(",");
 
   var originalMenu = null;
   var originalMenuElement = null;
@@ -13,17 +23,17 @@
   var originalNextSibling = null;
   var originalBodyPaddingTop = null;
   var placeholder = null;
-  var iniOriginals = new WeakMap();
+  var hitOriginals = new WeakMap();
   var observer = null;
   var syncTimer = null;
   var resizeTimer = null;
 
-  function q(sel) {
-    return document.querySelector(sel);
+  function q(sel, root) {
+    return (root || document).querySelector(sel);
   }
 
-  function qa(sel) {
-    return Array.prototype.slice.call(document.querySelectorAll(sel));
+  function qa(sel, root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll(sel));
   }
 
   function stop(ev) {
@@ -31,16 +41,6 @@
     ev.preventDefault();
     ev.stopPropagation();
     if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
-  }
-
-  function txt(el) {
-    return ((el && el.textContent) || "").replace(/\s+/g, " ").trim();
-  }
-
-  function visible(el) {
-    if (!el || !el.getBoundingClientRect) return false;
-    var r = el.getBoundingClientRect();
-    return r.width > 80 && r.height > 20;
   }
 
   function getPinned() {
@@ -82,11 +82,19 @@
       "bottom",
       "width",
       "max-width",
+      "height",
+      "min-height",
+      "max-height",
       "margin",
       "z-index",
       "box-sizing",
       "box-shadow",
-      "border-bottom"
+      "border-bottom",
+      "overflow",
+      "transform",
+      "filter",
+      "isolation",
+      "pointer-events"
     ].forEach(function (prop) {
       originalMenu[prop] = {
         value: menu.style.getPropertyValue(prop),
@@ -112,7 +120,7 @@
     if (!menu || !document.body || menu.parentNode === document.body) return;
 
     if (!placeholder || !placeholder.parentNode) {
-      placeholder = document.createComment("pincabos-menu-pin-v7-placeholder");
+      placeholder = document.createComment("pincabos-menu-pin-v8-placeholder");
       if (menu.parentNode) menu.parentNode.insertBefore(placeholder, menu);
     }
 
@@ -148,109 +156,48 @@
 
   function clearWrongFixedTargets(menu) {
     qa(".pco-menu-force-fixed").forEach(function (el) {
-      if (el !== menu) el.classList.remove("pco-menu-force-fixed");
-    });
-  }
-
-  function candidateLooksLikeIniHeader(el) {
-    if (!visible(el)) return false;
-
-    var t = txt(el).toLowerCase();
-    var hasIniWords =
-      t.indexOf("navigation") !== -1 ||
-      t.indexOf("safe editor") !== -1 ||
-      t.indexOf("filter a section") !== -1 ||
-      t.indexOf("reset filter") !== -1 ||
-      t.indexOf("save approved changes") !== -1 ||
-      t.indexOf("last modified") !== -1;
-
-    if (!hasIniWords) return false;
-
-    var r = el.getBoundingClientRect();
-    if (r.top > 420) return false;
-    if (r.height > 420) return false;
-    return true;
-  }
-
-  function climbToIniBlock(el) {
-    var best = el;
-    var cur = el;
-
-    while (cur && cur !== document.body && cur !== document.documentElement) {
-      if (!visible(cur)) break;
-
-      var r = cur.getBoundingClientRect();
-      var t = txt(cur).toLowerCase();
-      if (
-        r.top < 420 &&
-        r.height < 520 &&
-        (
-          t.indexOf("navigation") !== -1 ||
-          t.indexOf("safe editor") !== -1 ||
-          t.indexOf("filter a section") !== -1 ||
-          t.indexOf("save approved changes") !== -1
-        )
-      ) {
-        best = cur;
+      if (el !== menu) {
+        el.classList.remove("pco-menu-force-fixed");
+        el.classList.remove("pco-menu-viewport-fixed-v7");
+        el.classList.remove(VIEWPORT_CLASS);
       }
-      cur = cur.parentElement;
-    }
-
-    return best;
-  }
-
-  function findIniBlocks() {
-    var found = [];
-    qa("div,section,aside,nav,header,form").forEach(function (el) {
-      if (!candidateLooksLikeIniHeader(el)) return;
-      var block = climbToIniBlock(el);
-      if (block && found.indexOf(block) === -1) found.push(block);
-    });
-    return found;
-  }
-
-  function rememberIni(el) {
-    if (iniOriginals.has(el)) return;
-    iniOriginals.set(el, {
-      position: el.style.position || "",
-      top: el.style.top || "",
-      zIndex: el.style.zIndex || "",
-      boxShadow: el.style.boxShadow || "",
-      background: el.style.background || ""
     });
   }
 
-  function forceIniOffset(menuHeight) {
-    var top = Math.max(0, menuHeight + 12);
-    findIniBlocks().forEach(function (el) {
-      if (el === findMenu()) return;
-      rememberIni(el);
-      el.classList.add("pco-ini-offset-forced");
-      el.style.position = "sticky";
-      el.style.top = top + "px";
-      el.style.zIndex = "2147482500";
-      el.style.boxShadow = "0 8px 18px rgba(0,0,0,.35)";
-      if (!el.style.background) el.style.background = "inherit";
+  function rememberHitTarget(el) {
+    if (!el || hitOriginals.has(el)) return;
+    hitOriginals.set(el, {
+      value: el.style.getPropertyValue("pointer-events"),
+      priority: el.style.getPropertyPriority("pointer-events")
     });
   }
 
-  function clearIniOffset() {
-    qa(".pco-ini-offset-forced").forEach(function (el) {
-      var o = iniOriginals.get(el);
-      el.classList.remove("pco-ini-offset-forced");
-      if (o) {
-        el.style.position = o.position;
-        el.style.top = o.top;
-        el.style.zIndex = o.zIndex;
-        el.style.boxShadow = o.boxShadow;
-        el.style.background = o.background;
+  function enableMenuHitTargets(menu) {
+    if (!menu) return;
+
+    // The fixed NAV surface itself must never become an invisible click shield.
+    // Only real interactive controls inside it receive pointer events.
+    menu.style.setProperty("pointer-events", "none", "important");
+
+    qa(HIT_SELECTOR, menu).forEach(function (el) {
+      rememberHitTarget(el);
+      el.style.setProperty("pointer-events", "auto", "important");
+    });
+  }
+
+  function restoreMenuHitTargets(menu) {
+    if (!menu) return;
+
+    qa(HIT_SELECTOR, menu).forEach(function (el) {
+      var state = hitOriginals.get(el);
+      if (!state) return;
+
+      if (state.value) {
+        el.style.setProperty("pointer-events", state.value, state.priority || "");
       } else {
-        el.style.position = "";
-        el.style.top = "";
-        el.style.zIndex = "";
-        el.style.boxShadow = "";
-        el.style.background = "";
+        el.style.removeProperty("pointer-events");
       }
+      hitOriginals.delete(el);
     });
   }
 
@@ -277,10 +224,11 @@
     clearWrongFixedTargets(menu);
     detachMenuToViewportRoot(menu);
 
+    menu.classList.remove("pco-menu-viewport-fixed-v7");
     menu.classList.add("pco-menu-force-fixed");
     menu.classList.add(VIEWPORT_CLASS);
 
-    // Inline !important wins against page-specific legacy CSS.
+    // Fixed at the viewport root, without giant z-index values or extra overlays.
     menu.style.setProperty("position", "fixed", "important");
     menu.style.setProperty("top", "0", "important");
     menu.style.setProperty("left", "0", "important");
@@ -288,9 +236,18 @@
     menu.style.setProperty("bottom", "auto", "important");
     menu.style.setProperty("width", "100vw", "important");
     menu.style.setProperty("max-width", "none", "important");
+    menu.style.setProperty("height", "auto", "important");
+    menu.style.setProperty("min-height", "0", "important");
+    menu.style.setProperty("max-height", "none", "important");
     menu.style.setProperty("margin", "0", "important");
-    menu.style.setProperty("z-index", "2147482999", "important");
+    menu.style.setProperty("z-index", "100000", "important");
     menu.style.setProperty("box-sizing", "border-box", "important");
+    menu.style.setProperty("overflow", "visible", "important");
+    menu.style.setProperty("transform", "none", "important");
+    menu.style.setProperty("filter", "none", "important");
+    menu.style.setProperty("isolation", "isolate", "important");
+
+    enableMenuHitTargets(menu);
   }
 
   function enforcePinnedState() {
@@ -300,10 +257,7 @@
     setPinButtonVisual(pinned);
 
     if (!menu) {
-      if (!pinned) {
-        setOffset(0);
-        clearIniOffset();
-      }
+      if (!pinned) setOffset(0);
       return false;
     }
 
@@ -314,10 +268,11 @@
       var h = getMenuHeight(menu);
       if (document.body) document.body.style.paddingTop = h + "px";
       setOffset(h);
-      forceIniOffset(h);
       return true;
     }
 
+    restoreMenuHitTargets(menu);
+    menu.classList.remove("pco-menu-viewport-fixed-v7");
     menu.classList.remove(VIEWPORT_CLASS);
     menu.classList.remove("pco-menu-force-fixed");
     restoreMenuStyles(menu);
@@ -329,7 +284,6 @@
         : "";
     }
     setOffset(0);
-    clearIniOffset();
     return false;
   }
 
@@ -479,8 +433,6 @@
         );
       });
 
-      // The move to <body> itself produces mutations. Delay the sync so DOM
-      // settles; attributes are deliberately ignored to avoid a feedback loop.
       if (relevant) scheduleSync(70);
     });
 
@@ -507,7 +459,6 @@
       if (event && event.key === KEY) scheduleSync(20);
     });
 
-    // Win against late Dashboard scripts that rewrite menu geometry.
     window.setTimeout(syncMenuTools, 160);
     window.setTimeout(syncMenuTools, 600);
   }
