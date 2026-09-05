@@ -70,12 +70,17 @@ class CabinetControlTests(unittest.TestCase):
             systemd = FakeSystemd(active=True)
             manager = CabinetControlManager(layout, runner=systemd)
 
-            with mock.patch.object(layout, "launch_detached", return_value=4242) as launch:
+            with mock.patch.object(
+                RuntimeLayout,
+                "launch_detached",
+                autospec=True,
+                return_value=4242,
+            ) as launch:
                 lease = manager.reconcile(
                     {"session": session("running", manifest_hash=manifest)}
                 )
 
-            launch.assert_called_once_with("poc.vpx")
+            launch.assert_called_once_with(layout, "poc.vpx")
             self.assertEqual(lease["engine_pid"], 4242)
             self.assertEqual(lease["table"], "poc.vpx")
             self.assertEqual(lease["state"], "running")
