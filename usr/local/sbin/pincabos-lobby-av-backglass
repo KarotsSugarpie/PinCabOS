@@ -150,6 +150,15 @@ place_window() {
             else
                 DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
                     wmctrl -i -r "$window_id" -b remove,fullscreen >/dev/null 2>&1 || true
+                # Remove the window-manager decorations only for the one-screen
+                # overlay. Dedicated Backglass mode stays fullscreen as before.
+                if command -v xprop >/dev/null 2>&1; then
+                    DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
+                        xprop -id "$window_id" \
+                        -f _MOTIF_WM_HINTS 32c \
+                        -set _MOTIF_WM_HINTS "2, 0, 0, 0, 0" \
+                        >/dev/null 2>&1 || true
+                fi
                 DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
                     wmctrl -i -r "$window_id" -e "0,$x,$y,$width,$height" >/dev/null 2>&1 || true
                 DISPLAY=:0 XAUTHORITY=/home/pinball/.Xauthority \
