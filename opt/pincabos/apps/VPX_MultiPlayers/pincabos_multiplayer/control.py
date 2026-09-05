@@ -92,12 +92,7 @@ def _matching_table(layout: RuntimeLayout, manifest_hash: str) -> str:
 
 
 class CabinetControlManager:
-    """Applique uniquement le `control.desired` émis par PinCabOS.CC.
-
-    Le cabinet ne déduit jamais sa prise de contrôle de la phase Multiplayer seule.
-    Cela permet à .CC d'attendre les READY du Lobby, d'armer les cabinets, de les
-    linker, d'ouvrir l'A/V, puis de lancer VPX dans cet ordre.
-    """
+    """Applique uniquement le `control.desired` émis par PinCabOS.CC."""
 
     def __init__(
         self,
@@ -192,6 +187,9 @@ class CabinetControlManager:
                 "vpinfe_service": VPINFE_SERVICE,
                 "vpinfe_was_active": was_active,
                 "vpinfe_active": self.service_active(),
+                "link_state": (
+                    "pending-transport" if desired == "linked" else "not-requested"
+                ),
                 "video_desired": desired in VIDEO_STATES,
                 "video_state": "pending-hook" if desired in VIDEO_STATES else "idle",
             }
@@ -240,6 +238,7 @@ class CabinetControlManager:
                 "vpinfe_service": VPINFE_SERVICE,
                 "vpinfe_restored": restore_vpinfe,
                 "vpinfe_active": self.service_active(),
+                "link_state": "released",
                 "video_desired": False,
                 "video_state": "released",
             }
