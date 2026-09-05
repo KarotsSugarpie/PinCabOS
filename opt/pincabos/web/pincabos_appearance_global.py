@@ -21,6 +21,7 @@ _VARS_PATH = "/static/pincabos-appearance-vars.css?v=appearance-global-v2"
 _THEME_PATH = "/static/pincabos-theme-global.css?v=appearance-global-v2"
 _BRIDGE_PATH = "/static/pincabos-appearance-dashboard-menu-v2.css?v=appearance-global-v2"
 _UNIFIED_PATH = "/static/pincabos-interface-unified-v1.css?v=appearance-global-v2"
+_MODULES_PATH = "/static/pincabos-interface-unified-modules-v1.css?v=appearance-global-v2"
 _DUDESCAB_PATH = "/static/pincabos-dudescab-dark-exception-v1.css?v=appearance-global-v2"
 
 
@@ -43,8 +44,17 @@ def install_appearance_global(app):
                 return response
 
             content_type = (response.headers.get("Content-Type") or "").lower()
-            if "text/html" not in content_type or response.direct_passthrough:
+            if "text/html" not in content_type:
                 return response
+
+            # Les reponses HTML envoyees via send_file peuvent etre en mode
+            # direct_passthrough. On les rend lisibles ici uniquement si elles
+            # ne sont pas des pieces jointes a telecharger.
+            disposition = (response.headers.get("Content-Disposition") or "").lower()
+            if response.direct_passthrough:
+                if "attachment" in disposition:
+                    return response
+                response.direct_passthrough = False
 
             html = response.get_data(as_text=True)
 
@@ -83,7 +93,16 @@ def install_appearance_global(app):
                     f'{_MARKER}="v1">'
                 )
 
-            # 5) DudesCab est une exception demandee : pas d'unification de son
+            # 5) Pont des modules specialises historiques (Lobby, Audio,
+            # Explorer, Smart Import, FullDMD, DOF, Services, notifications,
+            # Batch). Meme Apparence, layouts originaux conserves.
+            if "pincabos-interface-unified-modules-v1.css" not in html:
+                links.append(
+                    f'<link rel="stylesheet" href="{_MODULES_PATH}" '
+                    'data-pincabos-interface-unified-modules="v1">'
+                )
+
+            # 6) DudesCab est une exception demandee : pas d'unification de son
             # identite. Cette feuille finale garde son UI propre mais remplace
             # les grandes surfaces roses/translucides par des fonds opaques et
             # tres sombres. Les selecteurs sont limites a .dc-app.
