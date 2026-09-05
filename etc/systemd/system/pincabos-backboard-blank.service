@@ -1,0 +1,18 @@
+[Unit]
+Description=PinCabOS - backboard LED off at boot and at shutdown
+Documentation=https://pincabos.cc/
+# PINCABOS_BACKBOARD_BLANK_V1 : avant le frontend au demarrage, apres lui a l arret
+ConditionKernelCommandLine=!pincabos.installer
+After=local-fs.target systemd-udevd.service
+Before=pincabos-vpinfe.service display-manager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/pincabos-backboard-blank boot
+ExecStop=/usr/local/sbin/pincabos-backboard-blank shutdown
+TimeoutStartSec=20
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

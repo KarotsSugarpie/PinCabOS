@@ -158,3 +158,51 @@ class Perimetre(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Tempo(unittest.TestCase):
+    """PINCABOS_SPLASH_TEMPO_V1 : le splash respire avant le gestionnaire d affichage."""
+
+    def test_unite(self):
+        u = (R / "etc/systemd/system/pincabos-splash-hold.service").read_text(encoding="utf-8")
+        self.assertIn("Before=display-manager.service lightdm.service", u)
+        self.assertIn("ConditionPathExists=!/etc/pincabos-live", u)
+        self.assertTrue((R / "etc/systemd/system/graphical.target.wants/pincabos-splash-hold.service").is_symlink())
+
+    def test_script(self):
+        s = (R / "usr/local/sbin/pincabos-splash-hold").read_text(encoding="utf-8")
+        self.assertIn("hold_until_uptime", s)
+        self.assertIn("plymouth --ping", s)
+        import subprocess
+        self.assertEqual(subprocess.run(["bash", "-n", str(R / "usr/local/sbin/pincabos-splash-hold")]).returncode, 0)
+
+
+class Backboard(unittest.TestCase):
+    """PINCABOS_BACKBOARD_BLANK_V1 : C puis O sur le port du TeensyStripController."""
+
+    bb = charger("usr/local/sbin/pincabos-backboard-blank", "pco_backboard_blank")
+
+    def test_port_depuis_cabinet(self):
+        xml = "<Cabinet><OutputControllers><TeensyStripController><Name>T</Name><ComPortName>/dev/ttyACM0</ComPortName></TeensyStripController></OutputControllers></Cabinet>"
+        self.assertEqual(self.bb.port_backboard(xml, by_id=["/dev/serial/by-id/usb-Teensyduino_USB_Serial_1-if00"]), "/dev/ttyACM0")
+
+    def test_port_depuis_by_id(self):
+        self.assertEqual(self.bb.port_backboard("<Cabinet/>", by_id=["/dev/serial/by-id/usb-Teensyduino_USB_Serial_1-if00"]),
+                         "/dev/serial/by-id/usb-Teensyduino_USB_Serial_1-if00")
+        self.assertEqual(self.bb.port_backboard(None, by_id=[]), "")
+
+    def test_sequence_c_puis_o(self):
+        class Faux:
+            def __init__(self): self.ecrit = []
+            def write(self, b): self.ecrit.append(b)
+            def read(self, n): return b"A"
+        f = Faux()
+        j = self.bb.blanchir(f)
+        self.assertEqual(f.ecrit, [b"C", b"O"])
+        self.assertEqual(len(j), 2)
+
+    def test_unite(self):
+        u = (R / "etc/systemd/system/pincabos-backboard-blank.service").read_text(encoding="utf-8")
+        self.assertIn("Before=pincabos-vpinfe.service", u)
+        self.assertIn("ExecStop=/usr/local/sbin/pincabos-backboard-blank shutdown", u)
+        self.assertTrue((R / "etc/systemd/system/multi-user.target.wants/pincabos-backboard-blank.service").is_symlink())
