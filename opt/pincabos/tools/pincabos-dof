@@ -4,6 +4,8 @@
   detect            cartes de sortie vues (JSON, via dof-cabinet)
   apply-firstboot   pose [Plugin.DOF] Enable (VPX) et [DOF] enabledof (VPinFE)
                     d apres /opt/pincabos/config/dof/installer.json
+  apply-toys-firstboot  genere cabinet.xml depuis hardware-inventory.json
+                    (contrôleurs de rubans declares par l installeur)
 """
 import json
 import os
@@ -17,6 +19,13 @@ def main(argv):
     cmd = argv[1] if len(argv) > 1 else "detect"
     if cmd == "detect":
         print(json.dumps(pd.resume(pd.detecter()), indent=2, ensure_ascii=False)); return 0
+    if cmd == "apply-toys-firstboot":
+        inv = pd.charger(pd.INVENTAIRE)
+        if not inv:
+            print("hardware-inventory.json absent ou vide : rien a faire"); return 0
+        for ligne in pd.appliquer_toys_premier_demarrage(inv):
+            print(ligne)
+        return 0
     if cmd == "apply-firstboot":
         cfg = pd.charger()
         if not cfg:

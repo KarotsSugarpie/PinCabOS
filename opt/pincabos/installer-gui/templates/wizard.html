@@ -231,7 +231,23 @@ button{
     <div class="hint" id="dof-detected"></div>
   </div>
   <div class="btns"><button class="ghost" onclick="go('st-screens')" data-i18n="back"></button>
-    <button class="primary" onclick="loadNetwork(false);go('st-network')" data-i18n="next"></button></div>
+    <button class="primary" onclick="loadToys();go('st-toys')" data-i18n="next"></button></div>
+</section>
+
+<section class="step" id="st-toys">
+  <h2 data-i18n="toys_title"></h2>
+  <p style="color:var(--muted);margin-bottom:12px" data-i18n="toys_hint"></p>
+  <div class="card" style="margin-bottom:14px">
+    <div class="row" style="margin-bottom:4px"><label data-i18n="toys_inputs"></label><span id="toys-inputs" style="flex:1"></span></div>
+    <div class="hint" data-i18n="toys_inputs_note" style="margin-top:0"></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="row" style="margin-bottom:4px"><label data-i18n="toys_auto"></label><span id="toys-auto" style="flex:1"></span></div>
+  </div>
+  <div id="toys-strips"></div>
+  <div class="hint" id="toys-status"></div>
+  <div class="btns"><button class="ghost" onclick="go('st-sound')" data-i18n="back"></button>
+    <button class="primary" id="toys-next" onclick="loadNetwork(false);go('st-network')" data-i18n="next"></button></div>
 </section>
 
 <section class="step" id="st-network">
@@ -240,7 +256,7 @@ button{
   <div id="net-list"></div>
   <div class="card" id="net-wifi" style="margin-top:14px;display:none"></div>
   <div class="hint" id="net-status"></div>
-  <div class="btns"><button class="ghost" onclick="go('st-sound')" data-i18n="back"></button>
+  <div class="btns"><button class="ghost" onclick="go('st-toys')" data-i18n="back"></button>
     <div style="display:flex;gap:10px">
       <button class="ghost" onclick="loadNetwork(true)" data-i18n="net_refresh"></button>
       <button class="primary" id="net-next" onclick="go('st-disk')" data-i18n="next"></button>
@@ -476,6 +492,60 @@ function testSound(){const st=document.getElementById("snd-status"),btn=document
   .then(r=>r.json()).then(d=>{btn.disabled=false;st.textContent=d.ok?t("snd_test_ok"):t("snd_test_failed")+" "+(d.sortie||"")})
   .catch(()=>{btn.disabled=false;st.textContent=t("snd_test_failed")})}
 function toggleDof(){S.dof.enabled=!S.dof.enabled;S.dof.touched=true;renderSound()}
+// PINCABOS_INSTALLEUR_TOYS_V1 — étape Toys / LED : cartes de boutons vues
+// (mapping au premier démarrage), cartes de sortie AutoConfig, contrôleurs de
+// rubans à déclarer (matrice backboard ou rubans, LEDs par sortie).
+S.toys={controllers:[]};
+let toysDet=null;
+function loadToys(){fetch("/api/toys").then(r=>r.json()).then(d=>{toysDet=d;
+    if(!S.toys.touched){S.toys={controllers:(d.proposition&&d.proposition.controllers)||[]}}
+    renderToys()}).catch(()=>{toysDet={inputs:[],auto:[],strips:[],arrangements:[],color_orders:[],proposition:{controllers:[]}};renderToys()})}
+function toysCtrl(i){return S.toys.controllers[i]}
+function stripsTotal(c){return (c.strips||[]).reduce((a,b)=>a+(+b||0),0)}
+function toysProblems(){const p=[];(S.toys.controllers||[]).forEach((c,i)=>{if(!c.enabled)return;
+    if(c.mode==="matrice"&&stripsTotal(c)!==(+c.width)*(+c.height))p.push(t("toys_err_total").replace("%n",i+1).replace("%s",stripsTotal(c)).replace("%m",(+c.width)*(+c.height)));
+    if(c.mode==="rubans"&&stripsTotal(c)===0)p.push(t("toys_err_none").replace("%n",i+1))});return p}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function renderToys(){
+  const d=toysDet||{};
+  document.getElementById("toys-inputs").textContent=(d.inputs||[]).length?d.inputs.map(x=>x.name+" ("+x.buttons+" "+t("toys_buttons")+")").join(", "):t("toys_inputs_none");
+  document.getElementById("toys-auto").textContent=(d.auto||[]).length?d.auto.map(x=>x.kind+(x.serial?" #"+x.serial:"")).join(", "):t("toys_auto_none");
+  const box=document.getElementById("toys-strips");
+  const strips=d.strips||[];
+  if(!strips.length){box.innerHTML='<div class="card"><div class="hint" style="margin:0">'+esc(t("toys_strips_none"))+'</div></div>';refreshToysStatus();return}
+  box.innerHTML=S.toys.controllers.map((c,i)=>{const hw=strips.find(s=>s.serial===c.serial)||{};
+    const sel=(id,opts,val)=>'<select data-i="'+i+'" data-k="'+id+'">'+opts.map(o=>'<option value="'+o+'"'+(o===val?" selected":"")+'>'+o+'</option>').join("")+'</select>';
+    const num=(k,val,min,max)=>'<input type="number" data-i="'+i+'" data-k="'+k+'" value="'+esc(val)+'" min="'+min+'" max="'+max+'" style="min-width:90px;flex:0 0 110px">';
+    return '<div class="card" style="margin-bottom:14px"><div class="row" style="margin-bottom:8px"><label>'+esc(hw.kind||c.type)+(c.serial?' #'+esc(c.serial):'')+'</label>'
+      +'<div class="seg"><button type="button" class="segb'+(c.enabled?" sel":"")+'" data-i="'+i+'" data-act="enable">'+esc(t("toys_used"))+'</button></div></div>'
+      +(c.enabled?'<div class="row" style="margin-bottom:8px"><label>'+esc(t("toys_mode"))+'</label><div class="seg">'
+      +'<button type="button" class="segb'+(c.mode==="matrice"?" sel":"")+'" data-i="'+i+'" data-act="mode" data-v="matrice">'+esc(t("toys_mode_matrix"))+'</button>'
+      +'<button type="button" class="segb'+(c.mode==="rubans"?" sel":"")+'" data-i="'+i+'" data-act="mode" data-v="rubans">'+esc(t("toys_mode_strips"))+'</button></div></div>'
+      +(c.mode==="matrice"?'<div class="row"><label>'+esc(t("toys_size"))+'</label>'+num("width",c.width,1,1024)+' × '+num("height",c.height,1,1024)
+        +'<span class="hint" style="margin:0">= '+((+c.width)*(+c.height))+' LED</span></div>'
+        +'<div class="row"><label>'+esc(t("toys_arrangement"))+'</label>'+sel("arrangement",d.arrangements||[],c.arrangement)+'</div>':'')
+      +'<div class="row"><label>'+esc(t("toys_outputs"))+'</label><input type="text" data-i="'+i+'" data-k="strips" value="'+esc((c.strips||[]).join(", "))+'" spellcheck="false">'
+      +'<span class="hint" style="margin:0">'+esc(t("toys_total"))+' '+stripsTotal(c)+'</span></div>'
+      +'<div class="hint" style="margin-top:0">'+esc(t(c.mode==="matrice"?"toys_outputs_hint_matrix":"toys_outputs_hint_strips"))+'</div>'
+      +'<div class="row"><label>'+esc(t("toys_color"))+'</label>'+sel("color_order",d.color_orders||[],c.color_order)
+      +'<label style="min-width:auto">'+esc(t("toys_brightness"))+'</label>'+num("brightness",c.brightness,1,100)
+      +'<label style="min-width:auto">'+esc(t("toys_ledwiz"))+'</label>'+num("ledwiz_number",c.ledwiz_number,1,128)+'</div>':'')
+      +'</div>'}).join("");
+  refreshToysStatus()}
+function refreshToysStatus(){const p=toysProblems();const st=document.getElementById("toys-status");
+  st.textContent=p.join(" ; ");st.style.color=p.length?"var(--danger)":"var(--muted)";document.getElementById("toys-next").disabled=p.length>0}
+document.getElementById("toys-strips").addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;
+  const c=toysCtrl(+b.dataset.i);S.toys.touched=true;
+  if(b.dataset.act==="enable")c.enabled=!c.enabled;
+  if(b.dataset.act==="mode"){c.mode=b.dataset.v;if(c.mode==="rubans"&&!stripsTotal(c))c.strips=[144];if(c.mode==="matrice"&&stripsTotal(c)!==(+c.width)*(+c.height)){const tot=(+c.width)*(+c.height);c.strips=[];let r=tot;while(r>0&&c.strips.length<10){c.strips.push(Math.min(512,r));r-=Math.min(512,r)}}}
+  renderToys()});
+document.getElementById("toys-strips").addEventListener("input",e=>{const el=e.target;if(!el.dataset.k)return;const c=toysCtrl(+el.dataset.i);S.toys.touched=true;
+  if(el.dataset.k==="strips"){c.strips=el.value.split(/[\s,;]+/).filter(x=>x!=="").map(x=>Math.max(0,parseInt(x,10)||0)).slice(0,10)}
+  else if(["width","height","brightness","ledwiz_number"].includes(el.dataset.k)){c[el.dataset.k]=parseInt(el.value,10)||0}
+  else{c[el.dataset.k]=el.value}
+  refreshToysStatus();
+  const tot=el.closest(".card");if(tot){const sp=tot.querySelectorAll(".hint");}});
+document.getElementById("toys-strips").addEventListener("change",e=>{if(e.target.dataset.k)renderToys()});
 // PINCABOS_INSTALLEUR_RESEAU_V1 — étape Réseau : DHCP par défaut, IP fixe
 // proposée depuis le bail, Wi-Fi seulement si un matériel est présent. Chaque
 // application est immédiate dans la session (le résultat se voit) ; le réseau
@@ -570,6 +640,7 @@ function fillSummary(){
     [t("dmd_title"),S.screens.usage.fulldmd?t("role_fulldmd"):t("dmd_"+S.dmd.type)+(S.dmd.type==="zedmd_usb"&&S.dmd.device?" · "+S.dmd.device:S.dmd.type==="zedmd_wifi"?" · "+S.dmd.wifi_addr:"")],
     [t("sound_title"),(sndDevs.find(d=>d.id===S.sound.playfield)||{}).label||"—"],
     [t("dof_title"),S.dof.enabled?t("dof_enable"):t("role_none")],
+    [t("toys_title"),(S.toys.controllers||[]).filter(c=>c.enabled).map(c=>(c.type||"").replace("StripController","")+" "+(c.mode==="matrice"?c.width+"×"+c.height:(c.strips||[]).filter(x=>x>0).length+" "+t("toys_mode_strips").toLowerCase())).join(", ")||"—"],
     [t("network"),(netState&&netState.interfaces||[]).filter(i=>i.address).map(i=>i.device+" "+i.address+" ("+(i.method==="manual"?t("net_static"):"DHCP")+")").join(", ")||t("net_noaddr")],
     [t("disk"),S.disk+" ("+(S.mode==1?t("mode_erase"):S.mode==3?t("mode_up"):t("mode_dual"))+")"]];
   document.getElementById("summary").innerHTML=rows.map(([k,v])=>

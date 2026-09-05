@@ -169,8 +169,10 @@ def _pinone(p):
     return "\n".join(lines)
 
 
-def _ledstrip_toy(s):
-    t = s["toy"]
+def _ledstrip_toy(s, t=None):
+    # PINCABOS_DOF_TOYS_MULTIPLES_V1 : un controleur peut porter plusieurs toys
+    # (mode « rubans » de l installeur : un LedStrip par sortie utilisee)
+    t = t or s["toy"]
     return "\n".join([
         "    <LedStrip>",
         _el("Name", t["name"]),
@@ -187,13 +189,15 @@ def _ledstrip_toy(s):
 
 
 def _ledwiz_equivalent(s):
-    t = s["toy"]
+    toys = s.get("toys") or [s["toy"]]
     num = s.get("ledwiz_number", 30)
-    nout = s.get("ledwiz_outputs", 9)
+    nout = s.get("ledwiz_outputs", 9) if len(toys) == 1 else len(toys)
     lines = ["    <LedWizEquivalent>", _el("Name", "LedWizEquivalent %d" % num), "      <Outputs>"]
     for i in range(1, nout + 1):
+        # un seul toy (matrice) : toutes les sorties le visent ; plusieurs (rubans) : une sortie par toy
+        nom = toys[0]["name"] if len(toys) == 1 else toys[i - 1]["name"]
         lines += ["        <LedWizEquivalentOutput>",
-                  "          <OutputName>%s</OutputName>" % t["name"],
+                  "          <OutputName>%s</OutputName>" % nom,
                   "          <LedWizEquivalentOutputNumber>%d</LedWizEquivalentOutputNumber>" % i,
                   "        </LedWizEquivalentOutput>"]
     lines += ["      </Outputs>", _el("LedWizNumber", num), "    </LedWizEquivalent>"]
@@ -206,7 +210,8 @@ def gen(config):
     for s in strips:
         ctype = s.get("controller", "TeensyStripController")
         controllers.append(_wemos_controller(s) if ctype == "WemosD1MPStripController" else _teensy_controller(s))
-        toys.append(_ledstrip_toy(s))
+        for t in (s.get("toys") or [s["toy"]]):
+            toys.append(_ledstrip_toy(s, t))
         toys.append(_ledwiz_equivalent(s))
     for a in config.get("artnet", []):
         controllers.append(_artnet(a))
