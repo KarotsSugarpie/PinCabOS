@@ -159,3 +159,17 @@ class FichiersVivants(unittest.TestCase):
                   "opt/pincabos/flags", "etc/netplan", "etc/ssh", "etc/machine-id", "var/lib/NetworkManager"):
             self.assertIn(f'"{p}"', bloc, p)
         self.assertNotIn('"opt/pincabos/config/version.json"', bloc)   # la version, elle, doit changer
+
+
+class LienVpx(unittest.TestCase):
+    """PINCABOS_VPX_LINK_V1 : ~/vpx existe sur la cible et a l execution."""
+
+    def test_cible_et_filet(self):
+        s = Path(RACINE, "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        self.assertIn("ensure_target_vpx_link() {", s)
+        self.assertLess(s.index("  ensure_target_vpx_link\n"), s.index("  apply_target_identity\n"))
+        self.assertIn('ln -sfn "$(basename "$plus_recent")" "$h/vpx"', s)
+        p = Path(RACINE, "opt/pincabos/tools/pincabos-paths.sh").read_text(encoding="utf-8")
+        self.assertIn("PINCABOS_VPX_LINK_V1", p)
+        self.assertIn('ln -sfn "$(basename "$_pco_vpx_dir")" /home/pinball/vpx', p)
+

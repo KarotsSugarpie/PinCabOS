@@ -20,6 +20,12 @@ if [ "${PCO_PATHS_LOADED:-0}" != "1" ]; then
         export PCO_ALIASES_ENV=/opt/pincabos/config/display-aliases.env
         export PCO_TABLES=/home/pinball/Tables
         export PCO_VPX_LINK=/home/pinball/vpx PCO_VPX_BIN=/home/pinball/vpx/VPinballX_BGFX
+        # PINCABOS_VPX_LINK_V1 : lien absent (image nue) -> le bundle le plus recent
+        if [ ! -x "$PCO_VPX_BIN" ] && [ -w /home/pinball ]; then
+            _pco_vpx_dir="$(ls -d /home/pinball/VPinballX_BGFX-*/ 2>/dev/null | sort -V | tail -1)"
+            [ -n "$_pco_vpx_dir" ] && ln -sfn "$(basename "$_pco_vpx_dir")" /home/pinball/vpx 2>/dev/null
+            unset _pco_vpx_dir
+        fi
         export PCO_VPX_PREF=/home/pinball/.pincabos/vpx PCO_VPX_INI=/home/pinball/.pincabos/vpx/VPinballX.ini
         export PCO_VPX_LEGACY_PREF=/home/pinball/.local/share/VPinballX/10.8
         export PCO_VPINFE_DIR=/home/pinball/vpinfe PCO_VPINFE_INI=/home/pinball/.config/vpinfe/vpinfe.ini

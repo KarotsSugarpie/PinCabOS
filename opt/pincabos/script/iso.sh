@@ -5294,6 +5294,24 @@ apply_target_screens() {
     fi
 }
 
+ensure_target_vpx_link() {
+    # PINCABOS_VPX_LINK_V1 : toute la chaine de lancement passe par /home/pinball/vpx
+    # (pincabos-paths.sh). Une image sans ce lien (vu le 05/09 : bundle 5231 nu)
+    # installe un cab qui ne lance aucune table. On pointe le bundle le plus recent.
+    local h="$TARGET/home/pinball" plus_recent
+    [ -d "$h" ] || return 0
+    if [ ! -e "$h/vpx" ] || [ ! -x "$h/vpx/VPinballX_BGFX" ]; then
+        plus_recent="$(ls -d "$h"/VPinballX_BGFX-*/ 2>/dev/null | sort -V | tail -1)"
+        if [ -n "$plus_recent" ]; then
+            ln -sfn "$(basename "$plus_recent")" "$h/vpx"
+            chown -h 1000:1000 "$h/vpx" 2>/dev/null || true
+            pco_go "VPX link created: ~/vpx -> $(basename "$plus_recent")"
+        else
+            pco_warn "no VPinballX_BGFX bundle in the image: ~/vpx not created"
+        fi
+    fi
+}
+
 apply_target_identity() {
     echo
     pco_step "Applying PinCabOS identity to installed system (os-release, issue, GRUB_DISTRIBUTOR)"
@@ -5954,6 +5972,7 @@ install_payload() {
 
   apply_target_regional
   apply_target_orientation
+  ensure_target_vpx_link
   apply_target_identity
   apply_target_screens
   apply_target_network
