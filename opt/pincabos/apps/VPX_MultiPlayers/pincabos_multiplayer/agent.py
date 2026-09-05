@@ -12,6 +12,7 @@ from pathlib import Path
 
 from . import COMPONENT_VERSION, PROTOCOL_VERSION
 from .client import MultiplayerClientError, ServerClient, load_credentials
+from .control import CabinetControlError, CabinetControlManager
 from .runtime import (
     RuntimeIsolationError,
     RuntimeLayout,
@@ -46,9 +47,14 @@ def session_action(server: ServerClient, action: str, **payload: object) -> dict
     return server.action(action, str(session["session_id"]), **payload)
 
 
-def state_payload(server: ServerClient, layout: RuntimeLayout) -> dict:
+def state_payload(
+    server: ServerClient,
+    layout: RuntimeLayout,
+    control: CabinetControlManager | None = None,
+) -> dict:
     value = server.state()
     value["local_runtime"] = layout.status()
+    value["local_control"] = control.lease() if control else {}
     value["component_version"] = COMPONENT_VERSION
     value["protocol_version"] = PROTOCOL_VERSION
     return value
@@ -85,15 +91,20 @@ def parser() -> argparse.ArgumentParser:
 def run(args: argparse.Namespace) -> dict | None:
     layout = RuntimeLayout.configured()
     layout.prepare_writable_directories()
+    control = CabinetControlManager(layout)
 
     if args.command == "doctor":
-        return {"ok": True, "local_runtime": layout.status()}
+        return {
+            "ok": True,
+            "local_runtime": layout.status(),
+            "local_control": control.lease(),
+        }
     if args.command == "install-engine":
         return {"ok": True, "installation": install_engine_copy(layout, Path(args.source))}
 
     server = client()
     if args.command == "status":
-        return state_payload(server, layout)
+        return state_payload(server, layout, control)
     if args.command == "create":
         return server.join()
     if args.command == "join":
@@ -111,7 +122,7 @@ def run(args: argparse.Namespace) -> dict | None:
     if args.command in {"start", "stop"}:
         result = session_action(server, args.command)
         if args.command == "stop":
-            result["local_engine_stopped"] = layout.stop_detached()
+            result["local_control"] = control.release("manual-stop")
         return result
 
     if args.command == "launch":
@@ -144,9 +155,27 @@ def run(args: argparse.Namespace) -> dict | None:
             raise RuntimeIsolationError("watch_interval_invalid")
         while True:
             try:
-                value = state_payload(server, layout)
+                value = state_payload(server, layout, control)
+                value["local_control"] = control.reconcile(value)
             except (MultiplayerClientError, RuntimeIsolationError) as exc:
-                value = {"ok": False, "error": str(exc), "local_runtime": layout.status()}
+                # Une panne réseau ne libère jamais le cabinet à l'aveugle :
+                # on conserve le dernier lease et on attend le prochain état serveur.
+                value = {
+                    "ok": False,
+                    "error": str(exc),
+                    "local_runtime": layout.status(),
+                    "local_control": control.lease(),
+                }
+            except CabinetControlError as exc:
+                value = {
+                    "ok": False,
+                    "error": str(exc),
+                    "local_runtime": layout.status(),
+                    "local_control": {
+                        **control.lease(),
+                        "error": str(exc),
+                    },
+                }
             layout.write_session_state(value)
             time.sleep(args.interval)
 
@@ -159,7 +188,13 @@ def main(argv: list[str] | None = None) -> int:
         if result is not None:
             output(result)
         return 0
-    except (MultiplayerClientError, RuntimeIsolationError, OSError, ValueError) as exc:
+    except (
+        MultiplayerClientError,
+        RuntimeIsolationError,
+        CabinetControlError,
+        OSError,
+        ValueError,
+    ) as exc:
         output({"ok": False, "error": str(exc)})
         return 1
 
