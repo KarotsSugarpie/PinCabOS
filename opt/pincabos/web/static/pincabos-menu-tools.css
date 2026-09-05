@@ -1,4 +1,4 @@
-/* PinCabOS menu tools — simple fixed menu V9 */
+/* PinCabOS menu tools — header pinning V10 */
 :root {
   --pco-menu-pinned-offset: 0px;
 }
@@ -35,6 +35,7 @@
   appearance: none !important;
   -webkit-appearance: none !important;
   position: relative !important;
+  pointer-events: auto !important;
 }
 
 .pco-menu-pin-btn {
@@ -65,32 +66,124 @@
 }
 
 /*
- * V9: the existing .pincabos-nav stays exactly where Flask rendered it.
- * No clone, no reparenting, no click-through surface and no pointer-event hack.
+ * V10: pin the complete header, not only .pincabos-nav.
+ * The language selector lives in .brand-left, beside .nav. Keeping the
+ * complete .top in the fixed layer preserves the exact header composition.
  */
-.pincabos-nav.pco-menu-pinned-v9 {
+.top.pco-header-pinned-v10 {
   position: fixed !important;
   top: 0 !important;
-  left: 18px !important;
-  right: 18px !important;
-  width: auto !important;
-  max-width: none !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: var(--pco-content-rail-width, calc(100vw - 36px)) !important;
+  max-width: var(--pco-content-rail-width, calc(100vw - 36px)) !important;
   margin: 0 !important;
-  z-index: 2000 !important;
+  transform: translateX(-50%) !important;
+  z-index: 5000 !important;
   box-sizing: border-box !important;
   pointer-events: auto !important;
 }
 
-/* Explicitly neutralize every legacy V7/V8 fixed class if stale HTML/JS left one. */
-.pincabos-nav.pco-menu-force-fixed:not(.pco-menu-pinned-v9),
-.pincabos-nav.pco-menu-viewport-fixed-v7:not(.pco-menu-pinned-v9),
-.pincabos-nav.pco-menu-viewport-fixed-v8:not(.pco-menu-pinned-v9) {
+/* The menu remains in its original DOM position inside the fixed header. */
+.pincabos-nav.pco-menu-pinned-v10 {
   position: static !important;
-  width: auto !important;
-  max-width: 1220px !important;
-  margin: 18px auto 0 auto !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: auto !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+.top.pco-header-pinned-v10 .nav,
+.top.pco-header-pinned-v10 .pincabos-nav,
+.top.pco-header-pinned-v10 .brand-left,
+.top.pco-header-pinned-v10 .brand-language-slot,
+.top.pco-header-pinned-v10 .top-language-widget,
+.top.pco-header-pinned-v10 a,
+.top.pco-header-pinned-v10 button,
+.top.pco-header-pinned-v10 select,
+.top.pco-header-pinned-v10 form {
+  pointer-events: auto !important;
+}
+
+/* Unpinned state must be ordinary document flow with working controls. */
+.pincabos-nav:not(.pco-menu-pinned-v10),
+.pincabos-nav:not(.pco-menu-pinned-v10) a,
+.pincabos-nav:not(.pco-menu-pinned-v10) button,
+.pincabos-nav:not(.pco-menu-pinned-v10) select,
+.pincabos-nav:not(.pco-menu-pinned-v10) form {
+  pointer-events: auto !important;
+}
+
+/*
+ * Compatibility guard for a page that still has V9 markup while the new CSS
+ * has already loaded. Modern Chromium supports :has(); this prevents the old
+ * V9 rule from separating the menu from the language selector.
+ */
+@supports selector(body:has(.pincabos-nav)) {
+  body:has(.pincabos-nav.pco-menu-pinned-v9) .top {
+    position: fixed !important;
+    top: 0 !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: var(--pco-content-rail-width, calc(100vw - 36px)) !important;
+    max-width: var(--pco-content-rail-width, calc(100vw - 36px)) !important;
+    margin: 0 !important;
+    transform: translateX(-50%) !important;
+    z-index: 5000 !important;
+    box-sizing: border-box !important;
+    pointer-events: auto !important;
+  }
+
+  body:has(.pincabos-nav.pco-menu-pinned-v9) .pincabos-nav.pco-menu-pinned-v9 {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    z-index: auto !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* Explicitly neutralize every legacy V7/V8 fixed class. */
+.pincabos-nav.pco-menu-force-fixed,
+.pincabos-nav.pco-menu-viewport-fixed-v7,
+.pincabos-nav.pco-menu-viewport-fixed-v8 {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
   z-index: auto !important;
   pointer-events: auto !important;
   transform: none !important;
   filter: none !important;
+}
+
+@media (max-width: 850px) {
+  .top.pco-header-pinned-v10 {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    transform: none !important;
+  }
+
+  @supports selector(body:has(.pincabos-nav)) {
+    body:has(.pincabos-nav.pco-menu-pinned-v9) .top {
+      left: 0 !important;
+      right: 0 !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      transform: none !important;
+    }
+  }
 }
