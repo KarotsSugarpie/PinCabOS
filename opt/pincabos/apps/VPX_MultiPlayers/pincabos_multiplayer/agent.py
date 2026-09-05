@@ -72,6 +72,12 @@ def acknowledge_control(server: ServerClient, value: dict, local_control: dict) 
     if not session_id or local_state != desired:
         return None
 
+    # Ne jamais confirmer un lien ou une vidéo qui n'existent pas encore.
+    if desired == "linked" and local_control.get("link_state") != "ready":
+        return None
+    if desired == "video" and local_control.get("video_state") != "ready":
+        return None
+
     return server.control_ack(
         session_id,
         control.get("generation"),
