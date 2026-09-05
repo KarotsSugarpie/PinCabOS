@@ -200,6 +200,12 @@ def tester(ident: str, run=executer, canaux: int = 2) -> dict:
 # PINCABOS_AUDIO_HP_UN_PAR_UN_V1 : ordre ALSA des canaux (speaker-test -s est 1-base)
 CANAUX = {2: ["FL", "FR"], 4: ["FL", "FR", "RL", "RR"], 6: ["FL", "FR", "RL", "RR", "C", "LFE"],
           8: ["FL", "FR", "RL", "RR", "C", "LFE", "SL", "SR"]}
+# PINCABOS_AUDIO_HP_CHMAP_V1 : sur un peripherique hw: brut, l ordre des canaux est celui du
+# materiel ; en HDMI (CEA-861) c est FL FR LFE FC RL RR, et la voix « Rear Left » sortait du
+# caisson (retex cab de Yann, GA104 HDMI : seul le Front Left etait coherent). La carte de
+# canaux imposee a speaker-test (-m, noms ALSA : FC pour le centre) remet l ordre standard,
+# comme PipeWire le fait pour VPX. Si le pilote la refuse, on rejoue sans.
+CHMAP = {2: "FL,FR", 4: "FL,FR,RL,RR", 6: "FL,FR,RL,RR,FC,LFE", 8: "FL,FR,RL,RR,FC,LFE,SL,SR"}
 
 
 def canaux_pour_mode(sound3d: str) -> int:
@@ -213,7 +219,10 @@ def tester_canal(ident: str, canaux: int, canal: int, run=executer) -> dict:
         return {"ok": False, "sortie": "identifiant ALSA invalide"}
     if canaux not in CANAUX or not 0 <= canal < canaux:
         return {"ok": False, "sortie": f"canal {canal} hors des {canaux} canaux"}
-    rc, out = run(["speaker-test", "-D", ident, "-c", str(canaux), "-t", "wav", "-s", str(canal + 1), "-l", "1"], timeout=40)
+    base = ["speaker-test", "-D", ident, "-c", str(canaux), "-t", "wav", "-s", str(canal + 1), "-l", "1"]
+    rc, out = run(base + ["-m", CHMAP[canaux]], timeout=40)
+    if rc != 0 and "channel map" in out.lower():
+        rc, out = run(base, timeout=40)
     sortie = out.strip()[-300:]
     if rc != 0 and "not available" in sortie.lower():
         sortie = f"cette sortie n'offre pas {canaux} canaux : {sortie}"

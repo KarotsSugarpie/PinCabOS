@@ -141,8 +141,16 @@ class Audio(unittest.TestCase):
             return (0, "")
         r = pa.tester_canal("hw:1,3", 6, 2, run)
         self.assertTrue(r["ok"]); self.assertEqual(r["canal"], "RL")
-        self.assertEqual(appels[-1], ["speaker-test", "-D", "hw:1,3", "-c", "6", "-t", "wav", "-s", "3", "-l", "1"])
+        # PINCABOS_AUDIO_HP_CHMAP_V1 : ordre standard impose (HDMI brut = FL FR LFE FC RL RR)
+        self.assertEqual(appels[-1], ["speaker-test", "-D", "hw:1,3", "-c", "6", "-t", "wav", "-s", "3", "-l", "1", "-m", "FL,FR,RL,RR,FC,LFE"])
         self.assertFalse(pa.tester_canal("hw:1,3", 6, 6, run)["ok"])
+
+        def refuse_chmap(args, timeout=20):
+            appels.append(args)
+            return (1, "Unable to set channel map") if "-m" in args else (0, "")
+        r = pa.tester_canal("hw:1,3", 6, 4, refuse_chmap)
+        self.assertTrue(r["ok"]); self.assertEqual(r["canal"], "C")
+        self.assertNotIn("-m", appels[-1], "pilote sans chmap : rejoue sans")
         self.assertFalse(pa.tester_canal("hw:1,3", 3, 0, run)["ok"])
         r = pa.tester_canal("hw:0,0", 6, 0, lambda a, timeout=20: (1, "Channels count (6) not available for playbacks: Invalid argument"))
         self.assertFalse(r["ok"]); self.assertIn("n'offre pas 6 canaux", r["sortie"])
