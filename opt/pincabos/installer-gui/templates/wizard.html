@@ -71,8 +71,8 @@ button:disabled,.primary:disabled{opacity:.32;filter:grayscale(.9);cursor:not-al
 .egerie{pointer-events:none;user-select:none}
 .egerie-lang{position:fixed;right:3vw;bottom:5vh;max-height:44vh;max-width:26vw}
 .egerie-done{display:block;margin:10px auto 0;max-height:32vh;max-width:40vw}
-#st-progress .card{position:relative;overflow:hidden}
-.egerie-filigrane{position:absolute;right:12px;bottom:0;max-height:70%;max-width:30%;opacity:.14}
+#st-progress .card{position:relative;overflow:hidden;min-height:260px}
+.egerie-filigrane{position:absolute;right:12px;bottom:0;max-height:92%;max-width:30%;opacity:.16}
 .credits{position:fixed;right:14px;bottom:8px;font-size:12px;color:var(--muted);opacity:.75;letter-spacing:.02em}
 .hint{color:var(--muted);font-size:.92rem;margin-top:10px;min-height:1.2em}
 .mon::before{content:"";position:absolute;left:6px;right:6px;bottom:2px;height:6px;border-radius:3px;background:var(--accent);box-shadow:0 0 8px rgba(255,176,0,.8);z-index:1}
@@ -164,8 +164,9 @@ button{
 
 <section class="step active" id="st-lang">
   <h2 data-i18n="choose_lang">Choose your language</h2>
-  <!-- PINCABOS_INSTALLEUR_EGERIE_V1 : Miss Tilt (visuels Karots) — /static/egerie.png, absent = rien -->
-  <img class="egerie egerie-lang" src="/static/egerie.png" alt="" onerror="this.hidden=true">
+  <!-- PINCABOS_INSTALLEUR_EGERIE_V2 : Miss Tilt (15 poses de Karots, static/egerie/*.webp), une pose
+       tiree au sort par emplacement a chaque passage ; fichier absent = rien -->
+  <img class="egerie egerie-lang" data-slot="lang" alt="" onerror="this.hidden=true">
   <div class="grid langs">
     <div class="lang" role="button" tabindex="0" data-lang="fr" title="Français" aria-label="Français"><svg class="flag" viewBox="0 0 60 40" role="img" aria-hidden="true"><rect width="60" height="40" fill="#fff"/><rect width="20" height="40" fill="#002654"/><rect x="40" width="20" height="40" fill="#ce1126"/></svg></div>
     <div class="lang" role="button" tabindex="0" data-lang="en" title="English" aria-label="English"><svg class="flag" viewBox="0 0 60 40" role="img" aria-hidden="true"><clipPath id="uj"><path d="M30,20 L60,40 L60,20 Z M30,20 L60,0 L30,0 Z M30,20 L0,0 L0,20 Z M30,20 L0,40 L30,40 Z"/></clipPath><rect width="60" height="40" fill="#012169"/><path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" stroke-width="8"/><path d="M0,0 L60,40 M60,0 L0,40" stroke="#c8102e" stroke-width="5" clip-path="url(#uj)"/><path d="M30,0 V40 M0,20 H60" stroke="#fff" stroke-width="13"/><path d="M30,0 V40 M0,20 H60" stroke="#c8102e" stroke-width="8"/></svg></div>
@@ -341,7 +342,7 @@ button{
     <path class="tick" d="M38 62 L54 78 L84 44"/>
   </svg>
   <h2 style="text-align:center" data-i18n="install_done"></h2>
-  <img class="egerie egerie-done" src="/static/egerie.png" alt="" onerror="this.hidden=true">
+  <img class="egerie egerie-done" data-slot="done" alt="" onerror="this.hidden=true">
   <p style="text-align:center;color:#ffb000;font-weight:600;margin-top:10px" data-i18n="install_remove"></p>
   <div style="text-align:center;margin-top:20px">
     <button class="primary" onclick="fetch('/api/reboot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:'INSTALL PINCABOS'})})" data-i18n="reboot"></button>
@@ -725,9 +726,14 @@ setInterval(()=>{  // le temps ecoule prouve que ca vit, meme quand le moteur se
   document.getElementById("plabel").textContent=
     base+" — "+String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")},1000);
 
-// PINCABOS_INSTALLEUR_EGERIE_V1 : filigrane sur la progression (meme image, discrete)
+// PINCABOS_INSTALLEUR_EGERIE_V2 : Miss Tilt, une pose par emplacement, tiree au sort
+const EGERIE={lang:["pose-07-salut-futuriste","pose-03-debout-contrapposto","pose-06-marche-elegante","pose-extra-04"],
+  progress:["pose-04-course-dynamique","pose-10-trois-billes","pose-extra-02"],
+  done:["pose-05-heroique-bras-croises","pose-extra-03","pose-09-penchee-sur-bille"]};
+function egerie(slot){const l=EGERIE[slot]||[];return l.length?"/static/egerie/"+l[Math.floor(Math.random()*l.length)]+".webp":""}
 document.querySelector("#st-progress .card").insertAdjacentHTML("beforeend",
-  '<img class="egerie egerie-filigrane" src="/static/egerie.png" alt="" onerror="this.hidden=true">');
+  '<img class="egerie egerie-filigrane" data-slot="progress" alt="" onerror="this.hidden=true">');
+document.querySelectorAll("img.egerie[data-slot]").forEach(im=>{const s=egerie(im.dataset.slot);if(s)im.src=s;else im.hidden=true});
 // PINCABOS_INSTALLEUR_REPONSE_NULLE_V1 : un refus du serveur se lit ici même
 // (code + détail), le bouton redevient actif ; avant, il était avalé en silence.
 function launchRefused(d,status){const st=document.getElementById("confirm-status");

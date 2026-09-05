@@ -4,6 +4,7 @@ Sorties xrandr réelles du cab de Yann (NVIDIA, trois écrans) ; aucune commande
 exécutée : un faux exécuteur enregistre ce qui serait lancé.
 """
 import json
+import re
 import os
 import shutil
 import tempfile
@@ -377,7 +378,12 @@ class Assistant(unittest.TestCase):
     def test_egerie_et_credits(self):
         # PINCABOS_INSTALLEUR_EGERIE_V1 / CREDITS_V1 : emplacements Miss Tilt (Langue, Progression, Terminé), auteurs
         w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
-        self.assertEqual(w.count('src="/static/egerie.png"'), 3)
+        self.assertEqual(w.count('data-slot="'), 3)
+        # PINCABOS_INSTALLEUR_EGERIE_V2 : chaque pose citee existe dans static/egerie (WebP 900 px, ~100 Ko)
+        for nom in re.findall(r'"(pose-[a-z0-9-]+)"', w.split("const EGERIE=")[1].split(";")[0]):
+            f = Path(RACINE, "opt/pincabos/installer-gui/static/egerie", nom + ".webp")
+            self.assertTrue(f.is_file(), nom)
+            self.assertLess(f.stat().st_size, 400_000, nom)
         self.assertIn('class="egerie egerie-lang"', w)
         self.assertIn('class="egerie egerie-done"', w)
         self.assertIn("egerie-filigrane", w)
