@@ -85,6 +85,26 @@ class Images(unittest.TestCase):
         self.assertEqual(r["pre_tourne"], 0)
         self.assertEqual((self.theme / ss.IMAGE_PLAYFIELD).read_bytes(), b"PORTRAIT")
 
+    def test_galerie_aleatoire(self):
+        # portrait0.png + portrait1.jpg + paysage.jpg : tout devient PNG numerote, tire au sort au boot
+        (self.tmp / "portrait0.png").write_bytes(b"P0"); (self.tmp / "portrait1.jpg").write_bytes(b"P1")
+        (self.tmp / "paysage.jpg").write_bytes(b"L0"); self.portrait.unlink(); self.paysage.unlink()
+        r = ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.tmp / "portrait.png", paysage=self.tmp / "paysage.png")
+        self.assertEqual((r["n_playfield"], r["n_autres"], r["genre_playfield"], r["genre_autres"]), (2, 1, "portrait", "paysage"))
+        self.assertEqual(sorted(p.name for p in self.theme.glob("pincabos-*-*.png")),
+                         ["pincabos-autres-0.png", "pincabos-playfield-0.png", "pincabos-playfield-1.png"])
+        # le jpg est converti (ffmpeg/convert) : trois commandes (2 rotations + 1 conversion)
+        self.assertEqual(len(self.appels), 3)
+        t = ss.theme(ECRANS_YANN, 0, dict(r, rot=270))
+        self.assertIn("k_pf = Math.Int(Math.Random() * 2);", t)
+        self.assertIn('if (k_pf == 1) img_pf = Image("pincabos-playfield-1.png");', t)
+        self.assertIn("k_autres = Math.Int(Math.Random() * 1);", t)
+
+    def test_purge_des_anciennes_images(self):
+        (self.theme / "pincabos-playfield-7.png").write_bytes(b"vieux")
+        ss.preparer_images(0, theme_dir=self.theme, run=self.run_ok, portrait=self.portrait, paysage=self.paysage)
+        self.assertFalse((self.theme / "pincabos-playfield-7.png").exists())
+
     def test_commande_rotation(self):
         self.assertIsNone(ss.commande_rotation(Path("a"), Path("b"), 0))
         self.assertIsNone(ss.commande_rotation(Path("a"), Path("b"), 360))
@@ -98,9 +118,12 @@ class Theme(unittest.TestCase):
         self.assertIn("PINCABOS_SPLASH_FROM_SCREENS_V3", t)
         self.assertIn("rot = 270;", t)
         self.assertIn("pf_w = 3840;", t)
-        self.assertIn('Image("pincabos-playfield.png")', t)
-        self.assertIn('Image("pincabos-autres.png")', t)
+        self.assertIn('Image("pincabos-playfield-0.png")', t)
+        self.assertIn('Image("pincabos-autres-0.png")', t)
         self.assertIn("Window.SetX(i, cx);", t)          # surfaces ecartees
+        self.assertIn("fun placer()", t)
+        self.assertIn("placer();\n    if (pf_place != 1) return;", t)   # re-applique a chaque rafraichissement
+        self.assertIn("Window.GetWidth(i) * 2 == pf_w", t)   # HiDPI
         self.assertNotIn("Rotate(rot * PI / 180);\n    }\n  }", t)
         self.assertIn(f"bar_width = bw * {ss.BARRE['portrait']['w']};", t)
         self.assertIn(f"bh * {ss.BARRE['portrait']['y']};", t)

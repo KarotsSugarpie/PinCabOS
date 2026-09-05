@@ -208,8 +208,9 @@ def allowed(rel):
       'opt/pincabos/web/','opt/pincabos/bin/','opt/pincabos/script/','opt/pincabos/scripts/',
       'opt/pincabos/update/','opt/pincabos/modules/','opt/pincabos/tools/','opt/pincabos/media/audio-voix/',
       'opt/pincabos/installer-gui/','opt/pincabos/apps/VPX_MultiPlayers/',
-      # PINCABOS_SPLASH_FROM_SCREENS_V3 : visuels de demarrage (prefixe seul dans
-      # cette release, les fichiers arrivent a la suivante — regle du piege ci-dessus)
+      # PINCABOS_SPLASH_FROM_SCREENS_V3 : visuels de demarrage (galeries portrait,
+      # paysage, fonds GRUB). Livres avec le prefixe : depuis 3.44 l updater se met
+      # a jour d abord, le parc est en 3.5x ou plus.
       'opt/pincabos/media/splash/',
       'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
       'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',

@@ -151,22 +151,50 @@ for logo in "$ROOTFS/opt/pincabos/install/PCOSInstallWP.png" \
   [ -f "$logo" ] && { cp -f "$logo" "$TREE/boot/grub/pincabos-grub.png"; break; }
 done
 
-cat > "$TREE/boot/grub/pincabos-branding.cfg" <<'BRANDING'
+# PINCABOS_GRUB_FONDS_ALEATOIRES_V1
+# Galerie de fonds GRUB (opt/pincabos/media/splash/grub*.jpg) : GRUB n a pas de
+# hasard, mais datehook expose la seconde de l horloge ; on s en sert pour
+# choisir le fond a chaque demarrage. Sans galerie : l illustration unique.
+GRUB_FONDS=()
+for f in "$ROOTFS"/opt/pincabos/media/splash/grub*.jpg "$ROOTFS"/opt/pincabos/media/splash/grub*.png; do
+  [ -f "$f" ] || continue
+  k=${#GRUB_FONDS[@]}
+  cp -f "$f" "$TREE/boot/grub/pincabos-grub-$k.${f##*.}"
+  GRUB_FONDS+=("pincabos-grub-$k.${f##*.}")
+done
+{
+  cat <<'BRANDING'
 if loadfont /boot/grub/fonts/unicode.pf2 ; then
   set gfxmode=auto
   insmod all_video
   insmod gfxterm
   insmod png
+  insmod jpeg
   terminal_output gfxterm
 fi
 set menu_color_normal=white/black
-set menu_color_highlight=black/light-gray
+set menu_color_highlight=white/black
 set color_normal=white/black
-set color_highlight=black/light-gray
-if [ -f /boot/grub/pincabos-grub.png ]; then
-  background_image /boot/grub/pincabos-grub.png
-fi
+set color_highlight=white/black
 BRANDING
+  n=${#GRUB_FONDS[@]}
+  if [ "$n" -gt 0 ]; then
+    echo "insmod datehook"
+    echo "set pco_fond=/boot/grub/${GRUB_FONDS[0]}"
+    k=1
+    while [ "$k" -lt "$n" ]; do
+      # seuil k*60/n : tranches egales de la minute
+      echo "if [ \"\$SECOND\" -ge $(( k * 60 / n )) ]; then set pco_fond=/boot/grub/${GRUB_FONDS[$k]}; fi"
+      k=$((k + 1))
+    done
+    echo 'background_image "$pco_fond"'
+  else
+    echo "if [ -f /boot/grub/pincabos-grub.png ]; then"
+    echo "  background_image /boot/grub/pincabos-grub.png"
+    echo "fi"
+  fi
+} > "$TREE/boot/grub/pincabos-branding.cfg"
+echo "  fonds GRUB : ${#GRUB_FONDS[@]} dans la galerie"
 
 # logo.nologo drops the kernel's Tux; the PinCabOS Plymouth splash stays.
 # vt.global_cursor_default=0 hides the blinking cursor between splash and X.
