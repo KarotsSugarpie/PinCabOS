@@ -16,6 +16,7 @@ DEFAULT_API = "https://pincabos.cc"
 DEFAULT_DEVICE_STATE = Path("/var/lib/pincabos-link/device.json")
 ROOM_CODE_PATTERN = re.compile(r"^[A-Z0-9]{6}$")
 MAX_RESPONSE_BYTES = 256 * 1024
+CONTROL_STATES = {"released", "armed", "linked", "video", "running", "handoff"}
 
 
 class MultiplayerClientError(RuntimeError):
@@ -146,4 +147,28 @@ class ServerClient:
             "POST",
             f"/api/device/multiplayer/{action}",
             {"session_id": session_id, **payload},
+        )
+
+    def control_ack(
+        self,
+        session_id: str,
+        generation: object,
+        state: str,
+        *,
+        ok: bool = True,
+        detail: str | None = None,
+    ) -> dict:
+        normalized_state = str(state or "").strip().lower()
+        if normalized_state not in CONTROL_STATES:
+            raise MultiplayerClientError("control_state_invalid")
+        return self.request(
+            "POST",
+            "/api/device/multiplayer/control-ack",
+            {
+                "session_id": str(session_id),
+                "generation": generation,
+                "state": normalized_state,
+                "ok": bool(ok),
+                "detail": detail,
+            },
         )

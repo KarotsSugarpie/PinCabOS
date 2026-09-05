@@ -78,6 +78,41 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(captured["body"], {"room_code": "ABC123"})
         self.assertTrue(captured["authorization"].startswith("PinCabOS-Device "))
 
+    def test_control_ack_uses_device_endpoint_and_strict_state(self):
+        captured = {}
+
+        def opener(request, **_kwargs):
+            captured["path"] = request.full_url
+            captured["body"] = json.loads(request.data.decode("utf-8"))
+            return FakeResponse({"ok": True})
+
+        client = ServerClient(
+            DeviceCredentials("PinCabOS-Device", "s" * 48, "cab-1"),
+            opener=opener,
+        )
+        client.control_ack(
+            "mp-test",
+            12,
+            "armed",
+            ok=True,
+            detail=None,
+        )
+
+        self.assertTrue(captured["path"].endswith("/api/device/multiplayer/control-ack"))
+        self.assertEqual(
+            captured["body"],
+            {
+                "session_id": "mp-test",
+                "generation": 12,
+                "state": "armed",
+                "ok": True,
+                "detail": None,
+            },
+        )
+
+        with self.assertRaises(MultiplayerClientError):
+            client.control_ack("mp-test", 12, "shell", ok=True)
+
 
 if __name__ == "__main__":
     unittest.main()
