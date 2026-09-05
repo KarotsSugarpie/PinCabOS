@@ -72,6 +72,11 @@ class FondsGrub(unittest.TestCase):
     def test_galerie_presente(self):
         fonds = sorted((R / "opt/pincabos/media/splash").glob("grub*.jpg"))
         self.assertGreaterEqual(len(fonds), 1)
+        for f in fonds:
+            # GRUB ne decode que le JPEG baseline : un JPEG progressif (SOF2) laisse le menu noir
+            octets = f.read_bytes()
+            self.assertIn(b"\xff\xc0", octets[:65536], f.name + " : pas de SOF0 (baseline)")
+            self.assertNotIn(b"\xff\xc2", octets[:65536], f.name + " : JPEG progressif")
 
 
 class PlusDeRepliTexte(unittest.TestCase):
