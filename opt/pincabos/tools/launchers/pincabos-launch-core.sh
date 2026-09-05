@@ -436,6 +436,23 @@ case "$SELECTED_MODE" in
             fi
         }
 
+        # PINCABOS_RETOUR_FRONTEND_V1 : au retour de table, l'ecran restait
+        # parfois noir (Alpha 3.77, playfield 4K NVIDIA) : le frontend n'est
+        # pas redessine tant qu'il n'a pas retrouve le focus. On le lui rend
+        # et on force un rafraichissement X ; sans effet quand tout va bien.
+        reveiller_frontend() {
+            [[ -n "${DISPLAY:-}" ]] || return 0
+            if command -v xdotool >/dev/null 2>&1; then
+                local w
+                w="$(xdotool search --onlyvisible --name 'VPinFE' 2>/dev/null | head -1 || true)"
+                if [[ -n "$w" ]]; then
+                    xdotool windowactivate "$w" >/dev/null 2>&1 || true
+                    log "RETOUR [=] frontend VPinFE reactive (fenetre $w)."
+                fi
+            fi
+            command -v xrefresh >/dev/null 2>&1 && xrefresh >/dev/null 2>&1 || true
+        }
+
         trap restore_pup EXIT INT TERM HUP
 
         DIRECT_PUP_ROOT="$(
@@ -473,6 +490,7 @@ case "$SELECTED_MODE" in
 
         restore_pup
         trap - EXIT INT TERM HUP
+        reveiller_frontend
 
         exit "$RC"
         ;;

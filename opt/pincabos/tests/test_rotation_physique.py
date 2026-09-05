@@ -258,7 +258,7 @@ class ScriptLightdm(unittest.TestCase):
         self.assertEqual(lignes["HDMI-0"][7], "inverted")
         self.assertEqual(lignes["DP-1"][7], "normal")
         self.assertEqual(lignes["DP-2"][7], "normal")
-        self.assertEqual(lignes["HDMI-0"][8], "", "pas de mode inverse a 180")
+        self.assertEqual(lignes["HDMI-0"][8], "-", "pas de mode inverse a 180 (champ vide = « - »)")
 
     def test_90_propose_le_mode_inverse(self):
         lignes = self.lignes(config("90", geometrie_tournee=True))
@@ -279,8 +279,20 @@ class ScriptLightdm(unittest.TestCase):
         self.assertEqual(lignes["DP-2"][7], "inverted")
         self.assertEqual(lignes["DP-3"][3:5], ["3840", "-1080"])
 
+    def test_aucun_champ_vide(self):
+        """PINCABOS_LIGHTDM_CHAMPS_VIDES_V1 : pour `read`, deux tabulations collees ne font
+        qu'un separateur ; un rate vide decalait les colonnes (--rate normal) et xrandr
+        refusait la sortie. Un champ vide s'ecrit « - »."""
+        lignes = self.lignes(config("0"))
+        for nom, cols in lignes.items():
+            self.assertEqual(len(cols), 9, nom)
+            self.assertTrue(all(c != "" for c in cols), (nom, cols))
+        self.assertEqual(lignes["HDMI-0"][8], "-")
+
     def test_le_shell_utilise_la_colonne(self):
         s = LIGHTDM_SH.read_text(encoding="utf-8")
+        self.assertIn('[ "${RATE_CFG:-}" = "-" ] && RATE_CFG=""', s)
+        self.assertIn('[ "${MODE_ALT:-}" = "-" ] && MODE_ALT=""', s)
         self.assertIn('--rotate "$ROTATE"', s)
         self.assertNotIn("--rotate normal)", s, "plus de « normal » force")
         self.assertIn("read -r OUT W H X Y PRIMARY RATE_CFG ROTATE MODE_ALT", s)
