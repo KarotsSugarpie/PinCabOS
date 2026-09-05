@@ -1,1 +1,1 @@
-/opt/pincabos/tools/pincabos-screen-xrandr.sh
+../../../opt/pincabos/tools/pincabos-screen-xrandr.sh

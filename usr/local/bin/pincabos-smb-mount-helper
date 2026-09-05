@@ -1,1 +1,1 @@
-/opt/pincabos/tools/pincabos-smb-mount-helper.sh
+../../../opt/pincabos/tools/pincabos-smb-mount-helper.sh

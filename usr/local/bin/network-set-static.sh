@@ -1,1 +1,1 @@
-/opt/pincabos/tools/network-set-static.sh
+../../../opt/pincabos/tools/network-set-static.sh

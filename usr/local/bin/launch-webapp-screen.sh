@@ -1,1 +1,1 @@
-/opt/pincabos/tools/launch-webapp-screen.sh
+../../../opt/pincabos/tools/launch-webapp-screen.sh

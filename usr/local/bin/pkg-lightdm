@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-lightdm.sh
+../../../opt/pincabos/install/packages/pkg-lightdm.sh

@@ -1,1 +1,1 @@
-/opt/pincabos/modules/system/mod-plymouth-install.sh
+../../../opt/pincabos/modules/system/mod-plymouth-install.sh

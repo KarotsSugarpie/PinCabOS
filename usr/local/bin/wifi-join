@@ -1,1 +1,1 @@
-/opt/pincabos/tools/wifi-join.sh
+../../../opt/pincabos/tools/wifi-join.sh

@@ -1,1 +1,1 @@
-/opt/pincabos/tools/wifi-hotspot.sh
+../../../opt/pincabos/tools/wifi-hotspot.sh

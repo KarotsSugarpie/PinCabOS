@@ -1,1 +1,1 @@
-/opt/pincabos/modules/system/mod-splash.sh
+../../../opt/pincabos/modules/system/mod-splash.sh

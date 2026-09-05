@@ -1,1 +1,1 @@
-/opt/pincabos/install/go-pincabos.sh
+../../../opt/pincabos/install/go-pincabos.sh

@@ -1,1 +1,1 @@
-/opt/pincabos/install/03-install-check.sh
+../../../opt/pincabos/install/03-install-check.sh

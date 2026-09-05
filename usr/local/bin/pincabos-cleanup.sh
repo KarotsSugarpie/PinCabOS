@@ -1,1 +1,1 @@
-/opt/pincabos/tools/pincabos-cleanup.sh
+../../../opt/pincabos/tools/pincabos-cleanup.sh

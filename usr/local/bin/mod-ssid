@@ -1,1 +1,1 @@
-/opt/pincabos/modules/network/mod-ssid.sh
+../../../opt/pincabos/modules/network/mod-ssid.sh

@@ -1,1 +1,1 @@
-/opt/pincabos/script/iso.sh
+../../../opt/pincabos/script/iso.sh

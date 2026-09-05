@@ -1,1 +1,1 @@
-/opt/pincabos/tools/pincabos-alpha-migration-audit.sh
+../../../opt/pincabos/tools/pincabos-alpha-migration-audit.sh

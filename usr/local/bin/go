@@ -1,1 +1,1 @@
-/opt/pincabos/tools/go.sh
+../../../opt/pincabos/tools/go.sh

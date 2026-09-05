@@ -1,1 +1,1 @@
-/etc/systemd/system/pincabos-batch-import-worker.service
+../pincabos-batch-import-worker.service

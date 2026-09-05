@@ -1,1 +1,1 @@
-/opt/pincabos/modules/network/mod-dhcp4.sh
+../../../opt/pincabos/modules/network/mod-dhcp4.sh

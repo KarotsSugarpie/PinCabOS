@@ -1,1 +1,1 @@
-/opt/pincabos/tools/close-fulldmd-calibrator.sh
+../../../opt/pincabos/tools/close-fulldmd-calibrator.sh

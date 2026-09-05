@@ -1,1 +1,1 @@
-/opt/pincabos/install/packages/pkg-x11.sh
+../../../opt/pincabos/install/packages/pkg-x11.sh
