@@ -223,6 +223,27 @@ def tourne(w: int, h: int, rot: int) -> tuple:
     return (h, w) if rot in (90, 270) else (w, h)
 
 
+def mode_de(m: dict) -> tuple[int, int]:
+    """Le mode à appliquer : celui que la dalle affiche (et que la page montre).
+
+    PINCABOS_INSTALLEUR_MODE_COURANT_V1 : le mode « préféré » de l'EDID peut
+    différer du mode courant (vu en VM : 3840x2160 préféré, 1920x1440 affiché →
+    disposition géante, assistant perdu). Sur un cab, X démarre sur le préféré :
+    même valeur. Une dalle déjà tournée annonce ses côtés inversés : on les remet.
+    """
+    modes = m.get("modes") or []
+    w, h = int(m.get("width") or 0), int(m.get("height") or 0)
+    if w and h:
+        if not modes or f"{w}x{h}" in modes:
+            return w, h
+        if f"{h}x{w}" in modes:
+            return h, w
+    pref = m.get("preferred") or ""
+    if "x" in pref:
+        return tuple(int(v) for v in pref.split("x"))
+    return w, h
+
+
 def disposition(monitors: list, roles: dict, rotation: int) -> dict:
     """Positions canoniques : playfield en 0,0, puis backglass, DMD et topper à sa
     droite, alignés en haut, avec la largeur du playfield telle que X la verra
@@ -232,7 +253,7 @@ def disposition(monitors: list, roles: dict, rotation: int) -> dict:
     out, x = {}, 0
     for i, nom in enumerate(ordre):
         m = par_nom[nom]
-        w, h = (int(v) for v in m["preferred"].split("x")) if "x" in m["preferred"] else (m["width"], m["height"])
+        w, h = mode_de(m)
         rot = rotation if nom == roles.get("playfield") else 0
         vw, vh = tourne(w, h, rot)
         out[nom] = {"x": x, "y": 0, "width": vw, "height": vh, "mode": f"{w}x{h}", "rotation": rot, "primary": i == 0}

@@ -309,6 +309,30 @@ class Assistant(unittest.TestCase):
         self.assertIn('class="segb sel" disabled data-use="backglass"', w)
         self.assertIn('if(role==="backglass")return;', w)
 
+    def test_mode_applique_est_le_mode_courant(self):
+        # PINCABOS_INSTALLEUR_MODE_COURANT_V1 : VM = prefere 3840x2160, affiche 1920x1440
+        vm = {"name": "Virtual-2", "width": 1920, "height": 1440, "preferred": "3840x2160", "modes": ["5120x2160", "3840x2160", "1920x1440", "1280x800"]}
+        self.assertEqual(sc.mode_de(vm), (1920, 1440))
+        tourne = dict(vm, width=1440, height=1920)             # dalle deja tournee par X
+        self.assertEqual(sc.mode_de(tourne), (1920, 1440))
+        eteinte = dict(vm, width=0, height=0)
+        self.assertEqual(sc.mode_de(eteinte), (3840, 2160))
+        d = sc.disposition([dict(vm, name="V1"), vm], {"playfield": "V1", "backglass": "Virtual-2"}, 0)
+        self.assertEqual(d["Virtual-2"]["mode"], "1920x1440")
+        self.assertEqual(d["Virtual-2"]["x"], 1920)
+
+    def test_kiosque_un_bureau_sans_liaisons_et_suit_la_geometrie(self):
+        # PINCABOS_KIOSK_OPENBOX_V1 / PINCABOS_KIOSK_SUIT_LA_GEOMETRIE_V1 (Yann : molette = changement de bureau, coince)
+        rc = Path(RACINE, "usr/local/share/pincabos/kiosk-rc.xml").read_text(encoding="utf-8")
+        self.assertIn("<number>1</number>", rc)
+        self.assertNotIn("GoToDesktop", rc)
+        self.assertNotIn("mousebind", rc)
+        sess = Path(RACINE, "usr/local/bin/pincabos-kiosk-session").read_text(encoding="utf-8")
+        self.assertIn("openbox --config-file /usr/local/share/pincabos/kiosk-rc.xml", sess)
+        k = Path(RACINE, "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8")
+        self.assertIn('geometrie(mon) != cible["geometrie"]', k)
+        self.assertIn("view.grab_focus()", k)
+
     def test_ergonomie_de_l_etape(self):
         # PINCABOS_INSTALLEUR_ECRANS_UX_V1 (Yann : « pas très clair ») : trois gestes numerotes,
         # un bouton d application primaire dans sa carte, un etat qui dit quoi faire, numeros automatiques
@@ -333,7 +357,7 @@ class Assistant(unittest.TestCase):
         self.assertIn('class="egerie egerie-done"', w)
         self.assertIn("egerie-filigrane", w)
         self.assertIn('<footer class="credits">', w)
-        self.assertIn("Karots", w)
+        self.assertIn("Karots SugarPie &amp; YaNFoX", w)
         i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
         for l in ("fr", "en", "de", "it", "es"):
             self.assertIn("progress_start", i18n[l])
