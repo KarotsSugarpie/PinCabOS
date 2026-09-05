@@ -258,3 +258,32 @@
 /var/lib/*
 !/var/lib/pincabos*
 /var/spool/
+
+# ------------------------------------------------------------
+# PINCABOS_DEPOT_HOME_V1 (05/09/2026) : le compte du joueur n'est pas
+# du code. Les bundles tiers (VPinFE, VPX) viennent des releases amont
+# au build de l'image ; les scripts de session, dotfiles, caches et
+# bases de certificats restent sur le cab. Restent suivis : ce que
+# PinCabOS ecrit lui-meme (.config/vpinfe, .config/pincabos,
+# .config/openbox/autostart, .local/share/VPinballX/10.8, .vpinball/
+# gamecontrollerdb.txt, .config/sunshine, .config/systemd/user).
+# ------------------------------------------------------------
+/home/pinball/vpinfe/
+/home/pinball/VPinballX_BGFX-*/
+/home/pinball/vpx
+/home/pinball/*.sh
+/home/pinball/*.pdf
+/home/pinball/PR*
+/home/pinball/.bashrc
+/home/pinball/.bash_logout
+/home/pinball/.profile
+/home/pinball/.gitconfig
+/home/pinball/.dmrc
+/home/pinball/.fehbg
+/home/pinball/.xsession-errors
+/home/pinball/.fontconfig/
+/home/pinball/.local/share/pki/
+/home/pinball/.local/state/
+/home/pinball/.local/share/applications/
+/home/pinball/.config/mimeapps.list
+/home/pinball/.vpinball/Cache/

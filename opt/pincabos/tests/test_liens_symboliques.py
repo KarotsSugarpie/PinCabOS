@@ -12,7 +12,7 @@ import unittest
 
 from _charge import RACINE
 
-PERIMETRE = ("opt/pincabos/", "usr/local/", "etc/systemd/system/", "home/pinball/vpinfe/_internal/")
+PERIMETRE = ("opt/pincabos/", "usr/local/", "etc/systemd/system/", "home/pinball/")
 # liens de l OS dans le perimetre, cible hors depot par construction
 HORS_DEPOT = {"usr/local/man"}
 
