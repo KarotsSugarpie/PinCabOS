@@ -156,6 +156,38 @@ def proposer_roles(monitors: list) -> dict:
     return roles
 
 
+# PINCABOS_INSTALLEUR_CAB_USAGE_V1
+# Le propriétaire déclare ce que son cab possède (backglass, full DMD, topper) ;
+# les rôles proposés, la disposition et, en aval, les réglages d'affichage
+# (disabled_roles des liaisons → topologie → VPX/VPinFE/DMD) en découlent.
+USAGE_ROLES = tuple(r for r in ROLES if r != "playfield")
+
+
+def usage_propose(roles: dict) -> dict:
+    """Ce qui a reçu un écran est réputé utilisé : point de départ de la déclaration."""
+    return {r: bool(roles.get(r)) for r in USAGE_ROLES}
+
+
+def usage_depuis(a) -> dict | None:
+    """La déclaration envoyée par la page ; None si absente ou mal formée."""
+    u = a.get("usage") if isinstance(a, dict) else None
+    if not isinstance(u, dict):
+        return None
+    return {r: bool(u.get(r)) for r in USAGE_ROLES}
+
+
+def valider_usage(usage: dict, roles: dict) -> list:
+    """Chaque rôle déclaré utilisé a un écran ; un rôle déclaré absent n'en a pas."""
+    erreurs = []
+    for role in USAGE_ROLES:
+        attribue = bool(roles.get(role))
+        if usage.get(role) and not attribue:
+            erreurs.append(f"{role} : déclaré utilisé mais aucun écran attribué")
+        if not usage.get(role) and attribue:
+            erreurs.append(f"{role} : déclaré absent mais un écran lui est attribué")
+    return erreurs
+
+
 def valider_roles(roles: dict, monitors: list) -> list:
     """Erreurs : playfield obligatoire, sorties existantes, une sortie par rôle."""
     noms = {m["name"] for m in monitors}

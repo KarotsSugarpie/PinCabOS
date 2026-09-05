@@ -53,7 +53,7 @@
     "role_none": "Non utilisé",
     "role_playfield": "Playfield",
     "role_backglass": "Backglass",
-    "role_fulldmd": "DMD",
+    "role_fulldmd": "Full DMD",
     "role_topper": "Topper",
     "screens_pending": "Testez la disposition pour continuer.",
     "screens_applying": "Application en cours…",
@@ -91,7 +91,10 @@
     "net_security": "Chiffrement",
     "net_sec_auto": "Détecté automatiquement",
     "net_identity": "Identifiant (802.1X)",
-    "net_hidden": "SSID caché"
+    "net_hidden": "SSID caché",
+    "cab_usage": "Votre cab utilise…",
+    "cab_usage_hint": "Le playfield est toujours là. Dites ce que votre cab possède : les rôles proposés, la disposition et les réglages d'affichage (VPX, VPinFE, DMD) en découlent.",
+    "screens_missing": "Aucun écran attribué pour :"
   },
   "en": {
     "choose_lang": "Choose your language",
@@ -147,7 +150,7 @@
     "role_none": "Not used",
     "role_playfield": "Playfield",
     "role_backglass": "Backglass",
-    "role_fulldmd": "DMD",
+    "role_fulldmd": "Full DMD",
     "role_topper": "Topper",
     "screens_pending": "Test the layout to continue.",
     "screens_applying": "Applying…",
@@ -185,7 +188,10 @@
     "net_security": "Encryption",
     "net_sec_auto": "Detected automatically",
     "net_identity": "Identity (802.1X)",
-    "net_hidden": "Hidden SSID"
+    "net_hidden": "Hidden SSID",
+    "cab_usage": "Your cab uses…",
+    "cab_usage_hint": "The playfield is always there. Tell us what your cab has: the proposed roles, the layout and the display settings (VPX, VPinFE, DMD) follow from it.",
+    "screens_missing": "No screen assigned for:"
   },
   "de": {
     "choose_lang": "Sprache auswählen",
@@ -241,7 +247,7 @@
     "role_none": "Nicht verwendet",
     "role_playfield": "Playfield",
     "role_backglass": "Backglass",
-    "role_fulldmd": "DMD",
+    "role_fulldmd": "Full DMD",
     "role_topper": "Topper",
     "screens_pending": "Anordnung testen, um fortzufahren.",
     "screens_applying": "Wird angewendet…",
@@ -279,7 +285,10 @@
     "net_security": "Verschlüsselung",
     "net_sec_auto": "Automatisch erkannt",
     "net_identity": "Benutzer (802.1X)",
-    "net_hidden": "Verstecktes SSID"
+    "net_hidden": "Verstecktes SSID",
+    "cab_usage": "Ihr Cab verwendet…",
+    "cab_usage_hint": "Das Playfield ist immer dabei. Geben Sie an, was Ihr Cab besitzt: Rollen, Anordnung und Anzeigeeinstellungen (VPX, VPinFE, DMD) ergeben sich daraus.",
+    "screens_missing": "Kein Bildschirm zugewiesen für:"
   },
   "it": {
     "choose_lang": "Scegli la tua lingua",
@@ -335,7 +344,7 @@
     "role_none": "Non usato",
     "role_playfield": "Playfield",
     "role_backglass": "Backglass",
-    "role_fulldmd": "DMD",
+    "role_fulldmd": "Full DMD",
     "role_topper": "Topper",
     "screens_pending": "Prova la disposizione per continuare.",
     "screens_applying": "Applicazione in corso…",
@@ -373,7 +382,10 @@
     "net_security": "Cifratura",
     "net_sec_auto": "Rilevata automaticamente",
     "net_identity": "Identità (802.1X)",
-    "net_hidden": "SSID nascosto"
+    "net_hidden": "SSID nascosto",
+    "cab_usage": "Il tuo cab usa…",
+    "cab_usage_hint": "Il playfield c'è sempre. Indica cosa possiede il tuo cab: ruoli proposti, disposizione e impostazioni di visualizzazione (VPX, VPinFE, DMD) ne derivano.",
+    "screens_missing": "Nessuno schermo assegnato per:"
   },
   "es": {
     "choose_lang": "Elige tu idioma",
@@ -429,7 +441,7 @@
     "role_none": "Sin uso",
     "role_playfield": "Playfield",
     "role_backglass": "Backglass",
-    "role_fulldmd": "DMD",
+    "role_fulldmd": "Full DMD",
     "role_topper": "Topper",
     "screens_pending": "Prueba la disposición para continuar.",
     "screens_applying": "Aplicando…",
@@ -467,6 +479,9 @@
     "net_security": "Cifrado",
     "net_sec_auto": "Detectado automáticamente",
     "net_identity": "Identidad (802.1X)",
-    "net_hidden": "SSID oculto"
+    "net_hidden": "SSID oculto",
+    "cab_usage": "Tu cab usa…",
+    "cab_usage_hint": "El playfield siempre está. Indica qué tiene tu cab: los roles propuestos, la disposición y los ajustes de pantalla (VPX, VPinFE, DMD) se derivan de ello.",
+    "screens_missing": "Ninguna pantalla asignada para:"
   }
 }
