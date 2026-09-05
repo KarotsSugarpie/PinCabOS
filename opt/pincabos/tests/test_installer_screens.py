@@ -79,6 +79,18 @@ class Decouverte(unittest.TestCase):
         self.assertFalse(s[2]["connected"])
         self.assertEqual(sc.parse_query(QUERY_INVERTED)[0]["rotation"], 180)
 
+    def test_sans_mode_prefere_le_mode_courant(self):
+        """PINCABOS_INSTALLEUR_MODE_COURANT_V1 : sortie sans « + » (pas d'EDID) : le mode
+        courant, pas le premier de la liste (5120x2160 applique sur un backglass en VM)."""
+        q = QUERY.replace("DP-2 connected 1920x1080+3840+0", "Virtual-2 connected 1280x800+3840+0").replace(
+            "   1920x1080     60.00*+\n", "   5120x2160     50.00\n   1920x1440     60.00\n   1280x800      74.99*\n")
+        s = {x["name"]: x for x in sc.parse_query(q)}
+        self.assertEqual(s["Virtual-2"]["preferred"], "1280x800")
+        self.assertEqual(sc.mode_de(sc.moniteurs(q, PROPS)[2]), (1280, 800))
+        # courant absent de la liste (sortie eteinte) : premier mode, comme avant
+        q2 = q.replace("Virtual-2 connected 1280x800+3840+0", "Virtual-2 connected")
+        self.assertEqual({x["name"]: x for x in sc.parse_query(q2)}["Virtual-2"]["preferred"], "5120x2160")
+
     def test_edid(self):
         e = sc.parse_edids(PROPS)
         self.assertEqual(set(e), {"HDMI-0", "DP-0"})

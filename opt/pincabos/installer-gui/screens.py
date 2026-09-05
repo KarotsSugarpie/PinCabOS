@@ -86,7 +86,11 @@ def parse_query(texte: str) -> list:
                 courante["preferred_rate"] = m_rate.group(1) if m_rate else (re.findall(r"\d+(?:\.\d+)?", rates) or [""])[0]
     for s in sorties:
         if not s["preferred"] and s["modes"]:
-            s["preferred"] = s["modes"][0]
+            # PINCABOS_INSTALLEUR_MODE_COURANT_V1 : sans mode « + » (dalle sans EDID,
+            # sortie virtuelle), le mode courant plutot que le premier de la liste
+            # (en VM : 5120x2160 applique sur un backglass qui tournait en 1280x800).
+            courant = f"{s['width']}x{s['height']}"
+            s["preferred"] = courant if courant in s["modes"] else s["modes"][0]
     return sorties
 
 
