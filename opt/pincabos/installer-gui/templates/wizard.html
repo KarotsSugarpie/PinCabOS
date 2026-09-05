@@ -58,6 +58,15 @@ h2{font-size:1.35rem;margin-bottom:18px;color:var(--accent)}
 .opt.sel{border-color:var(--accent);background:#2a0f45;box-shadow:0 0 0 2px var(--accent) inset,0 0 18px rgba(255,176,0,.35);position:relative}
 .opt.sel::after{content:"✓";position:absolute;top:6px;right:10px;color:var(--accent);font-weight:900;font-size:1.15rem}
 button:disabled,.primary:disabled{opacity:.32;filter:grayscale(.9);cursor:not-allowed}
+/* PINCABOS_INSTALLEUR_ECRANS_UX_V1 */
+.stepno{display:inline-flex;width:26px;height:26px;border-radius:50%;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#160020;font-weight:800;font-size:.9rem;flex:0 0 26px}
+.apply-row{display:flex;gap:14px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.status{flex:1;min-width:240px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);font-weight:600;color:var(--muted);line-height:1.35}
+.status[data-state=ok]{border-color:var(--good);color:var(--good);background:rgba(34,197,94,.08)}
+.status[data-state=err]{border-color:var(--danger);color:#ffb4b4;background:rgba(239,68,68,.08)}
+.status[data-state=todo]{border-color:var(--accent);color:var(--accent2)}
+.ghost.small{padding:7px 12px;font-size:.88rem}
+#screens-next:not(:disabled){box-shadow:0 0 18px rgba(255,138,0,.45)}
 /* PINCABOS_INSTALLEUR_EGERIE_V1 + CREDITS_V1 */
 .egerie{pointer-events:none;user-select:none}
 .egerie-lang{position:fixed;right:3vw;bottom:5vh;max-height:44vh;max-width:26vw}
@@ -180,8 +189,10 @@ button{
 <section class="step" id="st-screens">
   <h2 data-i18n="screens"></h2>
   <p style="color:var(--muted);margin-bottom:12px" data-i18n="screens_hint"></p>
+  <!-- PINCABOS_INSTALLEUR_ECRANS_UX_V1 : trois gestes numerotes, un seul bouton
+       d application (primaire, dans sa carte) et un etat qui dit quoi faire -->
   <div class="card" style="margin-bottom:14px">
-    <div class="row" style="margin-bottom:0"><label data-i18n="cab_usage"></label>
+    <div class="row" style="margin-bottom:0"><span class="stepno">1</span><label data-i18n="cab_usage"></label>
       <div class="seg" id="cab-usage">
         <button type="button" class="segb sel" disabled data-i18n="role_playfield"></button>
         <button type="button" class="segb sel" disabled data-use="backglass" data-i18n="role_backglass"></button>
@@ -204,9 +215,15 @@ button{
     <div class="row" id="dmd-addr-row" style="display:none;margin-top:10px"><label data-i18n="dmd_addr"></label><input type="text" id="dmd-addr" placeholder="192.168.1.50" autocomplete="off" spellcheck="false"></div>
     <div class="row" id="dmd-test-row" style="display:none;margin:10px 0 0"><button type="button" class="ghost" id="dmd-test" onclick="testDmd()" data-i18n="dmd_test"></button><span class="hint" id="dmd-status" style="margin:0"></span></div>
   </div>
-  <div class="grid screens" id="screen-list"></div>
-  <div class="card" style="margin-top:14px">
-    <div class="row" style="margin-bottom:8px"><label data-i18n="orient_q"></label>
+  <div class="card" style="margin-bottom:14px">
+    <div class="row" style="margin-bottom:6px;justify-content:space-between">
+      <div style="display:flex;gap:12px;align-items:center"><span class="stepno">2</span><label data-i18n="screens_roles_title"></label></div>
+      <button type="button" class="ghost small" id="btn-identify" onclick="identifyScreens()" data-i18n="identify"></button></div>
+    <div class="hint" style="margin:0 0 10px" data-i18n="screens_roles_hint"></div>
+    <div class="grid screens" id="screen-list"></div>
+  </div>
+  <div class="card" style="margin-top:0">
+    <div class="row" style="margin-bottom:8px"><span class="stepno">3</span><label data-i18n="orient_q"></label>
       <div class="seg" id="rot-seg">
         <button type="button" class="segb sel" data-rot="0" data-i18n="o_up"></button>
         <button type="button" class="segb" data-rot="180" data-i18n="o_down"></button>
@@ -214,12 +231,14 @@ button{
         <button type="button" class="segb" data-rot="270" data-i18n="o_270"></button>
       </div></div>
     <div class="preview" id="screen-preview"></div>
-    <div class="hint" id="screens-status" data-i18n="screens_pending"></div>
+    <div class="apply-row">
+      <button type="button" class="primary" id="btn-apply" onclick="applyScreens()" data-i18n="apply_layout"></button>
+      <div class="status" id="screens-status" data-state="todo" data-i18n="screens_pending"></div>
+    </div>
   </div>
   <div class="btns"><button class="ghost" onclick="go('st-regional')" data-i18n="back"></button>
-    <div style="display:flex;gap:10px">
-      <button class="ghost" id="btn-identify" onclick="identifyScreens()" data-i18n="identify"></button>
-      <button class="ghost" id="btn-apply" onclick="applyScreens()" data-i18n="apply_layout"></button>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span class="hint" id="screens-next-hint" style="margin:0"></span>
       <button class="primary" id="screens-next" disabled onclick="loadSound();go('st-sound')" data-i18n="next"></button>
     </div></div>
 </section>
@@ -369,7 +388,9 @@ const ROLE_KEYS=["playfield","backglass","fulldmd","topper"];
 // possède (backglass, full DMD, topper) ; les rôles attribuables, la proposition
 // et les réglages d'affichage en aval en découlent.
 S.screens={roles:{},rotation:0,usage:{backglass:true,fulldmd:true,topper:false}};
-let screensMon=[],screensApplied="";
+let screensMon=[],screensApplied="",screensIdentifiedOnce=false;
+function dalleDe(role){const m=screensMon.find(x=>x.name===S.screens.roles[role]);return m?m.app_index+1:null}
+function resumeDisposition(){return usedRoles().filter(r=>dalleDe(r)).map(r=>t("role_"+r)+" → "+t("screens_dalle")+" "+dalleDe(r)).join(" · ")}
 function screensKey(){return JSON.stringify([S.screens.roles,S.screens.rotation,S.screens.usage])}
 function usageFromRoles(){const u={};ROLE_KEYS.filter(r=>r!=="playfield").forEach(r=>u[r]=!!S.screens.roles[r]);return u}
 function usedRoles(){return ROLE_KEYS.filter(r=>r==="playfield"||S.screens.usage[r])}
@@ -391,6 +412,8 @@ function refreshScreensStatus(){
   const miss=missingRoles();
   if(miss.length){setScreensStatus("screens_missing",false,miss.map(r=>t("role_"+r)).join(", "))}
   else if(!dmdValid()){setScreensStatus("dmd_addr_invalid",false)}
+  else if(screensApplied&&screensApplied===screensKey()){setScreensStatus("screens_applied",true,resumeDisposition())}
+  else if(screensApplied){setScreensStatus("screens_changed",false)}
   else{setScreensStatus("screens_pending",false)}}
 // PINCABOS_INSTALLEUR_DMD_V1 — sans full DMD, le DMD est une matrice LED (ZeDMD,
 // PIN2DMD) ou rien : détecté par l'outil du cab, proposé, testable ici même.
@@ -432,7 +455,9 @@ function loadScreens(){
     if(d.error||!screensMon.length){box.innerHTML="<div class='hint'>"+t("screens_none")+"</div>";return}
     if(!Object.keys(S.screens.roles).length){S.screens.roles=d.roles||{};S.screens.rotation=d.rotation||0;S.screens.usage=d.usage||usageFromRoles()}
     document.querySelectorAll("#rot-seg .segb").forEach(b=>b.classList.toggle("sel",+b.dataset.rot===+S.screens.rotation));
-    renderUsage();renderScreens();loadDmd();refreshScreensStatus()})
+    renderUsage();renderScreens();loadDmd();refreshScreensStatus();
+    // les numeros s affichent d eux-memes sur chaque dalle a l arrivee : on sait qui est qui
+    if(!screensIdentifiedOnce){screensIdentifiedOnce=true;setTimeout(identifyScreens,500)}})
   .catch(()=>{box.innerHTML="<div class='hint'>"+t("screens_none")+"</div>"})}
 function roleOf(name){return ROLE_KEYS.find(r=>S.screens.roles[r]===name)||""}
 function renderScreens(){
@@ -463,15 +488,18 @@ document.querySelectorAll("#rot-seg .segb").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#rot-seg .segb").forEach(o=>o.classList.remove("sel"));b.classList.add("sel");
   S.screens.rotation=+b.dataset.rot;renderPreview();refreshScreensStatus()});
 function setScreensStatus(key,ok,extra){const st=document.getElementById("screens-status");
-  st.textContent=t(key)+(extra?" "+extra:"");st.style.color=ok?"var(--good)":"var(--muted)";
-  document.getElementById("screens-next").disabled=!(ok&&screensApplied===screensKey()&&S.screens.roles.playfield&&!missingRoles().length&&dmdValid())}
+  st.textContent=t(key)+(extra?" "+extra:"");
+  st.dataset.state=ok?"ok":key==="screens_failed"?"err":key==="screens_applying"?"busy":"todo";
+  const next=document.getElementById("screens-next");
+  next.disabled=!(ok&&screensApplied===screensKey()&&S.screens.roles.playfield&&!missingRoles().length&&dmdValid());
+  document.getElementById("screens-next-hint").textContent=next.disabled?t("screens_next_hint"):""}
 function applyScreens(){
   if(!S.screens.roles.playfield){setScreensStatus("screens_need_pf",false);return}
   if(missingRoles().length){refreshScreensStatus();return}
   const btn=document.getElementById("btn-apply");btn.disabled=true;setScreensStatus("screens_applying",false);
   fetch("/api/screens/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(S.screens)})
   .then(r=>r.json()).then(d=>{btn.disabled=false;
-    if(d.ok){screensApplied=screensKey();setScreensStatus("screens_applied",true)}
+    if(d.ok){screensApplied=screensKey();setScreensStatus("screens_applied",true,resumeDisposition());identifyScreens()}
     else{screensApplied="";setScreensStatus("screens_failed",false,(d.erreurs||[]).join(" ; "))}})
   .catch(()=>{btn.disabled=false;screensApplied="";setScreensStatus("screens_failed",false)})}
 // PINCABOS_INSTALLEUR_SON_DOF_V1 — étape Son et DOF : sorties ALSA de la

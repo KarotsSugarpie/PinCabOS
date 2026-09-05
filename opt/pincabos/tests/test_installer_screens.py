@@ -309,6 +309,22 @@ class Assistant(unittest.TestCase):
         self.assertIn('class="segb sel" disabled data-use="backglass"', w)
         self.assertIn('if(role==="backglass")return;', w)
 
+    def test_ergonomie_de_l_etape(self):
+        # PINCABOS_INSTALLEUR_ECRANS_UX_V1 (Yann : « pas très clair ») : trois gestes numerotes,
+        # un bouton d application primaire dans sa carte, un etat qui dit quoi faire, numeros automatiques
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        self.assertEqual(w.count('<span class="stepno">'), 3)
+        self.assertIn('class="primary" id="btn-apply"', w)
+        self.assertIn('id="screens-status" data-state="todo"', w)
+        self.assertIn('id="screens-next-hint"', w)
+        self.assertIn("setTimeout(identifyScreens,500)", w)          # numeros a l arrivee
+        self.assertIn('resumeDisposition());identifyScreens()', w)   # roles sur les dalles apres application
+        self.assertIn('setScreensStatus("screens_changed",false)', w)
+        i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
+        for l in ("fr", "en", "de", "it", "es"):
+            for k in ("screens_roles_title", "screens_changed", "screens_next_hint", "screens_dalle", "apply_layout"):
+                self.assertIn(k, i18n[l], (l, k))
+
     def test_egerie_et_credits(self):
         # PINCABOS_INSTALLEUR_EGERIE_V1 / CREDITS_V1 : emplacements Miss Tilt (Langue, Progression, Terminé), auteurs
         w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
