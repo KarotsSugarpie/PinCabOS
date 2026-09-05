@@ -158,7 +158,9 @@
     "toys_brightness": "Luminosité",
     "toys_ledwiz": "N° LedWiz",
     "toys_err_total": "Contrôleur %n : %s LED sur les sorties pour une matrice de %m.",
-    "toys_err_none": "Contrôleur %n : aucun ruban déclaré."
+    "toys_err_none": "Contrôleur %n : aucun ruban déclaré.",
+    "disk_found": "PinCabOS %v déjà installé",
+    "disk_keep": "Mise à jour : tables et médias, ROMs, écrans, son, réseau, DOF, boutons, DMD et réglages de la webapp sont conservés."
   },
   "en": {
     "choose_lang": "Choose your language",
@@ -319,7 +321,9 @@
     "toys_brightness": "Brightness",
     "toys_ledwiz": "LedWiz no.",
     "toys_err_total": "Controller %n: %s LEDs on the outputs for a %m matrix.",
-    "toys_err_none": "Controller %n: no strip declared."
+    "toys_err_none": "Controller %n: no strip declared.",
+    "disk_found": "PinCabOS %v already installed",
+    "disk_keep": "Update: tables and media, ROMs, screens, sound, network, DOF, buttons, DMD and web app settings are kept."
   },
   "de": {
     "choose_lang": "Sprache auswählen",
@@ -480,7 +484,9 @@
     "toys_brightness": "Helligkeit",
     "toys_ledwiz": "LedWiz-Nr.",
     "toys_err_total": "Controller %n: %s LEDs an den Ausgängen für eine Matrix von %m.",
-    "toys_err_none": "Controller %n: kein Streifen angegeben."
+    "toys_err_none": "Controller %n: kein Streifen angegeben.",
+    "disk_found": "PinCabOS %v bereits installiert",
+    "disk_keep": "Aktualisierung: Tische und Medien, ROMs, Bildschirme, Ton, Netzwerk, DOF, Tasten, DMD und Web-App-Einstellungen bleiben erhalten."
   },
   "it": {
     "choose_lang": "Scegli la tua lingua",
@@ -641,7 +647,9 @@
     "toys_brightness": "Luminosità",
     "toys_ledwiz": "N. LedWiz",
     "toys_err_total": "Controller %n: %s LED sulle uscite per una matrice di %m.",
-    "toys_err_none": "Controller %n: nessuna striscia dichiarata."
+    "toys_err_none": "Controller %n: nessuna striscia dichiarata.",
+    "disk_found": "PinCabOS %v già installato",
+    "disk_keep": "Aggiornamento: tavoli e media, ROM, schermi, audio, rete, DOF, pulsanti, DMD e impostazioni della web app vengono conservati."
   },
   "es": {
     "choose_lang": "Elige tu idioma",
@@ -802,6 +810,8 @@
     "toys_brightness": "Brillo",
     "toys_ledwiz": "N.º LedWiz",
     "toys_err_total": "Controlador %n: %s LED en las salidas para una matriz de %m.",
-    "toys_err_none": "Controlador %n: ninguna tira declarada."
+    "toys_err_none": "Controlador %n: ninguna tira declarada.",
+    "disk_found": "PinCabOS %v ya instalado",
+    "disk_keep": "Actualización: mesas y medios, ROM, pantallas, sonido, red, DOF, botones, DMD y ajustes de la web app se conservan."
   }
 }

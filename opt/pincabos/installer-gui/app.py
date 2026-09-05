@@ -18,6 +18,7 @@ from flask import Flask, Response, jsonify, render_template, request
 
 import screens as pco_screens  # PINCABOS_INSTALLEUR_ECRANS_V1
 import dmd as pco_dmd  # PINCABOS_INSTALLEUR_DMD_V1
+import disks as pco_disks  # PINCABOS_INSTALLEUR_DISQUE_V1
 
 # PINCABOS_INSTALLEUR_RESEAU_V1 : le moteur réseau du cab (nmcli) sert aussi à
 # l'assistant. Absent de la session (ISO au modèle classique) : l'étape se
@@ -72,20 +73,13 @@ def disques_reels():
     reguliere accepte /dev/nvme0n1 sur une machine qui n'en a pas, une
     enumeration decrit la machine devant soi.
     """
+    # PINCABOS_INSTALLEUR_DISQUE_V1 : chaque disque dit s il porte deja un PinCabOS
     if DEMO:
         return [
-            {"dev": "/dev/nvme0n1", "size": "931,5G", "model": "Samsung 980 PRO 1TB"},
-            {"dev": "/dev/sda", "size": "223,6G", "model": "Crucial BX500 240GB"},
+            {"dev": "/dev/nvme0n1", "size": "931,5G", "model": "Samsung 980 PRO 1TB", "pincabos": None},
+            {"dev": "/dev/sda", "size": "223,6G", "model": "Crucial BX500 240GB", "pincabos": {"version": "Alpha 3.55", "partition": "/dev/sda2"}},
         ]
-    out = subprocess.run(
-        ["lsblk", "-J", "-d", "-o", "NAME,SIZE,TYPE,MODEL"],
-        capture_output=True, text=True, timeout=10).stdout
-    found = []
-    for d in json.loads(out).get("blockdevices", []):
-        if d.get("type") == "disk" and not d["name"].startswith(("loop", "sr", "zram")):
-            found.append({"dev": "/dev/" + d["name"], "size": d.get("size", "?"),
-                          "model": (d.get("model") or "").strip() or "Disque"})
-    return found
+    return [{"dev": d["dev"], "size": d["size"], "model": d["model"], "pincabos": d.get("pincabos")} for d in pco_disks.detecter()]
 
 
 @app.route("/api/disks")

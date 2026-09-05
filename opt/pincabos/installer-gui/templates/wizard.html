@@ -71,6 +71,7 @@ button:disabled,.primary:disabled{opacity:.32;filter:grayscale(.9);cursor:not-al
 .scr .num{font-size:2.4rem;font-weight:900;color:var(--accent);line-height:1}
 .scr .name{font-weight:700;margin-top:4px}.scr .geo{color:var(--muted);font-size:.9rem;margin-bottom:8px}
 .scr select{width:100%;min-width:0}
+.opt.disk .found{margin-top:6px;font-size:.85rem;color:var(--good);font-weight:700}
 .seg{display:flex;gap:6px;flex-wrap:wrap}
 .segb{background:transparent;color:var(--muted);border:1px solid var(--border);padding:9px 14px;border-radius:10px;font-size:.95rem}
 .segb.sel{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#160020;border-color:transparent}
@@ -274,6 +275,7 @@ button{
     <div class="opt" data-mode="3" style="text-align:left;padding:16px">
       <b data-i18n="mode_up"></b><div class="o-desc" data-i18n="mode_up_d"></div></div>
   </div>
+  <div class="hint" id="disk-keep" style="display:none;color:var(--good)"></div>
   <div class="hint" id="disk-hint" data-i18n="disk_hint"></div>
   <div class="btns"><button class="ghost" onclick="go('st-network')" data-i18n="back"></button>
   <button class="primary" id="disk-next" disabled onclick="fillSummary();go('st-confirm')" data-i18n="next"></button></div>
@@ -616,20 +618,29 @@ function identifyScreens(){
   fetch("/api/screens/identify",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({roles:S.screens.roles,seconds:6,labels})}).catch(()=>{}).finally(()=>setTimeout(()=>btn.disabled=false,6500))}
 
-fetch("/api/disks").then(r=>r.json()).then(disks=>{
+// PINCABOS_INSTALLEUR_DISQUE_V1 — un disque qui porte déjà un PinCabOS est
+// signalé avec sa version ; la mise à jour y est proposée d'office (tables,
+// médias, réglages conservés) et n'est pas offerte sur un disque vierge.
+let disksInfo=[];
+function selectMode(m){document.querySelectorAll("[data-mode]").forEach(o=>o.classList.toggle("sel",o.dataset.mode===String(m)));S.mode=String(m);checkDisk()}
+function diskChosen(d){S.disk=d.dev;
+  const up=document.querySelector('[data-mode="3"]');up.style.display=d.pincabos?"":"none";
+  const keep=document.getElementById("disk-keep");keep.style.display=d.pincabos?"":"none";
+  if(d.pincabos){keep.textContent=t("disk_keep")}
+  selectMode(d.pincabos?3:1)}
+fetch("/api/disks").then(r=>r.json()).then(disks=>{disksInfo=disks;
   const box=document.getElementById("disk-list");
   disks.forEach(d=>{const el=document.createElement("div");
     el.className="opt disk";el.dataset.disk=d.dev;
     el.setAttribute("role","button");el.tabIndex=0;
-    el.innerHTML=`<span class="dev">${d.dev}</span><span class="model">${d.model}</span><b>${d.size}</b>`;
+    el.innerHTML=`<span class="dev">${d.dev}</span><span class="model">${d.model}</span><b>${d.size}</b>`+(d.pincabos?`<div class="found">${t("disk_found").replace("%v",d.pincabos.version)}</div>`:"");
     el.onclick=()=>{document.querySelectorAll("[data-disk]").forEach(o=>o.classList.remove("sel"));
-      el.classList.add("sel");S.disk=d.dev;checkDisk()};
+      el.classList.add("sel");diskChosen(d)};
     box.appendChild(el)});
-  if(disks.length===1){box.firstChild.click()}});
-document.querySelectorAll("[data-mode]").forEach(el=>el.onclick=()=>{
-  document.querySelectorAll("[data-mode]").forEach(o=>o.classList.remove("sel"));
-  el.classList.add("sel");S.mode=el.dataset.mode;checkDisk()});
-function checkDisk(){const ok=!!(S.disk&&S.mode);
+  const withPco=disks.find(d=>d.pincabos);
+  if(withPco){box.querySelector(`[data-disk="${withPco.dev}"]`).click()}else if(disks.length===1){box.firstChild.click()}});
+document.querySelectorAll("[data-mode]").forEach(el=>el.onclick=()=>selectMode(el.dataset.mode));
+function checkDisk(){const d=disksInfo.find(x=>x.dev===S.disk);const ok=!!(S.disk&&S.mode&&!(S.mode==="3"&&d&&!d.pincabos));
   document.getElementById("disk-next").disabled=!ok;
   document.getElementById("disk-hint").style.visibility=ok?"hidden":"visible"}
 
