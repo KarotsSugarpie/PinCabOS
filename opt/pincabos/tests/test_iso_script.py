@@ -173,3 +173,25 @@ class LienVpx(unittest.TestCase):
         self.assertIn("PINCABOS_VPX_LINK_V1", p)
         self.assertIn('ln -sfn "$(basename "$_pco_vpx_dir")" /home/pinball/vpx', p)
 
+
+
+class RepertoireTemporaire(unittest.TestCase):
+    """PR #156 (Karots) : un vieux worktree de PR sous /opt/pincabos/tmp contenait
+    un VPinballX.ini avec des noms de cartes audio ; la garde audio refusait
+    l'ISO. Le repertoire est exclu du payload ET refuse par la validation des
+    fichiers transitoires, directement dans iso.sh (plus besoin du helper)."""
+
+    def test_tmp_exclu_du_payload_et_garde(self):
+        s = _texte()
+        self.assertIn("--exclude='./opt/pincabos/tmp' \\", s)
+        self.assertIn("--exclude='./opt/pincabos/tmp/*' \\", s)
+        self.assertIn("tmp(/|$)", s)
+        self.assertIn('echo "OK: /opt/pincabos/tmp excluded"', s)
+
+    def test_la_regex_transitoire_refuse_tmp(self):
+        m = re.search(r"grep -E -q \\\n'(\^\\\./opt/pincabos/[^']+)'", _texte())
+        self.assertIsNotNone(m, "regex de validation transitoire introuvable")
+        motif = re.compile(m.group(1))
+        self.assertTrue(motif.search("./opt/pincabos/tmp/pr43/worktree/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"))
+        self.assertTrue(motif.search("./opt/pincabos/tmp"))
+        self.assertFalse(motif.search("./opt/pincabos/tools/pincabos-vps"))
