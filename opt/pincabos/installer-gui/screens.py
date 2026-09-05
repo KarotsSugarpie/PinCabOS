@@ -285,7 +285,43 @@ def appliquer(monitors: list, roles: dict, rotation: int, run=executer) -> dict:
     rc, out, err = run(cmd, timeout=30)
     if rc != 0:
         return {"ok": False, "erreurs": [f"xrandr : {err.strip() or out.strip() or rc}"], "commande": cmd}
-    return {"ok": True, "commande": cmd, "disposition": dispo}
+    pointeurs = cadrer_pointeurs_absolus(roles["playfield"], run)
+    return {"ok": True, "commande": cmd, "disposition": dispo, "pointeurs": pointeurs}
+
+
+# PINCABOS_INSTALLEUR_POINTEUR_ABSOLU_V1
+# Un pointeur absolu (écran tactile sur le playfield, tablette, souris
+# « tablet » d'une VM) se répartit par défaut sur TOUT l'écran X ; dès que la
+# disposition met deux dalles côte à côte, chaque clic tombe deux fois trop
+# loin (vu en VM : plus aucun clic possible après l'application). On le cadre
+# sur la dalle du playfield, la seule qu'on touche.
+POINTEUR_ABSOLU = re.compile(r"(?i)tablet|touch|stylus|pen\b|wacom|elan|goodix|ilitek|egalax")
+
+
+def pointeurs_absolus(liste_xinput: str) -> list:
+    """Identifiants des pointeurs esclaves dont le nom dit « absolu » (xinput list --short)."""
+    ids = []
+    for ligne in liste_xinput.splitlines():
+        if "slave" not in ligne or "pointer" not in ligne or "XTEST" in ligne:
+            continue
+        m = re.search(r"id=(\d+)", ligne)
+        nom = ligne.split("id=")[0]
+        if m and POINTEUR_ABSOLU.search(nom):
+            ids.append(int(m.group(1)))
+    return ids
+
+
+def cadrer_pointeurs_absolus(sortie: str, run=executer) -> list:
+    """xinput map-to-output <id> <sortie playfield> pour chaque pointeur absolu ; renvoie les ids cadrés."""
+    rc, out, _ = run(["xinput", "list", "--short"], timeout=10)
+    if rc != 0:
+        return []
+    cadres = []
+    for ident in pointeurs_absolus(out):
+        rc, _, _ = run(["xinput", "map-to-output", str(ident), sortie], timeout=10)
+        if rc == 0:
+            cadres.append(ident)
+    return cadres
 
 
 # ---------------------------------------------------------------- screens.json

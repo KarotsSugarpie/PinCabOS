@@ -309,6 +309,31 @@ class Assistant(unittest.TestCase):
         self.assertIn('class="segb sel" disabled data-use="backglass"', w)
         self.assertIn('if(role==="backglass")return;', w)
 
+    def test_pointeurs_absolus_cadres_sur_le_playfield(self):
+        # PINCABOS_INSTALLEUR_POINTEUR_ABSOLU_V1 (VM : plus de clic apres l application)
+        liste = (
+            "⎡ Virtual core pointer                    \tid=2\t[master pointer  (3)]\n"
+            "⎜   ↳ Virtual core XTEST pointer              \tid=4\t[slave  pointer  (2)]\n"
+            "⎜   ↳ QEMU Virtio Tablet                      \tid=6\t[slave  pointer  (2)]\n"
+            "⎜   ↳ VirtualPS/2 VMware VMMouse              \tid=10\t[slave  pointer  (2)]\n"
+            "⎜   ↳ ILITEK Multi-Touch-V5000               \tid=12\t[slave  pointer  (2)]\n"
+            "⎣ Virtual core keyboard                   \tid=3\t[master keyboard (2)]\n"
+            "    ↳ QEMU Virtio Keyboard                    \tid=7\t[slave  keyboard (3)]\n")
+        self.assertEqual(sc.pointeurs_absolus(liste), [6, 12])
+        appels = []
+
+        def f(args, timeout=20):
+            appels.append(args)
+            return (0, liste if args[:2] == ["xinput", "list"] else "", "")
+        self.assertEqual(sc.cadrer_pointeurs_absolus("HDMI-0", f), [6, 12])
+        self.assertIn(["xinput", "map-to-output", "6", "HDMI-0"], appels)
+        # xinput absent : rien a cadrer, pas d erreur
+        self.assertEqual(sc.cadrer_pointeurs_absolus("HDMI-0", lambda a, timeout=20: (127, "", "absent")), [])
+        mons = sc.moniteurs(QUERY, PROPS)
+        res = sc.appliquer(mons, self.ROLES, 0, f)
+        self.assertTrue(res["ok"])
+        self.assertEqual(res["pointeurs"], [6, 12])
+
     def test_mode_applique_est_le_mode_courant(self):
         # PINCABOS_INSTALLEUR_MODE_COURANT_V1 : VM = prefere 3840x2160, affiche 1920x1440
         vm = {"name": "Virtual-2", "width": 1920, "height": 1440, "preferred": "3840x2160", "modes": ["5120x2160", "3840x2160", "1920x1440", "1280x800"]}
