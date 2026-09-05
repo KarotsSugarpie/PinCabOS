@@ -234,8 +234,12 @@ class Theme(unittest.TestCase):
 
 class Perimetre(unittest.TestCase):
     def test_visuels_dans_le_perimetre_de_l_updater(self):
-        src = (Path(RACINE) / "opt/pincabos/update/pincabos_updates.py").read_text(encoding="utf-8")
-        self.assertIn("'opt/pincabos/media/splash/'", src)
+        # 3.69 : prefixe en attente ; a partir de la release suivante : livre (plus en attente)
+        up = charger("opt/pincabos/update/pincabos_updates.py", "pco_updates_perimetre")
+        rel = "opt/pincabos/media/splash/portrait0.png"
+        self.assertTrue(up.allowed(rel))
+        self.assertTrue(up.allowed_for_build(rel))
+        self.assertNotIn("opt/pincabos/media/splash/", up.PENDING_PREFIXES)
 
     def test_sources_declarees(self):
         self.assertEqual(str(ss.PORTRAIT), "/opt/pincabos/media/splash/portrait.png")
