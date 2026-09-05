@@ -474,26 +474,19 @@
 
     observer = new MutationObserver(function (mutations) {
       var relevant = mutations.some(function (mutation) {
-        if (mutation.type === "childList") {
-          return mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0;
-        }
-        if (mutation.type === "attributes") {
-          return mutation.target === document.body ||
-            (mutation.target && mutation.target.id === "pco-menu-pin-btn");
-        }
-        return false;
+        return mutation.type === "childList" && (
+          mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0
+        );
       });
 
       // The move to <body> itself produces mutations. Delay the sync so DOM
-      // settles and avoid a tight feedback loop.
+      // settles; attributes are deliberately ignored to avoid a feedback loop.
       if (relevant) scheduleSync(70);
     });
 
     observer.observe(document.body, {
       childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "aria-pressed"]
+      subtree: true
     });
   }
 
