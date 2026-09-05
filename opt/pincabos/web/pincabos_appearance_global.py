@@ -7,10 +7,6 @@ passent pas par le gabarit standard.
 
 DudesCab reste volontairement une exception visuelle : son identite propre est
 preservee, avec une feuille finale sombre/opaque chargee apres le theme global.
-
-Le correctif d'epinglage du menu principal est egalement injecte globalement
-afin que l'etat epingle cible toujours le vrai nav .pincabos-nav et reste fixe
-au viewport pendant le scroll.
 """
 
 from __future__ import annotations
@@ -27,7 +23,6 @@ _BRIDGE_PATH = "/static/pincabos-appearance-dashboard-menu-v2.css?v=appearance-g
 _UNIFIED_PATH = "/static/pincabos-interface-unified-v1.css?v=appearance-global-v2"
 _MODULES_PATH = "/static/pincabos-interface-unified-modules-v1.css?v=appearance-global-v2"
 _DUDESCAB_PATH = "/static/pincabos-dudescab-dark-exception-v1.css?v=appearance-global-v2"
-_MENU_PIN_PATH = "/static/pincabos-menu-pin-viewport-v7.js?v=menu-pin-v7"
 
 
 def install_appearance_global(app):
@@ -113,22 +108,13 @@ def install_appearance_global(app):
                     'data-pincabos-dudescab-dark-exception="v1">'
                 )
 
-            # 7) Correctif fonctionnel du pin du menu principal. Il est charge
-            # apres les scripts/CSS historiques pour que le vrai .pincabos-nav
-            # reste fixe au viewport lorsque la preference est activee.
-            if "pincabos-menu-pin-viewport-v7.js" not in html:
-                assets.append(
-                    f'<script src="{_MENU_PIN_PATH}" '
-                    'data-pincabos-menu-pin-viewport="v7"></script>'
-                )
-
             if not assets:
                 return response
 
             injection = "\n" + "\n".join(assets) + "\n"
 
             # Injection a la fin du document afin de passer apres les <style>
-            # locaux, CSS propres aux modules et scripts historiques du menu.
+            # locaux et CSS propres aux modules.
             if re.search(r"</body\s*>", html, flags=re.IGNORECASE):
                 html = re.sub(
                     r"</body\s*>",
