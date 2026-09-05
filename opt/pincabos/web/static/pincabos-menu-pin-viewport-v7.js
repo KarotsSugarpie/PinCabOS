@@ -9,10 +9,10 @@
    * offsets INI. Cette couche garantit que, quand l'option est activee, le
    * menu principal .pincabos-nav est REELLEMENT fixe au viewport.
    *
-   * Pourquoi cette couche existe : le moteur historique cherche le bloc de
-   * menu par heuristique. Avec les layouts recents, un sous-bloc peut gagner
-   * le score. Le bouton semble alors epingle, mais le menu principal continue
-   * de suivre le scroll.
+   * Le menu epingle est temporairement rattache directement au <body>. Ainsi,
+   * aucun parent avec transform/filter/overflow ne peut creer un containing
+   * block qui ferait suivre le menu avec le scroll. Un marqueur conserve sa
+   * place exacte pour le remettre au meme endroit au desepinglage.
    */
 
   var KEY = "pincabos_menu_force_pinned_v5";
@@ -23,6 +23,10 @@
   var resizeTimer = null;
   var originalStyles = null;
   var originalNav = null;
+  var originalParent = null;
+  var originalNextSibling = null;
+  var originalBodyPaddingTop = null;
+  var placeholder = null;
 
   function pinned() {
     try {
@@ -36,11 +40,14 @@
     return document.querySelector(NAV_SELECTOR);
   }
 
-  function rememberStyles(el) {
+  function rememberState(el) {
     if (!el || (originalStyles && originalNav === el)) return;
 
     originalNav = el;
     originalStyles = {};
+    originalParent = el.parentNode || null;
+    originalNextSibling = el.nextSibling || null;
+    originalBodyPaddingTop = document.body.style.paddingTop || "";
 
     [
       "position",
@@ -76,6 +83,41 @@
     });
   }
 
+  function detachToViewportRoot(menu) {
+    if (!menu || menu.parentNode === document.body) return;
+
+    if (!placeholder || !placeholder.parentNode) {
+      placeholder = document.createComment("pincabos-menu-pin-v7-placeholder");
+      if (menu.parentNode) {
+        menu.parentNode.insertBefore(placeholder, menu);
+      }
+    }
+
+    document.body.appendChild(menu);
+  }
+
+  function restorePlacement(menu) {
+    if (!menu) return;
+
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.insertBefore(menu, placeholder);
+      placeholder.parentNode.removeChild(placeholder);
+      placeholder = null;
+      return;
+    }
+
+    if (originalParent && originalParent.isConnected) {
+      if (
+        originalNextSibling &&
+        originalNextSibling.parentNode === originalParent
+      ) {
+        originalParent.insertBefore(menu, originalNextSibling);
+      } else {
+        originalParent.appendChild(menu);
+      }
+    }
+  }
+
   function clearWrongFixedTargets(menu) {
     Array.prototype.slice.call(
       document.querySelectorAll(".pco-menu-force-fixed")
@@ -99,8 +141,9 @@
     var menu = nav();
     if (!menu) return false;
 
-    rememberStyles(menu);
+    rememberState(menu);
     clearWrongFixedTargets(menu);
+    detachToViewportRoot(menu);
 
     menu.classList.add("pco-menu-force-fixed");
     menu.classList.add(ownedClass);
@@ -138,11 +181,18 @@
     menu.classList.remove(ownedClass);
     menu.classList.remove("pco-menu-force-fixed");
     restoreStyles(menu);
+    restorePlacement(menu);
 
     /*
-     * Ne pas ecrire le padding du body ici : le moteur historique le restaure
-     * deja avec sa valeur originale lors du desepinglage.
+     * Le vieux moteur peut avoir recapture son etat pendant que le nav etait
+     * deja fixe. On restaure donc explicitement le padding memorise avant le
+     * pin pour garantir un desepinglage propre.
      */
+    if (originalBodyPaddingTop !== null) {
+      document.body.style.paddingTop = originalBodyPaddingTop;
+    }
+    document.documentElement.style.setProperty("--pco-menu-pinned-offset", "0px");
+    document.body.classList.remove("pco-menu-is-pinned");
   }
 
   function sync() {
