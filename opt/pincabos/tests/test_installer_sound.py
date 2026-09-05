@@ -114,6 +114,24 @@ class Audio(unittest.TestCase):
             self.assertTrue(legacy.is_symlink())                     # l ancien chemin pointe sur le nouveau
             self.assertFalse(any("ini créé" in l for l in j))
 
+    def test_reparation_d_un_squelette_ecrit_par_vpx(self):
+        """PINCABOS_VPX_PREF_REPARATION_V2 : VPX a reecrit l ini minimal en squelette ([Version] present,
+        cles vides) ; le dossier complet doit quand meme etre repris (retex cab de Yann, 3.88)."""
+        squelette = "[Player]\nPlayfieldFullScreen = \nBGSet = \nSoundDevice = X\n[Version]\nVPinball = 10.8.1\n"
+        complet = "[Version]\nVPinball = 10.8.1\n[Player]\nPlayfieldFullScreen = 1\nBGSet = 1\n"
+        self.assertTrue(pa.ini_squelette(squelette)); self.assertTrue(pa.ini_squelette("[Player]\nSound3D = 0\n"))
+        self.assertFalse(pa.ini_squelette(complet)); self.assertTrue(pa.ini_complet(complet)); self.assertFalse(pa.ini_complet(squelette))
+        with tempfile.TemporaryDirectory() as d:
+            pref = Path(d, "pref"); pref.mkdir(); (pref / "VPinballX.ini").write_text(squelette, encoding="utf-8")
+            legacy = Path(d, "legacy"); legacy.mkdir(); (legacy / "VPinballX.ini").write_text(complet, encoding="utf-8")
+            (legacy / "directoutputconfig").mkdir(); (legacy / "directoutputconfig" / "directoutputconfig30.ini").write_text("x")
+            etat = pa.assurer_pref_vpx(pref / "VPinballX.ini", legacy / "VPinballX.ini")
+            self.assertIn("repare", etat)
+            self.assertEqual((pref / "VPinballX.ini").read_text(encoding="utf-8"), complet)
+            self.assertTrue((pref / "VPinballX.ini.minimal").is_file())
+            self.assertTrue((pref / "directoutputconfig" / "directoutputconfig30.ini").is_file())
+            self.assertTrue(legacy.is_symlink())
+
     def test_reparation_d_un_ini_minimal(self):
         # PINCABOS_VPX_PREF_REPARATION_V1 : mise a jour d un cab installe avec la V2 (ini minimal)
         sinks = "Sink #1\n\tName: alsa_output.pci-0000_00_05.0.analog-stereo\n\tDescription: HDA Intel Analog\n\tSample Specification: s16le 2ch 48000Hz\n\tProperties:\n\t\talsa.card = \"0\"\n\t\talsa.device = \"0\"\n"
@@ -163,6 +181,44 @@ class Audio(unittest.TestCase):
         for l in ("fr", "en", "de", "it", "es"):
             for k in ("hp_fl", "hp_lfe", "snd_speakers_hint6", "snd_speaker_ok"):
                 self.assertIn(k, i18n[l], (l, k))
+
+    CARDS = ("Card #54\n\tName: alsa_card.pci-0000_00_05.0\n\tDriver: alsa\n\tProperties:\n\t\talsa.card = \"0\"\n\tProfiles:\n"
+             "\t\toutput:analog-stereo: Analog Stereo Output (sinks: 1, sources: 0, priority: 6500, available: yes)\n"
+             "\t\toutput:analog-surround-51: Analog Surround 5.1 Output (sinks: 1, sources: 0, priority: 800, available: yes)\n"
+             "\t\toff: Off (sinks: 0, sources: 0, priority: 0, available: yes)\n\tActive Profile: output:analog-stereo\n")
+    SINKS_51 = ("Sink #3\n\tName: alsa_output.pci-0000_00_05.0.analog-surround-51\n\tDescription: Built-in Audio Analog Surround 5.1\n"
+                "\tSample Specification: s32le 6ch 48000Hz\n\tProperties:\n\t\talsa.card = \"0\"\n\t\talsa.device = \"0\"\n")
+
+    def test_profil_surround_active_avant_la_garde(self):
+        """PINCABOS_AUDIO_PROFIL_SURROUND_V1 (retex cab de Yann : ALC1220 ouvert en stereo par PipeWire,
+        SSF demande -> garde -> stereo alors que la carte a un profil 5.1)."""
+        c = pa.cartes_pactl(self.CARDS)
+        self.assertEqual(c[0]["card"], "0"); self.assertEqual(c[0]["active"], "output:analog-stereo")
+        self.assertEqual(pa.profil_multicanal(c[0], 6), "output:analog-surround-51")
+        self.assertEqual(pa.profil_multicanal(c[0], 8), "")
+        stereo = ("Sink #1\n\tName: alsa_output.pci-0000_00_05.0.analog-stereo\n\tDescription: Built-in Audio Analog Stereo\n"
+                  "\tSample Specification: s16le 2ch 48000Hz\n\tProperties:\n\t\talsa.card = \"0\"\n\t\talsa.device = \"0\"\n")
+        etat = {"profil": "stereo"}
+        appels = []
+
+        def run(args, timeout=20):
+            appels.append(list(args))
+            c = " ".join(args)
+            if "list cards" in c:
+                return (0, self.CARDS)
+            if "list sinks" in c:
+                return (0, self.SINKS_51 if etat["profil"] == "51" else stereo)
+            if "set-card-profile" in c:
+                etat["profil"] = "51"
+            return (0, "")
+        with tempfile.TemporaryDirectory() as d:
+            ini = Path(d, "VPinballX.ini")
+            j = pa.appliquer_premier_demarrage({"playfield_device": "hw:0,0", "backbox_device": "", "installer": {"sound3d": "4", "volume": 70}}, run=run, vpx_ini=ini)
+            t = ini.read_text(encoding="utf-8")
+            self.assertIn("Sound3D = 4", t); self.assertIn("SoundDevice = Built-in Audio Analog Surround 5.1", t)
+            self.assertTrue(any(a[-3:] == ["set-card-profile", "alsa_card.pci-0000_00_05.0", "output:analog-surround-51"] for a in appels), appels)
+            self.assertTrue(any("profil output:analog-surround-51 active" in l for l in j), j)
+            self.assertFalse(any("stereo (0) applique" in l for l in j), j)
 
     def test_ssf_sur_sortie_stereo_retombe_en_stereo(self):
         # PINCABOS_AUDIO_SSF_GARDE_V1 (Yann : « le SSF ne joue pas les sons »)

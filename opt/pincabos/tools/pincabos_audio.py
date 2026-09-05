@@ -27,6 +27,25 @@ VPX_INI = Path("/home/pinball/.pincabos/vpx/VPinballX.ini")
 VPX_LEGACY_INI = Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini")
 
 
+def ini_squelette(texte: str) -> bool:
+    """PINCABOS_VPX_PREF_REPARATION_V2 : l ini minimal ecrit par le premier demarrage (V2 du
+    05/09) n a pas de section [Version] ; mais des que VPX a tourne dessus, il le reecrit en
+    squelette complet ([Version] present, toutes les cles vides). Retex cab de Yann : BGSet et
+    PlayfieldFullScreen vides = table en paysage, DOF absent, alors que le dossier complet
+    attendait dans l ancien chemin. Un ini est un squelette si [Version] manque OU si ses cles
+    cabinet n ont pas de valeur."""
+    if "[Version]" not in texte:
+        return True
+
+    def vide(cle):
+        return re.search(rf"(?m)^{cle}[ \t]*=[ \t]*\S", texte) is None
+    return vide("BGSet") and vide("PlayfieldFullScreen")
+
+
+def ini_complet(texte: str) -> bool:
+    return "[Version]" in texte and not ini_squelette(texte)
+
+
 def assurer_pref_vpx(vpx_ini: Path = VPX_INI, legacy_ini: Path = VPX_LEGACY_INI) -> str:
     """PINCABOS_VPX_PREF_MIGRATION_V1 : meme migration que VPXlauncher.pincabos-original.sh.
 
@@ -50,8 +69,8 @@ def assurer_pref_vpx(vpx_ini: Path = VPX_INI, legacy_ini: Path = VPX_LEGACY_INI)
         # PINCABOS_VPX_PREF_REPARATION_V1 : un ini minimal (cree par la V2 du 05/09, sans
         # section [Version]) a cote d un dossier legacy complet -> on reprend le dossier
         # complet (ini, directoutputconfig...) et l ini minimal est garde en .minimal
-        minimal = vpx_ini.is_file() and "[Version]" not in vpx_ini.read_text(encoding="utf-8", errors="replace")
-        if minimal and legacy.is_dir() and not legacy.is_symlink() and legacy_ini.is_file() and "[Version]" in legacy_ini.read_text(encoding="utf-8", errors="replace"):
+        minimal = vpx_ini.is_file() and ini_squelette(vpx_ini.read_text(encoding="utf-8", errors="replace"))
+        if minimal and legacy.is_dir() and not legacy.is_symlink() and legacy_ini.is_file() and ini_complet(legacy_ini.read_text(encoding="utf-8", errors="replace")):
             shutil.move(str(vpx_ini), str(vpx_ini) + ".minimal")
             for element in legacy.iterdir():
                 cible = pref / element.name
@@ -317,6 +336,61 @@ def ecrire_vpx(texte: str, backglass: str, playfield: str, sound3d: str) -> str:
     return "\n".join(lines)
 
 
+def cartes_pactl(texte: str) -> list:
+    """[{name, card, profiles: {nom: disponible}, active}] depuis `pactl list cards`."""
+    cartes, cur, dans_profils = [], None, False
+    for ligne in texte.splitlines():
+        s = ligne.strip()
+        if s.startswith("Name:"):
+            cur = {"name": s.split(":", 1)[1].strip(), "card": "", "profiles": {}, "active": ""}
+            cartes.append(cur)
+            dans_profils = False
+        elif cur is None:
+            continue
+        elif s.startswith("alsa.card ="):
+            cur["card"] = s.split("=", 1)[1].strip().strip('"')
+        elif s.startswith("Profiles:"):
+            dans_profils = True
+        elif s.startswith("Active Profile:"):
+            cur["active"] = s.split(":", 1)[1].strip()
+            dans_profils = False
+        elif dans_profils:
+            m = re.match(r"([\w.:+-]+):\s.*available:\s*(\w+)", s)
+            if m:
+                cur["profiles"][m.group(1)] = m.group(2) == "yes"
+    return cartes
+
+
+def profil_multicanal(carte: dict, canaux: int) -> str:
+    """Le profil de sortie a `canaux` canaux (surround-51 pour 6, surround-71 pour 8), disponible d abord."""
+    motif = "surround-71" if canaux >= 8 else "surround-51"
+    candidats = [p for p in carte.get("profiles", {}) if p.startswith("output:") and motif in p]
+    candidats.sort(key=lambda p: (not carte["profiles"][p], p))
+    return candidats[0] if candidats else ""
+
+
+def assurer_profil_surround(pf: dict, canaux: int, run=executer) -> list:
+    """PINCABOS_AUDIO_PROFIL_SURROUND_V1 : PipeWire ouvre les cartes analogiques en stereo par
+    defaut (retex cab de Yann : ALC1220 en « Analog Stereo », SSF demande, garde -> stereo).
+    Si la carte de la sortie choisie offre un profil a `canaux` canaux, on l active avant la
+    garde ; le sink change alors de nom (analog-stereo -> analog-surround-51)."""
+    rc, out = run(commande_pinball(["/usr/bin/pactl", "list", "cards"]), timeout=15)
+    if rc != 0:
+        return []
+    carte = next((c for c in cartes_pactl(out) if c["card"] == pf.get("card")), None)
+    if not carte:
+        return []
+    profil = profil_multicanal(carte, canaux)
+    if not profil:
+        return [f"carte {carte['name']} : aucun profil a {canaux} canaux"]
+    if carte["active"] == profil:
+        return []
+    rc, out = run(commande_pinball(["/usr/bin/pactl", "set-card-profile", carte["name"], profil]), timeout=15)
+    if rc != 0:
+        return [f"carte {carte['name']} : profil {profil} refuse ({out.strip()[-80:]})"]
+    return [f"carte {carte['name']} : profil {profil} active pour le SSF"]
+
+
 def canaux_du_sink(texte: str, nom: str) -> int:
     """Nombre de canaux du sink `nom` dans `pactl list sinks` (Sample Specification: s16le 2ch 48000Hz), 0 si inconnu."""
     bloc = ""
@@ -346,6 +420,15 @@ def appliquer_premier_demarrage(cfg: dict, run=executer, vpx_ini: Path = VPX_INI
     # PINCABOS_AUDIO_SSF_GARDE_V1 (Yann : « le SSF ne joue pas les sons ») : un mode a 6 canaux
     # sur une sortie stereo laisse des sons muets ; on retombe en stereo et on le dit.
     voulu = str(inst.get("sound3d", "0"))
+    if pf and voulu not in ("0", "1") and 0 < canaux_du_sink(out, pf["name"]) < 6:
+        # PINCABOS_AUDIO_PROFIL_SURROUND_V1 : la carte offre peut-etre un profil multicanal
+        bascule = assurer_profil_surround(pf, 6, run)
+        journal += bascule
+        if any("active pour le SSF" in l for l in bascule):
+            rc, out = run(commande_pinball(["/usr/bin/pactl", "list", "sinks"]), timeout=15)
+            sinks = sinks_pactl(out) if rc == 0 else sinks
+            pf = sink_pour(cfg.get("playfield_device", ""), sinks) or pf
+            bg = sink_pour(cfg.get("backbox_device", ""), sinks) or pf
     if pf and voulu not in ("0", "1"):
         canaux = canaux_du_sink(out, pf["name"])
         if canaux and canaux < 6:
