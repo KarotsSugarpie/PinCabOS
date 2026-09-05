@@ -7,182 +7,288 @@ import pwd
 import subprocess
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+STATE = Path("/run/pincabos-updates/update-web-state.json")
+LOG = Path("/run/pincabos-updates/update-web.log")
+LOCK = Path("/run/lock/pincabos-update-web.lock")
+ENGINE_STATE = Path("/var/lib/pincabos/updates/state.json")
+BACKUP_HELPER = Path("/opt/pincabos/tools/pincabos-backupcfg")
+BACKUP_WORK_ROOT = Path("/var/tmp/pincabos-backupcfg")
 
-STATE = Path(
-    "/run/pincabos-updates/update-web-state.json"
-)
-
-LOG = Path(
-    "/run/pincabos-updates/update-web.log"
-)
-
-LOCK = Path(
-    "/run/lock/pincabos-update-web.lock"
-)
-
-ENGINE_STATE = Path(
-    "/var/lib/pincabos/updates/state.json"
-)
+STEP_LABELS = {
+    "backup": "Backup HotFiles",
+    "update": "Mise à jour en ligne",
+    "restore": "Restauration HotFiles",
+    "final": "Résultat final",
+}
 
 
 def now():
-    return (
-        datetime.now(
-            timezone.utc
-        )
-        .isoformat()
-        .replace(
-            "+00:00",
-            "Z"
-        )
-    )
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def pinball_ids():
     try:
-        user = pwd.getpwnam(
-            "pinball"
-        )
-
-        return (
-            user.pw_uid,
-            user.pw_gid
-        )
-
+        user = pwd.getpwnam("pinball")
+        return user.pw_uid, user.pw_gid
     except KeyError:
-        return (
-            -1,
-            -1
-        )
+        return -1, -1
 
 
 def chown_pinball(path):
     uid, gid = pinball_ids()
-
     if uid < 0:
         return
-
     try:
-        os.chown(
-            path,
-            uid,
-            gid
-        )
+        os.chown(path, uid, gid)
     except OSError:
         pass
 
 
 def save_state(data):
-    tmp = Path(
-        f"{STATE}.tmp.{os.getpid()}"
-    )
-
-    tmp.write_text(
-        json.dumps(
-            data,
-            indent=2,
-            ensure_ascii=False
-        ) + "\n",
-        encoding="utf-8"
-    )
-
-    tmp.chmod(
-        0o644
-    )
-
-    chown_pinball(
-        tmp
-    )
-
-    os.replace(
-        tmp,
-        STATE
-    )
-
-    chown_pinball(
-        STATE
-    )
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = Path(f"{STATE}.tmp.{os.getpid()}")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.chmod(0o644)
+    chown_pinball(tmp)
+    os.replace(tmp, STATE)
+    chown_pinball(STATE)
 
 
 def load_json(path):
     try:
-        return json.loads(
-            path.read_text(
-                encoding="utf-8"
-            )
-        )
-
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
 
 
 def prepare_log():
-    LOG.write_text(
-        "",
-        encoding="utf-8"
-    )
-
-    LOG.chmod(
-        0o644
-    )
-
-    chown_pinball(
-        LOG
-    )
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    LOG.write_text("", encoding="utf-8")
+    LOG.chmod(0o644)
+    chown_pinball(LOG)
 
 
-def base_state(
-    action,
-    reboot_after=False
-):
+def append_log(message=""):
+    with LOG.open("a", encoding="utf-8") as handle:
+        handle.write(message.rstrip() + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    chown_pinball(LOG)
+
+
+def base_state(action):
     return {
         "running": True,
         "pid": os.getpid(),
         "action": action,
         "status": "running",
-        "message":
-            f"Operation lancee : {action}",
+        "message": f"Opération lancée : {action}",
         "started_at": now(),
         "finished_at": "",
         "last_exit_code": None,
-        "reboot_after":
-            bool(reboot_after),
-        "reboot_recommended":
-            False,
-        "reboot_scheduled":
-            False,
+        "reboot_recommended": False,
+        "reboot_scheduled": False,
+        "reboot_prompt": False,
+        "progress_percent": 0,
+        "progress_mode": "determinate",
+        "steps": {
+            key: {"label": label, "status": "pending", "message": ""}
+            for key, label in STEP_LABELS.items()
+        },
     }
 
 
+def set_progress(state, percent, message=None, mode="determinate"):
+    state["progress_percent"] = max(0, min(100, int(percent)))
+    state["progress_mode"] = mode
+    if message is not None:
+        state["message"] = message
+    save_state(state)
+
+
+def set_step(state, step, status, message=""):
+    if step in state["steps"]:
+        state["steps"][step]["status"] = status
+        state["steps"][step]["message"] = message
+    save_state(state)
+
+
+def run_logged(command):
+    with LOG.open("a", encoding="utf-8") as output:
+        process = subprocess.Popen(
+            command,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        return process.wait()
+
+
+def run_hotfiles(state, action, job_id, stamp, low, high, step):
+    progress_file = BACKUP_WORK_ROOT / job_id / "progress.json"
+    with LOG.open("a", encoding="utf-8") as output:
+        process = subprocess.Popen(
+            [str(BACKUP_HELPER), action, job_id, stamp],
+            stdout=output,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        last_percent = None
+        last_message = None
+        while process.poll() is None:
+            detail = load_json(progress_file)
+            try:
+                helper_percent = int(detail.get("percent", 0))
+            except (TypeError, ValueError):
+                helper_percent = 0
+            mapped = low + int((high - low) * max(0, min(100, helper_percent)) / 100)
+            message = str(detail.get("message") or state.get("message") or "Traitement HotFiles…")
+            if mapped != last_percent or message != last_message:
+                state["progress_percent"] = mapped
+                state["progress_mode"] = "determinate"
+                state["message"] = message
+                if step in state["steps"]:
+                    state["steps"][step]["message"] = message
+                save_state(state)
+                last_percent = mapped
+                last_message = message
+            time.sleep(0.25)
+        return process.wait()
+
+
+def finish_error(state, rc, message, step=None):
+    if step:
+        set_step(state, step, "nogo", message)
+    set_step(state, "final", "nogo", message)
+    append_log(f"NOGO [X] {message}")
+    state.update(
+        {
+            "running": False,
+            "finished_at": now(),
+            "last_exit_code": rc,
+            "status": "error",
+            "message": message,
+            "progress_percent": 100,
+            "progress_mode": "determinate",
+            "reboot_prompt": False,
+        }
+    )
+    save_state(state)
+    return rc
+
+
+def run_update_transaction(state):
+    if not BACKUP_HELPER.is_file():
+        return finish_error(state, 78, "Moteur HotFiles absent; mise à jour annulée.", "backup")
+
+    job_id = uuid.uuid4().hex
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    append_log("================================================================")
+    append_log(" PINFORGE-SAFE — MISE À JOUR PINCABOS + HOTFILES")
+    append_log(" BACKUP HOTFILES -> MAJ EN LIGNE -> RESTORE HOTFILES -> GO/NOGO")
+    append_log(" AUCUN REDÉMARRAGE AUTOMATIQUE")
+    append_log("================================================================")
+    append_log("")
+
+    set_step(state, "backup", "running", "Création du backup HotFiles…")
+    set_progress(state, 2, "Backup HotFiles en cours…")
+    append_log("=== 1. BACKUP HOTFILES ===")
+    append_log("INFO Backup local sécurisé : /home/pinball/usersettings/UserSettings.PCOSCFG")
+    backup_rc = run_hotfiles(state, "create-local", job_id, stamp, 2, 22, "backup")
+    if backup_rc != 0:
+        append_log("NOGO [X] Backup HotFiles échoué. La mise à jour en ligne ne sera PAS lancée.")
+        return finish_error(
+            state,
+            backup_rc,
+            f"Backup HotFiles échoué (code {backup_rc}); mise à jour annulée.",
+            "backup",
+        )
+    append_log("GO [OK] Backup HotFiles créé et vérifié.")
+    append_log("")
+    set_step(state, "backup", "go", "Backup HotFiles créé et vérifié.")
+    set_progress(state, 25, "Backup HotFiles GO. Démarrage de la mise à jour en ligne…")
+
+    set_step(state, "update", "running", "Mise à jour PinCabOS en ligne…")
+    state["progress_mode"] = "indeterminate"
+    state["progress_percent"] = 30
+    state["message"] = "Mise à jour PinCabOS en ligne…"
+    save_state(state)
+    append_log("=== 2. MISE À JOUR PINCABOS EN LIGNE ===")
+    update_rc = run_logged(["/usr/local/sbin/getpcos", "update"])
+    if update_rc != 0:
+        append_log(f"NOGO [X] Mise à jour en ligne échouée (code {update_rc}).")
+        append_log("INFO Restauration HotFiles volontairement NON exécutée après échec de mise à jour.")
+        return finish_error(
+            state,
+            update_rc,
+            f"Mise à jour en ligne échouée (code {update_rc}); HotFiles non restaurés.",
+            "update",
+        )
+    append_log("GO [OK] Mise à jour PinCabOS en ligne réussie.")
+    append_log("")
+    set_step(state, "update", "go", "Mise à jour en ligne réussie.")
+    set_progress(state, 78, "Mise à jour GO. Restauration des HotFiles…")
+
+    set_step(state, "restore", "running", "Restauration des HotFiles sauvegardés…")
+    append_log("=== 3. RESTAURATION HOTFILES ===")
+    restore_rc = run_hotfiles(state, "restore-local", job_id, stamp, 78, 97, "restore")
+    if restore_rc != 0:
+        append_log(f"NOGO [X] Restauration HotFiles échouée (code {restore_rc}).")
+        return finish_error(
+            state,
+            restore_rc,
+            f"Mise à jour installée, mais restauration HotFiles échouée (code {restore_rc}).",
+            "restore",
+        )
+    append_log("GO [OK] HotFiles restaurés et validés.")
+    append_log("")
+    set_step(state, "restore", "go", "HotFiles restaurés et validés.")
+
+    engine = load_json(ENGINE_STATE)
+    reboot_required = bool(engine.get("reboot_required", False))
+    final_message = "GO — mise à jour terminée et HotFiles restaurés."
+    set_step(state, "final", "go", final_message)
+    append_log("=== 4. VALIDATION FINALE ===")
+    append_log("GO [OK] Backup HotFiles : réussi")
+    append_log("GO [OK] Mise à jour en ligne : réussie")
+    append_log("GO [OK] Restauration HotFiles : réussie")
+    append_log("GO [OK] TRANSACTION DE MISE À JOUR TERMINÉE")
+    append_log("INFO Aucun redémarrage automatique ne sera effectué.")
+    append_log("INFO Choix utilisateur attendu : Voulez-vous redémarrer le cabinet ?")
+
+    state.update(
+        {
+            "running": False,
+            "finished_at": now(),
+            "last_exit_code": 0,
+            "status": "success",
+            "message": final_message,
+            "progress_percent": 100,
+            "progress_mode": "determinate",
+            "reboot_recommended": reboot_required,
+            "reboot_prompt": True,
+            "reboot_scheduled": False,
+        }
+    )
+    save_state(state)
+    return 0
+
+
 def main():
-    # PINCABOS_UPDATE_DETACH_V1
-    # Le premier processus vient du WebApp.
-    # Le vrai runner est relance dans son propre cgroup systemd
-    # afin de survivre a l'arret de pincabos-webapp.service.
+    # Le premier processus vient du WebApp. Le vrai runner est relancé dans
+    # son propre cgroup systemd pour survivre au restart du WebApp pendant MAJ.
     if os.environ.get("PINCABOS_UPDATE_SYSTEMD_CHILD") != "1":
         if len(sys.argv) < 2:
             return 2
-
         action = sys.argv[1].strip().lower()
-
-        if action not in {
-            "check",
-            "update",
-            "rollback",
-            "reboot",
-        }:
+        if action not in {"check", "update", "rollback", "reboot"}:
             return 2
-
-        unit = (
-            "pincabos-update-web-"
-            + action
-            + "-"
-            + str(os.getpid())
-        )
-
+        unit = f"pincabos-update-web-{action}-{os.getpid()}"
         cmd = [
             "/usr/bin/systemd-run",
             "--unit=" + unit,
@@ -190,208 +296,69 @@ def main():
             "--no-block",
             "--setenv=PINCABOS_UPDATE_SYSTEMD_CHILD=1",
             "/usr/local/sbin/pincabos-update-web-runner",
-            *sys.argv[1:],
+            action,
         ]
-
-        return subprocess.run(
-            cmd,
-            check=False
-        ).returncode
+        return subprocess.run(cmd, check=False).returncode
 
     if len(sys.argv) < 2:
         return 2
-
-    action = (
-        sys.argv[1]
-        .strip()
-        .lower()
-    )
-
-    reboot_after = (
-        len(sys.argv) >= 3
-        and sys.argv[2] == "1"
-    )
-
-    if action not in {
-        "check",
-        "update",
-        "rollback",
-        "reboot",
-    }:
+    action = sys.argv[1].strip().lower()
+    if action not in {"check", "update", "rollback", "reboot"}:
         return 2
 
-    LOCK.parent.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-    lock_file = LOCK.open(
-        "w"
-    )
-
+    LOCK.parent.mkdir(parents=True, exist_ok=True)
+    lock_file = LOCK.open("w")
     try:
-        fcntl.flock(
-            lock_file.fileno(),
-            fcntl.LOCK_EX
-            | fcntl.LOCK_NB
-        )
-
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         return 75
 
-    state = base_state(
-        action,
-        reboot_after
-    )
-
+    state = base_state(action)
     prepare_log()
-    save_state(
-        state
-    )
+    save_state(state)
 
     if action == "reboot":
+        append_log("INFO Redémarrage explicitement demandé depuis l'interface Web.")
         state.update(
             {
-                "status":
-                    "success",
-                "message":
-                    "Redemarrage planifie.",
-                "running":
-                    False,
-                "finished_at":
-                    now(),
-                "last_exit_code":
-                    0,
-                "reboot_scheduled":
-                    True,
+                "status": "success",
+                "message": "Redémarrage planifié.",
+                "running": False,
+                "finished_at": now(),
+                "last_exit_code": 0,
+                "reboot_scheduled": True,
+                "reboot_prompt": False,
             }
         )
-
-        save_state(
-            state
-        )
-
-        time.sleep(
-            3
-        )
-
-        subprocess.run(
-            [
-                "/usr/bin/systemctl",
-                "reboot"
-            ],
-            check=False
-        )
-
+        save_state(state)
+        time.sleep(3)
+        subprocess.run(["/usr/bin/systemctl", "reboot"], check=False)
         return 0
 
-    with LOG.open(
-        "w",
-        encoding="utf-8"
-    ) as output:
-        process = subprocess.Popen(
-            [
-                "/usr/local/sbin/getpcos",
-                action
-            ],
-            stdout=output,
-            stderr=subprocess.STDOUT,
-            text=True
-        )
+    if action == "update":
+        return run_update_transaction(state)
 
-        rc = process.wait()
-
-    LOG.chmod(
-        0o644
-    )
-
-    chown_pinball(
-        LOG
-    )
-
-    engine = load_json(
-        ENGINE_STATE
-    )
-
-    reboot_required = bool(
-        engine.get(
-            "reboot_required",
-            False
-        )
-    )
-
+    # Check et rollback conservent le moteur PinCabOS existant.
+    set_progress(state, 10, f"Opération {action} en cours…", "indeterminate")
+    rc = run_logged(["/usr/local/sbin/getpcos", action])
+    engine = load_json(ENGINE_STATE)
+    reboot_required = bool(engine.get("reboot_required", False))
     state.update(
         {
-            "running":
-                False,
-            "finished_at":
-                now(),
-            "last_exit_code":
-                rc,
-            "status":
-                (
-                    "success"
-                    if rc == 0
-                    else "error"
-                ),
-            "message":
-                (
-                    "Operation terminee."
-                    if rc == 0
-                    else
-                    f"Operation en erreur "
-                    f"(code {rc})."
-                ),
-            "reboot_recommended":
-                (
-                    reboot_required
-                    if action == "update"
-                    else False
-                ),
+            "running": False,
+            "finished_at": now(),
+            "last_exit_code": rc,
+            "status": "success" if rc == 0 else "error",
+            "message": "Opération terminée." if rc == 0 else f"Opération en erreur (code {rc}).",
+            "progress_percent": 100,
+            "progress_mode": "determinate",
+            "reboot_recommended": reboot_required if action == "rollback" else False,
+            "reboot_prompt": False,
         }
     )
-
-    save_state(
-        state
-    )
-
-    if (
-        rc == 0
-        and action == "update"
-        and reboot_after
-        and reboot_required
-    ):
-        state[
-            "reboot_scheduled"
-        ] = True
-
-        state[
-            "message"
-        ] = (
-            "Mise a jour terminee. "
-            "Redemarrage requis et planifie."
-        )
-
-        save_state(
-            state
-        )
-
-        time.sleep(
-            4
-        )
-
-        subprocess.run(
-            [
-                "/usr/bin/systemctl",
-                "reboot"
-            ],
-            check=False
-        )
-
+    save_state(state)
     return rc
 
 
 if __name__ == "__main__":
-    raise SystemExit(
-        main()
-    )
+    raise SystemExit(main())
