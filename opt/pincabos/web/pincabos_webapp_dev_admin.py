@@ -1258,15 +1258,18 @@ def pincabos_admin_default_credentials_notice():
     )
 
 
-def pincabos_admin_login_body(error=""):
+def pincabos_admin_login_body(error="", next_path=""):
     err = f'<p class="warn">{esc(error)}</p>' if error else ""
     err += pincabos_admin_default_credentials_notice()
+    next_path = "/backupcfg" if next_path == "/backupcfg" else ""
+    next_input = f'<input type="hidden" name="next" value="{esc(next_path)}">' if next_path else ""
     body = f"""
 <h1>Admin PinCabOS</h1>
 <div class="card" style="max-width:520px;">
   <h2>Connexion admin</h2>
   {err}
   <form method="post" action="/admin">
+    {next_input}
     <table style="width:100%;">
       <tr><td style="width:150px;">Utilisateur</td><td><input name="username" style="width:100%;padding:8px;" autofocus></td></tr>
       <tr><td>Mot de passe</td><td><input name="password" type="password" style="width:100%;padding:8px;"></td></tr>
@@ -1291,17 +1294,22 @@ def pincabos_admin_index():
 <code>PINCABOS_ADMIN_LOGIN</code> et <code>PINCABOS_ADMIN_PASSWORD</code>.</p></div>
 """), 503
 
+    next_path = str(request.values.get("next") or "")
+    next_path = "/backupcfg" if next_path == "/backupcfg" else ""
+
     if request.method == "POST":
         username = (request.form.get("username", "") or "").strip()
         password = request.form.get("password", "") or ""
         if hmac.compare_digest(username, expected_user) and hmac.compare_digest(password, expected_pass):
             session["pincabos_admin_logged"] = True
             session.modified = True
-            return redirect("/admin")
-        return pincabos_admin_login_body("Utilisateur ou mot de passe invalide.")
+            return redirect(next_path or "/admin")
+        return pincabos_admin_login_body("Utilisateur ou mot de passe invalide.", next_path)
 
     if not pincabos_admin_is_logged():
-        return pincabos_admin_login_body()
+        return pincabos_admin_login_body(next_path=next_path)
+    if next_path:
+        return redirect(next_path)
     return pincabos_admin_page()
 
 

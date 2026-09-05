@@ -1,0 +1,64 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "PinCabOS/PinCabOS",
+    "commit": "69eceedf414de426ab53b0c90446cee37cb5a3e8",
+    "generated_at": "2026-09-05T00:00:00Z",
+    "method": "feature_source_inventory",
+    "limitations": [
+      "Runtime HotFiles are referenced dependencies; they are not owned by this module.",
+      "The privileged helper is the sole owner of archive and restore filesystem mutations."
+    ]
+  },
+  "module": {
+    "id": "pincabos_backupcfg",
+    "scope": "webapp",
+    "kind": "flask_module",
+    "source_file": "opt/pincabos/web/pincabos_backupcfg.py",
+    "manifest_file": "opt/pincabos/web/pincabos_backupcfg.json",
+    "language": "python",
+    "executable": false
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/app.py",
+      "opt/pincabos/web/tools.py",
+      "opt/pincabos/web/validate_refactor.py"
+    ],
+    "systemd_units": [],
+    "has_main_guard": false,
+    "registration_functions": ["register"]
+  },
+  "exposes": {
+    "routes": [
+      "/backupcfg",
+      "/tools/backupcfg",
+      "/api/backupcfg/backup",
+      "/api/backupcfg/restore-upload",
+      "/api/backupcfg/restore-local",
+      "/api/backupcfg/status/<job_id>",
+      "/api/backupcfg/download/<job_id>"
+    ]
+  },
+  "requires": {
+    "repository_files": [
+      "opt/pincabos/tools/pincabos-backupcfg",
+      "etc/sudoers.d/pincabos-backupcfg",
+      "opt/pincabos/web/static/pincabos-assets/PCOSBackupConfig.svg"
+    ],
+    "runtime_paths": [
+      "/usr/bin/sudo",
+      "/home/pinball/usersettings/UserSettings.PCOSCFG",
+      "/opt/pincabos/logs",
+      "/var/tmp/pincabos-backupcfg"
+    ],
+    "commands": ["/usr/bin/sudo", "/opt/pincabos/tools/pincabos-backupcfg"]
+  },
+  "security": {
+    "admin_session_required": true,
+    "module_csrf_required": true,
+    "download_cache": "no-store",
+    "restore_allowlist": "HotFiles PR #172",
+    "archive_validation": ["ZIP structure", "manifest", "path allowlist", "SHA-256", "size limits", "safe symlinks"]
+  }
+}

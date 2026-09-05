@@ -1,0 +1,44 @@
+{
+  "schema": "pincabos.module-inventory/v1",
+  "inventory": {
+    "repository": "PinCabOS/PinCabOS",
+    "commit": "69eceedf414de426ab53b0c90446cee37cb5a3e8",
+    "generated_at": "2026-09-05T00:00:00Z",
+    "method": "feature_source_inventory"
+  },
+  "module": {
+    "id": "pincabos-backupcfg",
+    "scope": "tool",
+    "kind": "privileged_executable",
+    "source_file": "opt/pincabos/tools/pincabos-backupcfg",
+    "manifest_file": "opt/pincabos/tools/pincabos-backupcfg.json",
+    "language": "python",
+    "executable": true
+  },
+  "activation": {
+    "referenced_by": [
+      "opt/pincabos/web/pincabos_backupcfg.py",
+      "etc/sudoers.d/pincabos-backupcfg"
+    ],
+    "systemd_units": [],
+    "has_main_guard": true,
+    "registration_functions": []
+  },
+  "requires": {
+    "python_imports": [
+      "datetime", "hashlib", "json", "os", "pathlib", "posixpath", "pwd", "re", "shutil", "socket", "stat", "sys", "time", "zipfile"
+    ],
+    "runtime_paths": [
+      "/home/pinball/usersettings/UserSettings.PCOSCFG",
+      "/opt/pincabos/logs",
+      "/var/tmp/pincabos-backupcfg"
+    ],
+    "commands": ["/usr/bin/env"]
+  },
+  "security": {
+    "euid_required": 0,
+    "fixed_actions": ["create-download", "create-local", "restore-upload", "restore-local", "cleanup-download"],
+    "arbitrary_paths_accepted": false,
+    "restore_rollback": "temporary and removed after operation"
+  }
+}
