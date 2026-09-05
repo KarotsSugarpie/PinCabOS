@@ -327,6 +327,60 @@ def son_vers_fichiers(a):
     return reponses
 
 
+# PINCABOS_INSTALLEUR_TOYS_V1 : cartes de boutons (evdev), cartes de sortie AutoConfig, controleurs de rubans
+ENTREES_DEMO = [{"name": "L'atelier d'Arnoz DudesCab", "id": "SDLJoy_0300a1eb8a2e00006f10000011010000_1", "buttons": 32, "axes": 6, "hats": 1}]
+TOYS_DEMO = DOF_DEMO + [{"dev": "/dev/ttyUSB0", "vid": "10c4", "model": "CP2104", "serial": "01AA5AA5",
+                         "kind": "Wemos D1 / ESP via CP210x (WemosD1MPStripController possible)", "auto_config": False}]
+
+
+def entrees_detectees():
+    """Cartes de boutons / plunger vues comme joysticks (pincabos_vpx_input)."""
+    if DEMO:
+        return list(ENTREES_DEMO)
+    try:
+        import pincabos_vpx_input as vi
+        devs = vi.list_devices()
+        ids = vi.joystick_setting_ids(devs)
+        return [{"name": d.name, "id": ids.get(d.path, ("", ""))[0], "buttons": len(d.button_order()),
+                 "axes": len(d.axis_order()), "hats": len(d.digital_hats())} for d in devs if d.is_joystick]
+    except Exception:
+        return []
+
+
+def toys_detection():
+    det = TOYS_DEMO if DEMO else (pco_dof.detecter() if pco_dof else [])
+    return {"disponible": pco_dof is not None, "inputs": entrees_detectees(),
+            "auto": pco_dof.cartes_auto(det) if pco_dof else [],
+            "strips": pco_dof.controleurs_de_rubans(det) if pco_dof else [],
+            "arrangements": list(pco_dof.ARRANGEMENTS) if pco_dof else [], "color_orders": list(pco_dof.ORDRES_COULEUR) if pco_dof else [],
+            "proposition": pco_dof.proposer_toys(det) if pco_dof else {"controllers": []}, "_det": det}
+
+
+@app.route("/api/toys")
+def toys_status():
+    try:
+        d = toys_detection()
+        d.pop("_det", None)
+        return jsonify(d)
+    except Exception as exc:
+        return jsonify({"disponible": False, "error": str(exc), "inputs": [], "auto": [], "strips": [], "arrangements": [],
+                        "color_orders": [], "proposition": {"controllers": []}})
+
+
+def toys_vers_fichiers(a):
+    """Les contrôleurs de rubans déclarés deviennent l'inventaire de la page DOF (gui-toys.json)."""
+    if pco_dof is None or not isinstance(a.get("toys"), dict):
+        return {}
+    det = toys_detection()["_det"]
+    erreurs, ok = pco_dof.valider_toys(a["toys"], det)
+    if erreurs:
+        return {"error": "bad-toys", "detail": erreurs}
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    f = RUN_DIR / "gui-toys.json"
+    f.write_text(json.dumps(pco_dof.inventaire_json(ok, det), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return {"toys_file": str(f)}
+
+
 RESEAU_DEMO = {
     "interfaces": [
         {"device": "eno1", "type": "ethernet", "state": "100 (connected)", "method": "auto", "address": "172.18.40.80/24",
@@ -530,6 +584,8 @@ ANSWER_RULES = {
     # PINCABOS_INSTALLEUR_SON_DOF_V1 : produits par l'étape Son et DOF
     "audio_file": re.compile(r"^/run/pincabos/gui-audio\.json$"),
     "dof_file": re.compile(r"^/run/pincabos/gui-dof\.json$"),
+    # PINCABOS_INSTALLEUR_TOYS_V1 : inventaire DOF produit par l'étape Toys / LED
+    "toys_file": re.compile(r"^/run/pincabos/gui-toys\.json$"),
 }
 
 
@@ -586,6 +642,13 @@ def install():
     # PINCABOS_INSTALLEUR_SON_DOF_V1 : son et DOF choisis dans l'assistant
     if isinstance(a.get("sound"), dict) or isinstance(a.get("dof"), dict):
         res = son_vers_fichiers(a)
+        if "error" in res:
+            return jsonify(res), 400
+        reponses.update(res)
+
+    # PINCABOS_INSTALLEUR_TOYS_V1 : contrôleurs de rubans déclarés
+    if isinstance(a.get("toys"), dict):
+        res = toys_vers_fichiers(a)
         if "error" in res:
             return jsonify(res), 400
         reponses.update(res)

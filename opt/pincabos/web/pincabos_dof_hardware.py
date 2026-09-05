@@ -254,6 +254,8 @@ def _build_config(inv):
                 "ledwiz_number": int(d.get("ledwiz_number") or 30),
                 "ledwiz_outputs": int(d.get("ledwiz_outputs") or 9),
             }
+            if d.get("toys"):   # PINCABOS_DOF_TOYS_MULTIPLES_V1 : mode « rubans » de l'installeur
+                strip["toys"] = d["toys"]
             cfg["strips"].append(strip)
         elif t == "ArtNet":
             a = {"name": d.get("label") or "ArtNet 1"}

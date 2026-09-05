@@ -210,7 +210,7 @@ class Integration(unittest.TestCase):
     def test_iso_sh(self):
         s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
         self.assertIn("apply_target_audio() {", s); self.assertIn("apply_target_dof() {", s)
-        self.assertIn("  apply_target_dmd\n  apply_target_audio\n  apply_target_dof\n", s)
+        self.assertIn("  apply_target_dmd\n  apply_target_audio\n  apply_target_dof\n  apply_target_toys\n", s)
         self.assertIn('"$TARGET/opt/pincabos/config/audio-router.json"', s)
         self.assertIn("audio-installer.pending", s); self.assertIn("dof-installer.pending", s)
         # le nettoyeur audio de la cible (installation NEUVE) precede la pose du choix de l installeur

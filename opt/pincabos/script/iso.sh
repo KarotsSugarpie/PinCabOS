@@ -5200,6 +5200,25 @@ apply_target_dof() {
     pco_go "dof/installer.json installed (enabled: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("enabled"))' "$src" 2>/dev/null || echo '?'))"
 }
 
+apply_target_toys() {
+    # PINCABOS_INSTALLEUR_TOYS_V1 : controleurs de rubans declares (matrice ou
+    # rubans) = inventaire de la page /dof/hardware. Le premier demarrage genere
+    # cabinet.xml avec dof-cabinet (pincabos-dof apply-toys-firstboot).
+    local src="${PCO_ANS_TOYS_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying toys / LED controllers from the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "toys file missing or empty: $src"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config/dof"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/dof/hardware-inventory.json"
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    date -Is > "$TARGET/opt/pincabos/flags/toys-installer.pending"
+    pco_go "hardware-inventory.json installed ($(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1])).get("devices",[])))' "$src" 2>/dev/null || echo '?') controller(s))"
+}
+
 apply_target_screens() {
     # PINCABOS_INSTALLEUR_ECRANS_V1 : l'etape Ecrans de l'assistant a produit
     # screens.json (roles, geometrie, rotation) et les liaisons role -> EDID.
@@ -5888,6 +5907,7 @@ install_payload() {
   apply_target_dmd
   apply_target_audio
   apply_target_dof
+  apply_target_toys
   refresh_target_initrd_for_orientation
 
   test -f "$TARGET/etc/pincabos/orientation.conf"

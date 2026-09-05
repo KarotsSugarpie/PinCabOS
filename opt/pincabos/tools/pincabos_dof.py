@@ -12,6 +12,7 @@ Toys / LED (lot 2c) et sur la page /dof/hardware du cab.
 """
 from __future__ import annotations
 
+import glob
 import importlib.util
 import json
 import re
@@ -133,3 +134,242 @@ def charger(chemin: Path = CONFIG) -> dict:
         return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
         return {}
+
+
+# ======================================================================
+# PINCABOS_INSTALLEUR_TOYS_V1 — étape Toys / LED de l'assistant
+#
+# Les cartes de sortie « AutoConfig » (DudesCab, LedWiz, Pinscape, Ultimarc)
+# sont prises en charge par DOF sans déclaration. Les contrôleurs de rubans
+# adressables (Teensy, Wemos) doivent être déclarés : soit une MATRICE
+# (backboard : largeur × hauteur, arrangement, ordre des couleurs), soit des
+# RUBANS (un toy LedStrip par sortie utilisée). Le tout devient l'inventaire
+# de la page /dof/hardware du cab (hardware-inventory.json) et, au premier
+# démarrage, le cabinet.xml généré par dof-cabinet.
+# ======================================================================
+INVENTAIRE = Path("/opt/pincabos/config/dof/hardware-inventory.json")
+CABINETS_GLOB = "/home/pinball/.local/share/VPinballX/*/directoutputconfig"
+SAUVEGARDES = Path("/opt/pincabos/backups/dof-cabinet")
+ARRANGEMENTS = (
+    "LeftRightTopDown", "LeftRightBottomUp", "RightLeftTopDown", "RightLeftBottomUp",
+    "TopDownLeftRight", "TopDownRightLeft", "BottomUpLeftRight", "BottomUpRightLeft",
+    "LeftRightAlternateTopDown", "LeftRightAlternateBottomUp",
+    "RightLeftAlternateTopDown", "RightLeftAlternateBottomUp",
+    "TopDownAlternateLeftRight", "TopDownAlternateRightLeft",
+    "BottomUpAlternateLeftRight", "BottomUpAlternateRightLeft",
+)
+ORDRES_COULEUR = ("RGB", "RBG", "GRB", "GBR", "BRG", "BGR")
+MODES = ("matrice", "rubans")
+MAX_SORTIES = 10
+MAX_LEDS_SORTIE = 1100
+
+
+def type_controleur(d: dict) -> str | None:
+    """TeensyStripController / WemosD1MPStripController pour une carte « à déclarer », sinon None."""
+    if d.get("auto_config") is not False:
+        return None
+    kind = (d.get("kind") or "").lower()
+    if "teensy" in kind:
+        return "TeensyStripController"
+    if "wemos" in kind or "esp" in kind:
+        return "WemosD1MPStripController"
+    return None
+
+
+def controleurs_de_rubans(detectes: list) -> list:
+    out = []
+    for d in detectes:
+        t = type_controleur(d)
+        if t:
+            out.append({"serial": d.get("serial", ""), "dev": d.get("dev", ""), "type": t, "kind": d.get("kind", "")})
+    return out
+
+
+def cartes_auto(detectes: list) -> list:
+    return [{"dev": d.get("dev", ""), "kind": d.get("kind", ""), "serial": d.get("serial", "")}
+            for d in detectes if d.get("auto_config") is True]
+
+
+def repartir(total: int, par_sortie: int = 512) -> list:
+    """Découpe une matrice en sorties pleines (144×16 = 2304 → 512,512,512,512,256)."""
+    total = max(0, int(total))
+    out = []
+    while total > 0 and len(out) < MAX_SORTIES:
+        n = min(par_sortie, total)
+        out.append(n)
+        total -= n
+    return out
+
+
+def proposer_toys(detectes: list) -> dict:
+    """Premier contrôleur = backboard (matrice 144×16, le cas courant), les suivants = rubans."""
+    ctrls = []
+    for i, c in enumerate(controleurs_de_rubans(detectes)):
+        base = {"serial": c["serial"], "type": c["type"], "enabled": True, "ledwiz_number": 30 + i,
+                "brightness": 25, "color_order": "GRB"}
+        if i == 0:
+            base.update({"mode": "matrice", "width": 144, "height": 16, "arrangement": "TopDownAlternateLeftRight",
+                         "strips": repartir(144 * 16)})
+        else:
+            base.update({"mode": "rubans", "width": 0, "height": 0, "arrangement": "LeftRightTopDown", "strips": [144]})
+        ctrls.append(base)
+    return {"controllers": ctrls}
+
+
+def _entier(v, defaut, lo, hi):
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return defaut, False
+    return n, lo <= n <= hi
+
+
+def valider_toys(choix, detectes: list) -> tuple[list, dict]:
+    erreurs = []
+    if not isinstance(choix, dict) or not isinstance(choix.get("controllers"), list):
+        return ["choix Toys invalide"], {}
+    connus = {c["serial"]: c for c in controleurs_de_rubans(detectes)}
+    ok = []
+    for i, c in enumerate(choix["controllers"]):
+        if not isinstance(c, dict):
+            erreurs.append(f"contrôleur {i + 1} : forme invalide"); continue
+        serial = str(c.get("serial") or "")
+        if serial not in connus:
+            erreurs.append(f"contrôleur {i + 1} : carte inconnue ({serial or 'sans numéro de série'})"); continue
+        mode = str(c.get("mode") or "matrice")
+        if mode not in MODES:
+            erreurs.append(f"contrôleur {i + 1} : mode inconnu {mode}"); continue
+        strips = c.get("strips") if isinstance(c.get("strips"), list) else []
+        strips_ok = []
+        for s in strips[:MAX_SORTIES]:
+            n, bon = _entier(s, -1, 0, MAX_LEDS_SORTIE)
+            if not bon:
+                erreurs.append(f"contrôleur {i + 1} : LEDs par sortie hors de 0..{MAX_LEDS_SORTIE}"); break
+            strips_ok.append(n)
+        prop = {"serial": serial, "type": connus[serial]["type"], "enabled": bool(c.get("enabled", True)), "mode": mode,
+                "strips": strips_ok}
+        prop["ledwiz_number"], bon = _entier(c.get("ledwiz_number", 30 + i), 30 + i, 1, 128)
+        if not bon:
+            erreurs.append(f"contrôleur {i + 1} : numéro LedWiz hors de 1..128")
+        prop["brightness"], bon = _entier(c.get("brightness", 25), 25, 1, 100)
+        if not bon:
+            erreurs.append(f"contrôleur {i + 1} : luminosité hors de 1..100")
+        prop["color_order"] = str(c.get("color_order") or "GRB")
+        if prop["color_order"] not in ORDRES_COULEUR:
+            erreurs.append(f"contrôleur {i + 1} : ordre des couleurs inconnu")
+        prop["arrangement"] = str(c.get("arrangement") or "TopDownAlternateLeftRight")
+        if prop["arrangement"] not in ARRANGEMENTS:
+            erreurs.append(f"contrôleur {i + 1} : arrangement inconnu")
+        if mode == "matrice":
+            prop["width"], b1 = _entier(c.get("width", 144), 144, 1, 1024)
+            prop["height"], b2 = _entier(c.get("height", 16), 16, 1, 1024)
+            if not (b1 and b2):
+                erreurs.append(f"contrôleur {i + 1} : dimensions de matrice hors de 1..1024")
+            elif prop["enabled"] and sum(strips_ok) != prop["width"] * prop["height"]:
+                erreurs.append(f"contrôleur {i + 1} : {sum(strips_ok)} LEDs sur les sorties pour une matrice de {prop['width']}×{prop['height']} = {prop['width'] * prop['height']}")
+        else:
+            prop["width"], prop["height"] = 0, 0
+            if prop["enabled"] and not any(strips_ok):
+                erreurs.append(f"contrôleur {i + 1} : aucun ruban déclaré")
+        ok.append(prop)
+    return erreurs, {"controllers": ok}
+
+
+def inventaire_json(choix: dict, detectes: list) -> dict:
+    """Le hardware-inventory.json de la page /dof/hardware, un équipement par contrôleur."""
+    par_serial = {c["serial"]: c for c in controleurs_de_rubans(detectes)}
+    devices = []
+    for i, c in enumerate(choix.get("controllers", [])):
+        t = c["type"]
+        d = {"id": f"{t.lower()}-{c['serial']}", "source": "detected", "type": t,
+             "label": f"{t} {i + 1}", "enabled": bool(c["enabled"]), "serial": c["serial"], "com_port": "auto",
+             "host": "", "leds_per_strip": (list(c["strips"]) + [0] * MAX_SORTIES)[:MAX_SORTIES],
+             "ledwiz_number": c["ledwiz_number"]}
+        if c["mode"] == "matrice":
+            d["toy"] = {"name": "Backboard HD" if i == 0 else f"Matrice {i + 1}", "width": c["width"], "height": c["height"],
+                        "arrangement": c["arrangement"], "color_order": c["color_order"], "first_led": 1,
+                        "brightness": c["brightness"], "fading_curve": "Linear"}
+            d["ledwiz_outputs"] = 9
+        else:
+            toys, premier, k = [], 1, 0
+            for s in c["strips"]:
+                if s > 0:
+                    k += 1
+                    toys.append({"name": f"Ruban {i + 1}.{k}", "width": s, "height": 1, "arrangement": "LeftRightTopDown",
+                                 "color_order": c["color_order"], "first_led": premier, "brightness": c["brightness"],
+                                 "fading_curve": "Linear"})
+                premier += s
+            d["toys"] = toys
+            d["toy"] = toys[0] if toys else None
+            d["ledwiz_outputs"] = max(1, len(toys))
+        d["dev"] = par_serial.get(c["serial"], {}).get("dev", "")
+        devices.append(d)
+    return {"cab_name": "PinCabOS Cabinet", "auto_config": True, "devices": devices,
+            "source": "PinCabOS installer", "updated_at": datetime.now().isoformat(timespec="seconds")}
+
+
+def config_dof_cabinet(inv: dict) -> dict:
+    """Config déclarative dof-cabinet depuis les équipements ACTIFS (même règle que la page du cab)."""
+    cfg = {"name": inv.get("cab_name") or "PinCabOS Cabinet", "auto_config": bool(inv.get("auto_config", True)),
+           "strips": [], "artnet": [], "pinone": []}
+    for d in inv.get("devices", []):
+        if not d.get("enabled"):
+            continue
+        t = d.get("type")
+        if t in ("TeensyStripController", "WemosD1MPStripController"):
+            strip = {"controller": t, "name": d.get("label") or f"{t} 1", "com_port": d.get("com_port") or "auto",
+                     "serial": d.get("serial") or "", "baud": 9600,
+                     "leds_per_strip": d.get("leds_per_strip") or [0] * MAX_SORTIES, "test_on_connect": False,
+                     "toy": d.get("toy") or {"name": "Backboard", "width": 144, "height": 16, "arrangement": "TopDownAlternateLeftRight",
+                                             "color_order": "GRB", "first_led": 1, "brightness": 25, "fading_curve": "Linear"},
+                     "ledwiz_number": int(d.get("ledwiz_number") or 30), "ledwiz_outputs": int(d.get("ledwiz_outputs") or 9)}
+            if d.get("toys"):
+                strip["toys"] = d["toys"]
+            cfg["strips"].append(strip)
+        elif t == "ArtNet":
+            a = {"name": d.get("label") or "ArtNet 1", "universe": int(d.get("universe") or 0)}
+            if d.get("broadcast_address"):
+                a["broadcast_address"] = d["broadcast_address"]
+            cfg["artnet"].append(a)
+        elif t == "PinOne":
+            p = {"name": d.get("label") or "PinOne 1"}
+            if d.get("com_port"):
+                p["com_port"] = d["com_port"]
+            cfg["pinone"].append(p)
+    return cfg
+
+
+def dossier_cabinet(motif: str = CABINETS_GLOB) -> Path | None:
+    dossiers = sorted(glob.glob(motif))
+    return Path(dossiers[-1]) if dossiers else None
+
+
+def appliquer_toys_premier_demarrage(inv: dict, inventaire: Path = INVENTAIRE, dossier: Path | None = None,
+                                     sauvegardes: Path = SAUVEGARDES, mod=None) -> list:
+    """Pose l'inventaire de la page DOF et, s'il y a un contrôleur de rubans actif, le cabinet.xml."""
+    journal = []
+    inventaire.parent.mkdir(parents=True, exist_ok=True)
+    inventaire.write_text(json.dumps(inv, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    journal.append(f"inventaire écrit : {inventaire} ({len(inv.get('devices', []))} équipement(s))")
+    cfg = config_dof_cabinet(inv)
+    if not cfg["strips"]:
+        journal.append("aucun contrôleur de rubans actif : cabinet.xml inchangé (AutoConfig DOF)")
+        return journal
+    mod = mod or outil()
+    if mod is None:
+        journal.append("outil dof-cabinet absent : cabinet.xml non généré")
+        return journal
+    dossier = dossier or dossier_cabinet()
+    if dossier is None:
+        journal.append("dossier directoutputconfig introuvable : cabinet.xml non généré")
+        return journal
+    dossier.mkdir(parents=True, exist_ok=True)
+    cab = dossier / "cabinet.xml"
+    if cab.exists():
+        sauvegardes.mkdir(parents=True, exist_ok=True)
+        copie = sauvegardes / ("cabinet.xml.bak-installer-" + datetime.now().strftime("%Y%m%d-%H%M%S"))
+        copie.write_bytes(cab.read_bytes())
+        journal.append(f"ancien cabinet.xml sauvegardé : {copie}")
+    cab.write_text(mod.gen(cfg), encoding="utf-8")
+    journal.append(f"cabinet.xml généré : {cab} ({len(cfg['strips'])} contrôleur(s) de rubans)")
+    return journal
