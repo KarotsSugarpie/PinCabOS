@@ -185,9 +185,8 @@ def sha256(path):
 # les cabinets encore en 3.43 ou moins.
 PENDING_PREFIXES = (
     'opt/pincabos/launchers/',
-    # PINCABOS_SPLASH_FROM_SCREENS_V3 : visuels de demarrage, release N ; a
-    # retirer d ici (donc a livrer) a la release suivante.
-    'opt/pincabos/media/splash/',
+    # PINCABOS_SPLASH_FROM_SCREENS_V3 : 'opt/pincabos/media/splash/' a attendu ici
+    # en 3.69 ; le parc connait le prefixe depuis, les visuels partent maintenant.
 )
 
 def allowed_for_build(rel):

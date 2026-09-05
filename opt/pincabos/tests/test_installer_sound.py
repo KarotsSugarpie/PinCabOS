@@ -96,6 +96,24 @@ class Audio(unittest.TestCase):
         n2 = pa.ecrire_vpx(n, "Built-in Audio Analog Stereo", "HDA NVidia HDMI 1", "2")
         self.assertEqual(n2.count("par PinCabOS fonction("), 3)      # un commentaire par cle, jamais empile
 
+    def test_premier_demarrage_cree_l_ini_vpx_absent(self):
+        # PINCABOS_AUDIO_PREMIER_DEMARRAGE_V2 : cab neuf, VPX n a pas encore ecrit son ini (vu en VM)
+        with tempfile.TemporaryDirectory() as d:
+            ini = Path(d, "vpx", "VPinballX.ini")
+            sinks = "Sink #1\n\tName: alsa_output.pci-0000_00_05.0.analog-stereo\n\tDescription: HDA Intel Analog\n\tProperties:\n\t\talsa.card = \"0\"\n\t\talsa.device = \"0\"\n"
+            appels = []
+
+            def run(args, timeout=20):
+                appels.append(args)
+                return (0, sinks if "list" in args else "")
+            cfg = {"playfield_device": "hw:0,0", "backbox_device": "", "installer": {"sound3d": "0", "volume": 70}}
+            j = pa.appliquer_premier_demarrage(cfg, run=run, vpx_ini=ini)
+            self.assertTrue(ini.is_file(), j)
+            texte = ini.read_text(encoding="utf-8")
+            self.assertIn("[Player]", texte)
+            self.assertIn("SoundDevice = HDA Intel Analog", texte)
+            self.assertTrue(any("ini créé" in l for l in j), j)
+
     def test_premier_demarrage(self):
         tmp = Path(tempfile.mkdtemp())
         try:
@@ -108,8 +126,9 @@ class Audio(unittest.TestCase):
             j = pa.appliquer_premier_demarrage(cfg, run=run, vpx_ini=ini)
             t = ini.read_text(encoding="utf-8")
             self.assertIn("SoundDevice = HDA NVidia HDMI 1", t); self.assertIn("SoundDeviceBG = Built-in Audio Analog Stereo", t); self.assertIn("Sound3D = 3", t)
-            self.assertTrue(any("/usr/bin/wpctl" in a and "set-default" in a for a in appels))
-            self.assertTrue(any("set-volume" in a and "65%" in a for a in appels))
+            self.assertTrue(any("/usr/bin/pactl" in a and "set-default-sink" in a for a in appels))
+            self.assertTrue(any("set-sink-volume" in a and "65%" in a for a in appels))
+            self.assertFalse(any("wpctl" in " ".join(a) for a in appels))   # wpctl set-default veut un id numerique
             self.assertTrue(all(a[:3] == ["runuser", "-u", "pinball"] for a in appels))
             self.assertEqual(len(j), 3)
         finally:

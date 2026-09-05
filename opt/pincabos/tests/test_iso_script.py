@@ -12,6 +12,7 @@ import re
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 
 from _charge import RACINE
 
@@ -103,3 +104,72 @@ class PreferencesVpx(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ModeleLive(unittest.TestCase):
+    """PINCABOS_ISO_MODELE_LIVE_V1 : iso.sh --live confie l ISO a iso-live.sh."""
+
+    def setUp(self):
+        self.s = (Path(RACINE) / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+
+    def test_drapeau_et_defaut(self):
+        self.assertIn('PCO_ISO_MODEL="${PCO_ISO_MODEL:-live}"', self.s)   # le live est le defaut
+        self.assertIn('--live) PCO_ISO_MODEL="live" ;;', self.s)
+        self.assertIn('--classic) PCO_ISO_MODEL="classic" ;;', self.s)   # roue de secours, une release
+
+    def test_branches_equilibrees(self):
+        # sections 9-11 (base Ubuntu) et 14-20 (repack, GRUB, xorriso) sont dans la branche classic
+        s = self.s
+        self.assertLess(s.index('if [ "$PCO_ISO_MODEL" = "live" ]; then\n  echo\n  echo "=== 9L)'), s.index('echo "=== 9) Download'))
+        self.assertLess(s.index('echo "=== 11) Locate'), s.index("fi   # PCO_ISO_MODEL classic (sections 9-11)"))
+        self.assertLess(s.index("fi   # PCO_ISO_MODEL classic (sections 9-11)"), s.index('echo "=== 12) Ensure'))
+        self.assertLess(s.index('echo "=== 14L) Live model'), s.index('echo "=== 14) No live desktop'))
+        self.assertLess(s.index('echo "=== 20) Final ISO validation'), s.index("fi   # PCO_ISO_MODEL classic (sections 14-20)"))
+        self.assertLess(s.index("fi   # PCO_ISO_MODEL classic (sections 14-20)"), s.index("pincabos_offer_web_publish() {"))
+
+    def test_live_utilise_le_payload_et_iso_live(self):
+        self.assertIn('tar --zstd -xpf "$ARCHIVE" -C "$LIVE_ROOTFS" --numeric-owner', self.s)
+        self.assertIn('ROOTFS_DIR="$LIVE_ROOTFS"', self.s)
+        self.assertIn('bash "$LIVE_SH" --rootfs "$ROOTFS_DIR" --payload "$PAYLOAD_FULL" --out "$OUT_ISO"', self.s)
+        # les montages du chroot (section 12) sont defaits avant iso-live.sh, qui monte les siens
+        bloc = self.s[self.s.index('echo "=== 14L)'):self.s.index('bash "$LIVE_SH"')]
+        self.assertIn("cleanup_mounts", bloc)
+
+    def test_syntaxe_bash(self):
+        import subprocess
+        for f in ("opt/pincabos/script/iso.sh", "opt/pincabos/script/iso-live.sh"):
+            r = subprocess.run(["bash", "-n", str(Path(RACINE) / f)], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, f + " : " + r.stderr)
+
+    def test_iso_live_installe_les_outils_manquants(self):
+        l = (Path(RACINE) / "opt/pincabos/script/iso-live.sh").read_text(encoding="utf-8")
+        for outil in ("grub-efi-amd64-bin", "grub-pc-bin", "xorriso", "mtools", "casper"):
+            self.assertIn(outil, l)
+
+
+class FichiersVivants(unittest.TestCase):
+    """PINCABOS_KEEP_PATHS_V2 : ce qui est propre au cab survit a la mise a jour."""
+
+    def test_liste_de_conservation(self):
+        s = Path(RACINE, "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        bloc = s.split("PCO_KEEP_PATHS=(")[1].split("\n)\n")[0]   # une parenthese dans un commentaire ne ferme pas le tableau
+        for p in ("opt/pincabos/config/screens", "home/pinball/.config/vpinfe/vpinfe.ini",
+                  "home/pinball/.local/share/VPinballX/10.8/directoutputconfig", "home/pinball/.config/pincabos",
+                  "opt/pincabos/config/dof", "opt/pincabos/config/zedmd.json", "opt/pincabos/config/splash.json",
+                  "opt/pincabos/flags", "etc/netplan", "etc/ssh", "etc/machine-id", "var/lib/NetworkManager"):
+            self.assertIn(f'"{p}"', bloc, p)
+        self.assertNotIn('"opt/pincabos/config/version.json"', bloc)   # la version, elle, doit changer
+
+
+class LienVpx(unittest.TestCase):
+    """PINCABOS_VPX_LINK_V1 : ~/vpx existe sur la cible et a l execution."""
+
+    def test_cible_et_filet(self):
+        s = Path(RACINE, "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        self.assertIn("ensure_target_vpx_link() {", s)
+        self.assertLess(s.index("  ensure_target_vpx_link\n"), s.index("  apply_target_identity\n"))
+        self.assertIn('ln -sfn "$(basename "$plus_recent")" "$h/vpx"', s)
+        p = Path(RACINE, "opt/pincabos/tools/pincabos-paths.sh").read_text(encoding="utf-8")
+        self.assertIn("PINCABOS_VPX_LINK_V1", p)
+        self.assertIn('ln -sfn "$(basename "$_pco_vpx_dir")" /home/pinball/vpx', p)
+

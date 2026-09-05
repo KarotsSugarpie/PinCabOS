@@ -4,6 +4,7 @@ Sorties xrandr réelles du cab de Yann (NVIDIA, trois écrans) ; aucune commande
 exécutée : un faux exécuteur enregistre ce qui serait lancé.
 """
 import json
+import re
 import os
 import shutil
 import tempfile
@@ -132,9 +133,11 @@ class Roles(unittest.TestCase):
         self.assertEqual(sc.valider_usage(sc.usage_propose(roles), roles), [])
         # declare un topper sans ecran, nie le backglass qui a un ecran
         erreurs = sc.valider_usage({"backglass": False, "fulldmd": True, "topper": True}, roles)
-        self.assertEqual(len(erreurs), 2)
+        # PINCABOS_INSTALLEUR_MINIMUM_V1 : nier le backglass est en plus une faute en soi
+        self.assertEqual(len(erreurs), 3)
         self.assertTrue(any(e.startswith("topper") and "aucun écran" in e for e in erreurs))
         self.assertTrue(any(e.startswith("backglass") and "absent" in e for e in erreurs))
+        self.assertTrue(any(e.startswith("backglass") and "obligatoire" in e for e in erreurs))
         self.assertIsNone(sc.usage_depuis({}))
         self.assertEqual(sc.usage_depuis({"usage": {"topper": 1}}), {"backglass": False, "fulldmd": False, "topper": True})
 
@@ -272,6 +275,149 @@ class Assistant(unittest.TestCase):
                                                    "screens": {"roles": {"playfield": "HDMI-9"}, "rotation": 0}})
         self.assertEqual(r.status_code, 400)
 
+    def test_installation_avec_l_etat_entier_de_l_assistant(self):
+        # PINCABOS_INSTALLEUR_REPONSE_NULLE_V1 : l'assistant envoie tout son état,
+        # orient:null compris (calculé ici depuis Écrans). Vu en VM : refus « bad-orient ».
+        d = self.client.get("/api/screens").get_json()
+        etat = {"lang": "fr", "locale": "fr_FR.UTF-8", "xkb": "fr", "xkb_variant": "", "tz": "Europe/Paris",
+                "orient": None, "mode": "1", "disk": "/dev/nvme0n1", "confirm": "INSTALL PINCABOS",
+                "screens": {"roles": d["roles"], "rotation": 0, "usage": d["usage"]},
+                "dmd": {"type": "none", "device": "", "wifi_addr": ""}, "network": {"applied": []}}
+        r = self.client.post("/api/install", json=etat)
+        self.assertEqual(r.status_code, 200, r.get_json())
+        env = (self.tmp / "gui-answers.env").read_text(encoding="utf-8")
+        self.assertIn("PCO_ANS_ORIENT=1", env)
+        self.assertNotIn("PCO_ANS_ORIENT=None", env)
+        # une vraie valeur hors moule reste refusee
+        r = self.client.post("/api/install", json=dict(etat, orient="9"))
+        self.assertEqual(r.get_json()["error"], "bad-orient")
+
+    def test_minimum_playfield_et_backglass(self):
+        # PINCABOS_INSTALLEUR_MINIMUM_V1 : sans backglass, ni test de disposition ni installation
+        d = self.client.get("/api/screens").get_json()
+        self.assertTrue(d["usage"]["backglass"])
+        sans = dict(d["roles"], backglass="")
+        rep = self.client.post("/api/screens/apply", json={"roles": sans, "rotation": 0,
+                               "usage": dict(d["usage"], backglass=False)}).get_json()
+        self.assertFalse(rep["ok"])
+        self.assertTrue(any("backglass" in e for e in rep["erreurs"]))
+        r = self.client.post("/api/install", json={"lang": "fr", "mode": "1", "disk": "/dev/nvme0n1", "confirm": "INSTALL PINCABOS",
+                                                   "screens": {"roles": sans, "rotation": 0, "usage": dict(d["usage"], backglass=False)}})
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.get_json()["error"], "bad-screens")
+        self.assertEqual(sc.usage_propose({"playfield": "HDMI-0"}), {"backglass": True, "fulldmd": False, "topper": False})
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        self.assertIn('class="segb sel" disabled data-use="backglass"', w)
+        self.assertIn('if(role==="backglass")return;', w)
+
+    def test_pointeurs_absolus_cadres_sur_le_playfield(self):
+        # PINCABOS_INSTALLEUR_POINTEUR_ABSOLU_V1 (VM : plus de clic apres l application)
+        liste = (
+            "⎡ Virtual core pointer                    \tid=2\t[master pointer  (3)]\n"
+            "⎜   ↳ Virtual core XTEST pointer              \tid=4\t[slave  pointer  (2)]\n"
+            "⎜   ↳ QEMU Virtio Tablet                      \tid=6\t[slave  pointer  (2)]\n"
+            "⎜   ↳ VirtualPS/2 VMware VMMouse              \tid=10\t[slave  pointer  (2)]\n"
+            "⎜   ↳ ILITEK Multi-Touch-V5000               \tid=12\t[slave  pointer  (2)]\n"
+            "⎣ Virtual core keyboard                   \tid=3\t[master keyboard (2)]\n"
+            "    ↳ QEMU Virtio Keyboard                    \tid=7\t[slave  keyboard (3)]\n")
+        self.assertEqual(sc.pointeurs_absolus(liste), [6, 12])
+        appels = []
+
+        def f(args, timeout=20):
+            appels.append(args)
+            return (0, liste if args[:2] == ["xinput", "list"] else "", "")
+        self.assertEqual(sc.cadrer_pointeurs_absolus("HDMI-0", f), [6, 12])
+        self.assertIn(["xinput", "map-to-output", "6", "HDMI-0"], appels)
+        # xinput absent : rien a cadrer, pas d erreur
+        self.assertEqual(sc.cadrer_pointeurs_absolus("HDMI-0", lambda a, timeout=20: (127, "", "absent")), [])
+        mons = sc.moniteurs(QUERY, PROPS)
+        res = sc.appliquer(mons, {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}, 0, f)
+        self.assertTrue(res["ok"], res)
+        self.assertEqual(res["pointeurs"], [6, 12])
+
+    def test_mode_applique_est_le_mode_courant(self):
+        # PINCABOS_INSTALLEUR_MODE_COURANT_V1 : VM = prefere 3840x2160, affiche 1920x1440
+        vm = {"name": "Virtual-2", "width": 1920, "height": 1440, "preferred": "3840x2160", "modes": ["5120x2160", "3840x2160", "1920x1440", "1280x800"]}
+        self.assertEqual(sc.mode_de(vm), (1920, 1440))
+        tourne = dict(vm, width=1440, height=1920)             # dalle deja tournee par X
+        self.assertEqual(sc.mode_de(tourne), (1920, 1440))
+        eteinte = dict(vm, width=0, height=0)
+        self.assertEqual(sc.mode_de(eteinte), (3840, 2160))
+        d = sc.disposition([dict(vm, name="V1"), vm], {"playfield": "V1", "backglass": "Virtual-2"}, 0)
+        self.assertEqual(d["Virtual-2"]["mode"], "1920x1440")
+        self.assertEqual(d["Virtual-2"]["x"], 1920)
+
+    def test_kiosque_un_bureau_sans_liaisons_et_suit_la_geometrie(self):
+        # PINCABOS_KIOSK_OPENBOX_V1 / PINCABOS_KIOSK_SUIT_LA_GEOMETRIE_V1 (Yann : molette = changement de bureau, coince)
+        rc = Path(RACINE, "opt/pincabos/installer-gui/kiosk-rc.xml").read_text(encoding="utf-8")
+        self.assertIn("<number>1</number>", rc)
+        self.assertNotIn("GoToDesktop", rc)
+        self.assertNotIn("mousebind", rc)
+        sess = Path(RACINE, "usr/local/bin/pincabos-kiosk-session").read_text(encoding="utf-8")
+        self.assertIn("openbox --config-file /opt/pincabos/installer-gui/kiosk-rc.xml", sess)
+        k = Path(RACINE, "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8")
+        self.assertIn('geometrie(mon) != cible["geometrie"]', k)
+        self.assertIn("view.grab_focus()", k)
+
+    def test_identification_en_overlay(self):
+        # PINCABOS_INSTALLEUR_IDENTIFY_OVERLAY_V1 (Yann) : badge dans un coin, par-dessus, sans focus
+        src = Path(RACINE, "opt/pincabos/installer-gui/identify.py").read_text(encoding="utf-8")
+        self.assertNotIn("fullscreen_on_monitor", src)
+        self.assertIn('TITRE = "pincabos-identify-{n}"', src)
+        self.assertIn("win.set_title(TITRE.format(n=i + 1))", src)
+        rc = Path(RACINE, "opt/pincabos/installer-gui/kiosk-rc.xml").read_text(encoding="utf-8")
+        for n in (1, 2, 8):
+            self.assertIn(f'<application title="pincabos-identify-{n}">', rc)
+            self.assertIn(f"<monitor>{n}</monitor>", rc)
+        self.assertIn("<layer>above</layer>", rc)
+        self.assertEqual(rc.count("<focus>no</focus>"), 8)
+        import xml.dom.minidom
+        xml.dom.minidom.parseString(rc)
+
+    def test_ergonomie_de_l_etape(self):
+        # PINCABOS_INSTALLEUR_ECRANS_UX_V1 (Yann : « pas très clair ») : trois gestes numerotes,
+        # un bouton d application primaire dans sa carte, un etat qui dit quoi faire, numeros automatiques
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        self.assertEqual(w.count('<span class="stepno">'), 3)
+        self.assertIn('class="primary" id="btn-apply"', w)
+        self.assertIn('id="screens-status" data-state="todo"', w)
+        self.assertIn('id="screens-next-hint"', w)
+        self.assertIn("setTimeout(identifyScreens,500)", w)          # numeros a l arrivee
+        self.assertIn('resumeDisposition());identifyScreens()', w)   # roles sur les dalles apres application
+        self.assertIn('setScreensStatus("screens_changed",false)', w)
+        i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
+        for l in ("fr", "en", "de", "it", "es"):
+            for k in ("screens_roles_title", "screens_changed", "screens_next_hint", "screens_dalle", "apply_layout"):
+                self.assertIn(k, i18n[l], (l, k))
+
+    def test_egerie_et_credits(self):
+        # PINCABOS_INSTALLEUR_EGERIE_V1 / CREDITS_V1 : emplacements Miss Tilt (Langue, Progression, Terminé), auteurs
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        self.assertEqual(w.count('data-slot="'), 3)
+        # PINCABOS_INSTALLEUR_EGERIE_V2 : chaque pose citee existe dans static/egerie (WebP 900 px, ~100 Ko)
+        for nom in re.findall(r'"(pose-[a-z0-9-]+)"', w.split("const EGERIE=")[1].split(";")[0]):
+            f = Path(RACINE, "opt/pincabos/installer-gui/static/egerie", nom + ".webp")
+            self.assertTrue(f.is_file(), nom)
+            self.assertLess(f.stat().st_size, 400_000, nom)
+        self.assertIn('class="egerie egerie-lang"', w)
+        self.assertIn('class="egerie egerie-done"', w)
+        self.assertIn("egerie-filigrane", w)
+        self.assertIn('<footer class="credits">', w)
+        self.assertIn("Karots SugarPie &amp; YaNFoX", w)
+        i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
+        for l in ("fr", "en", "de", "it", "es"):
+            self.assertIn("progress_start", i18n[l])
+            self.assertIn("backglass", i18n[l]["cab_usage_hint"].lower())
+
+    def test_le_wizard_affiche_un_refus(self):
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        self.assertIn('id="confirm-status"', w)
+        self.assertIn("launchRefused(d,r.status)", w)
+        self.assertNotIn("if(!r.ok)throw 0", w)
+        i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
+        for l in ("fr", "en", "de", "it", "es"):
+            self.assertIn("install_refused", i18n[l])
+
     def test_usage_dans_l_api(self):
         d = self.client.get("/api/screens").get_json()
         self.assertIn("usage", d)
@@ -319,8 +465,9 @@ class Integration(unittest.TestCase):
         s = (Path(RACINE) / "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8")
         self.assertIn("kiosk-target", s)
         self.assertIn("fullscreen_on_monitor", s)
+        # PINCABOS_INSTALLEUR_IDENTIFY_OVERLAY_V1 : l identification est un badge de coin, plus une fenetre plein ecran
         s = (Path(RACINE) / "opt/pincabos/installer-gui/identify.py").read_text(encoding="utf-8")
-        self.assertIn("fullscreen_on_monitor", s)
+        self.assertIn("pincabos-identify-", s)
 
 
 if __name__ == "__main__":

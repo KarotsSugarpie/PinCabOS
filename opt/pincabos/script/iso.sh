@@ -33,6 +33,24 @@ OUT_DIR="$BUILD_BASE/output"
 OUT_ISO="$OUT_DIR/PinCabOS-beta-Installer.iso"
 VOLID="PINCABOS_V81G"
 
+# PINCABOS_ISO_MODELE_LIVE_V1
+# Le modele live est LE modele (decision Yann + Karots 05/09/2026) : le payload
+# EST le systeme live (casper/filesystem.squashfs), meme noyau, memes pilotes,
+# memes outils que le cab installe ; l assistant graphique y voit le vrai
+# materiel. Sections 9-11 et 14-20 sautees, ISO produite par iso-live.sh.
+# --classic (base Ubuntu live-server + payload en morceaux) n est garde qu une
+# release, comme roue de secours ; ses sections disparaissent des que Karots a
+# produit une ISO live.
+PCO_ISO_MODEL="${PCO_ISO_MODEL:-live}"
+for pco_arg in "$@"; do
+  case "$pco_arg" in
+    --live) PCO_ISO_MODEL="live" ;;
+    --classic) PCO_ISO_MODEL="classic" ;;
+  esac
+done
+LIVE_ROOTFS="$WORK/live-rootfs"
+echo "ISO model: $PCO_ISO_MODEL"
+
 LOG_DIR="$BUILD_BASE/logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/iso-v8.1g-$(date +%Y%m%d-%H%M%S).log"
@@ -3783,6 +3801,19 @@ echo "ISO-ready payload:"
 ls -lh "$PAYLOAD_ISO_READY"
 du -sh "$PAYLOAD_ISO_READY"
 
+if [ "$PCO_ISO_MODEL" = "live" ]; then
+  echo
+  echo "=== 9L) Live model: the payload becomes the live root filesystem ==="
+  echo "PINCABOS_ISO_MODELE_LIVE_V1"
+  rm -rf "$LIVE_ROOTFS" "$ISO_DIR"
+  mkdir -p "$LIVE_ROOTFS" "$ISO_DIR/casper"
+  tar --zstd -xpf "$ARCHIVE" -C "$LIVE_ROOTFS" --numeric-owner
+  test -d "$LIVE_ROOTFS/opt/pincabos" || die "live rootfs incomplete: $LIVE_ROOTFS/opt/pincabos missing"
+  test -d "$LIVE_ROOTFS/lib/modules" || die "live rootfs incomplete: no kernel modules"
+  ROOTFS_DIR="$LIVE_ROOTFS"
+  echo "GO [OK] live rootfs unpacked in $LIVE_ROOTFS (sections 9-11 skipped: no Ubuntu base)"
+else
+
 echo
 echo "=== 9) Download or validate Ubuntu base ISO ==="
 mkdir -p "$CACHE_DIR"
@@ -3876,6 +3907,8 @@ echo "Selected live squashfs:"
 ls -lh "$SQUASHFS"
 
 unsquashfs -d "$ROOTFS_DIR" "$SQUASHFS"
+
+fi   # PCO_ISO_MODEL classic (sections 9-11)
 
 echo
 echo "=== 12) Ensure required live installer tools inside squashfs ==="
@@ -5092,6 +5125,11 @@ regional_setup() {
 
 refresh_target_initrd_for_orientation() {
     [ "${REG_FBROTATE:-0}" != "0" ] || return 0
+    # PINCABOS_SPLASH_CIBLE_V1 : deja fait par pincabos-splash-sync (theme + initrd)
+    if [ "${PCO_TARGET_INITRD_FRESH:-0}" = "1" ]; then
+        pco_go "Target initrd already regenerated with the splash of the installed cab"
+        return 0
+    fi
     pco_step "Regenerating target initrd (oriented splash must live in initrd)"
     for d in /proc /sys /dev; do
         mount --bind "$d" "$TARGET$d" 2>/dev/null || true
@@ -5239,6 +5277,39 @@ apply_target_screens() {
         install -o 1000 -g 1000 -m 0664 "$liaisons" "$TARGET/opt/pincabos/config/screens/display-role-bindings.json"
     fi
     pco_go "screens.json and EDID bindings installed (playfield rotation: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("playfield_rotation","0"))' "$src" 2>/dev/null || echo '?'))"
+
+    # PINCABOS_SPLASH_CIBLE_V1 : le premier demarrage montre deja les galeries
+    # du cab installe (playfield reconnu a sa resolution, rotation choisie), pas
+    # le theme du media ; pincabos-splash-sync regenere lui-meme l initrd cible.
+    if [ -x "$TARGET/usr/local/sbin/pincabos-splash-sync" ]; then
+        local d
+        for d in /proc /sys /dev; do mount --bind "$d" "$TARGET$d" 2>/dev/null || true; done
+        if chroot "$TARGET" /usr/local/sbin/pincabos-splash-sync --force; then
+            PCO_TARGET_INITRD_FRESH=1
+            pco_go "Boot splash of the installed cab generated (galleries, per-screen)"
+        else
+            pco_warn "splash sync on target failed (first boot will regenerate it)"
+        fi
+        for d in /dev /sys /proc; do umount "$TARGET$d" 2>/dev/null || true; done
+    fi
+}
+
+ensure_target_vpx_link() {
+    # PINCABOS_VPX_LINK_V1 : toute la chaine de lancement passe par /home/pinball/vpx
+    # (pincabos-paths.sh). Une image sans ce lien (vu le 05/09 : bundle 5231 nu)
+    # installe un cab qui ne lance aucune table. On pointe le bundle le plus recent.
+    local h="$TARGET/home/pinball" plus_recent
+    [ -d "$h" ] || return 0
+    if [ ! -e "$h/vpx" ] || [ ! -x "$h/vpx/VPinballX_BGFX" ]; then
+        plus_recent="$(ls -d "$h"/VPinballX_BGFX-*/ 2>/dev/null | sort -V | tail -1)"
+        if [ -n "$plus_recent" ]; then
+            ln -sfn "$(basename "$plus_recent")" "$h/vpx"
+            chown -h 1000:1000 "$h/vpx" 2>/dev/null || true
+            pco_go "VPX link created: ~/vpx -> $(basename "$plus_recent")"
+        else
+            pco_warn "no VPinballX_BGFX bundle in the image: ~/vpx not created"
+        fi
+    fi
 }
 
 apply_target_identity() {
@@ -5901,6 +5972,7 @@ install_payload() {
 
   apply_target_regional
   apply_target_orientation
+  ensure_target_vpx_link
   apply_target_identity
   apply_target_screens
   apply_target_network
@@ -6122,6 +6194,27 @@ PCO_KEEP_PATHS=(
   "opt/pincabos/config/gitpush-release-sequence.json"
   # cab identity
   "etc/pincabos/system-name.conf"
+  # PINCABOS_KEEP_PATHS_V2 (05/09/2026, revue avec Karots) : l image du media est
+  # le rootfs entier d un cab source ; a la mise a jour (unsquashfs -f) tout
+  # fichier present dans l image ecrase celui du cab. Ce qui est propre au cab
+  # et que l image porte aussi doit donc etre mis de cote :
+  "home/pinball/.local/share/VPinballX/10.8/directoutputconfig"
+  "home/pinball/.config/monitors.xml"
+  "home/pinball/.config/pincabos"
+  "home/pinball/.ssh"
+  "opt/pincabos/config/zedmd.json"
+  "opt/pincabos/config/splash.json"
+  "opt/pincabos/config/fulldmd-style.conf"
+  "opt/pincabos/config/admin-password.txt"
+  "opt/pincabos/config/dev-login.txt"
+  "opt/pincabos/config/dev-password.txt"
+  "opt/pincabos/config/webserver-webpass.secret"
+  "opt/pincabos/config/pincabos-paths.json"
+  "opt/pincabos/flags"
+  "etc/netplan"
+  "etc/ssh"
+  "etc/machine-id"
+  "var/lib/NetworkManager"
 )
 
 PCO_KEEP_DIR="/run/pincabos-keep"
@@ -6572,6 +6665,26 @@ PINCBOS_SERVICE
 
 ln -sfn ../pincabos-live-installer-tty.service \
   "$ROOTFS_DIR/etc/systemd/system/multi-user.target.wants/pincabos-live-installer-tty.service"
+
+if [ "$PCO_ISO_MODEL" = "live" ]; then
+  echo
+  echo "=== 14L) Live model: ISO built by iso-live.sh ==="
+  cleanup_mounts
+  rm -f "$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop"
+  LIVE_SH="$(dirname "$(readlink -f "$0")")/iso-live.sh"
+  [ -f "$LIVE_SH" ] || LIVE_SH="/opt/pincabos/script/iso-live.sh"
+  test -f "$LIVE_SH" || die "iso-live.sh not found next to iso.sh nor in /opt/pincabos/script"
+  mkdir -p "$OUT_DIR"
+  bash "$LIVE_SH" --rootfs "$ROOTFS_DIR" --payload "$PAYLOAD_FULL" --out "$OUT_ISO" \
+    || die "iso-live.sh failed"
+  test -f "$OUT_ISO" || die "live ISO was not created"
+  ls -lh "$OUT_ISO"
+  sha256sum "$OUT_ISO" | tee "$OUT_ISO.sha256"
+  echo
+  echo "==============================================================="
+  echo " ISO CREATED OK (live model)"
+  echo "==============================================================="
+else
 
 echo
 echo "=== 14) No live desktop, no manual launcher (PINCABOS_ISO_UN_SEUL_CHEMIN_V1) ==="
@@ -7256,6 +7369,8 @@ echo "OK: nettoyage post-build terminé."
 
 
 # ======================================================================
+fi   # PCO_ISO_MODEL classic (sections 14-20)
+
 # PINCABOS_OPTIONAL_WEB_PUBLISH_V1
 # Publication optionnelle de l'ISO apres un build reussi.
 # Demande IP/login/password une seule fois.

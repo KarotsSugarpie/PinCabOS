@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PINCABOS_KIOSK_OPENBOX_V1 : configuration openbox du kiosque de l'assistant.
+     Un seul bureau et aucune liaison souris ni clavier : avec le rc.xml du
+     systeme (4 bureaux, molette = changer de bureau), un coup de molette hors
+     de la WebView faisait disparaitre l'assistant (vu en VM apres l'application
+     de la disposition). Sans liaison, chaque clic, chaque touche et chaque coup
+     de molette vont a l'assistant. -->
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <focus>
+    <focusNew>yes</focusNew>
+    <followMouse>no</followMouse>
+    <raiseOnFocus>no</raiseOnFocus>
+  </focus>
+  <desktops>
+    <number>1</number>
+    <firstdesk>1</firstdesk>
+    <popupTime>0</popupTime>
+  </desktops>
+  <keyboard>
+    <chainQuitKey></chainQuitKey>
+  </keyboard>
+  <mouse>
+    <dragThreshold>8</dragThreshold>
+    <doubleClickTime>200</doubleClickTime>
+    <screenEdgeWarpTime>0</screenEdgeWarpTime>
+  </mouse>
+  <applications>
+    <application class="*">
+      <decor>no</decor>
+      <focus>yes</focus>
+      <layer>normal</layer>
+    </application>
+    <!-- PINCABOS_INSTALLEUR_IDENTIFY_OVERLAY_V1 : badge d identification dans le coin
+         haut gauche de CHAQUE dalle (moniteur N pour le titre pincabos-identify-N),
+         au-dessus de tout, sans jamais prendre le focus a l assistant. -->
+    <application title="pincabos-identify-1">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>1</monitor></position>
+    </application>
+    <application title="pincabos-identify-2">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>2</monitor></position>
+    </application>
+    <application title="pincabos-identify-3">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>3</monitor></position>
+    </application>
+    <application title="pincabos-identify-4">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>4</monitor></position>
+    </application>
+    <application title="pincabos-identify-5">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>5</monitor></position>
+    </application>
+    <application title="pincabos-identify-6">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>6</monitor></position>
+    </application>
+    <application title="pincabos-identify-7">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>7</monitor></position>
+    </application>
+    <application title="pincabos-identify-8">
+      <decor>no</decor>
+      <focus>no</focus>
+      <layer>above</layer>
+      <skip_pager>yes</skip_pager>
+      <skip_taskbar>yes</skip_taskbar>
+      <position force="yes"><x>24</x><y>24</y><monitor>8</monitor></position>
+    </application>
+  </applications>
+</openbox_config>

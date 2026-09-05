@@ -87,12 +87,24 @@ echo "=== 1) Live rootfs preparation ==="
 mount_pseudo
 # casper drives the live boot; it must live inside the image we are about to
 # compress, not on the build host.
-if [ ! -x "$ROOTFS/usr/share/initramfs-tools/scripts/casper" ] \
-   && [ ! -d "$ROOTFS/usr/share/casper" ]; then
-  echo "  installing casper into the rootfs"
+# PINCABOS_ISO_LIVE_OUTILS_V1 : grub-mkrescue tourne dans le chroot (section 6),
+# le rootfs doit donc porter GRUB EFI/BIOS, xorriso et mtools ; un cab ne les a
+# pas forcement. On n installe que ce qui manque.
+MANQUANTS=""
+[ -x "$ROOTFS/usr/share/initramfs-tools/scripts/casper" ] || [ -d "$ROOTFS/usr/share/casper" ] || MANQUANTS="$MANQUANTS casper"
+[ -x "$ROOTFS/usr/bin/grub-mkrescue" ] || MANQUANTS="$MANQUANTS grub-common"
+[ -d "$ROOTFS/usr/lib/grub/x86_64-efi" ] || MANQUANTS="$MANQUANTS grub-efi-amd64-bin"
+[ -d "$ROOTFS/usr/lib/grub/i386-pc" ] || MANQUANTS="$MANQUANTS grub-pc-bin"
+[ -x "$ROOTFS/usr/bin/xorriso" ] || MANQUANTS="$MANQUANTS xorriso"
+[ -x "$ROOTFS/usr/bin/mformat" ] || MANQUANTS="$MANQUANTS mtools"
+if [ -n "$MANQUANTS" ]; then
+  echo "  installing into the rootfs:$MANQUANTS"
+  cp -a /etc/resolv.conf "$ROOTFS/etc/resolv.conf" 2>/dev/null || true
+  chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1 || true
+  # shellcheck disable=SC2086
   chroot "$ROOTFS" env DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y -qq casper >/dev/null 2>&1 \
-    || die "cannot install casper (no network in chroot?)"
+    apt-get install -y -qq $MANQUANTS >/dev/null 2>&1 \
+    || die "cannot install$MANQUANTS (no network in chroot?)"
 fi
 
 cat > "$ROOTFS/etc/casper.conf" <<'CASPER'
@@ -109,7 +121,19 @@ CASPER
 # it right after unsquashfs, so an installed system behaves normally.
 echo "PinCabOS live media" > "$ROOTFS/etc/pincabos-live"
 
+# PINCABOS_MEDIA_RESEAU_V1 : les fichiers netplan du cab d origine (IP fixe,
+# renderer networkd) rendraient NetworkManager muet sur le media (devices
+# « strictly unmanaged », vu en VM : « No suitable device found ») et suivraient
+# le systeme installe. Mis de cote dans un sous-dossier que netplan ignore.
 mkdir -p "$ROOTFS/etc/netplan"
+if ls "$ROOTFS"/etc/netplan/*.yaml >/dev/null 2>&1; then
+  mkdir -p "$ROOTFS/etc/netplan/pincabos-source"
+  for f in "$ROOTFS"/etc/netplan/*.yaml; do
+    case "$(basename "$f")" in 01-pincabos-live-dhcp.yaml) continue ;; esac
+    echo "  netplan du cab d origine mis de cote : $(basename "$f")"
+    mv -f "$f" "$ROOTFS/etc/netplan/pincabos-source/"
+  done
+fi
 cat > "$ROOTFS/etc/netplan/01-pincabos-live-dhcp.yaml" <<'NETPLAN'
 network:
   version: 2
@@ -130,6 +154,14 @@ if [ -z "$KERNEL_VERSION" ]; then
 fi
 [ -n "$KERNEL_VERSION" ] || die "no kernel found under $ROOTFS/lib/modules"
 echo "  kernel: $KERNEL_VERSION"
+
+# PINCABOS_SPLASH_MEDIA_V1 : le media demarre avec les memes galeries
+# aleatoires que le cab (portrait sur la plus grande dalle, paysage ailleurs).
+# Le theme doit etre dans le rootfs AVANT l initrd casper, qui l embarque.
+if [ -x "$ROOTFS/usr/local/sbin/pincabos-splash-sync" ]; then
+  chroot "$ROOTFS" /usr/local/sbin/pincabos-splash-sync --media --no-initrd --force \
+    || echo "  AVERTISSEMENT : splash du media non prepare (theme existant conserve)"
+fi
 
 # Built to /tmp on purpose: /boot must keep the initrd of the installed system.
 chroot "$ROOTFS" mkinitramfs -o /tmp/initrd-live.img "$KERNEL_VERSION" \
@@ -199,7 +231,14 @@ echo "  fonds GRUB : ${#GRUB_FONDS[@]} dans la galerie"
 # logo.nologo drops the kernel's Tux; the PinCabOS Plymouth splash stays.
 # vt.global_cursor_default=0 hides the blinking cursor between splash and X.
 COMMON="logo.nologo vt.global_cursor_default=0"
-QUIET="quiet splash loglevel=3"
+# PINCABOS_MEDIA_NOPROMPT_V1 : au redemarrage, casper demandait « retirez le
+# media puis Entree », invisible sous le splash : ecran noir sans fin (vu en
+# VM). noprompt : le media est ejecte et la machine redemarre d elle-meme.
+QUIET="quiet splash loglevel=3 noprompt"
+# PINCABOS_LIVE_CMDLINE_EXTRA_V1 : arguments noyau supplementaires pour un banc
+# d essai (ex. video=Virtual-2:1280x800e pour forcer une 2e tete QEMU) ; vide en
+# production, jamais ecrit sur le systeme installe.
+EXTRA="${PCO_LIVE_CMDLINE_EXTRA:-}"
 BLACKLIST="modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off"
 
 # PINCABOS_ISO_UN_SEUL_CHEMIN_V1
@@ -212,7 +251,7 @@ set default=0
 set timeout=3
 set timeout_style=menu
 menuentry "Install PinCabOS" {
-    linux /casper/vmlinuz boot=casper $COMMON pincabos.installer=gui systemd.unit=pincabos-gui-install.target $QUIET $BLACKLIST ---
+    linux /casper/vmlinuz boot=casper $COMMON pincabos.installer=gui systemd.unit=pincabos-gui-install.target $QUIET $BLACKLIST $EXTRA ---
     initrd /casper/initrd
 }
 GRUBCFG

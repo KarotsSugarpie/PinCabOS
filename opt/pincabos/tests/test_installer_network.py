@@ -124,3 +124,11 @@ class Integration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CibleInstalleur(unittest.TestCase):
+    def test_networkmanager_demarre_sur_le_media(self):
+        # PINCABOS_INSTALLEUR_RESEAU_LIVE_V1 : vu en VM, « aucune interface reseau detectee »
+        u = (R / "etc/systemd/system/pincabos-gui-install.target").read_text(encoding="utf-8")
+        self.assertIn("NetworkManager.service", u.split("Wants=")[1].splitlines()[0])
+

@@ -66,11 +66,32 @@ SCREENS = Path("/opt/pincabos/config/screens/screens.json")
 THEME_DIR = Path("/usr/share/plymouth/themes/pincabos")
 THEME = THEME_DIR / "pincabos.script"
 SOURCES = Path("/opt/pincabos/media/splash")
+SPLASH_JSON = Path("/opt/pincabos/config/splash.json")   # hold_until_uptime (pincabos-splash-hold)
+TEMPO_DEFAUT = 15
+
+
+def duree_barre(splash_json: Path = SPLASH_JSON) -> int:
+    """PINCABOS_SPLASH_BARRE_TEMPO_V1 : la barre se remplit sur toute la tempo du splash.
+
+    Un cab demarre en une dizaine de secondes et le splash reste affiche jusqu a
+    hold_until_uptime : avec une barre calee sur la progression de systemd, elle
+    etait pleine des les premieres secondes et paraissait figee (Yann, VM). Elle
+    avance maintenant a vitesse constante et arrive au bout quand le splash
+    s efface (Plymouth demarre ~2 s apres le noyau).
+    """
+    tempo = TEMPO_DEFAUT
+    try:
+        data = json.loads(splash_json.read_text(encoding="utf-8"))
+        tempo = int(data.get("hold_until_uptime", TEMPO_DEFAUT))
+    except (OSError, ValueError, TypeError):
+        pass
+    return max(4, tempo - 2)
 PORTRAIT = SOURCES / "portrait.png"          # compatibilite : un seul visuel
 PAYSAGE = SOURCES / "paysage.png"
 EXTENSIONS = (".png", ".jpg", ".jpeg")
 PREFIXE_PLAYFIELD = "pincabos-playfield-"     # ecrits dans THEME_DIR, deja tournes
 PREFIXE_AUTRES = "pincabos-autres-"           # ecrits dans THEME_DIR, droits
+OPACITE_VOILE = 1.0                           # masque noir opaque sur la barre (Yann)
 PREFIXE_ARRET_PLAYFIELD = "pincabos-arret-playfield-"
 PREFIXE_ARRET_AUTRES = "pincabos-arret-autres-"
 IMAGE_PLAYFIELD = PREFIXE_PLAYFIELD + "0.png"
@@ -133,6 +154,16 @@ def resolution_physique(taille: tuple[int, int], rotation: int) -> tuple[int, in
     if rotation in (90, 270):
         return hauteur, largeur
     return largeur, hauteur
+
+
+def parametres_media() -> tuple[dict[str, tuple[int, int]], int]:
+    """PINCABOS_SPLASH_MEDIA_V1 : media d installation, aucun screens.json.
+
+    Le playfield n a pas de resolution connue (0x0 : le theme prend la plus
+    grande dalle) et la dalle est supposee a l endroit (rotation 0) : le
+    portrait est tourne comme sur un cab standard, le paysage va ailleurs.
+    """
+    return {"playfield": (0, 0)}, 0
 
 
 def rotation_effective(rotation_x11: int) -> int:
@@ -369,13 +400,19 @@ def preparer_images(rot_x11: int, theme_dir: Path = THEME_DIR, run=executer,
 def theme(ecrans: dict[str, tuple[int, int]], rot_x11: int, images: dict) -> str:
     pf_w, pf_h = resolution_physique(ecrans["playfield"], rot_x11)
     resume = ", ".join(f"{role} {w}x{h}" for role, (w, h) in ecrans.items())
+    if pf_w == 0:
+        resume = "media d installation (aucun screens.json) : playfield = la plus grande dalle"
     rot = int(images["rot"])
     pre_tourne = 1 if images.get("pre_tourne", 1) else 0
     barre = BARRE[images["genre_playfield"]]
+    # PINCABOS_SPLASH_BARRE_PARTOUT_V1 : la barre des autres visuels (paysage) est masquee
+    # et decouverte au meme rythme ; masque noir opaque (Yann).
+    barre_autres = BARRE.get(images.get("genre_autres", "paysage"), BARRE["paysage"])
     n_pf = max(1, int(images.get("n_playfield", 1)))
     n_autres = max(1, int(images.get("n_autres", 1)))
     choix_pf = "\n".join(f'if (k_pf == {k}) img_pf = Image("{PREFIXE_PLAYFIELD}{k}.png");' for k in range(n_pf))
     choix_autres = "\n".join(f'if (k_autres == {k}) img_autres = Image("{PREFIXE_AUTRES}{k}.png");' for k in range(n_autres))
+    ticks_barre = int(50 * int(images.get("duree_barre", duree_barre())))   # rafraichissement Plymouth ~50 Hz
     n_arret_pf = int(images.get("n_arret_playfield", 0))
     n_arret_autres = int(images.get("n_arret_autres", 0))
     choix_arret_pf = "\n".join(f'if (k_pf == {k}) img_pf = Image("{PREFIXE_ARRET_PLAYFIELD}{k}.png");' for k in range(n_arret_pf))
@@ -389,6 +426,7 @@ def theme(ecrans: dict[str, tuple[int, int]], rot_x11: int, images: dict) -> str
 # Image du playfield : {images["genre_playfield"]} ({n_pf} au choix), tournee de {rot} ({"deja dans le fichier" if pre_tourne else "par Plymouth"})
 # Image des autres ecrans : {images["genre_autres"]} ({n_autres} au choix), droite
 # Arret / redemarrage : {n_arret_pf} portrait(s) et {n_arret_autres} paysage(s) dedies, sinon ecran noir
+# Barre : pleine en {ticks_barre // 50} s (tempo du splash), independante de la progression systemd
 #
 # Le playfield est reconnu a sa resolution parametree, il n est pas devine.
 # Les surfaces sont ecartees dans l espace virtuel (Window.SetX) pour que
@@ -445,6 +483,8 @@ fh = [];
 pf = -1;
 pf_place = 0;
 n_places = 0;
+n_total = 0;
+bar_height = 8;
 
 fun placer() {{
     n = 0;
@@ -461,9 +501,21 @@ fun placer() {{
             if (pf < 0 && Window.GetWidth(i) * 2 == pf_w && Window.GetHeight(i) * 2 == pf_h) pf = i;
             i++;
         }}
+        # PINCABOS_SPLASH_MEDIA_V1 : media d installation, aucune resolution
+        # connue (pf_w = 0) : le playfield est la plus grande dalle.
+        if (pf < 0 && pf_w == 0) {{
+            best = 0;
+            i = 0;
+            while (i < n) {{
+                a = Window.GetWidth(i) * Window.GetHeight(i);
+                if (a > best) {{ best = a; pf = i; }}
+                i++;
+            }}
+        }}
         # Aucune correspondance : la premiere surface est celle de la sortie primaire.
         if (pf < 0 && n > 0) pf = 0;
     }}
+    n_total = n;
     cx = 0;
     i = 0;
     while (i < n) {{
@@ -535,7 +587,6 @@ fun geometrie_barre() {{
     }}
     sw = pf_sw; sh = pf_sh;
     bar_width = bw * {barre["w"]};
-    bar_height = 8;
     bar_lx = (lw - bw) / 2 + (bw - bar_width) / 2;
     bar_ly = (lh - bh) / 2 + bh * {barre["y"]};
 }}
@@ -546,12 +597,36 @@ fun geometrie_barre() {{
 voile_image = Image("{IMAGE_VOILE}");
 voile = Sprite();
 voile.SetZ(20);
-voile.SetOpacity(0.88);
+voile.SetOpacity({OPACITE_VOILE});
+
+# PINCABOS_SPLASH_BARRE_PARTOUT_V1 : sur chaque autre dalle, le visuel est droit ;
+# sa barre est a {barre_autres["y"]} de la hauteur de l image, large de {barre_autres["w"]} de sa largeur.
+voiles = [];
+fun poser_voiles_autres(frac) {{
+    if (arret == 1) return;
+    i = 0;
+    while (i < n_total) {{
+        if (i != pf && fw[i] > 0) {{
+            bw2 = fw[i] * {barre_autres["w"]};
+            reste = bw2 - bw2 * frac;
+            if (!voiles[i]) {{ voiles[i] = Sprite(); voiles[i].SetZ(20); }}
+            if (reste < 1) {{
+                voiles[i].SetOpacity(0);
+            }} else {{
+                voiles[i].SetOpacity({OPACITE_VOILE});
+                voiles[i].SetImage(voile_image.Scale(reste, bar_height));
+                voiles[i].SetX(fonds[i].GetX() + (fw[i] - bw2) / 2 + bw2 * frac);
+                voiles[i].SetY(fonds[i].GetY() + fh[i] * {barre_autres["y"]} - bar_height / 2);
+            }}
+        }}
+        i++;
+    }}
+}}
 
 fun poser_voile(cw) {{
     reste = bar_width - cw;
     if (reste < 1) {{ voile.SetOpacity(0); return; }}
-    voile.SetOpacity(0.88);
+    voile.SetOpacity({OPACITE_VOILE});
     a = bar_lx + cw;            # debut logique du voile
     b = bar_lx + bar_width;     # fin logique
     y0 = bar_ly - bar_height / 2;
@@ -576,19 +651,19 @@ fun poser_voile(cw) {{
 progress_target = 0;
 progress_shown = 0;
 tick = 0;
+ticks_barre = {ticks_barre};
 
 fun refresh_callback() {{
     placer();
     if (pf_place != 1) return;
     geometrie_barre();
     tick++;
-    # sans information de Plymouth, la barre avance quand meme (95 % en ~12 s a 50 Hz)
-    creep = tick / 600;
-    if (creep > 0.95) creep = 0.95;
-    target = progress_target;
-    if (target < creep) target = creep;
-    progress_shown = progress_shown + (target - progress_shown) * 0.08;
+    # PINCABOS_SPLASH_BARRE_TEMPO_V1 : vitesse constante sur la tempo du splash ;
+    # la progression systemd (pleine en 3 s sur un cab rapide) ne la fait pas sauter.
+    progress_shown = tick / ticks_barre;
+    if (progress_shown > 1) progress_shown = 1;
     poser_voile(bar_width * progress_shown);
+    poser_voiles_autres(progress_shown);
 }}
 
 fun boot_progress_callback(duration, progress) {{
@@ -632,21 +707,27 @@ def main() -> int:
                         help="ecrire le theme sans regenerer l initrd")
     parser.add_argument("--stdout", action="store_true",
                         help="afficher le theme sans rien ecrire")
+    parser.add_argument("--media", action="store_true",
+                        help="media d installation (sans screens.json) : playfield = la plus grande dalle, "
+                             "dalle supposee a l endroit ; l empreinte n est pas ecrite")
     args = parser.parse_args()
 
-    if not SCREENS.is_file():
-        print(f"  {SCREENS} absent : theme inchange")
-        return 0
+    if args.media:
+        ecrans, rot = parametres_media()
+    else:
+        if not SCREENS.is_file():
+            print(f"  {SCREENS} absent : theme inchange")
+            return 0
 
-    try:
-        ecrans, rot = configuration()
-    except (json.JSONDecodeError, OSError, ValueError) as exc:
-        print(f"  screens.json illisible ({exc}) : theme inchange")
-        return 0
+        try:
+            ecrans, rot = configuration()
+        except (json.JSONDecodeError, OSError, ValueError) as exc:
+            print(f"  screens.json illisible ({exc}) : theme inchange")
+            return 0
 
-    if "playfield" not in ecrans:
-        print("  role playfield absent de screens.json : theme inchange")
-        return 0
+        if "playfield" not in ecrans:
+            print("  role playfield absent de screens.json : theme inchange")
+            return 0
 
     if args.stdout:
         srcs = sources_images()
@@ -669,7 +750,7 @@ def main() -> int:
         "arret": [[p.name, empreinte_fichier(p)] for p in galerie(SOURCES, "arret")],
         "historique": empreinte_fichier(THEME_DIR / IMAGE_HISTORIQUE),
     }, sort_keys=True).encode()).hexdigest()
-    if not args.force and EMPREINTE.is_file() \
+    if not args.media and not args.force and EMPREINTE.is_file() \
             and EMPREINTE.read_text(encoding="utf-8").strip() == signature:
         print("  configuration d ecrans et visuels inchanges : rien a faire")
         return 0
@@ -688,6 +769,10 @@ def main() -> int:
     if not args.no_initrd and not regenerer_initrd():
         print("  empreinte non enregistree : le theme sera repose au prochain essai")
         return 1
+
+    # Media : pas d empreinte, le systeme installe regenerera le sien au premier passage.
+    if args.media:
+        return 0
 
     EMPREINTE.parent.mkdir(parents=True, exist_ok=True)
     EMPREINTE.write_text(signature + "\n", encoding="utf-8")

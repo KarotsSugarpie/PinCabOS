@@ -163,9 +163,16 @@ def proposer_roles(monitors: list) -> dict:
 USAGE_ROLES = tuple(r for r in ROLES if r != "playfield")
 
 
+# PINCABOS_INSTALLEUR_MINIMUM_V1 (Yann, 05/09/2026) : le fonctionnement minimal
+# d'un cab est playfield + backglass ; sans ces deux écrans, pas d'installation.
+ROLES_MINIMUM = ("playfield", "backglass")
+
+
 def usage_propose(roles: dict) -> dict:
-    """Ce qui a reçu un écran est réputé utilisé : point de départ de la déclaration."""
-    return {r: bool(roles.get(r)) for r in USAGE_ROLES}
+    """Ce qui a reçu un écran est réputé utilisé ; le backglass l'est toujours (minimum)."""
+    u = {r: bool(roles.get(r)) for r in USAGE_ROLES}
+    u["backglass"] = True
+    return u
 
 
 def usage_depuis(a) -> dict | None:
@@ -179,6 +186,8 @@ def usage_depuis(a) -> dict | None:
 def valider_usage(usage: dict, roles: dict) -> list:
     """Chaque rôle déclaré utilisé a un écran ; un rôle déclaré absent n'en a pas."""
     erreurs = []
+    if not usage.get("backglass"):
+        erreurs.append("backglass : obligatoire (fonctionnement minimal = playfield + backglass)")
     for role in USAGE_ROLES:
         attribue = bool(roles.get(role))
         if usage.get(role) and not attribue:
@@ -194,6 +203,8 @@ def valider_roles(roles: dict, monitors: list) -> list:
     erreurs = []
     if not roles.get("playfield"):
         erreurs.append("le playfield est obligatoire")
+    if not roles.get("backglass"):
+        erreurs.append("le backglass est obligatoire (fonctionnement minimal = playfield + backglass)")
     vus = {}
     for role in ROLES:
         nom = roles.get(role) or ""
@@ -212,6 +223,27 @@ def tourne(w: int, h: int, rot: int) -> tuple:
     return (h, w) if rot in (90, 270) else (w, h)
 
 
+def mode_de(m: dict) -> tuple[int, int]:
+    """Le mode à appliquer : celui que la dalle affiche (et que la page montre).
+
+    PINCABOS_INSTALLEUR_MODE_COURANT_V1 : le mode « préféré » de l'EDID peut
+    différer du mode courant (vu en VM : 3840x2160 préféré, 1920x1440 affiché →
+    disposition géante, assistant perdu). Sur un cab, X démarre sur le préféré :
+    même valeur. Une dalle déjà tournée annonce ses côtés inversés : on les remet.
+    """
+    modes = m.get("modes") or []
+    w, h = int(m.get("width") or 0), int(m.get("height") or 0)
+    if w and h:
+        if not modes or f"{w}x{h}" in modes:
+            return w, h
+        if f"{h}x{w}" in modes:
+            return h, w
+    pref = m.get("preferred") or ""
+    if "x" in pref:
+        return tuple(int(v) for v in pref.split("x"))
+    return w, h
+
+
 def disposition(monitors: list, roles: dict, rotation: int) -> dict:
     """Positions canoniques : playfield en 0,0, puis backglass, DMD et topper à sa
     droite, alignés en haut, avec la largeur du playfield telle que X la verra
@@ -221,7 +253,7 @@ def disposition(monitors: list, roles: dict, rotation: int) -> dict:
     out, x = {}, 0
     for i, nom in enumerate(ordre):
         m = par_nom[nom]
-        w, h = (int(v) for v in m["preferred"].split("x")) if "x" in m["preferred"] else (m["width"], m["height"])
+        w, h = mode_de(m)
         rot = rotation if nom == roles.get("playfield") else 0
         vw, vh = tourne(w, h, rot)
         out[nom] = {"x": x, "y": 0, "width": vw, "height": vh, "mode": f"{w}x{h}", "rotation": rot, "primary": i == 0}
@@ -253,7 +285,43 @@ def appliquer(monitors: list, roles: dict, rotation: int, run=executer) -> dict:
     rc, out, err = run(cmd, timeout=30)
     if rc != 0:
         return {"ok": False, "erreurs": [f"xrandr : {err.strip() or out.strip() or rc}"], "commande": cmd}
-    return {"ok": True, "commande": cmd, "disposition": dispo}
+    pointeurs = cadrer_pointeurs_absolus(roles["playfield"], run)
+    return {"ok": True, "commande": cmd, "disposition": dispo, "pointeurs": pointeurs}
+
+
+# PINCABOS_INSTALLEUR_POINTEUR_ABSOLU_V1
+# Un pointeur absolu (écran tactile sur le playfield, tablette, souris
+# « tablet » d'une VM) se répartit par défaut sur TOUT l'écran X ; dès que la
+# disposition met deux dalles côte à côte, chaque clic tombe deux fois trop
+# loin (vu en VM : plus aucun clic possible après l'application). On le cadre
+# sur la dalle du playfield, la seule qu'on touche.
+POINTEUR_ABSOLU = re.compile(r"(?i)tablet|touch|stylus|pen\b|wacom|elan|goodix|ilitek|egalax")
+
+
+def pointeurs_absolus(liste_xinput: str) -> list:
+    """Identifiants des pointeurs esclaves dont le nom dit « absolu » (xinput list --short)."""
+    ids = []
+    for ligne in liste_xinput.splitlines():
+        if "slave" not in ligne or "pointer" not in ligne or "XTEST" in ligne:
+            continue
+        m = re.search(r"id=(\d+)", ligne)
+        nom = ligne.split("id=")[0]
+        if m and POINTEUR_ABSOLU.search(nom):
+            ids.append(int(m.group(1)))
+    return ids
+
+
+def cadrer_pointeurs_absolus(sortie: str, run=executer) -> list:
+    """xinput map-to-output <id> <sortie playfield> pour chaque pointeur absolu ; renvoie les ids cadrés."""
+    rc, out, _ = run(["xinput", "list", "--short"], timeout=10)
+    if rc != 0:
+        return []
+    cadres = []
+    for ident in pointeurs_absolus(out):
+        rc, _, _ = run(["xinput", "map-to-output", str(ident), sortie], timeout=10)
+        if rc == 0:
+            cadres.append(ident)
+    return cadres
 
 
 # ---------------------------------------------------------------- screens.json

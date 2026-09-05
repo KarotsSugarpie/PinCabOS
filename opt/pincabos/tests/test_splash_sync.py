@@ -190,11 +190,56 @@ class Theme(unittest.TestCase):
         self.assertEqual(t.count("{"), t.count("}"))
         self.assertNotIn("{{", t)
 
+    def test_barre_sur_la_tempo_du_splash(self):
+        # PINCABOS_SPLASH_BARRE_TEMPO_V1 : barre pleine a la fin de la tempo, pas en 3 s (Yann : « ne defile pas »)
+        with tempfile.TemporaryDirectory() as d:
+            j = Path(d, "splash.json")
+            self.assertEqual(ss.duree_barre(j), 13)                      # absent : tempo par defaut 15 - 2
+            j.write_text('{"hold_until_uptime": 20}', encoding="utf-8")
+            self.assertEqual(ss.duree_barre(j), 18)
+            j.write_text('{"hold_until_uptime": 3}', encoding="utf-8")
+            self.assertEqual(ss.duree_barre(j), 4)                       # plancher
+        t = ss.theme(ECRANS_YANN, 0, dict(self.IMAGES, duree_barre=13))
+        self.assertIn("ticks_barre = 650;", t)
+        self.assertIn("progress_shown = tick / ticks_barre;", t)
+        self.assertNotIn("creep = tick / 600", t)
+        self.assertNotIn("target = progress_target", t)
+
+    def test_barre_repliquee_sur_les_autres_dalles(self):
+        # PINCABOS_SPLASH_BARRE_PARTOUT_V1 : masque noir opaque, decouvert au meme rythme partout
+        t = ss.theme(ECRANS_YANN, 0, self.IMAGES)
+        self.assertIn("fun poser_voiles_autres(frac)", t)
+        self.assertIn("poser_voiles_autres(progress_shown);", t)
+        self.assertIn(f"bw2 = fw[i] * {ss.BARRE['paysage']['w']};", t)
+        self.assertIn(f"fh[i] * {ss.BARRE['paysage']['y']} - bar_height / 2", t)
+        self.assertIn("SetOpacity(1.0)", t)
+        self.assertNotIn("0.88", t)
+        self.assertIn("n_total = n;", t)
+        self.assertEqual(t.count("{"), t.count("}"))
+
+    def test_media(self):
+        # PINCABOS_SPLASH_MEDIA_V1 : sans screens.json, playfield = la plus grande dalle
+        ecrans, rot = ss.parametres_media()
+        self.assertEqual((ecrans, rot), ({"playfield": (0, 0)}, 0))
+        self.assertEqual(ss.rotation_effective(rot), 270)     # portrait tourne comme un cab a l endroit
+        t = ss.theme(ecrans, rot, self.IMAGES)
+        self.assertIn("pf_w = 0;", t)
+        self.assertIn("if (pf < 0 && pf_w == 0)", t)
+        self.assertIn("a = Window.GetWidth(i) * Window.GetHeight(i);", t)
+        self.assertIn("la plus grande dalle", t)
+        self.assertEqual(t.count("{"), t.count("}"))
+        # un cab configure garde la reconnaissance par resolution
+        self.assertIn("pf_w = 3840;", ss.theme(ECRANS_YANN, 0, self.IMAGES))
+
 
 class Perimetre(unittest.TestCase):
     def test_visuels_dans_le_perimetre_de_l_updater(self):
-        src = (Path(RACINE) / "opt/pincabos/update/pincabos_updates.py").read_text(encoding="utf-8")
-        self.assertIn("'opt/pincabos/media/splash/'", src)
+        # 3.69 : prefixe en attente ; a partir de la release suivante : livre (plus en attente)
+        up = charger("opt/pincabos/update/pincabos_updates.py", "pco_updates_perimetre")
+        rel = "opt/pincabos/media/splash/portrait0.png"
+        self.assertTrue(up.allowed(rel))
+        self.assertTrue(up.allowed_for_build(rel))
+        self.assertNotIn("opt/pincabos/media/splash/", up.PENDING_PREFIXES)
 
     def test_sources_declarees(self):
         self.assertEqual(str(ss.PORTRAIT), "/opt/pincabos/media/splash/portrait.png")

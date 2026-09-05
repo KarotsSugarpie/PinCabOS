@@ -73,22 +73,33 @@ def on_activate(app):
     # wizard écrit la sortie retenue dans /run/pincabos/kiosk-target et le
     # kiosque s'y replace en plein écran. Sans ce suivi, l'assistant resterait
     # sur l'ancienne dalle, parfois devenue le fronton.
-    cible = {"connector": ""}
+    cible = {"connector": "", "geometrie": None}
+
+    def geometrie(mon):
+        g = mon.get_geometry()
+        return (g.x, g.y, g.width, g.height)
 
     def suivre_le_playfield():
+        # PINCABOS_KIOSK_SUIT_LA_GEOMETRIE_V1 : la dalle peut garder son nom et
+        # changer de mode ou de position (xrandr de l'etape Ecrans) ; la fenetre
+        # se replace, repasse devant et rend le focus a la WebView (molette).
         try:
             nom = Path("/run/pincabos/kiosk-target").read_text(encoding="utf-8").strip()
         except OSError:
-            return GLib.SOURCE_CONTINUE
-        if nom and nom != cible["connector"]:
-            mons = Gdk.Display.get_default().get_monitors()
-            for i in range(mons.get_n_items()):
-                mon = mons.get_item(i)
-                if mon.get_connector() == nom:
-                    win.unfullscreen()
-                    win.fullscreen_on_monitor(mon)
-                    cible["connector"] = nom
-                    break
+            nom = cible["connector"]
+        mons = Gdk.Display.get_default().get_monitors()
+        for i in range(mons.get_n_items()):
+            mon = mons.get_item(i)
+            if nom and mon.get_connector() != nom:
+                continue
+            if nom != cible["connector"] or geometrie(mon) != cible["geometrie"]:
+                win.unfullscreen()
+                win.fullscreen_on_monitor(mon)
+                win.present()
+                view.grab_focus()
+                cible["connector"] = nom
+                cible["geometrie"] = geometrie(mon)
+            break
         return GLib.SOURCE_CONTINUE
 
     GLib.timeout_add(700, suivre_le_playfield)

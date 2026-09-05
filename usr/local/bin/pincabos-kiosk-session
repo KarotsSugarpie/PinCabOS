@@ -1,5 +1,6 @@
 #!/bin/sh
 # Session X du kiosk installer : openbox + wizard plein ecran
 xsetroot -solid "#050007" 2>/dev/null || true
-openbox &
+# PINCABOS_KIOSK_OPENBOX_V1 : un bureau, aucune liaison (la molette restait a openbox)
+openbox --config-file /opt/pincabos/installer-gui/kiosk-rc.xml &
 exec /usr/local/bin/pincabos-kiosk.py
