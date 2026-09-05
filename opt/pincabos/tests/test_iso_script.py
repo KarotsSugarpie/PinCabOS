@@ -113,8 +113,9 @@ class ModeleLive(unittest.TestCase):
         self.s = (Path(RACINE) / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
 
     def test_drapeau_et_defaut(self):
-        self.assertIn('PCO_ISO_MODEL="${PCO_ISO_MODEL:-classic}"', self.s)
+        self.assertIn('PCO_ISO_MODEL="${PCO_ISO_MODEL:-live}"', self.s)   # le live est le defaut
         self.assertIn('--live) PCO_ISO_MODEL="live" ;;', self.s)
+        self.assertIn('--classic) PCO_ISO_MODEL="classic" ;;', self.s)   # roue de secours, une release
 
     def test_branches_equilibrees(self):
         # sections 9-11 (base Ubuntu) et 14-20 (repack, GRUB, xorriso) sont dans la branche classic

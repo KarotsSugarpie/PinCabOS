@@ -34,15 +34,14 @@ OUT_ISO="$OUT_DIR/PinCabOS-beta-Installer.iso"
 VOLID="PINCABOS_V81G"
 
 # PINCABOS_ISO_MODELE_LIVE_V1
-# Deux modeles d ISO :
-#   classic (defaut) : base Ubuntu live-server + payload en morceaux, l installeur
-#                      texte/graphique tourne dans la base Ubuntu ;
-#   live (--live ou PCO_ISO_MODEL=live) : le payload EST le systeme live
-#                      (casper/filesystem.squashfs), meme noyau, memes pilotes,
-#                      memes outils que le cab installe ; l assistant graphique y
-#                      voit le vrai materiel. Sections 9-11 et 14-20 sautees, ISO
-#                      produite par iso-live.sh. Decision Yann + Karots 05/09/2026.
-PCO_ISO_MODEL="${PCO_ISO_MODEL:-classic}"
+# Le modele live est LE modele (decision Yann + Karots 05/09/2026) : le payload
+# EST le systeme live (casper/filesystem.squashfs), meme noyau, memes pilotes,
+# memes outils que le cab installe ; l assistant graphique y voit le vrai
+# materiel. Sections 9-11 et 14-20 sautees, ISO produite par iso-live.sh.
+# --classic (base Ubuntu live-server + payload en morceaux) n est garde qu une
+# release, comme roue de secours ; ses sections disparaissent des que Karots a
+# produit une ISO live.
+PCO_ISO_MODEL="${PCO_ISO_MODEL:-live}"
 for pco_arg in "$@"; do
   case "$pco_arg" in
     --live) PCO_ISO_MODEL="live" ;;
