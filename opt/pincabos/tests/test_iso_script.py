@@ -146,3 +146,16 @@ class ModeleLive(unittest.TestCase):
         for outil in ("grub-efi-amd64-bin", "grub-pc-bin", "xorriso", "mtools", "casper"):
             self.assertIn(outil, l)
 
+
+class FichiersVivants(unittest.TestCase):
+    """PINCABOS_KEEP_PATHS_V2 : ce qui est propre au cab survit a la mise a jour."""
+
+    def test_liste_de_conservation(self):
+        s = Path(RACINE, "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        bloc = s.split("PCO_KEEP_PATHS=(")[1].split(")\n")[0]
+        for p in ("opt/pincabos/config/screens", "home/pinball/.config/vpinfe/vpinfe.ini",
+                  "home/pinball/.local/share/VPinballX/10.8/directoutputconfig", "home/pinball/.config/pincabos",
+                  "opt/pincabos/config/dof", "opt/pincabos/config/zedmd.json", "opt/pincabos/config/splash.json",
+                  "opt/pincabos/flags", "etc/netplan", "etc/ssh", "etc/machine-id", "var/lib/NetworkManager"):
+            self.assertIn(f'"{p}"', bloc, p)
+        self.assertNotIn("version.json", bloc)      # la version, elle, doit changer

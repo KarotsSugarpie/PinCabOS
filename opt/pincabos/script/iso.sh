@@ -6175,6 +6175,27 @@ PCO_KEEP_PATHS=(
   "opt/pincabos/config/gitpush-release-sequence.json"
   # cab identity
   "etc/pincabos/system-name.conf"
+  # PINCABOS_KEEP_PATHS_V2 (05/09/2026, revue avec Karots) : l image du media est
+  # le rootfs entier d un cab source ; a la mise a jour (unsquashfs -f) tout
+  # fichier present dans l image ecrase celui du cab. Ce qui est propre au cab
+  # et que l image porte aussi doit donc etre mis de cote :
+  "home/pinball/.local/share/VPinballX/10.8/directoutputconfig"
+  "home/pinball/.config/monitors.xml"
+  "home/pinball/.config/pincabos"
+  "home/pinball/.ssh"
+  "opt/pincabos/config/zedmd.json"
+  "opt/pincabos/config/splash.json"
+  "opt/pincabos/config/fulldmd-style.conf"
+  "opt/pincabos/config/admin-password.txt"
+  "opt/pincabos/config/dev-login.txt"
+  "opt/pincabos/config/dev-password.txt"
+  "opt/pincabos/config/webserver-webpass.secret"
+  "opt/pincabos/config/pincabos-paths.json"
+  "opt/pincabos/flags"
+  "etc/netplan"
+  "etc/ssh"
+  "etc/machine-id"
+  "var/lib/NetworkManager"
 )
 
 PCO_KEEP_DIR="/run/pincabos-keep"
