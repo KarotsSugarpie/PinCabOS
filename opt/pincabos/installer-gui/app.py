@@ -170,7 +170,14 @@ def screens_apply():
         return jsonify({"ok": False, "erreurs": erreurs}), 200
     if DEMO:
         return jsonify({"ok": True, "demo": True, "disposition": pco_screens.disposition(mons, roles, rotation)})
-    res = pco_screens.appliquer(mons, roles, rotation)
+    # PINCABOS_INSTALLEUR_LECTURE_V1 : la rotation de lecture ne vaut que pour cette session
+    try:
+        lecture = int(a.get("lecture") or 0)
+    except (TypeError, ValueError):
+        lecture = -1
+    if lecture not in pco_screens.LECTURES:
+        return jsonify({"ok": False, "erreurs": [f"rotation de lecture invalide : {a.get('lecture')}"]}), 200
+    res = pco_screens.appliquer(mons, roles, rotation, lecture=lecture)
     if res.get("ok"):
         try:
             RUN_DIR.mkdir(parents=True, exist_ok=True)

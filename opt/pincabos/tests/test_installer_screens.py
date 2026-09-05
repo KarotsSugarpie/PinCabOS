@@ -335,17 +335,42 @@ class Assistant(unittest.TestCase):
         self.assertTrue(res["ok"], res)
         self.assertEqual(res["pointeurs"], [6, 12])
 
-    def test_mode_applique_est_le_mode_courant(self):
-        # PINCABOS_INSTALLEUR_MODE_COURANT_V1 : VM = prefere 3840x2160, affiche 1920x1440
-        vm = {"name": "Virtual-2", "width": 1920, "height": 1440, "preferred": "3840x2160", "modes": ["5120x2160", "3840x2160", "1920x1440", "1280x800"]}
-        self.assertEqual(sc.mode_de(vm), (1920, 1440))
-        tourne = dict(vm, width=1440, height=1920)             # dalle deja tournee par X
-        self.assertEqual(sc.mode_de(tourne), (1920, 1440))
-        eteinte = dict(vm, width=0, height=0)
-        self.assertEqual(sc.mode_de(eteinte), (3840, 2160))
-        d = sc.disposition([dict(vm, name="V1"), vm], {"playfield": "V1", "backglass": "Virtual-2"}, 0)
-        self.assertEqual(d["Virtual-2"]["mode"], "1920x1440")
-        self.assertEqual(d["Virtual-2"]["x"], 1920)
+    def test_mode_applique_est_le_mode_natif(self):
+        # PINCABOS_INSTALLEUR_MODE_NATIF_V1 : cab 4K dont la session tourne en 1080p -> 4K ecrit
+        cab = {"name": "HDMI-0", "width": 1920, "height": 1080, "preferred": "3840x2160", "modes": ["3840x2160", "1920x1080"]}
+        self.assertEqual(sc.mode_de(cab), (3840, 2160))
+        sans_pref = {"name": "V", "width": 1440, "height": 1920, "preferred": "", "modes": ["1920x1440", "1280x800"]}
+        self.assertEqual(sc.mode_de(sans_pref), (1920, 1440))     # deja tournee : cotes remis
+        d = sc.disposition([cab, dict(cab, name="DP-2", preferred="1920x1080")], {"playfield": "HDMI-0", "backglass": "DP-2"}, 0)
+        self.assertEqual(d["HDMI-0"]["mode"], "3840x2160")
+        self.assertEqual(d["DP-2"]["x"], 3840)
+
+    def test_rotation_de_lecture_jamais_ecrite(self):
+        # PINCABOS_INSTALLEUR_LECTURE_V1 (Yann) : l assistant tourne, la config reste standard
+        mons = sc.moniteurs(QUERY, PROPS)
+        roles = {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}
+        appels = []
+
+        def f(args, timeout=20):
+            appels.append(args)
+            return (0, "", "")
+        res = sc.appliquer(mons, roles, 0, f, lecture=90)
+        self.assertTrue(res["ok"], res)
+        cmd = [a for a in appels if a and a[0] == "xrandr"][0]
+        self.assertIn("right", cmd)                                  # la session est tournee...
+        data = sc.screens_json(mons, roles, 0)                       # ...la config, non
+        self.assertEqual(data["playfield_rotation"], "0")
+        self.assertEqual(data["playfield"]["geometry"], "3840x2160+0+0")
+        self.assertFalse(sc.appliquer(mons, roles, 0, f, lecture=45)["ok"])
+        w = Path(RACINE, "opt/pincabos/installer-gui/templates/wizard.html").read_text(encoding="utf-8")
+        self.assertNotIn('data-rot="90"', w)
+        self.assertIn('data-lecture="270"', w)
+        self.assertIn("S.screens.lecture=+b.dataset.lecture", w)
+        i18n = json.loads(Path(RACINE, "opt/pincabos/installer-gui/i18n.json").read_text(encoding="utf-8"))
+        for l in ("fr", "en", "de", "it", "es"):
+            self.assertIn("lecture_q", i18n[l]); self.assertNotIn("o_90", i18n[l])
+        k = Path(RACINE, "usr/local/bin/pincabos-kiosk.py").read_text(encoding="utf-8")
+        self.assertIn("set_zoom_level(2.0 if max(g.width, g.height) >= 3000 else 1.0)", k)
 
     def test_kiosque_un_bureau_sans_liaisons_et_suit_la_geometrie(self):
         # PINCABOS_KIOSK_OPENBOX_V1 / PINCABOS_KIOSK_SUIT_LA_GEOMETRIE_V1 (Yann : molette = changement de bureau, coince)

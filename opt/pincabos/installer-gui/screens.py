@@ -224,23 +224,20 @@ def tourne(w: int, h: int, rot: int) -> tuple:
 
 
 def mode_de(m: dict) -> tuple[int, int]:
-    """Le mode à appliquer : celui que la dalle affiche (et que la page montre).
+    """Le mode à appliquer et à écrire : le mode NATIF de la dalle (préféré EDID).
 
-    PINCABOS_INSTALLEUR_MODE_COURANT_V1 : le mode « préféré » de l'EDID peut
-    différer du mode courant (vu en VM : 3840x2160 préféré, 1920x1440 affiché →
-    disposition géante, assistant perdu). Sur un cab, X démarre sur le préféré :
-    même valeur. Une dalle déjà tournée annonce ses côtés inversés : on les remet.
+    PINCABOS_INSTALLEUR_MODE_NATIF_V1 (Yann, cab 4K) : la session d'installation
+    peut tourner en 1920x1080 sur une dalle 4K ; écrire ce mode courant aurait
+    installé un cab en 1080p. Le préféré EDID est le natif. Sans préféré : le
+    mode courant, côtés remis dans le sens de la dalle si elle est déjà tournée.
     """
-    modes = m.get("modes") or []
-    w, h = int(m.get("width") or 0), int(m.get("height") or 0)
-    if w and h:
-        if not modes or f"{w}x{h}" in modes:
-            return w, h
-        if f"{h}x{w}" in modes:
-            return h, w
     pref = m.get("preferred") or ""
     if "x" in pref:
         return tuple(int(v) for v in pref.split("x"))
+    modes = m.get("modes") or []
+    w, h = int(m.get("width") or 0), int(m.get("height") or 0)
+    if w and h and modes and f"{w}x{h}" not in modes and f"{h}x{w}" in modes:
+        return h, w
     return w, h
 
 
@@ -272,14 +269,26 @@ def commande_xrandr(dispo: dict, eteindre: list = ()) -> list:
     return cmd
 
 
-def appliquer(monitors: list, roles: dict, rotation: int, run=executer) -> dict:
-    """Applique la disposition dans la session live (le propriétaire voit le résultat)."""
+LECTURES = (0, 90, 270)
+
+
+def appliquer(monitors: list, roles: dict, rotation: int, run=executer, lecture: int = 0) -> dict:
+    """Applique la disposition dans la session live (le propriétaire voit le résultat).
+
+    PINCABOS_INSTALLEUR_LECTURE_V1 (Yann) : `rotation` est la rotation PHYSIQUE
+    du playfield (0 ou 180), la seule écrite dans screens.json : VPX et VPinFE
+    tournent la table eux-mêmes dans un écran X resté en paysage. `lecture`
+    (0, 90, 270) tourne en plus la session d'installation pour que l'assistant
+    se lise sur une dalle montée en portrait ; elle n'est jamais conservée.
+    """
     erreurs = valider_roles(roles, monitors)
     if rotation not in ROTATIONS:
         erreurs.append(f"rotation invalide : {rotation}")
+    if lecture not in LECTURES:
+        erreurs.append(f"rotation de lecture invalide : {lecture}")
     if erreurs:
         return {"ok": False, "erreurs": erreurs}
-    dispo = disposition(monitors, roles, rotation)
+    dispo = disposition(monitors, roles, (rotation + lecture) % 360)
     inutilises = [m["name"] for m in monitors if m["name"] not in dispo]
     cmd = commande_xrandr(dispo, inutilises)
     rc, out, err = run(cmd, timeout=30)
