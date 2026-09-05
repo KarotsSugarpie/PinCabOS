@@ -1,639 +1,388 @@
-# PinCabOS — Guide clé en main pour les demandes OpenAI et Anthropic
+# PinCabOS — Guide clé en main pour Yan : Claude for Open Source
 
 **Destinataire : Yan — France**  
 **Projet : PinCabOS**  
 **Dépôt officiel :** https://github.com/PinCabOs/PinCabOS  
 **Organisation GitHub :** https://github.com/PinCabOs  
-**Dernière vérification des programmes : 5 septembre 2026**
+**Programme visé :** Anthropic — Claude for Open Source  
+**Dernière vérification : 5 septembre 2026**
 
 ---
 
-## 1. But de ce document
+# 1. Objectif
 
-Ce guide est conçu pour que Yan puisse effectuer les demandes de soutien pour PinCabOS depuis la France sans devoir reconstruire le dossier lui-même.
+Ce document est uniquement destiné à la demande **Anthropic / Claude for Open Source** pour PinCabOS.
 
-L'objectif est de déposer PinCabOS auprès des programmes actuellement les plus pertinents pour un projet open source en développement actif :
+Yan utilise déjà Claude AI : il doit donc faire la demande avec **son propre compte Claude/Anthropic**, son vrai nom, son vrai courriel et son vrai profil GitHub.
 
-1. **OpenAI — Codex Open Source Fund**
-2. **OpenAI — Codex for Open Source**
-3. **Anthropic — Claude for Open Source**
-4. **Anthropic — Claude for Startups** uniquement si PinCabOS est plus tard porté par une structure startup admissible
+Il ne faut pas utiliser la procédure OpenAI dans ce document.
 
-Les trois premières demandes peuvent être faites séparément. Il n'est pas nécessaire d'attendre la réponse d'un programme avant de déposer auprès d'un autre.
+Le programme officiel Claude for Open Source annonce actuellement **6 mois gratuits de Claude Max 20x** pour les candidats sélectionnés.
 
-> Important : ces programmes offrent principalement des crédits API, des abonnements ou des ressources de développement. Ils ne doivent pas être présentés comme un salaire ou comme une subvention en argent comptant aux développeurs, sauf si le programme le dit explicitement.
+Lien officiel :
 
----
-
-# 2. Ordre recommandé
-
-Faire les démarches dans cet ordre :
-
-- [ ] Étape 1 — vérifier que le dépôt GitHub PinCabOS est public
-- [ ] Étape 2 — vérifier que `LICENSE` et `THIRD_PARTY_NOTICES.md` sont présents dans le dépôt
-- [ ] Étape 3 — vérifier que le profil GitHub personnel utilisé pour la demande est public
-- [ ] Étape 4 — déposer **OpenAI Codex Open Source Fund**
-- [ ] Étape 5 — déposer **OpenAI Codex for Open Source**
-- [ ] Étape 6 — déposer **Anthropic Claude for Open Source**
-- [ ] Étape 7 — conserver une copie des réponses envoyées et la date de chaque dépôt
-- [ ] Étape 8 — surveiller l'adresse courriel utilisée pour les candidatures
+https://claude.com/contact-sales/claude-for-oss
 
 ---
 
-# 3. Informations PinCabOS à utiliser partout
+# 2. Ce qu'Anthropic recherche
 
-## Nom du projet
+Anthropic indique que le programme vise notamment les profils suivants :
 
-```text
-PinCabOS
-```
+- mainteneurs de paquets utilisés par beaucoup d'autres projets ;
+- contributeurs principaux de grands projets ou fondations open source ;
+- contributeurs ayant fait beaucoup de PR fusionnées dans des dépôts qu'ils ne possèdent pas ;
+- projets ayant beaucoup de contributeurs externes ;
+- projets considérés comme infrastructure open source critique.
 
-## Dépôt GitHub
+Les seuils publiés par Anthropic incluent notamment :
+
+- 500 dépôts dépendants ou plus ;
+- 100 paquets dépendants ou plus ;
+- 200 000 téléchargements mensuels combinés ou plus ;
+- 100 PR ou plus fusionnées dans des dépôts externes sur les 12 derniers mois ;
+- 20 contributeurs externes uniques ou plus sur un dépôt ;
+- ou un score OpenSSF criticality d'au moins 0,4.
+
+**PinCabOS est encore jeune et ne doit surtout pas prétendre atteindre ces seuils si ce n'est pas vrai.**
+
+Anthropic précise toutefois que les mainteneurs qui ne correspondent pas parfaitement à ces critères peuvent quand même déposer une demande s'ils maintiennent quelque chose d'important ou d'utile à leur écosystème.
+
+C'est exactement l'angle recommandé pour PinCabOS.
+
+---
+
+# 3. Ce que Yan doit avoir sous la main avant de commencer
+
+- [ ] être connecté au compte Claude qu'il utilise réellement ;
+- [ ] utiliser l'adresse courriel liée à ce compte ;
+- [ ] connaître son nom d'utilisateur GitHub ;
+- [ ] avoir son profil GitHub public ;
+- [ ] vérifier que le dépôt PinCabOS est public ;
+- [ ] vérifier que `LICENSE` est présent ;
+- [ ] vérifier que `THIRD_PARTY_NOTICES.md` est présent ;
+- [ ] connaître son rôle réel dans PinCabOS ;
+- [ ] garder ce document ouvert pour copier-coller les réponses.
+
+Dépôt à fournir partout :
 
 ```text
 https://github.com/PinCabOs/PinCabOS
 ```
 
-## Organisation GitHub
+---
+
+# 4. Rôle de Yan
+
+Yan doit utiliser la formulation correspondant réellement à son travail.
+
+## Si Yan développe régulièrement PinCabOS
 
 ```text
-https://github.com/PinCabOs
+Core maintainer and developer. I contribute to development, testing, validation and maintenance of PinCabOS, including real-world testing on physical virtual pinball cabinet hardware in France.
 ```
 
-## Description très courte
+## Si Yan est surtout responsable des tests matériels en France
 
 ```text
-PinCabOS is an open-source Linux-based operating and management platform for virtual pinball cabinets.
+Core contributor and hardware validation developer. I test PinCabOS on physical virtual pinball cabinet hardware in France and contribute to validation, regression testing, issue identification and development feedback.
 ```
 
-## Description courte recommandée
+Ne pas écrire `primary maintainer` si ce n'est pas réellement son rôle.
+
+---
+
+# 5. Description courte de PinCabOS
+
+Si le formulaire demande une courte description du projet, copier :
 
 ```text
-PinCabOS is an open-source Linux platform designed specifically for virtual pinball cabinets. It connects cabinet hardware, Visual Pinball X, VPinFE, displays, audio/SSF, physical controls, DOF devices, diagnostics, updates, backups and a browser-based management interface into one coherent and maintainable environment.
+PinCabOS is an open-source Linux platform designed specifically for virtual pinball cabinets. It connects cabinet hardware, Visual Pinball X, VPinFE, displays, audio/SSF, physical controls, DOF devices, diagnostics, safe updates, backups and a browser-based management interface into one coherent and maintainable environment.
 ```
 
-## Description plus complète
+---
+
+# 6. Description complète du projet
+
+Si le formulaire permet une réponse plus longue, copier :
 
 ```text
 PinCabOS is an open-source Linux-based platform designed specifically for virtual pinball cabinets.
 
-Virtual pinball systems normally require users to manually integrate many independent components: the operating system, Visual Pinball X, frontend software, multiple displays, audio and surround sound feedback, physical buttons, analog plungers, accelerometers, lighting controllers, solenoids, addressable LEDs, network storage, media libraries and table assets.
+Virtual pinball cabinets require many independent technologies to work together: Linux, GPUs, multiple displays, Visual Pinball X, frontend software, audio and surround sound feedback, USB controllers, physical buttons, analog plungers, accelerometers, force-feedback devices, addressable lighting, network storage, media libraries and table assets.
 
-PinCabOS brings these components together into a coherent, reproducible and maintainable platform. Its goal is to make building, configuring, operating and troubleshooting a virtual pinball cabinet significantly easier while preserving compatibility with the existing virtual pinball ecosystem.
+PinCabOS brings these components together into a coherent, reproducible and maintainable environment. The project includes a browser-based WebApp, hardware and display detection, audio/SSF configuration, input mapping, DOF hardware management, Smart Import/Export tools, diagnostics, backup and recovery systems, transactional updates with rollback, cabinet monitoring and integration with VPX and VPinFE.
 
-The project includes a browser-based management interface, hardware and display detection, audio/SSF configuration, input mapping, DOF hardware management, Smart Import/Export tools, backup and recovery systems, diagnostics, update management, cabinet monitoring and integration with VPX and VPinFE.
+The goal is to reduce the technical barrier to building and maintaining a virtual pinball cabinet while preserving compatibility with the existing virtual pinball ecosystem.
 ```
 
 ---
 
-# 4. Rôle de Yan dans les formulaires
+# 7. Réponse principale — Pourquoi PinCabOS devrait être accepté
 
-Yan doit utiliser son vrai nom, sa vraie adresse courriel et son propre profil GitHub.
-
-Pour la question sur son rôle, utiliser la formulation qui correspond réellement à son implication.
-
-### Si Yan développe régulièrement dans PinCabOS
-
-```text
-Core maintainer / developer. I contribute to development, testing, validation and maintenance of PinCabOS, including real-world testing on physical virtual pinball cabinet hardware.
-```
-
-### Si Yan est surtout responsable des essais sur cabinet en France
-
-```text
-Core contributor and hardware validation developer. I test PinCabOS on physical virtual pinball cabinet hardware in France and contribute to validation, issue identification, regression testing and development feedback.
-```
-
-Ne pas se déclarer « primary maintainer » si ce n'est pas réellement son rôle.
-
----
-
-# 5. OPENAI — CODEX OPEN SOURCE FUND
-
-## Programme
-
-OpenAI a créé un fonds de **1 million de dollars US** pour soutenir des projets open source utilisant Codex CLI et les modèles OpenAI.
-
-Les projets retenus peuvent recevoir jusqu'à **25 000 $ US en crédits API**.
-
-Les demandes sont examinées au fil de l'eau.
-
-## Lien officiel
-
-https://openai.com/form/codex-open-source-fund/
-
-## Ce que Yan doit préparer avant d'ouvrir le formulaire
-
-- son prénom et nom
-- son adresse courriel
-- son profil LinkedIn, si disponible
-- son profil GitHub personnel
-- le dépôt PinCabOS
-- la description du projet ci-dessous
-- la liste des autres développeurs principaux
-
----
-
-## Remplissage champ par champ
-
-### First name
-
-Utiliser le vrai prénom de Yan.
-
-### Last name
-
-Utiliser le vrai nom de famille de Yan.
-
-### Email address
-
-Utiliser une adresse courriel que Yan consulte régulièrement.
-
-### LinkedIn URL
-
-Si Yan possède LinkedIn, inscrire son URL personnelle.
-
-Sinon, laisser vide si le formulaire le permet.
-
-### GitHub (personal)
-
-Inscrire le profil GitHub personnel de Yan.
-
-Exemple de format :
-
-```text
-https://github.com/NOM_UTILISATEUR
-```
-
-### Is there anything else you'd like us to know?
+C'est la réponse la plus importante du dossier.
 
 Copier :
 
 ```text
-PinCabOS is a young but very actively developed open-source project. Development and validation are performed against real physical virtual pinball cabinets, which creates an unusually broad engineering surface spanning Linux, Python, web development, GPU/display configuration, audio, USB hardware, physical controls, force feedback, lighting and multiplayer services. Support from OpenAI would directly reduce the maintenance burden on a small development team.
+PinCabOS is a young but highly active open-source Linux platform for virtual pinball cabinets. It solves a difficult integration problem across Linux, GPUs, multiple displays, audio/SSF, USB controls, force-feedback devices, lighting, Visual Pinball X and frontend software.
+
+The project is developed and validated on real physical cabinets in Canada and France. It focuses strongly on safe configuration, diagnostics, backups, transactional updates and rollback because errors can affect expensive physical hardware.
+
+We do not yet meet Anthropic's large adoption thresholds, and we do not want to overstate our current metrics. However, PinCabOS addresses a technically complex niche with very little integrated tooling, and it has the potential to become important infrastructure for Linux-based virtual pinball builders.
+
+Claude support would directly increase the development capacity of a small distributed open-source team while keeping all final validation on real hardware in human hands.
 ```
 
-### Which open source project are you representing?
+---
+
+# 8. Réponse — Comment Claude serait utilisé
+
+Copier :
+
+```text
+Claude and Claude Code would be used as engineering tools for PinCabOS development: code review, debugging, regression analysis, installer validation, release workflows, documentation, log analysis, hardware compatibility work, WebApp development, multiplayer development and maintenance of safe backup/update/rollback procedures.
+
+PinCabOS spans Linux system engineering, Python, web development, GPU/display configuration, audio, USB hardware and physical cabinet integration. Claude can significantly increase the capacity of a small open-source team while real-cabinet testing and final technical decisions remain performed by the maintainers.
+```
+
+---
+
+# 9. Réponse — Pourquoi Claude est particulièrement utile à PinCabOS
+
+Si le formulaire demande pourquoi Claude ou Claude Code est pertinent pour le projet, copier :
+
+```text
+PinCabOS has a very broad engineering surface for a small team. A single feature can involve Python, Bash, systemd, Linux permissions, web code, hardware detection, GPU/display configuration and real physical devices. Claude Code is particularly valuable for reviewing cross-component changes, tracing regressions, maintaining documentation and validating safer implementation paths before changes are tested on real cabinets.
+```
+
+---
+
+# 10. Réponse — Impact attendu
+
+Si le formulaire demande l'impact du programme, copier :
+
+```text
+Six months of Claude Max 20x would materially increase the amount of development, review and documentation work our small team can perform. It would help us spend less time on repetitive analysis and more time on architecture, physical hardware testing, community support and making PinCabOS easier to install and maintain for new virtual pinball builders.
+```
+
+---
+
+# 11. Réponse — État actuel / maturité du projet
+
+```text
+PinCabOS is currently in active alpha development with frequent releases and continuous testing on real virtual pinball cabinets. The project is young, but development is very active and the system already covers installation, WebApp management, displays, audio/SSF, controls, DOF hardware, imports, diagnostics, updates, backups and recovery workflows.
+```
+
+---
+
+# 12. Réponse — Équipe distribuée
+
+Si le formulaire demande qui travaille sur le projet :
+
+```text
+PinCabOS is maintained by a small distributed team. Jean-Robert Letarte leads project direction, architecture, integration and real-cabinet validation in Canada. Yan contributes from France to development, testing, hardware validation, regression identification and development feedback. Additional work is contributed through GitHub pull requests and component-specific development.
+```
+
+Avant l'envoi, corriger ce texte si les rôles réels ont changé.
+
+---
+
+# 13. Procédure exacte pour Yan
+
+## Étape 1 — Se connecter à Claude
+
+Ouvrir :
+
+https://claude.ai
+
+Se connecter avec **le compte Claude que Yan utilise réellement**.
+
+Il est préférable que l'adresse courriel utilisée dans la demande soit la même que celle de ce compte.
+
+## Étape 2 — Ouvrir le programme officiel
+
+Ouvrir dans le même navigateur :
+
+https://claude.com/contact-sales/claude-for-oss
+
+Vérifier que la page affiche bien :
+
+**Claude for Open Source**
+
+et l'offre de **6 months of Claude Max 20x**.
+
+## Étape 3 — Commencer la candidature
+
+Cliquer sur le bouton d'application de la page.
+
+Le formulaire peut évoluer. Si le nom exact d'un champ diffère de ce guide, utiliser la réponse correspondant au sens du champ.
+
+## Étape 4 — Identité
+
+Utiliser uniquement les informations personnelles réelles de Yan :
+
+- vrai prénom ;
+- vrai nom ;
+- vrai courriel ;
+- vrai profil GitHub ;
+- France comme pays si demandé.
+
+## Étape 5 — Projet
+
+Nom :
 
 ```text
 PinCabOS
 ```
 
-### Brief description of the project
-
-Copier :
-
-```text
-PinCabOS is an open-source Linux platform for virtual pinball cabinets. It integrates cabinet hardware, Visual Pinball X, VPinFE, displays, audio/SSF, physical controls, DOF devices, diagnostics, updates, backups and a browser-based management interface into one coherent system. The goal is to make complex virtual pinball hardware easier to install, operate, diagnose and maintain while remaining compatible with the existing virtual pinball ecosystem.
-```
-
-### GitHub repository
+Repository URL :
 
 ```text
 https://github.com/PinCabOs/PinCabOS
 ```
 
-### If there are other people working with you on this project...
-
-Adapter les noms réels avant l'envoi.
-
-Texte recommandé :
+Project type :
 
 ```text
-PinCabOS is maintained by a small distributed development team. Jean-Robert Letarte leads project direction, architecture, integration and real-cabinet validation in Canada. Yan contributes from France to development, testing, hardware validation and regression identification. Additional contributors participate through GitHub pull requests, issue resolution and component-specific development.
+Open-source Linux platform / operating and management environment for virtual pinball cabinets
 ```
 
-Si les rôles ont changé, corriger cette phrase avant de soumettre.
+## Étape 6 — Rôle
 
-### How would you use API credits for your project?
+Utiliser une des formulations de la section 4 selon le rôle réel de Yan.
 
-Copier :
+## Étape 7 — Critères d'admissibilité
+
+Si le formulaire demande lequel des grands critères Anthropic est atteint et qu'aucun n'est réellement atteint, **ne rien inventer**.
+
+Choisir une option de type `Other`, `None of the above`, `Additional context` ou équivalent si elle existe, puis expliquer que PinCabOS est un projet jeune mais techniquement important pour son écosystème.
+
+Utiliser la réponse de la section 7.
+
+## Étape 8 — Usage de Claude
+
+Utiliser la réponse de la section 8.
+
+## Étape 9 — Informations supplémentaires
+
+Si un champ libre apparaît, copier :
 
 ```text
-We would use OpenAI API credits and Codex to accelerate code review, regression analysis, automated testing, release validation, installer diagnostics, structured log analysis, documentation, issue triage and maintainer workflows. Credits would also support safer backup/update/rollback tooling, hardware-compatibility diagnostics and development of the PinCabOS multiplayer framework. The objective is to use AI as an engineering multiplier for a small open-source team maintaining a complex hardware/software platform.
+PinCabOS is intentionally conservative around physical hardware. Important changes follow a backup -> targeted change -> validation -> log review -> real-hardware test -> rollback-capable workflow. Claude would help us strengthen this engineering process and improve maintainability without replacing human validation. The project is open source and tested on real cabinets in both Canada and France.
 ```
 
-### Avant de cliquer Submit
+## Étape 10 — Vérification avant Submit
 
-- [ ] vérifier que le dépôt est exactement `https://github.com/PinCabOs/PinCabOS`
-- [ ] relire les noms et rôles
-- [ ] ne pas promettre des statistiques d'utilisation qui ne sont pas vérifiables
-- [ ] ne pas présenter les crédits API comme un paiement en argent comptant
-- [ ] conserver une copie du texte envoyé
-- [ ] noter la date du dépôt
+- [ ] le compte Claude connecté est bien celui de Yan ;
+- [ ] le courriel est correct ;
+- [ ] le profil GitHub est réel et public ;
+- [ ] le dépôt est exactement `https://github.com/PinCabOs/PinCabOS` ;
+- [ ] Yan n'a inventé aucune statistique ;
+- [ ] le rôle indiqué correspond à son travail réel ;
+- [ ] PinCabOS est présenté comme projet open source jeune mais très actif ;
+- [ ] l'utilisation de Claude est clairement liée au développement open source ;
+- [ ] une copie des réponses est conservée.
+
+## Étape 11 — Envoyer
+
+Cliquer sur Submit une seule fois.
+
+Faire une capture ou conserver la confirmation affichée après l'envoi.
+
+Noter la date de dépôt.
 
 ---
 
-# 6. OPENAI — CODEX FOR OPEN SOURCE
+# 14. Si Yan possède déjà Claude Pro ou Max
 
-## Lien officiel français
+Le programme Claude for Open Source annonce actuellement **6 mois de Claude Max 20x offerts** aux candidats sélectionnés.
 
-https://openai.com/fr-FR/form/codex-for-oss/
+Anthropic indique qu'à la fin de la période gratuite :
 
-## Lien officiel anglais
+- si le compte possédait auparavant un abonnement payant, cet abonnement reprend à son plan et tarif antérieurs sauf annulation ;
+- sinon le compte revient au plan gratuit.
 
-https://openai.com/form/codex-for-oss/
-
-## Ce que le programme peut fournir
-
-Pour les mainteneurs sélectionnés :
-
-- **6 mois de ChatGPT Pro**, incluant Codex
-- crédits API pour le projet
-- accès conditionnel possible à Codex Security
-
-OpenAI indique que les candidatures sont examinées au fil de l'eau.
-
-OpenAI indique également qu'un projet qui ne correspond pas parfaitement aux critères peut quand même déposer s'il joue un rôle important dans son écosystème.
+Yan n'a donc pas besoin de créer un second compte Claude uniquement pour cette demande.
 
 ---
 
-## Préparation obligatoire
+# 15. Ce qu'il ne faut surtout pas écrire
 
-### Compte ChatGPT
+Ne pas écrire :
 
-Yan doit utiliser l'adresse courriel liée au compte ChatGPT avec lequel il souhaite bénéficier du programme.
+- que PinCabOS possède 200 000 téléchargements mensuels si ce n'est pas vrai ;
+- que PinCabOS possède 500 dépôts dépendants ;
+- que PinCabOS possède 20 contributeurs externes si ce n'est pas documenté ;
+- que le projet a un score OpenSSF >= 0,4 sans l'avoir vérifié ;
+- que Yan est le créateur principal si ce n'est pas son rôle ;
+- que Claude remplacera les développeurs ;
+- que l'avantage est un paiement en argent comptant.
 
-### Profil GitHub
-
-Le profil personnel GitHub doit être visible publiquement au moment du dépôt.
-
-### Dépôt PinCabOS
-
-Le dépôt doit être public :
-
-```text
-https://github.com/PinCabOs/PinCabOS
-```
-
-### OpenAI Organization ID
-
-Le formulaire demande un **OpenAI Organization ID**.
-
-Ouvrir :
-
-https://platform.openai.com/settings/organization/general
-
-Se connecter au compte OpenAI Platform.
-
-Copier l'identifiant de l'organisation affiché dans les paramètres.
-
-Ne pas inventer l'Organization ID.
+Le dossier doit rester techniquement solide et totalement vérifiable.
 
 ---
 
-## Remplissage champ par champ
+# 16. Arguments PinCabOS à garder en tête
 
-### Prénom / Nom
+Les meilleurs arguments ne sont pas encore les statistiques de popularité du dépôt.
 
-Informations réelles de Yan.
+Les meilleurs arguments sont :
 
-### Adresse e-mail
-
-Utiliser l'adresse associée à son compte ChatGPT.
-
-### Nom d'utilisateur GitHub
-
-Inscrire uniquement son nom d'utilisateur GitHub, sans inventer celui d'un autre développeur.
-
-### URL du dépôt GitHub
-
-```text
-https://github.com/PinCabOs/PinCabOS
-```
-
-### Rôle
-
-Choisir **Core maintainer / Mainteneur clé** si cela correspond réellement à son rôle.
-
-### Pourquoi ce dépôt est-il admissible ? — maximum 500 caractères
-
-Copier exactement :
-
-```text
-PinCabOS is an actively maintained open-source Linux platform for virtual pinball cabinets. It integrates hardware, displays, audio/SSF, controls, DOF, VPX, VPinFE, safe updates, diagnostics and a WebApp into one reproducible system. The project addresses a difficult hardware/software integration problem for the virtual pinball maker ecosystem and is developed through frequent releases and real-cabinet testing.
-```
-
-Ce texte respecte la limite de 500 caractères au moment de la préparation de ce document.
-
-### Je suis intéressé(e) par...
-
-Cocher :
-
-- [x] **Codex Security**
-- [x] **Crédits API pour mon projet**
-
-### Identifiant d'organisation OpenAI
-
-Coller l'Organization ID récupéré dans :
-
-https://platform.openai.com/settings/organization/general
-
-### Comment utiliserez-vous les crédits d'API ? — maximum 500 caractères
-
-Copier exactement :
-
-```text
-We would use OpenAI API credits and Codex for code review, regression analysis, automated tests, release validation, installer diagnostics, documentation, issue triage and maintainer workflows. Credits would also support safer backup/update/rollback tooling, hardware compatibility diagnostics and development of the PinCabOS multiplayer framework.
-```
-
-### Avez-vous d'autres informations à nous communiquer ? — maximum 500 caractères
-
-Copier :
-
-```text
-PinCabOS is a young project, so its adoption metrics are still growing, but development is unusually active and testing is performed on real physical cabinets. The project aims to reduce the technical barrier to building and maintaining Linux-based virtual pinball systems while preserving compatibility with the broader VPX ecosystem.
-```
-
-### Avant de soumettre
-
-- [ ] compte ChatGPT correct
-- [ ] courriel correct
-- [ ] profil GitHub public
-- [ ] dépôt PinCabOS public
-- [ ] licence visible dans le dépôt
-- [ ] Organization ID réel
-- [ ] les deux cases Codex Security + API credits cochées
-- [ ] copie des réponses conservée
+1. projet open source réel et public ;
+2. système Linux spécialisé pour une niche matérielle complexe ;
+3. intégration de nombreuses couches techniques dans un seul environnement ;
+4. développement rapide et fréquent ;
+5. tests sur de vrais cabinets ;
+6. équipe distribuée Canada / France ;
+7. procédures de backup, validation et rollback ;
+8. réduction de la barrière technique pour les utilisateurs ;
+9. Claude et Claude Code peuvent réellement multiplier la capacité d'une petite équipe ;
+10. les décisions finales et les tests physiques restent faits par les mainteneurs.
 
 ---
 
-# 7. ANTHROPIC — CLAUDE FOR OPEN SOURCE
+# 17. Liens utiles pour Yan
 
-## Lien officiel
+## Claude AI
+
+https://claude.ai
+
+## Claude for Open Source — formulaire officiel
 
 https://claude.com/contact-sales/claude-for-oss
 
-## Avantage annoncé
-
-Anthropic annonce **6 mois gratuits de Claude Max 20x** pour les candidats sélectionnés.
-
-Le programme vise notamment :
-
-- mainteneurs et auteurs de bibliothèques très utilisées
-- contributeurs principaux à de grands projets
-- contributeurs très actifs
-- projets comptant un nombre important de contributeurs externes
-- infrastructure open source critique
-
-### Point très important pour PinCabOS
-
-PinCabOS est encore jeune et ne satisfait probablement pas aujourd'hui les seuils statistiques élevés affichés par Anthropic.
-
-Cependant, Anthropic indique explicitement que si un projet ne correspond pas parfaitement aux critères mais que son écosystème en dépend ou qu'il apporte une valeur réelle, le mainteneur devrait quand même déposer et expliquer son importance.
-
-Il faut donc être transparent : **ne pas inventer de téléchargements, de dépendances, de contributeurs ou de scores OpenSSF**.
-
-L'argument PinCabOS doit porter sur :
-
-- la complexité technique du projet
-- l'intégration logiciel + matériel
-- les tests sur vrais cabinets
-- la maintenance très active
-- la réduction de la barrière technique pour les constructeurs de pincabs
-- la sécurité des mises à jour et procédures de rollback
-- la nature open source du projet
-
----
-
-## Texte principal recommandé pour Claude for Open Source
-
-Si le formulaire demande pourquoi PinCabOS devrait être accepté, utiliser :
-
-```text
-PinCabOS is a young but highly active open-source Linux platform for virtual pinball cabinets. It solves a difficult integration problem across Linux, GPUs, multiple displays, audio/SSF, USB controls, force-feedback devices, lighting, Visual Pinball X and frontend software. The project is tested on real physical cabinets and aims to make this complex maker ecosystem significantly easier to install, diagnose and maintain. We do not yet meet Anthropic's large adoption thresholds, but the project has clear technical depth and growing ecosystem value.
-```
-
-## Si le formulaire demande comment Claude serait utilisé
-
-```text
-Claude and Claude Code would be used for code review, debugging, regression analysis, installer validation, release workflows, documentation, log analysis, hardware compatibility work and multiplayer development. PinCabOS spans Linux system engineering, Python, web development and physical hardware integration, so AI-assisted development can significantly increase the capacity of a small open-source team without replacing human validation on real cabinet hardware.
-```
-
-## Si le formulaire demande le dépôt
-
-```text
-https://github.com/PinCabOs/PinCabOS
-```
-
-## Si le formulaire demande le rôle de Yan
-
-Utiliser la formulation réelle correspondant à la section 4 de ce guide.
-
-### Avant de soumettre
-
-- [ ] ne pas prétendre atteindre les seuils Anthropic si ce n'est pas le cas
-- [ ] expliquer clairement pourquoi PinCabOS est techniquement important
-- [ ] insister sur le vrai matériel et les tests physiques
-- [ ] fournir le dépôt GitHub public
-- [ ] conserver une copie de la demande
-
----
-
-# 8. ANTHROPIC — CLAUDE FOR STARTUPS — OPTION SECONDAIRE
-
-## Lien officiel français
-
-https://claude.com/fr/programs/startups
-
-## Lien officiel anglais
-
-https://claude.com/programs/startups
-
-Ce programme n'est **pas la priorité** pour PinCabOS tant que le projet est principalement présenté comme un projet open source communautaire.
-
-Anthropic indique que le programme startup est ouvert aux fondateurs et jeunes startups, mais que les avantages en crédits les plus importants dépendent notamment de la structure de l'entreprise et, pour certains avantages, de financement institutionnel ou d'un investisseur/accélérateur partenaire.
-
-Pour une demande depuis la France, cette piste peut être réévaluée si PinCabOS est porté par une société ou startup créée pour développer des services autour du projet.
-
-Ne pas transformer artificiellement PinCabOS en « startup » uniquement pour demander des crédits.
-
----
-
-# 9. CE QUE YAN DOIT DIRE SI ON LUI DEMANDE « POURQUOI MAINTENANT ? »
-
-```text
-PinCabOS has reached the stage where the main challenge is no longer proving the concept but maintaining the speed and quality of development across a broad hardware/software surface. The project is moving through frequent releases while simultaneously improving installation, diagnostics, safe updates, physical hardware compatibility and multiplayer capabilities. AI development resources would allow a small distributed team to improve testing, review and documentation while preserving human validation on real cabinets.
-```
-
----
-
-# 10. CE QUE YAN DOIT DIRE SI ON LUI DEMANDE L'IMPACT DU PROJET
-
-```text
-Virtual pinball cabinets combine technologies that are individually complex and rarely designed to work together as one product. PinCabOS attempts to turn that fragmented stack into a coherent open-source environment. The impact is practical: builders spend less time manually debugging Linux, displays, audio, controllers, feedback devices and file layouts, and more time using and improving their cabinets. The project also creates reusable diagnostics, update and recovery workflows for the wider maker community.
-```
-
----
-
-# 11. CE QUE YAN NE DOIT PAS ÉCRIRE
-
-Éviter les affirmations suivantes si elles ne sont pas vérifiables :
-
-```text
-We have thousands of users.
-```
-
-```text
-PinCabOS is the most popular virtual pinball operating system.
-```
-
-```text
-We depend on this grant to survive.
-```
-
-```text
-The grant will pay developer salaries.
-```
-
-```text
-All software included with PinCabOS is owned by PinCabOS.
-```
-
-À la place, rester factuel : projet jeune, développement actif, vraie complexité technique, tests matériels, open source, besoin d'augmenter la capacité de maintenance.
-
----
-
-# 12. LICENCE ET COMPOSANTS TIERS
-
-PinCabOS doit clairement distinguer son propre code des logiciels et contenus tiers.
-
-Le dépôt doit contenir :
-
-```text
-LICENSE
-THIRD_PARTY_NOTICES.md
-```
-
-La licence PinCabOS ne doit pas être interprétée comme une relicence de :
-
-- Visual Pinball X
-- VPinFE
-- tables VPX tierces
-- ROMs
-- backglass
-- PuP-Packs
-- médias tiers
-- marques ou contenus protégés appartenant à leurs ayants droit
-
-Les composants tiers conservent leurs propres licences et droits.
-
----
-
-# 13. DOSSIER GITHUB DE RÉFÉRENCE
-
-Les textes détaillés préparés dans le dépôt sont :
-
-```text
-docs/OPENAI_CODEX_OPEN_SOURCE_FUND.md
-docs/OPENAI_CODEX_FOR_OPEN_SOURCE.md
-docs/GUIDE_SUBVENTIONS_IA_YAN_FRANCE.md
-FUNDING.md
-LICENSE
-THIRD_PARTY_NOTICES.md
-```
-
-Utiliser ces fichiers comme copie de référence de la candidature.
-
----
-
-# 14. SUIVI APRÈS L'ENVOI
-
-Créer un petit suivi personnel avec :
-
-| Programme | Date envoyée | Courriel utilisé | Statut | Réponse |
-|---|---|---|---|---|
-| OpenAI Codex Open Source Fund |  |  | Envoyé / En attente |  |
-| OpenAI Codex for Open Source |  |  | Envoyé / En attente |  |
-| Anthropic Claude for Open Source |  |  | Envoyé / En attente |  |
-
-Les programmes OpenAI indiquent que les demandes sont examinées au fil de l'eau. Il ne faut donc pas soumettre plusieurs fois la même candidature simplement parce qu'une réponse n'est pas immédiate.
-
----
-
-# 15. CHECKLIST FINALE — VERSION 5 MINUTES
-
-Avant de commencer :
-
-- [ ] GitHub personnel de Yan public
-- [ ] PinCabOS public
-- [ ] licence visible
-- [ ] adresse courriel accessible
-- [ ] compte ChatGPT accessible
-- [ ] OpenAI Organization ID disponible
-
-Ensuite :
-
-### OpenAI Fund
-
-https://openai.com/form/codex-open-source-fund/
-
-- [ ] remplir identité
-- [ ] mettre PinCabOS
-- [ ] mettre le dépôt
-- [ ] copier les réponses de la section 5
-- [ ] soumettre
-
-### OpenAI Codex for OSS
-
-https://openai.com/fr-FR/form/codex-for-oss/
-
-- [ ] utiliser le mail du compte ChatGPT
-- [ ] mettre le GitHub personnel
-- [ ] mettre PinCabOS
-- [ ] sélectionner le rôle réel
-- [ ] cocher Codex Security
-- [ ] cocher API credits
-- [ ] mettre le vrai OpenAI Organization ID
-- [ ] copier les réponses de la section 6
-- [ ] soumettre
-
-### Anthropic Claude for OSS
-
-https://claude.com/contact-sales/claude-for-oss
-
-- [ ] remplir identité
-- [ ] mettre PinCabOS
-- [ ] mettre le dépôt GitHub
-- [ ] être transparent sur le fait que le projet est jeune
-- [ ] copier les arguments de la section 7
-- [ ] soumettre
-
----
-
-# 16. LIENS OFFICIELS À CONSERVER
-
-### PinCabOS
+## Dépôt PinCabOS
 
 https://github.com/PinCabOs/PinCabOS
 
-### OpenAI — Codex Open Source Fund
+## Organisation PinCabOS
 
-https://openai.com/form/codex-open-source-fund/
+https://github.com/PinCabOs
 
-### OpenAI — Codex for Open Source — France
+## Licence PinCabOS
 
-https://openai.com/fr-FR/form/codex-for-oss/
+https://github.com/PinCabOs/PinCabOS/blob/main/LICENSE
 
-### OpenAI — paramètres Organization ID
+## Avis sur les composants tiers
 
-https://platform.openai.com/settings/organization/general
-
-### Anthropic — Claude for Open Source
-
-https://claude.com/contact-sales/claude-for-oss
-
-### Anthropic — Claude for Startups France
-
-https://claude.com/fr/programs/startups
+https://github.com/PinCabOs/PinCabOS/blob/main/THIRD_PARTY_NOTICES.md
 
 ---
 
-# 17. NOTE POUR YAN
+# 18. Résumé ultra-court pour Yan
 
-Tu n'as pas besoin de survendre PinCabOS.
+1. Connecte-toi à ton compte Claude habituel.
+2. Va sur https://claude.com/contact-sales/claude-for-oss
+3. Utilise ton vrai profil GitHub et ton vrai rôle dans PinCabOS.
+4. Projet : `PinCabOS`.
+5. Repo : `https://github.com/PinCabOs/PinCabOS`.
+6. Ne prétends pas atteindre les grands seuils statistiques Anthropic.
+7. Explique que PinCabOS est jeune, très actif, techniquement complexe et testé sur du vrai matériel.
+8. Explique que Claude/Claude Code servira au code review, debugging, régressions, releases, documentation et diagnostics.
+9. Relis tout.
+10. Submit et garde la confirmation.
 
-Le meilleur dossier est celui qui explique exactement ce que nous faisons : un petit groupe de développeurs construit et teste un véritable environnement Linux de virtual pinball sur du matériel physique, avec une cadence de développement élevée et une surface technique très large.
+---
 
-Le projet est encore jeune, mais c'est justement là que des outils comme Codex et Claude Code peuvent avoir le plus d'impact : automatiser une partie des revues, tests, diagnostics, documentation et validations afin que l'équipe puisse consacrer davantage de temps aux problèmes que seul un vrai cabinet permet de tester.
-
-**Rester factuel, transparent et technique. C'est l'argument le plus fort de PinCabOS.**
+**Document préparé pour la candidature Anthropic Claude for Open Source de PinCabOS.**
