@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""Plus de flash blanc au lancement du frontend.
+
+PINCABOS_VPINFE_CHROME_SOMBRE_V1
+
+Chromium peint ses fenetres en blanc tant que la page n a pas rendu : dans le
+noir du cab, le playfield 4K « fusille les yeux » a chaque lancement. VPinFE
+transmet a Chromium les options de `chromeoptions` (vpinfe.ini) : on y ajoute
+--force-dark-mode, qui rend ce premier remplissage sombre. Idempotent, jamais
+bloquant (ExecStartPre=- du service vpinfe).
+"""
+from __future__ import annotations
+
+import os
+import re
+import sys
+
+INI = "/home/pinball/.config/vpinfe/vpinfe.ini"
+FLAGS = ("--force-dark-mode",)
+CLE = re.compile(r"^(\s*chromeoptions\s*=\s*)(.*?)\s*$", re.IGNORECASE)
+
+
+def ajouter(texte: str, flags=FLAGS) -> tuple[str, bool]:
+    """Ajoute les options manquantes sur la ligne chromeoptions ; (texte, change)."""
+    lignes = texte.split("\n")
+    for i, ligne in enumerate(lignes):
+        m = CLE.match(ligne)
+        if not m:
+            continue
+        presentes = m.group(2).split()
+        manquantes = [f for f in flags if f not in presentes]
+        if not manquantes:
+            return texte, False
+        lignes[i] = m.group(1) + " ".join(presentes + manquantes)
+        return "\n".join(lignes), True
+    return texte, False
+
+
+def main() -> int:
+    try:
+        with open(INI, encoding="utf-8", errors="replace") as f:
+            texte = f.read()
+    except OSError as exc:
+        print(f"chrome sombre : {INI} illisible ({exc}), rien a faire")
+        return 0
+    nouveau, change = ajouter(texte)
+    if not change:
+        print("chrome sombre : deja en place")
+        return 0
+    tmp = INI + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(nouveau)
+    try:
+        st = os.stat(INI)
+        os.chown(tmp, st.st_uid, st.st_gid)
+        os.chmod(tmp, st.st_mode & 0o7777)
+    except OSError:
+        pass
+    os.replace(tmp, INI)
+    print("chrome sombre : --force-dark-mode ajoute a chromeoptions")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

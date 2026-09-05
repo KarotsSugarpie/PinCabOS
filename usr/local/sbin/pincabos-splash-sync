@@ -1,19 +1,49 @@
 #!/usr/bin/env python3
 """Genere le splash de demarrage a partir de la configuration des ecrans.
 
-PINCABOS_SPLASH_FROM_SCREENS_V2
+PINCABOS_SPLASH_FROM_SCREENS_V3 (V3.1 : galeries, HiDPI, ecart des surfaces)
 
-Le theme Plymouth ne devine plus rien : il recoit les resolutions exactes
-definies dans screens.json et s en sert pour reconnaitre le playfield parmi
-les surfaces que Plymouth expose. L illustration est ensuite posee une fois
-par ecran, a la taille de cet ecran, et seul le playfield suit l orientation
-choisie a l installation.
+Le theme Plymouth ne devine rien : il recoit les resolutions exactes definies
+dans screens.json et s en sert pour reconnaitre le playfield parmi les surfaces
+que Plymouth expose. Chaque ecran recoit SON illustration, a sa taille :
 
-Pourquoi ne pas poser les images aux coordonnees de screens.json : au moment
-du splash, X11 n existe pas encore. Plymouth ouvre une surface par sortie DRM
-et les fait toutes partir de l origine — il n y a pas de bureau etendu. Une
-image placee a x=3840 tombe donc hors de toutes les surfaces et ne s affiche
-nulle part. C est ce qui ne laissait le visuel que sur le playfield.
+  - le playfield recoit l illustration portrait, pre-tournee ici dans le sens
+    de la dalle telle que Plymouth la voit (le framebuffer de demarrage est
+    toujours dans le sens natif de la dalle, avant toute rotation X11) ;
+  - backglass, full DMD et topper recoivent l illustration paysage, droite,
+    letterboxee sur fond noir.
+
+Sens du playfield (PINCABOS_SPLASH_SENS_JOUEUR_V1) : sur une dalle paysage
+(rotation X11 0 ou 180), le haut de la table est a GAUCHE de l espace X, meme
+convention que les medias playfield des tables et que l ancienne video de
+demarrage (verifie sur cab reel) : l image portrait est tournee de 270
+(anti-horaire), 90 si la dalle est montee a l envers. Sur une dalle tournee
+par X11 (90 / 270), l image suit cette rotation.
+
+Pourquoi ecarter les surfaces (Window.SetX) : Plymouth centre toutes les
+surfaces dans une boite virtuelle commune, un sprite pose au milieu apparait
+donc sur TOUS les ecrans. En les mettant cote a cote dans l espace virtuel,
+chaque sprite ne tombe que sur sa dalle.
+
+Pourquoi pre-tourner les images (ffmpeg, sinon ImageMagick) : Image.Rotate()
+de Plymouth recadre dans le canevas d origine et sa convention de sens n est
+pas documentee ; une image deja dans le bon sens ne pose aucune question.
+
+Sources : /opt/pincabos/media/splash/portrait*.png|jpg et paysage*.png|jpg
+(perimetre de l updater) ; a defaut, l illustration historique pincabos.png du
+theme. Plusieurs visuels = galerie : Plymouth en tire un au hasard a chaque
+demarrage (Math.Random, seme sur l horloge), sans regenerer l initrd.
+
+Arret et redemarrage (PINCABOS_SPLASH_ARRET_V1) : Plymouth rejoue le theme en
+mode reboot/shutdown. On n y montre pas le visuel de demarrage : la galerie
+arret*.png|jpg si elle existe (portraits pour le playfield, paysages ailleurs,
+reconnus a leurs dimensions), sinon un ecran noir.
+
+HiDPI (PINCABOS_SPLASH_HIDPI_V1) : Plymouth divise par deux les dalles 4K
+(3840x2160 vue 1920x1080). Le playfield est reconnu a sa resolution native OU
+a sa moitie. Les surfaces sont ecartees avec un vide entre elles : Plymouth
+fusionne les zones a redessiner contigues, et une zone plus large qu une
+dalle n y etait pas dessinee (constate sur cab, 05/09/2026).
 
 Le theme vit dans l initrd : il faut le regenerer apres chaque modification,
 ce que fait ce script.
@@ -25,7 +55,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -33,15 +65,37 @@ from pathlib import Path
 SCREENS = Path("/opt/pincabos/config/screens/screens.json")
 THEME_DIR = Path("/usr/share/plymouth/themes/pincabos")
 THEME = THEME_DIR / "pincabos.script"
+SOURCES = Path("/opt/pincabos/media/splash")
+PORTRAIT = SOURCES / "portrait.png"          # compatibilite : un seul visuel
+PAYSAGE = SOURCES / "paysage.png"
+EXTENSIONS = (".png", ".jpg", ".jpeg")
+PREFIXE_PLAYFIELD = "pincabos-playfield-"     # ecrits dans THEME_DIR, deja tournes
+PREFIXE_AUTRES = "pincabos-autres-"           # ecrits dans THEME_DIR, droits
+PREFIXE_ARRET_PLAYFIELD = "pincabos-arret-playfield-"
+PREFIXE_ARRET_AUTRES = "pincabos-arret-autres-"
+IMAGE_PLAYFIELD = PREFIXE_PLAYFIELD + "0.png"
+IMAGE_AUTRES = PREFIXE_AUTRES + "0.png"
+ECART = 4096                                  # vide entre surfaces dans l espace virtuel
+IMAGE_HISTORIQUE = "pincabos.png"
+IMAGE_VOILE = "pincabos-voile.png"           # carre noir : voile de la barre (PINCABOS_SPLASH_BARRE_VOILE_V1)
 EMPREINTE = Path("/var/lib/pincabos/splash-screens.sha256")
 ROLES = ("playfield", "backglass", "fulldmd", "topper")
+
+# Position de la barre de progression dessinee DANS chaque illustration
+# (fraction de la largeur / hauteur de l image droite) : la barre animee du
+# theme vient se poser dessus. Mesure sur les visuels de Karots (05/09/2026).
+BARRE = {
+    "portrait": {"y": 0.571, "w": 0.300},
+    "paysage": {"y": 0.695, "w": 0.190},
+    "historique": {"y": 0.728, "w": 0.193},
+}
 
 GEOMETRIE = re.compile(r"^(\d+)x(\d+)\+(-?\d+)\+(-?\d+)$")
 
 
-def configuration() -> tuple[dict[str, tuple[int, int]], int]:
-    """Resolutions parametrees par role, et rotation du playfield."""
-    data = json.loads(SCREENS.read_text(encoding="utf-8"))
+def configuration(screens: Path = SCREENS) -> tuple[dict[str, tuple[int, int]], int]:
+    """Resolutions parametrees par role, et rotation X11 du playfield."""
+    data = json.loads(screens.read_text(encoding="utf-8"))
 
     rotation = int(str(data.get("playfield_rotation") or "0") or 0) % 360
     if rotation not in (0, 90, 180, 270):
@@ -81,144 +135,448 @@ def resolution_physique(taille: tuple[int, int], rotation: int) -> tuple[int, in
     return largeur, hauteur
 
 
-def theme(ecrans: dict[str, tuple[int, int]], rot: int) -> str:
-    pf_w, pf_h = resolution_physique(ecrans["playfield"], rot)
+def rotation_effective(rotation_x11: int) -> int:
+    """Rotation de l image portrait vers le framebuffer natif du playfield.
+
+    Dalle tournee par X11 (90/270) : l image suit X11. Dalle paysage (0/180) :
+    haut de table a gauche de l espace X (270 anti-horaire), donc 270 sur une
+    dalle a l endroit et 90 sur une dalle montee a l envers.
+    """
+    if rotation_x11 in (90, 270):
+        return rotation_x11
+    return (270 + rotation_x11) % 360
+
+
+# --- images ------------------------------------------------------------------
+def executer(args, timeout=120):
+    try:
+        p = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, (p.stdout or "") + (p.stderr or "")
+    except (OSError, subprocess.SubprocessError) as exc:
+        return 99, str(exc)
+
+
+def commande_rotation(src: Path, dst: Path, degres: int) -> list | None:
+    """La commande qui tourne src de `degres` dans le sens horaire vers dst.
+
+    ffmpeg : transpose=1 = 90 horaire, transpose=2 = 90 anti-horaire (= 270).
+    ImageMagick : -rotate N = N degres horaires.
+    """
+    if degres % 360 == 0:
+        return None
+    if shutil.which("ffmpeg"):
+        vf = {90: "transpose=1", 180: "transpose=1,transpose=1", 270: "transpose=2"}[degres % 360]
+        return ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(src), "-vf", vf, str(dst)]
+    if shutil.which("convert"):
+        return ["convert", str(src), "-rotate", str(degres % 360), str(dst)]
+    return []
+
+
+def dimensions(chemin: Path) -> tuple[int, int]:
+    """(largeur, hauteur) d un PNG ou d un JPEG, sans bibliotheque ; (0, 0) sinon."""
+    try:
+        with open(chemin, "rb") as f:
+            tete = f.read(32)
+            if tete[:8] == b"\x89PNG\r\n\x1a\n":
+                return int.from_bytes(tete[16:20], "big"), int.from_bytes(tete[20:24], "big")
+            if tete[:2] != b"\xff\xd8":
+                return (0, 0)
+            f.seek(2)
+            while True:
+                marqueur = f.read(2)
+                if len(marqueur) < 2 or marqueur[0] != 0xFF:
+                    return (0, 0)
+                code = marqueur[1]
+                if code in (0xD8, 0x01) or 0xD0 <= code <= 0xD7:
+                    continue
+                longueur = int.from_bytes(f.read(2), "big")
+                if code in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                    f.read(1)
+                    h = int.from_bytes(f.read(2), "big"); w = int.from_bytes(f.read(2), "big")
+                    return (w, h)
+                f.seek(longueur - 2, 1)
+    except OSError:
+        return (0, 0)
+
+
+def _cle_naturelle(p: Path):
+    return [int(s) if s.isdigit() else s for s in re.split(r"(\d+)", p.name.lower())]
+
+
+def galerie(dossier: Path, prefixe: str) -> list:
+    """portrait*.png|jpg tries naturellement (portrait.png, portrait0, portrait1, ...)."""
+    if not dossier.is_dir():
+        return []
+    return sorted((p for p in dossier.iterdir()
+                   if p.is_file() and p.name.lower().startswith(prefixe) and p.suffix.lower() in EXTENSIONS),
+                  key=_cle_naturelle)
+
+
+def sources_images(theme_dir: Path = THEME_DIR, portrait: Path = PORTRAIT, paysage: Path = PAYSAGE) -> dict:
+    """Les galeries du playfield et des autres ecrans (listes de fichiers), et leur genre."""
+    historique = theme_dir / IMAGE_HISTORIQUE
+    portraits = galerie(portrait.parent, portrait.stem) if portrait.parent.is_dir() else []
+    paysages = galerie(paysage.parent, paysage.stem) if paysage.parent.is_dir() else []
+    if portraits:
+        pf = {"sources": portraits, "genre": "portrait"}
+    else:
+        pf = {"sources": [historique], "genre": "historique"}
+    if paysages:
+        autres = {"sources": paysages, "genre": "paysage"}
+    elif portraits:
+        autres = {"sources": portraits, "genre": "portrait"}
+    else:
+        autres = {"sources": [historique], "genre": "historique"}
+    return {"playfield": pf, "autres": autres}
+
+
+def commande_conversion(src: Path, dst: Path) -> list | None:
+    """JPEG -> PNG (Plymouth ne lit que le PNG) ; None si deja du PNG."""
+    if src.suffix.lower() == ".png":
+        return None
+    if shutil.which("ffmpeg"):
+        return ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(src), str(dst)]
+    if shutil.which("convert"):
+        return ["convert", str(src), str(dst)]
+    return []
+
+
+def png_uni(chemin: Path, rgba=(0, 0, 0, 255), taille: int = 8):
+    """Un PNG uni (RGBA 8 bits), sans bibliotheque : le voile de la barre."""
+    import struct
+    import zlib
+
+    def chunk(nom, data):
+        return struct.pack(">I", len(data)) + nom + data + struct.pack(">I", zlib.crc32(nom + data) & 0xFFFFFFFF)
+    brut = b"".join(b"\x00" + bytes(rgba) * taille for _ in range(taille))
+    ihdr = struct.pack(">IIBBBBB", taille, taille, 8, 6, 0, 0, 0)
+    chemin.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(brut, 9)) + chunk(b"IEND", b""))
+
+
+def purger(theme_dir: Path, prefixe: str, garder: int):
+    for p in theme_dir.glob(prefixe + "*.png"):
+        num = p.name[len(prefixe):-4]
+        if not num.isdigit() or int(num) >= garder:
+            p.unlink(missing_ok=True)
+
+
+def preparer_images(rot_x11: int, theme_dir: Path = THEME_DIR, run=executer,
+                    portrait: Path = PORTRAIT, paysage: Path = PAYSAGE) -> dict:
+    """Ecrit les galeries du theme ; renvoie ce que le script doit savoir.
+
+    L illustration historique (paysage, un seul visuel pour tout) garde son
+    ancien comportement : tournee comme X11 tourne la dalle, jamais plus.
+    """
+    srcs = sources_images(theme_dir, portrait, paysage)
+    pf, autres = srcs["playfield"], srcs["autres"]
+    degres = rotation_effective(rot_x11) if pf["genre"] == "portrait" else rot_x11
+
+    pre_tourne = 1
+    n_pf = 0
+    for k, src in enumerate(pf["sources"]):
+        dst = theme_dir / f"{PREFIXE_PLAYFIELD}{k}.png"
+        cmd = commande_rotation(src, dst, degres)
+        if cmd is None:
+            cmd = commande_conversion(src, dst)
+        if cmd is None:
+            shutil.copyfile(src, dst)
+        elif cmd:
+            rc, out = run(cmd)
+            if rc != 0:
+                print(f"  AVERTISSEMENT : image {src.name} impossible a preparer ({out.strip()[:120]})")
+                if src.suffix.lower() != ".png":
+                    continue
+                shutil.copyfile(src, dst)
+                pre_tourne = 0
+        else:
+            print("  AVERTISSEMENT : ni ffmpeg ni convert, Plymouth tournera lui-meme l image du playfield")
+            if src.suffix.lower() != ".png":
+                continue
+            shutil.copyfile(src, dst)
+            pre_tourne = 0
+        n_pf += 1
+    purger(theme_dir, PREFIXE_PLAYFIELD, n_pf)
+
+    n_autres = 0
+    for k, src in enumerate(autres["sources"]):
+        dst = theme_dir / f"{PREFIXE_AUTRES}{k}.png"
+        cmd = commande_conversion(src, dst)
+        if cmd is None:
+            shutil.copyfile(src, dst)
+        elif cmd:
+            rc, out = run(cmd)
+            if rc != 0:
+                print(f"  AVERTISSEMENT : image {src.name} impossible a convertir ({out.strip()[:120]})")
+                continue
+        else:
+            continue
+        n_autres += 1
+    purger(theme_dir, PREFIXE_AUTRES, n_autres)
+
+    # galerie d arret : portraits (h > l) pour le playfield, tournes comme lui ; le reste droit
+    arrets = galerie(portrait.parent, "arret") if portrait.parent.is_dir() else []
+    n_arret_pf = n_arret_autres = 0
+    for src in arrets:
+        w, h = dimensions(src)
+        if h > w:
+            dst = theme_dir / f"{PREFIXE_ARRET_PLAYFIELD}{n_arret_pf}.png"
+            cmd = commande_rotation(src, dst, rotation_effective(rot_x11)) or commande_conversion(src, dst)
+        else:
+            dst = theme_dir / f"{PREFIXE_ARRET_AUTRES}{n_arret_autres}.png"
+            cmd = commande_conversion(src, dst)
+        if cmd is None:
+            shutil.copyfile(src, dst)
+        elif cmd:
+            rc, out = run(cmd)
+            if rc != 0:
+                print(f"  AVERTISSEMENT : image d arret {src.name} impossible a preparer ({out.strip()[:120]})")
+                continue
+        else:
+            continue
+        if h > w:
+            n_arret_pf += 1
+        else:
+            n_arret_autres += 1
+    purger(theme_dir, PREFIXE_ARRET_PLAYFIELD, n_arret_pf)
+    purger(theme_dir, PREFIXE_ARRET_AUTRES, n_arret_autres)
+
+    png_uni(theme_dir / IMAGE_VOILE)
+
+    if n_pf == 0:
+        shutil.copyfile(theme_dir / IMAGE_HISTORIQUE, theme_dir / IMAGE_PLAYFIELD); n_pf = 1
+        pf = {"genre": "historique"}; degres = rot_x11
+    if n_autres == 0:
+        shutil.copyfile(theme_dir / IMAGE_HISTORIQUE, theme_dir / IMAGE_AUTRES); n_autres = 1
+        autres = {"genre": "historique"}
+    return {"genre_playfield": pf["genre"], "genre_autres": autres["genre"],
+            "rot": degres, "pre_tourne": pre_tourne, "n_playfield": n_pf, "n_autres": n_autres,
+            "n_arret_playfield": n_arret_pf, "n_arret_autres": n_arret_autres}
+
+
+# --- theme -------------------------------------------------------------------
+def theme(ecrans: dict[str, tuple[int, int]], rot_x11: int, images: dict) -> str:
+    pf_w, pf_h = resolution_physique(ecrans["playfield"], rot_x11)
     resume = ", ".join(f"{role} {w}x{h}" for role, (w, h) in ecrans.items())
+    rot = int(images["rot"])
+    pre_tourne = 1 if images.get("pre_tourne", 1) else 0
+    barre = BARRE[images["genre_playfield"]]
+    n_pf = max(1, int(images.get("n_playfield", 1)))
+    n_autres = max(1, int(images.get("n_autres", 1)))
+    choix_pf = "\n".join(f'if (k_pf == {k}) img_pf = Image("{PREFIXE_PLAYFIELD}{k}.png");' for k in range(n_pf))
+    choix_autres = "\n".join(f'if (k_autres == {k}) img_autres = Image("{PREFIXE_AUTRES}{k}.png");' for k in range(n_autres))
+    n_arret_pf = int(images.get("n_arret_playfield", 0))
+    n_arret_autres = int(images.get("n_arret_autres", 0))
+    choix_arret_pf = "\n".join(f'if (k_pf == {k}) img_pf = Image("{PREFIXE_ARRET_PLAYFIELD}{k}.png");' for k in range(n_arret_pf))
+    choix_arret_autres = "\n".join(f'if (k_autres == {k}) img_autres = Image("{PREFIXE_ARRET_AUTRES}{k}.png");' for k in range(n_arret_autres))
 
     return f"""# PinCabOS splash — genere par pincabos-splash-sync
-# PINCABOS_SPLASH_FROM_SCREENS_V2
+# PINCABOS_SPLASH_FROM_SCREENS_V3
 #
 # Ecrans parametres : {resume}
-# Rotation du playfield : {rot} (dalle vue par Plymouth : {pf_w}x{pf_h})
+# Rotation X11 du playfield : {rot_x11} (dalle vue par Plymouth : {pf_w}x{pf_h})
+# Image du playfield : {images["genre_playfield"]} ({n_pf} au choix), tournee de {rot} ({"deja dans le fichier" if pre_tourne else "par Plymouth"})
+# Image des autres ecrans : {images["genre_autres"]} ({n_autres} au choix), droite
+# Arret / redemarrage : {n_arret_pf} portrait(s) et {n_arret_autres} paysage(s) dedies, sinon ecran noir
 #
 # Le playfield est reconnu a sa resolution parametree, il n est pas devine.
-# Les autres ecrans recoivent la meme illustration, a leur taille, et restent
-# droits.
+# Les surfaces sont ecartees dans l espace virtuel (Window.SetX) pour que
+# chaque illustration ne tombe que sur sa dalle.
 
 PI = 3.14159265358979;
 rot = {rot};
+pre_tourne = {pre_tourne};
 pf_w = {pf_w};
 pf_h = {pf_h};
 
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
 
-bg0 = Image("pincabos.png");
-iw = bg0.GetWidth();
-ih = bg0.GetHeight();
-
-# --- 1) reperer le playfield parmi les surfaces ouvertes par Plymouth
-pf = -1;
-i = 0;
-while (i < 8) {{
-    if (pf < 0 && Window.GetWidth(i) == pf_w && Window.GetHeight(i) == pf_h)
-        pf = i;
-    i++;
-}}
-# Aucune correspondance (mode de demarrage different du mode parametre) :
-# on retombe sur la premiere surface, qui est celle de la sortie primaire.
-if (pf < 0) pf = 0;
-
-# --- 2) poser l illustration sur chaque ecran, a sa propre taille
-fonds = [];
-i = 0;
-while (i < 8) {{
-    sw = Window.GetWidth(i);
-    if (sw > 0) {{
-        sh = Window.GetHeight(i);
-        ox = Window.GetX(i);
-        oy = Window.GetY(i);
-
-        r = 0;
-        if (i == pf) r = rot;
-        if (r == 90 || r == 270) {{ lw = sh; lh = sw; }} else {{ lw = sw; lh = sh; }}
-
-        scale = lw / iw;
-        if (ih * scale > lh) scale = lh / ih;
-        img = bg0.Scale(iw * scale, ih * scale);
-        if (r != 0) img = img.Rotate(r * PI / 180);
-
-        fonds[i] = Sprite(img);
-        fonds[i].SetX(ox + (sw - img.GetWidth()) / 2);
-        fonds[i].SetY(oy + (sh - img.GetHeight()) / 2);
-        fonds[i].SetZ(-100);
-
-        if (i == pf) {{
-            pf_ox = ox; pf_oy = oy;
-            pf_sw = sw; pf_sh = sh;
-            pf_lw = lw; pf_lh = lh;
-            pf_bw = iw * scale; pf_bh = ih * scale;
-        }}
+# --- 0) mode, puis tirage au sort des visuels (Math.Random est seme sur l horloge)
+mode = Plymouth.GetMode();
+arret = 0;
+if (mode == "shutdown" || mode == "reboot" || mode == "system-reset") arret = 1;
+montrer_pf = 1;
+montrer_autres = 1;
+if (arret == 1) {{
+    montrer_pf = 0;
+    montrer_autres = 0;
+    if ({n_arret_pf} > 0) {{
+        montrer_pf = 1;
+        k_pf = Math.Int(Math.Random() * {n_arret_pf});
+        if (k_pf >= {n_arret_pf}) k_pf = 0;
+{choix_arret_pf}
     }}
-    i++;
+    if ({n_arret_autres} > 0) {{
+        montrer_autres = 1;
+        k_autres = Math.Int(Math.Random() * {n_arret_autres});
+        if (k_autres >= {n_arret_autres}) k_autres = 0;
+{choix_arret_autres}
+    }}
+}} else {{
+    k_pf = Math.Int(Math.Random() * {n_pf});
+    if (k_pf >= {n_pf}) k_pf = 0;
+    k_autres = Math.Int(Math.Random() * {n_autres});
+    if (k_autres >= {n_autres}) k_autres = 0;
+{choix_pf}
+{choix_autres}
 }}
 
-# --- 3) barre de progression, sur le playfield uniquement
-# Jamais de Rotate() sur la barre : Rotate recadre dans le canevas d origine
-# et la transformerait en pastille. On la pose en coordonnees ecran.
-sw = pf_sw; sh = pf_sh;
-lw = pf_lw; lh = pf_lh;
-bw = pf_bw; bh = pf_bh;
+# --- 1) placement : reconnaitre le playfield, ecarter les surfaces, poser
+# les illustrations. Appele au depart PUIS a chaque rafraichissement :
+# Plymouth recentre toutes les surfaces (update_displays) quand il prend la
+# main sur le GPU ou qu une sortie arrive, ce qui defait l ecartement ; on le
+# remet en place, et on habille les surfaces apparues tard.
+fonds = [];
+places = [];
+fw = [];
+fh = [];
+pf = -1;
+pf_place = 0;
+n_places = 0;
 
-bar_width = bw * 0.193;
-bar_height = 6;
-bar_lx = (lw - bw) / 2 + (bw - bar_width) / 2;
-bar_ly = (lh - bh) / 2 + bh * 0.728;
+fun placer() {{
+    n = 0;
+    i = 0;
+    while (i < 8) {{
+        if (Window.GetWidth(i) > 0) n = i + 1;
+        i++;
+    }}
+    if (pf < 0) {{
+        i = 0;
+        while (i < n) {{
+            if (pf < 0 && Window.GetWidth(i) == pf_w && Window.GetHeight(i) == pf_h) pf = i;
+            # HiDPI : Plymouth presente une dalle 4K a la moitie de sa resolution
+            if (pf < 0 && Window.GetWidth(i) * 2 == pf_w && Window.GetHeight(i) * 2 == pf_h) pf = i;
+            i++;
+        }}
+        # Aucune correspondance : la premiere surface est celle de la sortie primaire.
+        if (pf < 0 && n > 0) pf = 0;
+    }}
+    cx = 0;
+    i = 0;
+    while (i < n) {{
+        sw = Window.GetWidth(i);
+        sh = Window.GetHeight(i);
+        if (Window.GetX(i) != cx) Window.SetX(i, cx);
+        if (Window.GetY(i) != 0) Window.SetY(i, 0);
+        if (places[i] != 1 && ((i == pf && montrer_pf == 0) || (i != pf && montrer_autres == 0))) {{
+            # rien a montrer sur cette dalle (arret sans visuel dedie) : noir
+            places[i] = 1; fw[i] = 0; fh[i] = 0;
+        }}
+        if (places[i] != 1) {{
+            if (i == pf) {{
+                src = img_pf;
+                if (pre_tourne == 1 || rot == 0) {{
+                    iw = src.GetWidth(); ih = src.GetHeight();
+                    scale = sw / iw;
+                    if (ih * scale > sh) scale = sh / ih;
+                    img = src.Scale(iw * scale, ih * scale);
+                }} else {{
+                    # secours : Plymouth tourne lui-meme (canevas d origine conserve)
+                    if (rot == 90 || rot == 270) {{ lw = sh; lh = sw; }} else {{ lw = sw; lh = sh; }}
+                    iw = src.GetWidth(); ih = src.GetHeight();
+                    scale = lw / iw;
+                    if (ih * scale > lh) scale = lh / ih;
+                    img = src.Scale(iw * scale, ih * scale).Rotate(rot * PI / 180);
+                }}
+            }} else {{
+                src = img_autres;
+                iw = src.GetWidth(); ih = src.GetHeight();
+                scale = sw / iw;
+                if (ih * scale > sh) scale = sh / ih;
+                img = src.Scale(iw * scale, ih * scale);
+            }}
+            fonds[i] = Sprite(img);
+            fonds[i].SetZ(-100);
+            fw[i] = img.GetWidth(); fh[i] = img.GetHeight();
+            places[i] = 1;
+            n_places = n_places + 1;
+            if (i == pf) {{
+                pf_sw = sw; pf_sh = sh;
+                pf_iw = img.GetWidth(); pf_ih = img.GetHeight();
+                if (arret == 0) pf_place = 1;
+            }}
+        }}
+        # position (re)posee a chaque passage : l origine de la surface a pu bouger
+        if (fw[i] > 0) {{
+            fonds[i].SetX(cx + (sw - fw[i]) / 2);
+            fonds[i].SetY((sh - fh[i]) / 2);
+        }}
+        if (i == pf) {{ pf_ox = cx; pf_oy = 0; }}
+        cx = cx + sw + {ECART};
+        i++;
+    }}
+}}
 
-box_image = Image("progress_box.png");
-bar_image = Image("progress_bar.png");
+placer();
 
-box_sprite = Sprite();
-box_sprite.SetZ(10);
-if (rot == 0) {{
-    box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-    box_sprite.SetX(pf_ox + bar_lx); box_sprite.SetY(pf_oy + bar_ly);
-}}
-if (rot == 180) {{
-    box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
-    box_sprite.SetX(pf_ox + sw - bar_lx - bar_width); box_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
-}}
-if (rot == 90) {{
-    box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-    box_sprite.SetX(pf_ox + sw - bar_ly - bar_height); box_sprite.SetY(pf_oy + bar_lx);
-}}
-if (rot == 270) {{
-    box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
-    box_sprite.SetX(pf_ox + bar_ly); box_sprite.SetY(pf_oy + sh - bar_lx - bar_width);
+# --- 2) barre de progression, sur le playfield uniquement
+# Coordonnees LOGIQUES = image droite (telle que dessinee), puis passage en
+# coordonnees ecran selon rot. Jamais de Rotate() sur la barre.
+fun geometrie_barre() {{
+    if (rot == 90 || rot == 270) {{
+        lw = pf_sh; lh = pf_sw;       # dalle logique (droite)
+        bw = pf_ih; bh = pf_iw;       # image droite
+    }} else {{
+        lw = pf_sw; lh = pf_sh;
+        bw = pf_iw; bh = pf_ih;
+    }}
+    sw = pf_sw; sh = pf_sh;
+    bar_width = bw * {barre["w"]};
+    bar_height = 8;
+    bar_lx = (lw - bw) / 2 + (bw - bar_width) / 2;
+    bar_ly = (lh - bh) / 2 + bh * {barre["y"]};
 }}
 
-bar_sprite = Sprite();
-bar_sprite.SetZ(11);
+# PINCABOS_SPLASH_BARRE_VOILE_V1 : le visuel porte deja sa barre, pleine. Un
+# voile sombre la couvre et recule de gauche a droite (en coordonnees logiques)
+# a mesure que le demarrage avance : c est elle qui semble se remplir.
+voile_image = Image("{IMAGE_VOILE}");
+voile = Sprite();
+voile.SetZ(20);
+voile.SetOpacity(0.88);
+
+fun poser_voile(cw) {{
+    reste = bar_width - cw;
+    if (reste < 1) {{ voile.SetOpacity(0); return; }}
+    voile.SetOpacity(0.88);
+    a = bar_lx + cw;            # debut logique du voile
+    b = bar_lx + bar_width;     # fin logique
+    y0 = bar_ly - bar_height / 2;
+    if (rot == 0) {{
+        voile.SetImage(voile_image.Scale(reste, bar_height));
+        voile.SetX(pf_ox + a); voile.SetY(pf_oy + y0);
+    }}
+    if (rot == 180) {{
+        voile.SetImage(voile_image.Scale(reste, bar_height));
+        voile.SetX(pf_ox + sw - b); voile.SetY(pf_oy + sh - y0 - bar_height);
+    }}
+    if (rot == 90) {{
+        voile.SetImage(voile_image.Scale(bar_height, reste));
+        voile.SetX(pf_ox + sw - y0 - bar_height); voile.SetY(pf_oy + a);
+    }}
+    if (rot == 270) {{
+        voile.SetImage(voile_image.Scale(bar_height, reste));
+        voile.SetX(pf_ox + y0); voile.SetY(pf_oy + sh - b);
+    }}
+}}
 
 progress_target = 0;
 progress_shown = 0;
 tick = 0;
 
 fun refresh_callback() {{
+    placer();
+    if (pf_place != 1) return;
+    geometrie_barre();
     tick++;
-    creep = tick / 1500;
+    # sans information de Plymouth, la barre avance quand meme (95 % en ~12 s a 50 Hz)
+    creep = tick / 600;
     if (creep > 0.95) creep = 0.95;
     target = progress_target;
     if (target < creep) target = creep;
     progress_shown = progress_shown + (target - progress_shown) * 0.08;
-    cw = bar_width * progress_shown;
-    if (cw < 1) cw = 1;
-    if (rot == 0) {{
-        bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(pf_ox + bar_lx); bar_sprite.SetY(pf_oy + bar_ly);
-    }}
-    if (rot == 180) {{
-        bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
-        bar_sprite.SetX(pf_ox + sw - bar_lx - cw); bar_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
-    }}
-    if (rot == 90) {{
-        bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(pf_ox + sw - bar_ly - bar_height); bar_sprite.SetY(pf_oy + bar_lx);
-    }}
-    if (rot == 270) {{
-        bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
-        bar_sprite.SetX(pf_ox + bar_ly); bar_sprite.SetY(pf_oy + sh - bar_lx - cw);
-    }}
+    poser_voile(bar_width * progress_shown);
 }}
 
 fun boot_progress_callback(duration, progress) {{
@@ -230,6 +588,14 @@ fun boot_progress_callback(duration, progress) {{
 Plymouth.SetBootProgressFunction(boot_progress_callback);
 Plymouth.SetRefreshFunction(refresh_callback);
 """
+
+
+def empreinte_fichier(chemin: Path) -> str:
+    try:
+        st = chemin.stat()
+        return f"{st.st_size}:{int(st.st_mtime)}"
+    except OSError:
+        return "absent"
 
 
 def regenerer_initrd() -> bool:
@@ -270,28 +636,38 @@ def main() -> int:
         print("  role playfield absent de screens.json : theme inchange")
         return 0
 
-    contenu = theme(ecrans, rot)
-
     if args.stdout:
-        sys.stdout.write(contenu)
+        srcs = sources_images()
+        images = {"genre_playfield": srcs["playfield"]["genre"], "genre_autres": srcs["autres"]["genre"],
+                  "rot": rotation_effective(rot) if srcs["playfield"]["genre"] == "portrait" else rot,
+                  "pre_tourne": 1, "n_playfield": len(srcs["playfield"]["sources"]),
+                  "n_autres": len(srcs["autres"]["sources"])}
+        sys.stdout.write(theme(ecrans, rot, images))
         return 0
 
     if not THEME_DIR.is_dir():
         print(f"  {THEME_DIR} absent : theme PinCabOS non installe")
         return 0
 
-    signature = hashlib.sha256(
-        json.dumps({"ecrans": ecrans, "rot": rot}, sort_keys=True).encode()
-    ).hexdigest()
+    srcs = sources_images()
+    signature = hashlib.sha256(json.dumps({
+        "v": 3.1, "ecrans": ecrans, "rot": rot,
+        "playfield": [[p.name, empreinte_fichier(p)] for p in srcs["playfield"]["sources"]],
+        "autres": [[p.name, empreinte_fichier(p)] for p in srcs["autres"]["sources"]],
+        "arret": [[p.name, empreinte_fichier(p)] for p in galerie(SOURCES, "arret")],
+        "historique": empreinte_fichier(THEME_DIR / IMAGE_HISTORIQUE),
+    }, sort_keys=True).encode()).hexdigest()
     if not args.force and EMPREINTE.is_file() \
             and EMPREINTE.read_text(encoding="utf-8").strip() == signature:
-        print("  configuration d ecrans inchangee : rien a faire")
+        print("  configuration d ecrans et visuels inchanges : rien a faire")
         return 0
 
-    THEME.write_text(contenu, encoding="utf-8")
+    images = preparer_images(rot)
+    THEME.write_text(theme(ecrans, rot, images), encoding="utf-8")
     resume = ", ".join(f"{r} {w}x{h}" for r, (w, h) in ecrans.items())
     print(f"  theme ecrit : {resume}")
-    print(f"  rotation appliquee au playfield seul : {rot}")
+    print(f"  playfield : {images['n_playfield']} image(s) {images['genre_playfield']} tournee(s) de {images['rot']} ; "
+          f"autres ecrans : {images['n_autres']} image(s) {images['genre_autres']}")
 
     # PINCABOS_FAIL_LOUDLY_V1
     # L'empreinte dit « ce theme est en place ». Ne l'ecrire qu'une fois le

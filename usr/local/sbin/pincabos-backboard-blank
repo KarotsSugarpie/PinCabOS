@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""Eteint le backboard LED (TeensyStripController) au demarrage et a l arret.
+
+PINCABOS_BACKBOARD_BLANK_V1
+
+Le Teensy garde sa derniere image tant que personne ne lui parle : apres un
+redemarrage, le backboard affiche encore le logo de la derniere table jusqu a
+ce que DOF envoie quelque chose. Cette commande envoie « C » (efface le
+tampon) puis « O » (sortie) — le protocole du TeensyStripController de DOF,
+que libdof emploie aussi — sur le port declare dans cabinet.xml, a defaut le
+premier Teensy serie. Sans backboard : sortie immediate, sans effet.
+
+  pincabos-backboard-blank [boot|shutdown]
+"""
+from __future__ import annotations
+
+import glob
+import re
+import sys
+import time
+
+CABINETS = "/home/pinball/.local/share/VPinballX/*/directoutputconfig/cabinet.xml"
+TEENSY_BY_ID = "/dev/serial/by-id/*Teensy*"
+ACK = b"A"
+
+
+def port_backboard(cabinet_xml: str | None, by_id: list | None = None) -> str:
+    """Le port du TeensyStripController de cabinet.xml, sinon le premier Teensy."""
+    if cabinet_xml and "<TeensyStripController>" in cabinet_xml:
+        bloc = cabinet_xml.split("<TeensyStripController>", 1)[1].split("</TeensyStripController>", 1)[0]
+        m = re.search(r"<ComPortName>\s*([^<\s]+)\s*</ComPortName>", bloc)
+        if m:
+            return m.group(1)
+    for lien in sorted(by_id if by_id is not None else glob.glob(TEENSY_BY_ID)):
+        return lien
+    return ""
+
+
+def cabinet_xml_courant() -> str | None:
+    fichiers = sorted(glob.glob(CABINETS))
+    if not fichiers:
+        return None
+    try:
+        with open(fichiers[-1], encoding="utf-8", errors="replace") as f:
+            return f.read()
+    except OSError:
+        return None
+
+
+def blanchir(port_serie) -> list:
+    """Envoie C puis O ; renvoie le journal. `port_serie` : objet avec write/read."""
+    journal = []
+    for cmd in (b"C", b"O"):
+        port_serie.write(cmd)
+        rep = port_serie.read(1)
+        journal.append(f"{cmd.decode()} -> {rep!r}")
+        if rep != ACK:
+            journal.append("pas d acquittement, on continue")
+    return journal
+
+
+def main(argv) -> int:
+    phase = argv[1] if len(argv) > 1 else "boot"
+    port = ""
+    for _ in range(10):          # le Teensy peut arriver quelques secondes apres le demarrage
+        port = port_backboard(cabinet_xml_courant())
+        if port and glob.glob(port):
+            break
+        time.sleep(0.5)
+    if not port or not glob.glob(port):
+        print(f"backboard : aucun port ({phase}), rien a faire")
+        return 0
+    try:
+        import serial
+    except ImportError:
+        print("backboard : pyserial absent, rien a faire")
+        return 0
+    try:
+        with serial.Serial(port, 9600, timeout=2, write_timeout=2) as s:
+            for ligne in blanchir(s):
+                print(f"backboard {port} ({phase}) : {ligne}")
+    except Exception as exc:  # port occupe (DOF), debranche : jamais bloquant
+        print(f"backboard {port} ({phase}) : {exc}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

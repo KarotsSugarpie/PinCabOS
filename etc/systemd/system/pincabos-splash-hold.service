@@ -1,0 +1,17 @@
+[Unit]
+Description=PinCabOS - let the boot splash breathe before the display manager
+Documentation=https://pincabos.cc/
+# PINCABOS_SPLASH_TEMPO_V1 : jamais sur le media d installation
+ConditionPathExists=!/etc/pincabos-live
+ConditionKernelCommandLine=!pincabos.installer
+After=plymouth-start.service
+Before=display-manager.service lightdm.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/pincabos-splash-hold
+TimeoutStartSec=90
+
+[Install]
+WantedBy=graphical.target

@@ -1,0 +1,28 @@
+#!/bin/bash
+# PINCABOS_SPLASH_TEMPO_V1
+# Le cab demarre si vite que les illustrations du splash n ont pas le temps
+# d etre vues sur le backglass et le full DMD (les tetes NVIDIA secondaires
+# arrivent vers 4 s, X a 9 s). Cette unite retient le gestionnaire d affichage
+# jusqu a ce que le systeme ait au moins `hold_until_uptime` secondes
+# (/opt/pincabos/config/splash.json, 15 par defaut, 0 = pas de tempo).
+# Ne retient rien si Plymouth n est pas la (pas de splash, rien a montrer).
+set -u
+CONF=/opt/pincabos/config/splash.json
+cible=$(python3 - "$CONF" <<'PY' 2>/dev/null || echo 15
+import json, sys
+try:
+    v = json.load(open(sys.argv[1])).get("hold_until_uptime", 15)
+    print(max(0, min(60, int(v))))
+except Exception:
+    print(15)
+PY
+)
+[ "$cible" -gt 0 ] || exit 0
+plymouth --ping 2>/dev/null || exit 0
+read -r up _ < /proc/uptime
+up=${up%.*}
+if [ "$up" -lt "$cible" ]; then
+    echo "splash retenu $((cible - up)) s (uptime $up s, cible $cible s)"
+    sleep $((cible - up))
+fi
+exit 0

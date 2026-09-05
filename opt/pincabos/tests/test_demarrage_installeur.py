@@ -59,6 +59,26 @@ class MenuGrub(unittest.TestCase):
             self.assertTrue(m and int(m.group(1)) <= 5, script.name + " : delai GRUB trop long")
 
 
+class FondsGrub(unittest.TestCase):
+    def test_galerie_tiree_par_l_horloge(self):
+        # PINCABOS_GRUB_FONDS_ALEATOIRES_V1
+        s = ISO_LIVE.read_text(encoding="utf-8")
+        self.assertIn("opt/pincabos/media/splash/grub*.jpg", s)
+        self.assertIn('echo "insmod datehook"', s)
+        self.assertIn("SECOND", s)
+        self.assertIn("insmod jpeg", s)
+        self.assertIn("background_image /boot/grub/pincabos-grub.png", s)   # secours sans galerie
+
+    def test_galerie_presente(self):
+        fonds = sorted((R / "opt/pincabos/media/splash").glob("grub*.jpg"))
+        self.assertGreaterEqual(len(fonds), 1)
+        for f in fonds:
+            # GRUB ne decode que le JPEG baseline : un JPEG progressif (SOF2) laisse le menu noir
+            octets = f.read_bytes()
+            self.assertIn(b"\xff\xc0", octets[:65536], f.name + " : pas de SOF0 (baseline)")
+            self.assertNotIn(b"\xff\xc2", octets[:65536], f.name + " : JPEG progressif")
+
+
 class PlusDeRepliTexte(unittest.TestCase):
     def test_fichiers_du_repli_absents(self):
         for rel in ("usr/local/sbin/pincabos-gui-fallback",
