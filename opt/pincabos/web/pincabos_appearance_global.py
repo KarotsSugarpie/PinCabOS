@@ -7,6 +7,10 @@ passent pas par le gabarit standard.
 
 DudesCab reste volontairement une exception visuelle : son identite propre est
 preservee, avec une feuille finale sombre/opaque chargee apres le theme global.
+
+Le correctif d'epinglage du menu principal est egalement injecte globalement
+afin que l'etat epingle cible toujours le vrai nav .pincabos-nav et reste fixe
+au viewport pendant le scroll.
 """
 
 from __future__ import annotations
@@ -23,6 +27,7 @@ _BRIDGE_PATH = "/static/pincabos-appearance-dashboard-menu-v2.css?v=appearance-g
 _UNIFIED_PATH = "/static/pincabos-interface-unified-v1.css?v=appearance-global-v2"
 _MODULES_PATH = "/static/pincabos-interface-unified-modules-v1.css?v=appearance-global-v2"
 _DUDESCAB_PATH = "/static/pincabos-dudescab-dark-exception-v1.css?v=appearance-global-v2"
+_MENU_PIN_PATH = "/static/pincabos-menu-pin-viewport-v7.js?v=menu-pin-v7"
 
 
 def install_appearance_global(app):
@@ -57,30 +62,26 @@ def install_appearance_global(app):
                 response.direct_passthrough = False
 
             html = response.get_data(as_text=True)
-
-            if _MARKER in html:
-                return response
-
-            links = []
+            assets = []
 
             # 1) Apparence reste la source de verite. Les pages qui ne
             # chargent pas encore les variables les recoivent ici.
             if "pincabos-appearance-vars.css" not in html:
-                links.append(
+                assets.append(
                     f'<link rel="stylesheet" href="{_VARS_PATH}" '
                     'data-pincabos-appearance-vars-global="v2">'
                 )
 
             # 2) Theme historique commun pour les primitives PinCabOS.
             if "pincabos-theme-global.css" not in html:
-                links.append(
+                assets.append(
                     f'<link rel="stylesheet" href="{_THEME_PATH}" '
                     'data-pincabos-theme-global="v2">'
                 )
 
             # 3) Compatibilite Dashboard/Menu.
             if "pincabos-appearance-dashboard-menu-v2.css" not in html:
-                links.append(
+                assets.append(
                     f'<link rel="stylesheet" href="{_BRIDGE_PATH}" '
                     'data-pincabos-appearance-global-bridge="v2">'
                 )
@@ -88,7 +89,7 @@ def install_appearance_global(app):
             # 4) Couche commune de toute la WebApp. Elle reste visuelle
             # seulement : aucune grille, position, largeur ou logique modifiee.
             if "pincabos-interface-unified-v1.css" not in html:
-                links.append(
+                assets.append(
                     f'<link rel="stylesheet" href="{_UNIFIED_PATH}" '
                     f'{_MARKER}="v1">'
                 )
@@ -97,7 +98,7 @@ def install_appearance_global(app):
             # Explorer, Smart Import, FullDMD, DOF, Services, notifications,
             # Batch). Meme Apparence, layouts originaux conserves.
             if "pincabos-interface-unified-modules-v1.css" not in html:
-                links.append(
+                assets.append(
                     f'<link rel="stylesheet" href="{_MODULES_PATH}" '
                     'data-pincabos-interface-unified-modules="v1">'
                 )
@@ -107,18 +108,27 @@ def install_appearance_global(app):
             # les grandes surfaces roses/translucides par des fonds opaques et
             # tres sombres. Les selecteurs sont limites a .dc-app.
             if "pincabos-dudescab-dark-exception-v1.css" not in html:
-                links.append(
+                assets.append(
                     f'<link rel="stylesheet" href="{_DUDESCAB_PATH}" '
                     'data-pincabos-dudescab-dark-exception="v1">'
                 )
 
-            if not links:
+            # 7) Correctif fonctionnel du pin du menu principal. Il est charge
+            # apres les scripts/CSS historiques pour que le vrai .pincabos-nav
+            # reste fixe au viewport lorsque la preference est activee.
+            if "pincabos-menu-pin-viewport-v7.js" not in html:
+                assets.append(
+                    f'<script src="{_MENU_PIN_PATH}" '
+                    'data-pincabos-menu-pin-viewport="v7"></script>'
+                )
+
+            if not assets:
                 return response
 
-            injection = "\n" + "\n".join(links) + "\n"
+            injection = "\n" + "\n".join(assets) + "\n"
 
             # Injection a la fin du document afin de passer apres les <style>
-            # locaux et les CSS propres aux modules.
+            # locaux, CSS propres aux modules et scripts historiques du menu.
             if re.search(r"</body\s*>", html, flags=re.IGNORECASE):
                 html = re.sub(
                     r"</body\s*>",
