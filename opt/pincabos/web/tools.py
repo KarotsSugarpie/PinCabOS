@@ -489,11 +489,27 @@ def tools_hub_html():
         </a>
         <!-- PINCABOS_UPDATES_V4_CARD_END -->
 
-
-
-
-
-
+        <!-- PINCABOS_BACKUPCFG_CARD_V1 -->
+        <a class="tool-card" href="/backupcfg">
+          <div class="pco-tool-art">
+            <img
+              src="/static/pincabos-assets/PCOSBackupConfig.svg?v=backupcfg1"
+              alt="Backup Config PinCabOS"
+              loading="lazy">
+          </div>
+          <div class="pco-tool-body">
+            <strong>Backup Config</strong>
+            <span class="pco-tool-description">
+              Sauvegarder ou restaurer les HotFiles et réglages vivants du cab
+              dans une archive PCOSCFG vérifiée.
+            </span>
+            <div class="pco-tool-footer">
+              <span>Ouvrir Backup Config</span>
+              <span class="pco-tool-open">→</span>
+            </div>
+          </div>
+        </a>
+        <!-- PINCABOS_BACKUPCFG_CARD_V1_END -->
 
         <a class="tool-card" href="/tools/import-table">
           <div class="pco-tool-art">

@@ -1,0 +1,7 @@
+# PinCabOS Backup Config — the helper accepts only fixed actions and validates
+# job ids/timestamps before touching its hard-coded HotFiles allowlist.
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-backupcfg create-download *
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-backupcfg create-local *
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-backupcfg restore-upload *
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-backupcfg restore-local *
+pinball ALL=(root) NOPASSWD: /opt/pincabos/tools/pincabos-backupcfg cleanup-download *

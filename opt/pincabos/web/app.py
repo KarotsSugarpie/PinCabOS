@@ -27,6 +27,7 @@ import pincabos_webapp_inputs as pco_inputs_routes
 import pincabos_webapp_firstrun as pco_firstrun_routes
 import pincabos_webapp_dev_admin as pco_dev_admin_routes
 import pincabos_webapp_exports as pco_exports_routes
+import pincabos_backupcfg as pco_backupcfg_routes
 # === PINCABOS MODULAR ROUTES END ===
 from pincabos_webapp_import_metadata import pincabos_write_imported_table_metadata
 
@@ -15563,6 +15564,7 @@ for _pco_module in (
     pco_firstrun_routes,
     pco_dev_admin_routes,
     pco_exports_routes,
+    pco_backupcfg_routes,
 ):
     _pco_module.register(app, globals())
 del _pco_module

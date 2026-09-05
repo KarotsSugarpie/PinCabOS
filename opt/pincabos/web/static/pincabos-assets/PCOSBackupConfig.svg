@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">PinCabOS Backup Config</title>
+  <desc id="desc">Archive de configuration protégée par une bille de flipper</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#130725"/>
+      <stop offset="1" stop-color="#05020b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a654ef"/>
+      <stop offset="1" stop-color="#ff8c19"/>
+    </linearGradient>
+    <radialGradient id="ball" cx="34%" cy="25%" r="70%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".22" stop-color="#d8c6ef"/>
+      <stop offset=".58" stop-color="#7d6b91"/>
+      <stop offset="1" stop-color="#21172d"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="13" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="520" rx="34" fill="url(#bg)"/>
+  <circle cx="990" cy="70" r="190" fill="#ff8617" opacity=".08"/>
+  <circle cx="160" cy="470" r="250" fill="#9546e8" opacity=".10"/>
+  <g transform="translate(110 90)">
+    <rect x="20" y="42" width="390" height="285" rx="28" fill="#160a25" stroke="url(#accent)" stroke-width="8"/>
+    <path d="M65 120h300M65 174h300M65 228h190" stroke="#c9a9e8" stroke-width="18" stroke-linecap="round" opacity=".72"/>
+    <path d="M75 27h280l55 55H20z" fill="url(#accent)" opacity=".9"/>
+    <circle cx="351" cy="277" r="88" fill="#0b0611" stroke="#ff9521" stroke-width="9" filter="url(#glow)"/>
+    <circle cx="351" cy="277" r="58" fill="url(#ball)"/>
+    <path d="M325 277l18 18 36-42" fill="none" stroke="#ff9a24" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g font-family="Arial,Helvetica,sans-serif" font-weight="800">
+    <text x="585" y="220" fill="#ffffff" font-size="72">BACKUP</text>
+    <text x="585" y="302" fill="#ff9a24" font-size="72">CONFIG</text>
+    <text x="590" y="355" fill="#cab6dc" font-size="27" letter-spacing="5">PIN CAB OS · PCOSCFG</text>
+  </g>
+</svg>

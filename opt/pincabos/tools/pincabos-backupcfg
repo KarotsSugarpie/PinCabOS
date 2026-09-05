@@ -1,0 +1,672 @@
+#!/usr/bin/env python3
+"""Privileged PinCabOS HotFiles backup and restore helper.
+
+The WebApp may only select an action, a random job id and a timestamp. Every
+filesystem path is fixed here so sudo cannot be used as an arbitrary archiver.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import pwd
+import re
+import shutil
+import socket
+import stat
+import sys
+import time
+import zipfile
+import posixpath
+from datetime import datetime, timezone
+from pathlib import Path, PurePosixPath
+
+FORMAT = "pincabos.config-backup/v1"
+MANIFEST_NAME = "pincabos-backupcfg-manifest.json"
+WORK_ROOT = Path("/var/tmp/pincabos-backupcfg")
+LOCAL_DIR = Path("/home/pinball/usersettings")
+LOCAL_ARCHIVE = LOCAL_DIR / "UserSettings.PCOSCFG"
+LOG_ROOT = Path("/opt/pincabos/logs")
+MAX_ARCHIVE_BYTES = 2 * 1024 * 1024 * 1024
+MAX_ENTRY_COUNT = 100_000
+JOB_RE = re.compile(r"^[a-f0-9]{32}$")
+STAMP_RE = re.compile(r"^[0-9]{8}-[0-9]{6}$")
+ARCHIVE_RE = re.compile(r"^UserSettings-[0-9]{8}-[0-9]{6}\.PCOSCFG$")
+
+# Normalized version of the HotFiles list supplied for PR #172. Redundant
+# children are intentionally omitted when their complete parent is included.
+SELECTORS = (
+    "opt/pincabos/config/screens",
+    "opt/pincabos/config/display-aliases.env",
+    "opt/pincabos/state/screens-apply-last-success.flag",
+    "etc/X11/xorg.conf",
+    "etc/X11/xorg.conf.d",
+    "home/pinball/.config/monitors.xml",
+    "opt/pincabos/config/splash.json",
+    "var/lib/pincabos/hardware-autoconfig.done",
+    "home/pinball/.config/vpinfe/vpinfe.ini",
+    "home/pinball/.config/vpinfe/vpsdb.json",
+    "home/pinball/.config/vpinfe/roms.json",
+    "home/pinball/.config/vpinfe/collections.ini",
+    "home/pinball/.pincabos/vpx/VPinballX.ini",
+    "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini",
+    "home/pinball/.vpinball/VPinballX.ini",
+    "home/pinball/.local/share/VPinballX/10.8/directoutputconfig",
+    "opt/pincabos/config/audio-router.json",
+    "opt/pincabos/config/audio.json",
+    "opt/pincabos/config/audio-ssf.json",
+    "opt/pincabos/config/audio/surround.json",
+    "opt/pincabos/config/ssf-commander.json",
+    "opt/pincabos/config/dof",
+    "opt/pincabos/config/dudescab",
+    "opt/pincabos/config/inputs-commander.json",
+    "opt/pincabos/config/dmd-calibration.json",
+    "opt/pincabos/config/fulldmd-calibration.json",
+    "opt/pincabos/config/fulldmd-background.env",
+    "opt/pincabos/config/zedmd.json",
+    "opt/pincabos/config/fulldmd-style.conf",
+    "etc/netplan",
+    "etc/NetworkManager/system-connections",
+    "var/lib/NetworkManager",
+    "etc/pincabos/system-name.conf",
+    "etc/ssh",
+    "etc/machine-id",
+    "home/pinball/.ssh",
+    "opt/pincabos/config/admin-login.txt",
+    "opt/pincabos/config/admin-password.txt",
+    "opt/pincabos/config/dev-login.txt",
+    "opt/pincabos/config/dev-password.txt",
+    "opt/pincabos/config/webserver-webpass.secret",
+    "opt/pincabos/config/pki",
+    "opt/pincabos/config/webapp-appearance",
+    "opt/pincabos/config/webapp-screen-targets.conf",
+    "opt/pincabos/config/webapp-screen-autostart.conf",
+    "opt/pincabos/config/media-hunter",
+    "var/lib/pincabos/media-hunter",
+    "opt/pincabos/config/hybrid-launcher",
+    "home/pinball/.config/pincabos",
+    "opt/pincabos/config/sample-tables.json",
+    "opt/pincabos/config/gitpush-release-sequence.json",
+    "opt/pincabos/config/pincabos-paths.json",
+    "opt/pincabos/flags",
+)
+
+FORBIDDEN = {
+    "opt/pincabos/config/version.json",
+}
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def pinball_ids() -> tuple[int, int]:
+    try:
+        account = pwd.getpwnam("pinball")
+        return account.pw_uid, account.pw_gid
+    except KeyError:
+        # Developer/test containers may not carry the appliance account.
+        return os.geteuid(), os.getegid()
+
+
+def safe_rel(value: str) -> str:
+    path = PurePosixPath(str(value))
+    if path.is_absolute() or not path.parts or any(part in {"", ".", ".."} for part in path.parts):
+        raise ValueError(f"Chemin d'archive invalide: {value!r}")
+    result = path.as_posix()
+    if result in FORBIDDEN:
+        raise ValueError(f"Chemin explicitement exclu: {result}")
+    return result
+
+
+def allowed(rel: str) -> bool:
+    try:
+        rel = safe_rel(rel)
+    except ValueError:
+        return False
+    return any(rel == selector or rel.startswith(selector + "/") for selector in SELECTORS)
+
+
+def selector_for(rel: str) -> str | None:
+    matches = [selector for selector in SELECTORS if rel == selector or rel.startswith(selector + "/")]
+    return max(matches, key=len) if matches else None
+
+
+def safe_symlink_target(rel: str, link_target: str) -> bool:
+    if not link_target or "\x00" in link_target or link_target.startswith("/"):
+        return False
+    selector = selector_for(rel)
+    if selector is None or rel == selector:
+        return False
+    destination = posixpath.normpath(posixpath.join(posixpath.dirname(rel), link_target))
+    return destination == selector or destination.startswith(selector + "/")
+
+
+def validate_job(job_id: str, stamp: str) -> tuple[Path, str]:
+    if not JOB_RE.fullmatch(job_id or ""):
+        raise ValueError("Identifiant de tâche invalide.")
+    if not STAMP_RE.fullmatch(stamp or ""):
+        raise ValueError("Horodatage invalide.")
+    archive_name = f"UserSettings-{stamp}.PCOSCFG"
+    uid, gid = pinball_ids()
+    if WORK_ROOT.is_symlink():
+        raise ValueError("Racine de tâches non sécuritaire.")
+    WORK_ROOT.mkdir(parents=True, exist_ok=True, mode=0o1770)
+    os.chown(WORK_ROOT, 0, gid)
+    os.chmod(WORK_ROOT, 0o1770)
+    job_dir = WORK_ROOT / job_id
+    if job_dir.exists() and job_dir.is_symlink():
+        raise ValueError("Dossier de tâche non sécuritaire.")
+    job_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # The WebApp creates the inbox as pinball, then the privileged helper locks
+    # the directory so an unprivileged process cannot swap stage/rollback paths.
+    os.chown(job_dir, 0, gid)
+    os.chmod(job_dir, 0o750)
+    return job_dir, archive_name
+
+
+def atomic_json(path: Path, data: dict, mode: int = 0o644) -> None:
+    uid, gid = pinball_ids()
+    temp = path.with_name(path.name + ".tmp")
+    temp.unlink(missing_ok=True)
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, ensure_ascii=False, sort_keys=True)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.chown(temp, uid, gid)
+    os.chmod(temp, mode)
+    os.replace(temp, path)
+
+
+def progress(job_dir: Path, percent: int, stage: str, message: str, *, done: bool = False,
+             ok: bool | None = None, archive_name: str = "", log_path: Path | None = None) -> None:
+    atomic_json(job_dir / "progress.json", {
+        "ok": ok,
+        "done": done,
+        "percent": max(0, min(100, int(percent))),
+        "stage": stage,
+        "message": message,
+        "archive_name": archive_name,
+        "log_path": str(log_path or ""),
+        "updated_at": utc_now(),
+    })
+
+
+def secure_log_path(archive_name: str) -> Path:
+    if not ARCHIVE_RE.fullmatch(archive_name):
+        raise ValueError("Nom d'archive invalide dans le manifeste.")
+    if LOG_ROOT.is_symlink():
+        raise ValueError("Dossier de journaux non sécuritaire.")
+    LOG_ROOT.mkdir(parents=True, exist_ok=True, mode=0o755)
+    return LOG_ROOT / f"{archive_name}.log"
+
+
+def log(log_path: Path, message: str) -> None:
+    uid, gid = pinball_ids()
+    line = f"[{datetime.now().astimezone().isoformat(timespec='seconds')}] {message}\n"
+    fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o640)
+    with os.fdopen(fd, "a", encoding="utf-8") as handle:
+        handle.write(line)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.chown(log_path, 0, gid)
+    os.chmod(log_path, 0o640)
+
+
+def entry_from_lstat(path: Path, rel: str) -> dict:
+    info = path.lstat()
+    kind = "file"
+    if stat.S_ISDIR(info.st_mode):
+        kind = "dir"
+    elif stat.S_ISLNK(info.st_mode):
+        kind = "symlink"
+    elif not stat.S_ISREG(info.st_mode):
+        kind = "special"
+    return {
+        "path": rel,
+        "type": kind,
+        "mode": stat.S_IMODE(info.st_mode),
+        "uid": info.st_uid,
+        "gid": info.st_gid,
+        "mtime_ns": info.st_mtime_ns,
+        "size": info.st_size if kind == "file" else 0,
+    }
+
+
+def inventory() -> tuple[list[dict], list[str], int]:
+    entries: list[dict] = []
+    missing: list[str] = []
+    seen: set[str] = set()
+
+    def visit(path: Path, rel: str) -> None:
+        rel = safe_rel(rel)
+        if rel in seen:
+            return
+        if not allowed(rel):
+            raise ValueError(f"Chemin hors manifeste HotFiles: {rel}")
+        item = entry_from_lstat(path, rel)
+        if item["type"] == "special":
+            return
+        seen.add(rel)
+        if item["type"] == "symlink":
+            target = os.readlink(path)
+            item["link_target"] = target
+            raw = os.fsencode(target)
+            item["size"] = len(raw)
+            item["sha256"] = hashlib.sha256(raw).hexdigest()
+        entries.append(item)
+        if item["type"] == "dir":
+            with os.scandir(path) as children:
+                for child in sorted(children, key=lambda value: value.name):
+                    visit(Path(child.path), f"{rel}/{child.name}")
+
+    for selector in SELECTORS:
+        source = Path("/") / selector
+        if not os.path.lexists(source):
+            missing.append(selector)
+            continue
+        visit(source, selector)
+    return entries, missing, sum(item["size"] for item in entries if item["type"] == "file")
+
+
+def zip_info(item: dict, name: str) -> zipfile.ZipInfo:
+    stamp = time.localtime(max(315532800, item.get("mtime_ns", 0) / 1_000_000_000))[:6]
+    info = zipfile.ZipInfo(name, stamp)
+    info.create_system = 3
+    type_bits = {"file": stat.S_IFREG, "dir": stat.S_IFDIR, "symlink": stat.S_IFLNK}[item["type"]]
+    info.external_attr = ((type_bits | int(item["mode"])) & 0xFFFF) << 16
+    info.compress_type = zipfile.ZIP_DEFLATED
+    if item["type"] == "dir":
+        info.external_attr |= 0x10
+    return info
+
+
+def create_archive(job_dir: Path, archive_name: str) -> tuple[Path, dict, Path]:
+    log_path = secure_log_path(archive_name)
+    log(log_path, "BACKUP START — inventaire HotFiles")
+    progress(job_dir, 2, "inventory", "Inventaire des fichiers vivants…",
+             archive_name=archive_name, log_path=log_path)
+    entries, missing, total_bytes = inventory()
+    log(log_path, f"Inventaire: {len(entries)} entrées, {total_bytes} octets, {len(missing)} chemins absents")
+    for path in missing:
+        log(log_path, f"ABSENT (normal si non configuré): /{path}")
+    if not entries:
+        raise RuntimeError("Aucun HotFile présent sur le cab.")
+
+    output = job_dir / "download.PCOSCFG"
+    temp = job_dir / ".download.PCOSCFG.tmp"
+    temp.unlink(missing_ok=True)
+    processed = 0
+    with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9,
+                         allowZip64=True, strict_timestamps=False) as archive:
+        for index, item in enumerate(entries, start=1):
+            rel = item["path"]
+            name = "rootfs/" + rel + ("/" if item["type"] == "dir" else "")
+            info = zip_info(item, name)
+            if item["type"] == "dir":
+                archive.writestr(info, b"")
+            elif item["type"] == "symlink":
+                archive.writestr(info, os.fsencode(item["link_target"]))
+            else:
+                digest = hashlib.sha256()
+                written = 0
+                with open(Path("/") / rel, "rb", buffering=1024 * 1024) as source, archive.open(info, "w") as target:
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        target.write(chunk)
+                        digest.update(chunk)
+                        written += len(chunk)
+                        processed += len(chunk)
+                item["size"] = written
+                item["sha256"] = digest.hexdigest()
+            if index == len(entries) or index % 20 == 0:
+                ratio = processed / max(total_bytes, 1)
+                percent = 8 + int(72 * min(1.0, ratio if total_bytes else index / len(entries)))
+                progress(job_dir, percent, "compress", f"Compression maximale: {index}/{len(entries)} entrées",
+                         archive_name=archive_name, log_path=log_path)
+
+        manifest = {
+            "format": FORMAT,
+            "format_version": 1,
+            "archive_name": archive_name,
+            "created_at": utc_now(),
+            "hostname": socket.gethostname(),
+            "compression": "ZIP Deflate niveau 9",
+            "root_prefix": "rootfs/",
+            "entries": entries,
+            "missing_paths": missing,
+            "excluded_paths": sorted(FORBIDDEN),
+        }
+        raw_manifest = json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+        manifest_info = zipfile.ZipInfo(MANIFEST_NAME, time.localtime()[:6])
+        manifest_info.create_system = 3
+        manifest_info.external_attr = (stat.S_IFREG | 0o600) << 16
+        manifest_info.compress_type = zipfile.ZIP_DEFLATED
+        archive.writestr(manifest_info, raw_manifest)
+
+    with open(temp, "rb") as handle:
+        os.fsync(handle.fileno())
+    with zipfile.ZipFile(temp, "r") as archive:
+        broken = archive.testzip()
+        if broken:
+            raise RuntimeError(f"Archive ZIP invalide: {broken}")
+    # Apply the exact same allowlist, metadata and symlink checks used by restore.
+    load_manifest(temp)
+    os.replace(temp, output)
+    uid, gid = pinball_ids()
+    os.chown(output, uid, gid)
+    os.chmod(output, 0o600)
+
+    progress(job_dir, 90, "local-copy", "Écriture atomique de la copie locale…",
+             archive_name=archive_name, log_path=log_path)
+    if LOCAL_DIR.is_symlink():
+        raise ValueError("Dossier UserSettings non sécuritaire.")
+    LOCAL_DIR.mkdir(parents=True, exist_ok=True, mode=0o750)
+    os.chown(LOCAL_DIR, 0, gid)
+    os.chmod(LOCAL_DIR, 0o750)
+    local_temp = LOCAL_DIR / f".UserSettings.PCOSCFG.{job_dir.name}.tmp"
+    local_temp.unlink(missing_ok=True)
+    fd = os.open(local_temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, "wb") as target, open(output, "rb") as source:
+        shutil.copyfileobj(source, target, length=1024 * 1024)
+        target.flush()
+        os.fsync(target.fileno())
+    os.chown(local_temp, uid, gid)
+    os.chmod(local_temp, 0o600)
+    os.replace(local_temp, LOCAL_ARCHIVE)
+    log(log_path, f"Archive créée: {archive_name} ({output.stat().st_size} octets)")
+    log(log_path, f"Copie locale remplacée atomiquement: {LOCAL_ARCHIVE}")
+    log(log_path, "BACKUP GO [OK]")
+    return output, manifest, log_path
+
+
+def load_manifest(archive_path: Path) -> tuple[dict, dict[str, zipfile.ZipInfo]]:
+    if not archive_path.is_file() or archive_path.is_symlink():
+        raise ValueError("Archive PCOSCFG absente ou non sécuritaire.")
+    if archive_path.stat().st_size <= 0 or archive_path.stat().st_size > MAX_ARCHIVE_BYTES:
+        raise ValueError("Taille de l'archive PCOSCFG refusée.")
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        infos = archive.infolist()
+        if len(infos) > MAX_ENTRY_COUNT:
+            raise ValueError("Archive PCOSCFG contenant trop d'entrées.")
+        names = [item.filename for item in infos]
+        if len(names) != len(set(names)) or MANIFEST_NAME not in names:
+            raise ValueError("Manifeste absent ou entrées ZIP dupliquées.")
+        raw = archive.read(MANIFEST_NAME)
+    if len(raw) > 8 * 1024 * 1024:
+        raise ValueError("Manifeste PCOSCFG trop volumineux.")
+    manifest = json.loads(raw.decode("utf-8"))
+    if manifest.get("format") != FORMAT or manifest.get("format_version") != 1:
+        raise ValueError("Format PCOSCFG incompatible.")
+    archive_name = str(manifest.get("archive_name") or "")
+    if not ARCHIVE_RE.fullmatch(archive_name):
+        raise ValueError("Nom d'archive PCOSCFG invalide.")
+    entries = manifest.get("entries")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("Manifeste PCOSCFG vide.")
+
+    by_name = {item.filename: item for item in infos}
+    expected = {MANIFEST_NAME}
+    normalized: list[tuple[dict, str, str]] = []
+    total = 0
+    for item in entries:
+        if not isinstance(item, dict):
+            raise ValueError("Entrée de manifeste invalide.")
+        rel = safe_rel(str(item.get("path") or ""))
+        if not allowed(rel):
+            raise ValueError(f"Chemin hors HotFiles: {rel}")
+        kind = item.get("type")
+        if kind not in {"file", "dir", "symlink"}:
+            raise ValueError(f"Type d'entrée refusé: {rel}")
+        try:
+            mode = int(item.get("mode"))
+            uid = int(item.get("uid"))
+            gid = int(item.get("gid"))
+        except (TypeError, ValueError):
+            raise ValueError(f"Métadonnées invalides: {rel}")
+        if not 0 <= mode <= 0o777 or not 0 <= uid <= 65535 or not 0 <= gid <= 65535:
+            raise ValueError(f"Permissions ou propriétaire refusés: {rel}")
+        if kind == "symlink" and not safe_symlink_target(rel, str(item.get("link_target") or "")):
+            raise ValueError(f"Cible de lien symbolique refusée: {rel}")
+        name = "rootfs/" + rel + ("/" if kind == "dir" else "")
+        if name in expected:
+            raise ValueError(f"Entrée de manifeste dupliquée: {rel}")
+        expected.add(name)
+        info = by_name.get(name)
+        if info is None:
+            raise ValueError(f"Entrée ZIP manquante: {rel}")
+        size = int(item.get("size") or 0)
+        if size < 0 or info.file_size != size:
+            raise ValueError(f"Taille incohérente: {rel}")
+        total += size
+        if total > MAX_ARCHIVE_BYTES:
+            raise ValueError("Contenu PCOSCFG décompressé trop volumineux.")
+        normalized.append((item, rel, kind))
+    symlinks = {rel for _item, rel, kind in normalized if kind == "symlink"}
+    for _item, rel, _kind in normalized:
+        if any(parent.as_posix() in symlinks for parent in PurePosixPath(rel).parents):
+            raise ValueError(f"Entrée imbriquée sous un lien symbolique: {rel}")
+    if set(names) != expected:
+        raise ValueError("L'archive contient des fichiers non déclarés.")
+    return manifest, by_name
+
+
+def stage_archive(archive_path: Path, manifest: dict, stage_root: Path, job_dir: Path,
+                  archive_name: str, log_path: Path) -> None:
+    shutil.rmtree(stage_root, ignore_errors=True)
+    stage_root.mkdir(parents=True, mode=0o700)
+    entries = manifest["entries"]
+    ordered = sorted(entries, key=lambda item: (len(PurePosixPath(item["path"]).parts), item["type"] != "dir", item["path"]))
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        for index, item in enumerate(ordered, start=1):
+            rel = safe_rel(item["path"])
+            target = stage_root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            kind = item["type"]
+            name = "rootfs/" + rel + ("/" if kind == "dir" else "")
+            if kind == "dir":
+                target.mkdir(exist_ok=True)
+            elif kind == "symlink":
+                raw = archive.read(name)
+                if hashlib.sha256(raw).hexdigest() != item.get("sha256"):
+                    raise ValueError(f"SHA-256 invalide: {rel}")
+                os.symlink(os.fsdecode(raw), target)
+            else:
+                digest = hashlib.sha256()
+                with archive.open(name, "r") as source, open(target, "xb") as output:
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        output.write(chunk)
+                        digest.update(chunk)
+                if digest.hexdigest() != item.get("sha256"):
+                    raise ValueError(f"SHA-256 invalide: {rel}")
+            if index == len(ordered) or index % 20 == 0:
+                progress(job_dir, 10 + int(30 * index / len(ordered)), "verify",
+                         f"Validation SHA-256: {index}/{len(ordered)} entrées",
+                         archive_name=archive_name, log_path=log_path)
+
+
+def remove_path(path: Path) -> None:
+    if not os.path.lexists(path):
+        return
+    if path.is_symlink() or not path.is_dir():
+        path.unlink()
+    else:
+        shutil.rmtree(path)
+
+
+def copy_item(source: Path, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if source.is_symlink():
+        os.symlink(os.readlink(source), target)
+    elif source.is_dir():
+        shutil.copytree(source, target, symlinks=True, copy_function=shutil.copy2)
+    else:
+        shutil.copy2(source, target, follow_symlinks=False)
+
+
+def metadata_for_tree(root: Path, rel: str) -> list[dict]:
+    values: list[dict] = []
+
+    def visit(path: Path, current: str) -> None:
+        item = entry_from_lstat(path, current)
+        if item["type"] == "special":
+            return
+        values.append(item)
+        if item["type"] == "dir":
+            with os.scandir(path) as children:
+                for child in sorted(children, key=lambda value: value.name):
+                    visit(Path(child.path), f"{current}/{child.name}")
+
+    visit(root, rel)
+    return values
+
+
+def apply_metadata(root: Path, entries: list[dict]) -> None:
+    ordered = sorted(entries, key=lambda item: (item["type"] == "dir", -len(PurePosixPath(item["path"]).parts)))
+    for item in ordered:
+        target = root / item["path"]
+        if not os.path.lexists(target):
+            raise RuntimeError(f"Cible restaurée absente: {target}")
+        if target.is_symlink():
+            os.chown(target, int(item["uid"]), int(item["gid"]), follow_symlinks=False)
+            continue
+        os.chown(target, int(item["uid"]), int(item["gid"]))
+        os.chmod(target, int(item["mode"]))
+        stamp_ns = int(item.get("mtime_ns") or 0)
+        if stamp_ns:
+            os.utime(target, ns=(stamp_ns, stamp_ns), follow_symlinks=False)
+
+
+def restore_archive(job_dir: Path, archive_path: Path, fallback_name: str) -> tuple[dict, Path]:
+    progress(job_dir, 2, "validate", "Lecture du manifeste PCOSCFG…", archive_name=fallback_name)
+    manifest, _ = load_manifest(archive_path)
+    archive_name = manifest["archive_name"]
+    log_path = secure_log_path(archive_name)
+    log(log_path, f"RESTORE START — source {archive_path}")
+    stage_root = job_dir / "stage" / "rootfs"
+    stage_archive(archive_path, manifest, stage_root, job_dir, archive_name, log_path)
+    log(log_path, f"Archive validée: {len(manifest['entries'])} entrées, SHA-256 OK")
+
+    represented = [
+        selector for selector in SELECTORS
+        if any(item["path"] == selector or item["path"].startswith(selector + "/") for item in manifest["entries"])
+    ]
+    rollback_root = job_dir / "rollback" / "rootfs"
+    rollback_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    rollback_meta: list[dict] = []
+    existed: set[str] = set()
+    progress(job_dir, 45, "rollback", "Création du rollback temporaire…",
+             archive_name=archive_name, log_path=log_path)
+    for selector in represented:
+        current = Path("/") / selector
+        if os.path.lexists(current):
+            existed.add(selector)
+            rollback_meta.extend(metadata_for_tree(current, selector))
+            copy_item(current, rollback_root / selector)
+
+    try:
+        progress(job_dir, 60, "restore", "Restauration atomique des groupes de configuration…",
+                 archive_name=archive_name, log_path=log_path)
+        for selector in represented:
+            source = stage_root / selector
+            target = Path("/") / selector
+            remove_path(target)
+            if os.path.lexists(source):
+                copy_item(source, target)
+        progress(job_dir, 88, "metadata", "Restauration des propriétaires et permissions…",
+                 archive_name=archive_name, log_path=log_path)
+        apply_metadata(Path("/"), manifest["entries"])
+    except Exception:
+        log(log_path, "NOGO [X] — échec; rollback temporaire en cours")
+        for selector in represented:
+            remove_path(Path("/") / selector)
+            saved = rollback_root / selector
+            if selector in existed and os.path.lexists(saved):
+                copy_item(saved, Path("/") / selector)
+        apply_metadata(Path("/"), rollback_meta)
+        log(log_path, "Rollback GO [OK]")
+        raise
+    finally:
+        shutil.rmtree(job_dir / "rollback", ignore_errors=True)
+        shutil.rmtree(job_dir / "stage", ignore_errors=True)
+
+    log(log_path, f"Restauration terminée: {len(represented)} groupes HotFiles")
+    log(log_path, "Aucun redémarrage de VPX, BGFX ou VPinFE effectué")
+    log(log_path, "RESTORE GO [OK]")
+    return manifest, log_path
+
+
+def cleanup_old_jobs() -> None:
+    try:
+        cutoff = time.time() - 24 * 3600
+        for child in WORK_ROOT.iterdir():
+            if JOB_RE.fullmatch(child.name) and child.is_dir() and not child.is_symlink() and child.stat().st_mtime < cutoff:
+                shutil.rmtree(child, ignore_errors=True)
+    except OSError:
+        pass
+
+
+def main(argv: list[str]) -> int:
+    if os.geteuid() != 0:
+        print("NOGO: ce moteur doit être exécuté par root.", file=sys.stderr)
+        return 77
+    actions = {"create-download", "create-local", "restore-upload", "restore-local", "cleanup-download"}
+    if len(argv) != 4 or argv[1] not in actions:
+        print("Usage: pincabos-backupcfg ACTION JOB_ID YYYYMMDD-HHMMSS", file=sys.stderr)
+        return 64
+    action, job_id, stamp = argv[1:]
+    job_dir, fallback_name = validate_job(job_id, stamp)
+    cleanup_old_jobs()
+    log_path: Path | None = None
+    archive_name = fallback_name
+    try:
+        if action == "cleanup-download":
+            (job_dir / "download.PCOSCFG").unlink(missing_ok=True)
+            return 0
+        if action in {"create-download", "create-local"}:
+            output, manifest, log_path = create_archive(job_dir, fallback_name)
+            archive_name = manifest["archive_name"]
+            progress(job_dir, 100, "done", "Backup Config créé, vérifié et enregistré sur le cab.",
+                     done=True, ok=True, archive_name=archive_name, log_path=log_path)
+            if action == "create-local":
+                output.unlink(missing_ok=True)
+            print(output)
+        else:
+            archive_path = LOCAL_ARCHIVE if action == "restore-local" else job_dir / "upload.PCOSCFG"
+            if action == "restore-upload":
+                if not archive_path.is_file() or archive_path.is_symlink():
+                    raise ValueError("Archive PCOSCFG téléversée absente ou non sécuritaire.")
+                uid, gid = pinball_ids()
+                os.chown(archive_path, 0, gid)
+                os.chmod(archive_path, 0o640)
+            try:
+                manifest, log_path = restore_archive(job_dir, archive_path, fallback_name)
+            finally:
+                if action == "restore-upload":
+                    archive_path.unlink(missing_ok=True)
+            archive_name = manifest["archive_name"]
+            progress(job_dir, 100, "done", "Configuration restaurée. Redémarrage du cab recommandé.",
+                     done=True, ok=True, archive_name=archive_name, log_path=log_path)
+        return 0
+    except Exception as exc:
+        try:
+            if log_path is None:
+                log_path = secure_log_path(archive_name)
+            log(log_path, f"NOGO [X] {type(exc).__name__}: {exc}")
+        except Exception:
+            log_path = None
+        progress(job_dir, 100, "error", f"Échec: {exc}", done=True, ok=False,
+                 archive_name=archive_name, log_path=log_path)
+        print(f"NOGO: {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

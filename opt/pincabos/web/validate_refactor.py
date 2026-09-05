@@ -121,10 +121,28 @@ required_routes = {
     "/first-run/action/<action>",
     "/api/batch-import/live/create",
     "/api/batch-export/live/start",
+    "/backupcfg",
+    "/tools/backupcfg",
+    "/api/backupcfg/backup",
+    "/api/backupcfg/restore-upload",
+    "/api/backupcfg/restore-local",
+    "/api/backupcfg/status/<job_id>",
+    "/api/backupcfg/download/<job_id>",
 }
 found_routes = {route for route, _methods, _name, _file, _line in routes}
 for route in sorted(required_routes - found_routes):
     errors.append(f"Route critique absente: {route}")
+
+backupcfg_helper = ROOT.parent / "tools" / "pincabos-backupcfg"
+backupcfg_sudoers = ROOT.parents[2] / "etc" / "sudoers.d" / "pincabos-backupcfg"
+if not backupcfg_helper.is_file():
+    errors.append("Moteur privilégié Backup Config absent")
+elif not (backupcfg_helper.stat().st_mode & 0o100):
+    errors.append("Moteur privilégié Backup Config non exécutable")
+if not backupcfg_sudoers.is_file():
+    errors.append("Règle sudoers Backup Config absente")
+if "PINCABOS_BACKUPCFG_CARD_V1" not in (ROOT / "tools.py").read_text(encoding="utf-8"):
+    errors.append("Carte Backup Config absente de la page Tools")
 
 classifier_candidates = (
     ROOT / "pincabos_import_classifier.py",
