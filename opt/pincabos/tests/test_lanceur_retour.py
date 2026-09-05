@@ -29,7 +29,10 @@ class RetourFrontend(unittest.TestCase):
         # sans DISPLAY ni xdotool : rien, jamais d'erreur
         self.assertIn('[[ -n "${DISPLAY:-}" ]] || return 0', s)
         self.assertIn("command -v xdotool >/dev/null 2>&1", s)
-        self.assertIn("xdotool search --onlyvisible --name 'VPinFE'", s)
+        # PINCABOS_RETOUR_FRONTEND_V2 : la fenetre principale d'abord (BG/DMD recevaient le clavier)
+        self.assertIn("xdotool search --onlyvisible --name '^VPinFE Table$'", s)
+        self.assertIn("xdotool search --onlyvisible --name '^VPinFE'", s)
+        self.assertLess(s.index("'^VPinFE Table$'"), s.index("'^VPinFE' 2>/dev/null"))
 
     def test_le_reveil_ne_fait_rien_sans_serveur_x(self):
         s = CORE.read_text(encoding="utf-8")

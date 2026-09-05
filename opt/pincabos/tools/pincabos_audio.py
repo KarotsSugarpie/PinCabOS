@@ -27,6 +27,25 @@ VPX_INI = Path("/home/pinball/.pincabos/vpx/VPinballX.ini")
 VPX_LEGACY_INI = Path("/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini")
 
 
+def ini_squelette(texte: str) -> bool:
+    """PINCABOS_VPX_PREF_REPARATION_V2 : l ini minimal ecrit par le premier demarrage (V2 du
+    05/09) n a pas de section [Version] ; mais des que VPX a tourne dessus, il le reecrit en
+    squelette complet ([Version] present, toutes les cles vides). Retex cab de Yann : BGSet et
+    PlayfieldFullScreen vides = table en paysage, DOF absent, alors que le dossier complet
+    attendait dans l ancien chemin. Un ini est un squelette si [Version] manque OU si ses cles
+    cabinet n ont pas de valeur."""
+    if "[Version]" not in texte:
+        return True
+
+    def vide(cle):
+        return re.search(rf"(?m)^{cle}[ \t]*=[ \t]*\S", texte) is None
+    return vide("BGSet") and vide("PlayfieldFullScreen")
+
+
+def ini_complet(texte: str) -> bool:
+    return "[Version]" in texte and not ini_squelette(texte)
+
+
 def assurer_pref_vpx(vpx_ini: Path = VPX_INI, legacy_ini: Path = VPX_LEGACY_INI) -> str:
     """PINCABOS_VPX_PREF_MIGRATION_V1 : meme migration que VPXlauncher.pincabos-original.sh.
 
@@ -50,8 +69,8 @@ def assurer_pref_vpx(vpx_ini: Path = VPX_INI, legacy_ini: Path = VPX_LEGACY_INI)
         # PINCABOS_VPX_PREF_REPARATION_V1 : un ini minimal (cree par la V2 du 05/09, sans
         # section [Version]) a cote d un dossier legacy complet -> on reprend le dossier
         # complet (ini, directoutputconfig...) et l ini minimal est garde en .minimal
-        minimal = vpx_ini.is_file() and "[Version]" not in vpx_ini.read_text(encoding="utf-8", errors="replace")
-        if minimal and legacy.is_dir() and not legacy.is_symlink() and legacy_ini.is_file() and "[Version]" in legacy_ini.read_text(encoding="utf-8", errors="replace"):
+        minimal = vpx_ini.is_file() and ini_squelette(vpx_ini.read_text(encoding="utf-8", errors="replace"))
+        if minimal and legacy.is_dir() and not legacy.is_symlink() and legacy_ini.is_file() and ini_complet(legacy_ini.read_text(encoding="utf-8", errors="replace")):
             shutil.move(str(vpx_ini), str(vpx_ini) + ".minimal")
             for element in legacy.iterdir():
                 cible = pref / element.name
@@ -83,7 +102,8 @@ DEFAUTS = {
 SOUND3D = (
     ("0", "2 canaux, avant"), ("1", "2 canaux, arrière"),
     ("2", "jusqu'à 6 canaux, arrière au lockbar"), ("3", "jusqu'à 6 canaux, avant au lockbar"),
-    ("4", "6 canaux, latéral et arrière, mixage historique"), ("5", "6 canaux, latéral et arrière, nouveau mixage"),
+    ("4", "7.1 (8 canaux) : latéraux + arrière, avant = fronton, mixage historique"),
+    ("5", "7.1 (8 canaux) : latéraux + arrière, avant = fronton, nouveau mixage (SSF)"),
 )
 APLAY_RE = re.compile(r"^(?:card|carte)\s+(\d+)\s*:\s*(.+?)\s+\[(.+?)\]\s*,\s*(?:device|périphérique|peripherique)\s+(\d+)\s*:\s*(.+?)\s+\[(.+?)\]", re.IGNORECASE)
 HW_RE = re.compile(r"^hw:(\d+),(\d+)$")
@@ -200,11 +220,21 @@ def tester(ident: str, run=executer, canaux: int = 2) -> dict:
 # PINCABOS_AUDIO_HP_UN_PAR_UN_V1 : ordre ALSA des canaux (speaker-test -s est 1-base)
 CANAUX = {2: ["FL", "FR"], 4: ["FL", "FR", "RL", "RR"], 6: ["FL", "FR", "RL", "RR", "C", "LFE"],
           8: ["FL", "FR", "RL", "RR", "C", "LFE", "SL", "SR"]}
+# PINCABOS_AUDIO_HP_CHMAP_V1 : sur un peripherique hw: brut, l ordre des canaux est celui du
+# materiel ; en HDMI (CEA-861) c est FL FR LFE FC RL RR, et la voix « Rear Left » sortait du
+# caisson (retex cab de Yann, GA104 HDMI : seul le Front Left etait coherent). La carte de
+# canaux imposee a speaker-test (-m, noms ALSA : FC pour le centre) remet l ordre standard,
+# comme PipeWire le fait pour VPX. Si le pilote la refuse, on rejoue sans.
+CHMAP = {2: "FL,FR", 4: "FL,FR,RL,RR", 6: "FL,FR,RL,RR,FC,LFE", 8: "FL,FR,RL,RR,FC,LFE,SL,SR"}
 
 
 def canaux_pour_mode(sound3d: str) -> int:
-    """Nombre de canaux qu'exige le mode VPX : 2 en stereo (0, 1), 6 pour les modes SSF."""
-    return 2 if str(sound3d) in ("0", "1") else 6
+    """Nombre de canaux qu'exige le mode VPX : 2 en stereo (0, 1), 6 pour 2 et 3, 8 pour les
+    modes 7.1 (4, 5 : effets avant sur les lateraux, arriere sur l arriere, fronton sur l avant).
+    PINCABOS_AUDIO_71_V1 (retex cab de Yann : 3 paires + basses = 7.1, les lateraux n etaient
+    meme pas sur le schema)."""
+    s = str(sound3d)
+    return 2 if s in ("0", "1") else 8 if s in ("4", "5") else 6
 
 
 def tester_canal(ident: str, canaux: int, canal: int, run=executer) -> dict:
@@ -213,7 +243,10 @@ def tester_canal(ident: str, canaux: int, canal: int, run=executer) -> dict:
         return {"ok": False, "sortie": "identifiant ALSA invalide"}
     if canaux not in CANAUX or not 0 <= canal < canaux:
         return {"ok": False, "sortie": f"canal {canal} hors des {canaux} canaux"}
-    rc, out = run(["speaker-test", "-D", ident, "-c", str(canaux), "-t", "wav", "-s", str(canal + 1), "-l", "1"], timeout=40)
+    base = ["speaker-test", "-D", ident, "-c", str(canaux), "-t", "wav", "-s", str(canal + 1), "-l", "1"]
+    rc, out = run(base + ["-m", CHMAP[canaux]], timeout=40)
+    if rc != 0 and "channel map" in out.lower():
+        rc, out = run(base, timeout=40)
     sortie = out.strip()[-300:]
     if rc != 0 and "not available" in sortie.lower():
         sortie = f"cette sortie n'offre pas {canaux} canaux : {sortie}"
@@ -308,6 +341,61 @@ def ecrire_vpx(texte: str, backglass: str, playfield: str, sound3d: str) -> str:
     return "\n".join(lines)
 
 
+def cartes_pactl(texte: str) -> list:
+    """[{name, card, profiles: {nom: disponible}, active}] depuis `pactl list cards`."""
+    cartes, cur, dans_profils = [], None, False
+    for ligne in texte.splitlines():
+        s = ligne.strip()
+        if s.startswith("Name:"):
+            cur = {"name": s.split(":", 1)[1].strip(), "card": "", "profiles": {}, "active": ""}
+            cartes.append(cur)
+            dans_profils = False
+        elif cur is None:
+            continue
+        elif s.startswith("alsa.card ="):
+            cur["card"] = s.split("=", 1)[1].strip().strip('"')
+        elif s.startswith("Profiles:"):
+            dans_profils = True
+        elif s.startswith("Active Profile:"):
+            cur["active"] = s.split(":", 1)[1].strip()
+            dans_profils = False
+        elif dans_profils:
+            m = re.match(r"([\w.:+-]+):\s.*available:\s*(\w+)", s)
+            if m:
+                cur["profiles"][m.group(1)] = m.group(2) == "yes"
+    return cartes
+
+
+def profil_multicanal(carte: dict, canaux: int) -> str:
+    """Le profil de sortie a `canaux` canaux (surround-51 pour 6, surround-71 pour 8), disponible d abord."""
+    motif = "surround-71" if canaux >= 8 else "surround-51"
+    candidats = [p for p in carte.get("profiles", {}) if p.startswith("output:") and motif in p]
+    candidats.sort(key=lambda p: (not carte["profiles"][p], p))
+    return candidats[0] if candidats else ""
+
+
+def assurer_profil_surround(pf: dict, canaux: int, run=executer) -> list:
+    """PINCABOS_AUDIO_PROFIL_SURROUND_V1 : PipeWire ouvre les cartes analogiques en stereo par
+    defaut (retex cab de Yann : ALC1220 en « Analog Stereo », SSF demande, garde -> stereo).
+    Si la carte de la sortie choisie offre un profil a `canaux` canaux, on l active avant la
+    garde ; le sink change alors de nom (analog-stereo -> analog-surround-51)."""
+    rc, out = run(commande_pinball(["/usr/bin/pactl", "list", "cards"]), timeout=15)
+    if rc != 0:
+        return []
+    carte = next((c for c in cartes_pactl(out) if c["card"] == pf.get("card")), None)
+    if not carte:
+        return []
+    profil = profil_multicanal(carte, canaux)
+    if not profil:
+        return [f"carte {carte['name']} : aucun profil a {canaux} canaux"]
+    if carte["active"] == profil:
+        return []
+    rc, out = run(commande_pinball(["/usr/bin/pactl", "set-card-profile", carte["name"], profil]), timeout=15)
+    if rc != 0:
+        return [f"carte {carte['name']} : profil {profil} refuse ({out.strip()[-80:]})"]
+    return [f"carte {carte['name']} : profil {profil} active pour le SSF"]
+
+
 def canaux_du_sink(texte: str, nom: str) -> int:
     """Nombre de canaux du sink `nom` dans `pactl list sinks` (Sample Specification: s16le 2ch 48000Hz), 0 si inconnu."""
     bloc = ""
@@ -337,11 +425,30 @@ def appliquer_premier_demarrage(cfg: dict, run=executer, vpx_ini: Path = VPX_INI
     # PINCABOS_AUDIO_SSF_GARDE_V1 (Yann : « le SSF ne joue pas les sons ») : un mode a 6 canaux
     # sur une sortie stereo laisse des sons muets ; on retombe en stereo et on le dit.
     voulu = str(inst.get("sound3d", "0"))
+    exige = canaux_pour_mode(voulu)
+    if pf and exige > 2 and 0 < canaux_du_sink(out, pf["name"]) < exige:
+        # PINCABOS_AUDIO_PROFIL_SURROUND_V1 : la carte offre peut-etre un profil multicanal
+        bascule = assurer_profil_surround(pf, exige, run)
+        if exige == 8 and not any("active pour le SSF" in l for l in bascule):
+            # pas de 7.1 sur cette carte : le 5.1 au moins (lateraux muets, on le dira)
+            bascule += assurer_profil_surround(pf, 6, run)
+        journal += bascule
+        if any("active pour le SSF" in l for l in bascule):
+            rc, out = run(commande_pinball(["/usr/bin/pactl", "list", "sinks"]), timeout=15)
+            sinks = sinks_pactl(out) if rc == 0 else sinks
+            pf = sink_pour(cfg.get("playfield_device", ""), sinks) or pf
+            bg = sink_pour(cfg.get("backbox_device", ""), sinks) or pf
     if pf and voulu not in ("0", "1"):
         canaux = canaux_du_sink(out, pf["name"])
         if canaux and canaux < 6:
             journal.append(f"Sound3D {voulu} demande mais la sortie {pf['name']} n'a que {canaux} canaux : mode stereo (0) applique")
             inst = dict(inst, sound3d="0", sound3d_voulu=voulu)
+        elif canaux and canaux < exige:
+            # PINCABOS_AUDIO_71_V1 : 7.1 demande sur une sortie 5.1 : VPX joue lockbar + arriere +
+            # basses, les lateraux (fronton) restent muets. Le mode est garde, on le dit.
+            journal.append(f"WARN: Sound3D {voulu} (7.1) demande mais la sortie {pf['name']} n'a que {canaux} canaux : "
+                           "les canaux lateraux (fronton) seront muets ; il faut une sortie 7.1 (prise line-in retaskee en "
+                           "sortie laterale) ou une sortie backbox separee")
     # PINCABOS_AUDIO_PREMIER_DEMARRAGE_V2 : VPX n'a pas encore écrit son ini au
     # premier démarrage d'un cab neuf (vu en VM : « absent, rien écrit ») ; on le
     # crée avec la seule section [Player], VPX complète le reste à son premier

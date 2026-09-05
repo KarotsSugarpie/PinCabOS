@@ -443,11 +443,16 @@ case "$SELECTED_MODE" in
         reveiller_frontend() {
             [[ -n "${DISPLAY:-}" ]] || return 0
             if command -v xdotool >/dev/null 2>&1; then
+                # PINCABOS_RETOUR_FRONTEND_V2 : VPinFE a trois fenetres (Table, BG, DMD) ;
+                # la premiere venue etait BG ou DMD et le clavier partait sur l'autre
+                # ecran (retex cab de Yann, 3.88 : alt-tab obligatoire apres la table).
+                # La fenetre principale d'abord, une fenetre VPinFE quelconque sinon.
                 local w
-                w="$(xdotool search --onlyvisible --name 'VPinFE' 2>/dev/null | head -1 || true)"
+                w="$(xdotool search --onlyvisible --name '^VPinFE Table$' 2>/dev/null | head -1 || true)"
+                [[ -n "$w" ]] || w="$(xdotool search --onlyvisible --name '^VPinFE' 2>/dev/null | head -1 || true)"
                 if [[ -n "$w" ]]; then
                     xdotool windowactivate "$w" >/dev/null 2>&1 || true
-                    log "RETOUR [=] frontend VPinFE reactive (fenetre $w)."
+                    log "RETOUR [=] frontend VPinFE reactive (fenetre $w : $(xdotool getwindowname "$w" 2>/dev/null))."
                 fi
             fi
             command -v xrefresh >/dev/null 2>&1 && xrefresh >/dev/null 2>&1 || true
