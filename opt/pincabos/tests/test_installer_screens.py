@@ -330,8 +330,8 @@ class Assistant(unittest.TestCase):
         # xinput absent : rien a cadrer, pas d erreur
         self.assertEqual(sc.cadrer_pointeurs_absolus("HDMI-0", lambda a, timeout=20: (127, "", "absent")), [])
         mons = sc.moniteurs(QUERY, PROPS)
-        res = sc.appliquer(mons, self.ROLES, 0, f)
-        self.assertTrue(res["ok"])
+        res = sc.appliquer(mons, {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}, 0, f)
+        self.assertTrue(res["ok"], res)
         self.assertEqual(res["pointeurs"], [6, 12])
 
     def test_mode_applique_est_le_mode_courant(self):
