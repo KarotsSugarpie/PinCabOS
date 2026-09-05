@@ -4,6 +4,9 @@ PINCABOS_APPEARANCE_GLOBAL_INJECTOR_V2
 Garantit que les variables Apparence et la meme couche visuelle commune sont
 chargees sur chaque reponse HTML, y compris les pages specialisees qui ne
 passent pas par le gabarit standard.
+
+DudesCab reste volontairement une exception visuelle : son identite propre est
+preservee, avec une feuille finale sombre/opaque chargee apres le theme global.
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ _VARS_PATH = "/static/pincabos-appearance-vars.css?v=appearance-global-v2"
 _THEME_PATH = "/static/pincabos-theme-global.css?v=appearance-global-v2"
 _BRIDGE_PATH = "/static/pincabos-appearance-dashboard-menu-v2.css?v=appearance-global-v2"
 _UNIFIED_PATH = "/static/pincabos-interface-unified-v1.css?v=appearance-global-v2"
+_DUDESCAB_PATH = "/static/pincabos-dudescab-dark-exception-v1.css?v=appearance-global-v2"
 
 
 def install_appearance_global(app):
@@ -57,29 +61,36 @@ def install_appearance_global(app):
                     'data-pincabos-appearance-vars-global="v2">'
                 )
 
-            # 2) Le theme historique commun couvre les primitives PinCabOS
-            # deja normalisees. Il est injecte aussi sur les pages specialisees.
+            # 2) Theme historique commun pour les primitives PinCabOS.
             if "pincabos-theme-global.css" not in html:
                 links.append(
                     f'<link rel="stylesheet" href="{_THEME_PATH}" '
                     'data-pincabos-theme-global="v2">'
                 )
 
-            # 3) Le bridge conserve les compatibilites Dashboard/Menu et les
-            # protections full-width existantes.
+            # 3) Compatibilite Dashboard/Menu.
             if "pincabos-appearance-dashboard-menu-v2.css" not in html:
                 links.append(
                     f'<link rel="stylesheet" href="{_BRIDGE_PATH}" '
                     'data-pincabos-appearance-global-bridge="v2">'
                 )
 
-            # 4) La couche unifiee est TOUJOURS la derniere feuille chargee.
-            # Elle ne change pas les grilles/positions/densites : elle convertit
-            # le chrome visuel des modules vers les variables Apparence.
+            # 4) Couche commune de toute la WebApp. Elle reste visuelle
+            # seulement : aucune grille, position, largeur ou logique modifiee.
             if "pincabos-interface-unified-v1.css" not in html:
                 links.append(
                     f'<link rel="stylesheet" href="{_UNIFIED_PATH}" '
                     f'{_MARKER}="v1">'
+                )
+
+            # 5) DudesCab est une exception demandee : pas d'unification de son
+            # identite. Cette feuille finale garde son UI propre mais remplace
+            # les grandes surfaces roses/translucides par des fonds opaques et
+            # tres sombres. Les selecteurs sont limites a .dc-app.
+            if "pincabos-dudescab-dark-exception-v1.css" not in html:
+                links.append(
+                    f'<link rel="stylesheet" href="{_DUDESCAB_PATH}" '
+                    'data-pincabos-dudescab-dark-exception="v1">'
                 )
 
             if not links:
@@ -87,8 +98,8 @@ def install_appearance_global(app):
 
             injection = "\n" + "\n".join(links) + "\n"
 
-            # Injection a la fin du document, comme le bridge historique, afin
-            # de passer apres les <style> locaux et les CSS propres aux modules.
+            # Injection a la fin du document afin de passer apres les <style>
+            # locaux et les CSS propres aux modules.
             if re.search(r"</body\s*>", html, flags=re.IGNORECASE):
                 html = re.sub(
                     r"</body\s*>",
