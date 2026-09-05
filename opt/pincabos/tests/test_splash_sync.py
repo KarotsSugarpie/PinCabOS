@@ -272,3 +272,29 @@ class ChromeSombre(unittest.TestCase):
     def test_drop_in(self):
         d = (R / "etc/systemd/system/pincabos-vpinfe.service.d/40-chrome-sombre.conf").read_text(encoding="utf-8")
         self.assertIn("ExecStartPre=-/usr/local/libexec/pincabos/pincabos-vpinfe-chrome-sombre", d)
+
+
+class VoileEcrans(unittest.TestCase):
+    """PINCABOS_VOILE_ECRANS_V1 : voile noir par ecran jusqu au premier rendu du frontend."""
+
+    ve = charger("usr/local/bin/pincabos-voile-ecrans", "pco_voile_ecrans")
+
+    def test_geometries(self):
+        s = json.dumps({"playfield": {"geometry": "3840x2160+0+0"}, "backglass": {"geometry": "1920x1080+3840+0"},
+                        "fulldmd": {"geometry": "1920x1080+5760+0"}, "topper": None})
+        self.assertEqual(self.ve.geometries(s), [(0, 0, 3840, 2160), (3840, 0, 1920, 1080), (5760, 0, 1920, 1080)])
+        self.assertEqual(self.ve.geometries("pas du json"), [])
+        self.assertEqual(self.ve.geometries(None), [])
+
+    def test_nouvelle_fenetre_seulement(self):
+        # un redemarrage du frontend laisse l ancienne fenetre quelques instants : elle ne compte pas
+        self.assertFalse(self.ve.nouvelle_fenetre({"0x1c00003"}, {"0x1c00003"}))
+        self.assertTrue(self.ve.nouvelle_fenetre({"0x1c00003"}, {"0x1c00003", "0x2400003"}))
+        self.assertFalse(self.ve.nouvelle_fenetre(set(), set()))
+
+    def test_unite(self):
+        u = (R / "etc/systemd/system/pincabos-voile-ecrans.service").read_text(encoding="utf-8")
+        self.assertIn("User=pinball", u)
+        self.assertIn("Before=pincabos-vpinfe.service", u)
+        self.assertIn("ExecStart=/usr/local/bin/pincabos-voile-ecrans --delai 3.5", u)
+        self.assertTrue((R / "etc/systemd/system/graphical.target.wants/pincabos-voile-ecrans.service").is_symlink())

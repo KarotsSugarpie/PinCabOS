@@ -1,0 +1,19 @@
+[Unit]
+Description=PinCabOS - black veil over the screens until the frontend has painted
+Documentation=https://pincabos.cc/
+# PINCABOS_VOILE_ECRANS_V1 : Chromium peint blanc avant son premier rendu
+ConditionKernelCommandLine=!pincabos.installer
+ConditionPathExists=!/etc/pincabos-live
+After=display-manager.service
+Before=pincabos-vpinfe.service
+
+[Service]
+Type=simple
+User=pinball
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pinball/.Xauthority
+ExecStart=/usr/local/bin/pincabos-voile-ecrans --delai 3.5 --max 40
+TimeoutStopSec=5
+
+[Install]
+WantedBy=graphical.target

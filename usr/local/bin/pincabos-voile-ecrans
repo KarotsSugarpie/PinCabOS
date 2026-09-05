@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""Voile noir sur chaque ecran entre l arrivee de X et le premier rendu du frontend.
+
+PINCABOS_VOILE_ECRANS_V1
+
+Chromium peint ses fenetres en blanc avant son premier rendu : dans le noir du
+cab, le playfield 4K « fusille les yeux » a chaque lancement (mesure sur le
+cab de Yann : un cliche entierement blanc 3 s apres le lancement du service,
+avec ou sans mode sombre force). Ce voile est une fenetre X override-redirect
+noire par ecran de screens.json, maintenue au-dessus de tout (XRaiseWindow a
+50 Hz : une fenetre Chromium qui apparait passe dessous en moins de 20 ms),
+retiree `--delai` secondes apres l apparition d une NOUVELLE fenetre
+« VPinFE Table » (xdotool ; celles d avant un redemarrage ne comptent pas), ou au plus tard a `--max` secondes. Jamais bloquant : sans X, sans
+libX11 ou sans screens.json, on couvre l ecran entier ou on sort.
+
+  pincabos-voile-ecrans [--delai 3.5] [--max 40] [--fenetre "VPinFE Table"]
+"""
+from __future__ import annotations
+
+import argparse
+import ctypes
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+SCREENS = "/opt/pincabos/config/screens/screens.json"
+ROLES = ("playfield", "backglass", "fulldmd", "topper")
+GEOMETRIE = re.compile(r"^(\d+)x(\d+)\+(-?\d+)\+(-?\d+)$")
+CW_OVERRIDE_REDIRECT = 1 << 9
+
+
+class XSetWindowAttributes(ctypes.Structure):
+    _fields_ = [
+        ("background_pixmap", ctypes.c_ulong), ("background_pixel", ctypes.c_ulong),
+        ("border_pixmap", ctypes.c_ulong), ("border_pixel", ctypes.c_ulong),
+        ("bit_gravity", ctypes.c_int), ("win_gravity", ctypes.c_int), ("backing_store", ctypes.c_int),
+        ("backing_planes", ctypes.c_ulong), ("backing_pixel", ctypes.c_ulong), ("save_under", ctypes.c_int),
+        ("event_mask", ctypes.c_long), ("do_not_propagate_mask", ctypes.c_long),
+        ("override_redirect", ctypes.c_int), ("colormap", ctypes.c_ulong), ("cursor", ctypes.c_ulong),
+    ]
+
+
+def geometries(texte: str | None) -> list:
+    """[(x, y, w, h)] des ecrans de screens.json (geometrie logique, apres xrandr)."""
+    if not texte:
+        return []
+    try:
+        data = json.loads(texte)
+    except ValueError:
+        return []
+    out = []
+    for role in ROLES:
+        e = data.get(role)
+        if not isinstance(e, dict):
+            continue
+        m = GEOMETRIE.match(str(e.get("geometry") or ""))
+        if m:
+            w, h, x, y = (int(v) for v in m.groups())
+            if w > 0 and h > 0:
+                out.append((x, y, w, h))
+    return out
+
+
+def fenetres_nommees(nom: str) -> set:
+    """Identifiants X des fenetres portant ce nom (xdotool)."""
+    try:
+        r = subprocess.run(["xdotool", "search", "--name", nom], capture_output=True, text=True, timeout=3)
+        return set(r.stdout.split()) if r.returncode == 0 else set()
+    except (OSError, subprocess.SubprocessError):
+        return set()
+
+
+def nouvelle_fenetre(avant: set, maintenant: set) -> bool:
+    """Une fenetre du frontend qui n existait pas au depart (un redemarrage du
+    frontend laisse l ancienne quelques instants : elle ne compte pas)."""
+    return bool(maintenant - avant)
+
+
+def x11():
+    lib = ctypes.CDLL("libX11.so.6")
+    lib.XOpenDisplay.restype = ctypes.c_void_p
+    lib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+    lib.XDefaultScreen.argtypes = [ctypes.c_void_p]
+    lib.XDefaultRootWindow.restype = ctypes.c_ulong
+    lib.XDefaultRootWindow.argtypes = [ctypes.c_void_p]
+    lib.XBlackPixel.restype = ctypes.c_ulong
+    lib.XBlackPixel.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XDisplayWidth.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XDisplayHeight.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XCreateSimpleWindow.restype = ctypes.c_ulong
+    lib.XCreateSimpleWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_int,
+                                        ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_ulong, ctypes.c_ulong]
+    lib.XChangeWindowAttributes.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_ulong, ctypes.POINTER(XSetWindowAttributes)]
+    for f in ("XMapRaised", "XRaiseWindow", "XUnmapWindow", "XDestroyWindow"):
+        getattr(lib, f).argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+    lib.XFlush.argtypes = [ctypes.c_void_p]
+    lib.XCloseDisplay.argtypes = [ctypes.c_void_p]
+    return lib
+
+
+def main(argv) -> int:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--delai", type=float, default=3.5, help="secondes entre la fenetre du frontend et le retrait")
+    p.add_argument("--max", type=float, default=40.0, help="duree maximale du voile")
+    p.add_argument("--fenetre", default="VPinFE Table")
+    a = p.parse_args(argv[1:])
+
+    try:
+        lib = x11()
+    except OSError as exc:
+        print(f"voile : libX11 absente ({exc}), rien a faire")
+        return 0
+    dpy = None
+    for _ in range(100):                       # X peut arriver quelques secondes apres nous
+        dpy = lib.XOpenDisplay(None)
+        if dpy:
+            break
+        time.sleep(0.2)
+    if not dpy:
+        print("voile : pas de serveur X, rien a faire")
+        return 0
+    ecran = lib.XDefaultScreen(dpy)
+    racine = lib.XDefaultRootWindow(dpy)
+    noir = lib.XBlackPixel(dpy, ecran)
+    try:
+        with open(SCREENS, encoding="utf-8") as f:
+            geos = geometries(f.read())
+    except OSError:
+        geos = []
+    if not geos:
+        geos = [(0, 0, lib.XDisplayWidth(dpy, ecran), lib.XDisplayHeight(dpy, ecran))]
+
+    attrs = XSetWindowAttributes()
+    attrs.override_redirect = 1
+    fenetres = []
+    for (x, y, w, h) in geos:
+        win = lib.XCreateSimpleWindow(dpy, racine, x, y, w, h, 0, noir, noir)
+        lib.XChangeWindowAttributes(dpy, win, CW_OVERRIDE_REDIRECT, ctypes.byref(attrs))
+        lib.XMapRaised(dpy, win)
+        fenetres.append(win)
+    lib.XFlush(dpy)
+    print(f"voile : {len(fenetres)} ecran(s) couvert(s) {geos}")
+
+    debut = time.monotonic()
+    vue = None
+    prochain_test = 0.0
+    initiales = fenetres_nommees(a.fenetre)
+    while True:
+        for win in fenetres:
+            lib.XRaiseWindow(dpy, win)
+        lib.XFlush(dpy)
+        maintenant = time.monotonic()
+        if vue is None and maintenant >= prochain_test:
+            prochain_test = maintenant + 0.25
+            if nouvelle_fenetre(initiales, fenetres_nommees(a.fenetre)):
+                vue = maintenant
+                print(f"voile : fenetre « {a.fenetre} » vue a {maintenant - debut:.1f} s, retrait dans {a.delai} s")
+        if (vue is not None and maintenant - vue >= a.delai) or maintenant - debut >= a.max:
+            break
+        time.sleep(0.02)
+    for win in fenetres:
+        lib.XUnmapWindow(dpy, win)
+        lib.XDestroyWindow(dpy, win)
+    lib.XFlush(dpy)
+    lib.XCloseDisplay(dpy)
+    print(f"voile : retire a {time.monotonic() - debut:.1f} s")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
