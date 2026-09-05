@@ -1,6 +1,17 @@
-/* PinCabOS menu tools — header pinning V10 */
+/* PinCabOS menu tools — deterministic header pinning V11 */
 :root {
   --pco-menu-pinned-offset: 0px;
+}
+
+/*
+ * V11 safety rule:
+ * normal header stays in document flow but owns a stacking context so no
+ * decorative/background layer can steal clicks from the navigation.
+ */
+.top:not(.pco-header-pinned-v11):not(.pco-header-pinned-v10) {
+  position: relative !important;
+  z-index: 100 !important;
+  pointer-events: auto !important;
 }
 
 .pco-menu-tools {
@@ -10,6 +21,8 @@
   margin-left: 10px !important;
   vertical-align: middle !important;
   position: relative !important;
+  z-index: 2 !important;
+  pointer-events: auto !important;
 }
 
 .pco-menu-tool-btn {
@@ -66,18 +79,21 @@
 }
 
 /*
- * V10: pin the complete header, not only .pincabos-nav.
- * The language selector lives in .brand-left, beside .nav. Keeping the
- * complete .top in the fixed layer preserves the exact header composition.
+ * V11 fixes the complete .top header. Language remains in the same header,
+ * beside the navigation, and the menu itself never gets cloned or moved.
+ *
+ * The JS also writes the same geometry inline with !important. That makes
+ * V11 resilient if a cabinet temporarily mixes a fresh JS with cached CSS.
  */
+.top.pco-header-pinned-v11,
 .top.pco-header-pinned-v10 {
   position: fixed !important;
   top: 0 !important;
   left: 50% !important;
   right: auto !important;
   bottom: auto !important;
-  width: var(--pco-content-rail-width, calc(100vw - 36px)) !important;
-  max-width: var(--pco-content-rail-width, calc(100vw - 36px)) !important;
+  width: var(--pco-content-rail-width, calc(100vw - 60px)) !important;
+  max-width: var(--pco-content-rail-width, calc(100vw - 60px)) !important;
   margin: 0 !important;
   transform: translateX(-50%) !important;
   z-index: 5000 !important;
@@ -85,7 +101,21 @@
   pointer-events: auto !important;
 }
 
-/* The menu remains in its original DOM position inside the fixed header. */
+/* V11 uses a real inert flow spacer instead of body padding. */
+.pco-header-pin-spacer-v11 {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  visibility: hidden;
+  pointer-events: none !important;
+  box-sizing: border-box;
+}
+
+/* The navigation always remains a normal child of .top. */
+.pincabos-nav.pco-menu-pinned-v11,
 .pincabos-nav.pco-menu-pinned-v10 {
   position: static !important;
   top: auto !important;
@@ -97,93 +127,61 @@
   pointer-events: auto !important;
 }
 
-.top.pco-header-pinned-v10 .nav,
-.top.pco-header-pinned-v10 .pincabos-nav,
-.top.pco-header-pinned-v10 .brand-left,
-.top.pco-header-pinned-v10 .brand-language-slot,
-.top.pco-header-pinned-v10 .top-language-widget,
-.top.pco-header-pinned-v10 a,
-.top.pco-header-pinned-v10 button,
-.top.pco-header-pinned-v10 select,
-.top.pco-header-pinned-v10 form {
-  pointer-events: auto !important;
-}
-
-/* Unpinned state must be ordinary document flow with working controls. */
-.pincabos-nav:not(.pco-menu-pinned-v10),
-.pincabos-nav:not(.pco-menu-pinned-v10) a,
-.pincabos-nav:not(.pco-menu-pinned-v10) button,
-.pincabos-nav:not(.pco-menu-pinned-v10) select,
-.pincabos-nav:not(.pco-menu-pinned-v10) form {
+.top .nav,
+.top .pincabos-nav,
+.top .brand-left,
+.top .brand-language-slot,
+.top .top-language-widget,
+.top a,
+.top button,
+.top select,
+.top input,
+.top form,
+.top label,
+.pincabos-nav,
+.pincabos-nav a,
+.pincabos-nav button,
+.pincabos-nav select,
+.pincabos-nav input,
+.pincabos-nav form,
+.pincabos-nav label {
   pointer-events: auto !important;
 }
 
 /*
- * Compatibility guard for a page that still has V9 markup while the new CSS
- * has already loaded. Modern Chromium supports :has(); this prevents the old
- * V9 rule from separating the menu from the language selector.
+ * Old V7/V8/V9 menu geometry must never survive into the current stack.
+ * V10 is intentionally kept compatible above for mixed-cache transitions.
  */
-@supports selector(body:has(.pincabos-nav)) {
-  body:has(.pincabos-nav.pco-menu-pinned-v9) .top {
-    position: fixed !important;
-    top: 0 !important;
-    left: 50% !important;
-    right: auto !important;
-    bottom: auto !important;
-    width: var(--pco-content-rail-width, calc(100vw - 36px)) !important;
-    max-width: var(--pco-content-rail-width, calc(100vw - 36px)) !important;
-    margin: 0 !important;
-    transform: translateX(-50%) !important;
-    z-index: 5000 !important;
-    box-sizing: border-box !important;
-    pointer-events: auto !important;
-  }
-
-  body:has(.pincabos-nav.pco-menu-pinned-v9) .pincabos-nav.pco-menu-pinned-v9 {
-    position: static !important;
-    top: auto !important;
-    left: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    width: 100% !important;
-    margin: 0 !important;
-    z-index: auto !important;
-    transform: none !important;
-    pointer-events: auto !important;
-  }
-}
-
-/* Explicitly neutralize every legacy V7/V8 fixed class. */
 .pincabos-nav.pco-menu-force-fixed,
 .pincabos-nav.pco-menu-viewport-fixed-v7,
-.pincabos-nav.pco-menu-viewport-fixed-v8 {
+.pincabos-nav.pco-menu-viewport-fixed-v8,
+.pincabos-nav.pco-menu-pinned-v9 {
   position: static !important;
   top: auto !important;
   left: auto !important;
   right: auto !important;
   bottom: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
   z-index: auto !important;
-  pointer-events: auto !important;
   transform: none !important;
   filter: none !important;
+  pointer-events: auto !important;
+}
+
+/* Never let a stale legacy body offset survive after V11 takes ownership. */
+body:not(.pco-menu-is-pinned) {
+  --pco-menu-pinned-offset: 0px;
 }
 
 @media (max-width: 850px) {
+  .top.pco-header-pinned-v11,
   .top.pco-header-pinned-v10 {
     left: 0 !important;
     right: 0 !important;
     width: 100vw !important;
     max-width: 100vw !important;
     transform: none !important;
-  }
-
-  @supports selector(body:has(.pincabos-nav)) {
-    body:has(.pincabos-nav.pco-menu-pinned-v9) .top {
-      left: 0 !important;
-      right: 0 !important;
-      width: 100vw !important;
-      max-width: 100vw !important;
-      transform: none !important;
-    }
   }
 }
