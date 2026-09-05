@@ -43,8 +43,15 @@ def session(phase: str, manifest_hash: str | None = None) -> dict:
     }
 
 
+def state(desired: str, phase: str, manifest_hash: str | None = None) -> dict:
+    return {
+        "session": session(phase, manifest_hash),
+        "control": {"desired": desired, "generation": 7},
+    }
+
+
 class CabinetControlTests(unittest.TestCase):
-    def test_ready_acquires_control_and_stops_vpinfe(self):
+    def test_missing_control_contract_fails_safe_and_keeps_vpinfe(self):
         with tempfile.TemporaryDirectory() as directory:
             layout = RuntimeLayout(Path(directory) / "VPX_MultiPlayers")
             layout.prepare_writable_directories()
@@ -53,12 +60,41 @@ class CabinetControlTests(unittest.TestCase):
 
             lease = manager.reconcile({"session": session("ready")})
 
+            self.assertEqual(lease["state"], "released")
+            self.assertTrue(systemd.active)
+            self.assertNotIn(["systemctl", "stop", VPINFE_SERVICE], systemd.commands)
+
+    def test_armed_acquires_control_and_stops_vpinfe(self):
+        with tempfile.TemporaryDirectory() as directory:
+            layout = RuntimeLayout(Path(directory) / "VPX_MultiPlayers")
+            layout.prepare_writable_directories()
+            systemd = FakeSystemd(active=True)
+            manager = CabinetControlManager(layout, runner=systemd)
+
+            lease = manager.reconcile(state("armed", "ready"))
+
             self.assertEqual(lease["owner"], "multiplayer")
             self.assertEqual(lease["state"], "armed")
+            self.assertEqual(lease["generation"], 7)
             self.assertTrue(lease["vpinfe_was_active"])
             self.assertFalse(lease["vpinfe_active"])
             self.assertFalse(systemd.active)
             self.assertIn(["systemctl", "stop", VPINFE_SERVICE], systemd.commands)
+
+    def test_video_desired_is_recorded_without_launching_vpx(self):
+        with tempfile.TemporaryDirectory() as directory:
+            layout = RuntimeLayout(Path(directory) / "VPX_MultiPlayers")
+            layout.prepare_writable_directories()
+            systemd = FakeSystemd(active=True)
+            manager = CabinetControlManager(layout, runner=systemd)
+
+            with mock.patch.object(RuntimeLayout, "launch_detached", autospec=True) as launch:
+                lease = manager.reconcile(state("video", "ready"))
+
+            launch.assert_not_called()
+            self.assertEqual(lease["state"], "video")
+            self.assertTrue(lease["video_desired"])
+            self.assertEqual(lease["video_state"], "pending-hook")
 
     def test_running_launches_only_the_table_matching_manifest(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -76,9 +112,7 @@ class CabinetControlTests(unittest.TestCase):
                 autospec=True,
                 return_value=4242,
             ) as launch:
-                lease = manager.reconcile(
-                    {"session": session("running", manifest_hash=manifest)}
-                )
+                lease = manager.reconcile(state("running", "running", manifest))
 
             launch.assert_called_once_with(layout, "poc.vpx")
             self.assertEqual(lease["engine_pid"], 4242)
@@ -86,17 +120,29 @@ class CabinetControlTests(unittest.TestCase):
             self.assertEqual(lease["state"], "running")
             self.assertFalse(systemd.active)
 
-    def test_stopped_releases_control_and_restores_vpinfe(self):
+    def test_running_is_rejected_if_server_session_is_not_running(self):
         with tempfile.TemporaryDirectory() as directory:
             layout = RuntimeLayout(Path(directory) / "VPX_MultiPlayers")
             layout.prepare_writable_directories()
             systemd = FakeSystemd(active=True)
             manager = CabinetControlManager(layout, runner=systemd)
 
-            manager.reconcile({"session": session("ready")})
+            with self.assertRaises(CabinetControlError):
+                manager.reconcile(state("running", "ready", "a" * 64))
+
+            self.assertTrue(systemd.active)
+
+    def test_server_release_restores_vpinfe(self):
+        with tempfile.TemporaryDirectory() as directory:
+            layout = RuntimeLayout(Path(directory) / "VPX_MultiPlayers")
+            layout.prepare_writable_directories()
+            systemd = FakeSystemd(active=True)
+            manager = CabinetControlManager(layout, runner=systemd)
+
+            manager.reconcile(state("armed", "ready"))
             self.assertFalse(systemd.active)
 
-            lease = manager.reconcile({"session": session("stopped")})
+            lease = manager.reconcile(state("released", "stopped"))
 
             self.assertEqual(lease["state"], "released")
             self.assertTrue(lease["vpinfe_restored"])
@@ -110,8 +156,8 @@ class CabinetControlTests(unittest.TestCase):
             systemd = FakeSystemd(active=False)
             manager = CabinetControlManager(layout, runner=systemd)
 
-            manager.reconcile({"session": session("ready")})
-            lease = manager.reconcile({"session": session("stopped")})
+            manager.reconcile(state("armed", "ready"))
+            lease = manager.reconcile(state("released", "stopped"))
 
             self.assertFalse(lease["vpinfe_restored"])
             self.assertFalse(systemd.active)
@@ -126,7 +172,7 @@ class CabinetControlTests(unittest.TestCase):
             manager = CabinetControlManager(layout, runner=systemd)
 
             with self.assertRaises(CabinetControlError):
-                manager.reconcile({"session": session("running", manifest_hash="a" * 64)})
+                manager.reconcile(state("running", "running", "a" * 64))
 
             self.assertFalse(systemd.active)
             self.assertEqual(manager.lease()["owner"], "multiplayer")
