@@ -97,6 +97,10 @@ def on_activate(app):
                 win.fullscreen_on_monitor(mon)
                 win.present()
                 view.grab_focus()
+                # PINCABOS_KIOSK_ZOOM_4K_V1 : l assistant est dessine pour ~1280-1920 px de large ;
+                # sur une dalle 4K (mode natif applique par l etape Ecrans) il est agrandi 2x.
+                g = mon.get_geometry()
+                view.set_zoom_level(2.0 if max(g.width, g.height) >= 3000 else 1.0)
                 cible["connector"] = nom
                 cible["geometrie"] = geometrie(mon)
             break

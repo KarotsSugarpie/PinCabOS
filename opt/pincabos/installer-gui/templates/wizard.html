@@ -224,13 +224,20 @@ button{
     <div class="grid screens" id="screen-list"></div>
   </div>
   <div class="card" style="margin-top:0">
+    <!-- PINCABOS_INSTALLEUR_LECTURE_V1 : montage physique (ecrit) / lecture de l assistant (session seulement) -->
     <div class="row" style="margin-bottom:8px"><span class="stepno">3</span><label data-i18n="orient_q"></label>
       <div class="seg" id="rot-seg">
         <button type="button" class="segb sel" data-rot="0" data-i18n="o_up"></button>
         <button type="button" class="segb" data-rot="180" data-i18n="o_down"></button>
-        <button type="button" class="segb" data-rot="90" data-i18n="o_90"></button>
-        <button type="button" class="segb" data-rot="270" data-i18n="o_270"></button>
       </div></div>
+    <div class="hint" style="margin:0 0 10px" data-i18n="orient_hint"></div>
+    <div class="row" style="margin-bottom:8px"><label data-i18n="lecture_q"></label>
+      <div class="seg" id="lecture-seg">
+        <button type="button" class="segb sel" data-lecture="0" data-i18n="l_0"></button>
+        <button type="button" class="segb" data-lecture="90" data-i18n="l_90"></button>
+        <button type="button" class="segb" data-lecture="270" data-i18n="l_270"></button>
+      </div></div>
+    <div class="hint" style="margin:0 0 10px" data-i18n="lecture_hint"></div>
     <div class="preview" id="screen-preview"></div>
     <div class="apply-row">
       <button type="button" class="primary" id="btn-apply" onclick="applyScreens()" data-i18n="apply_layout"></button>
@@ -388,11 +395,11 @@ const ROLE_KEYS=["playfield","backglass","fulldmd","topper"];
 // PINCABOS_INSTALLEUR_CAB_USAGE_V1 — le propriétaire déclare ce que son cab
 // possède (backglass, full DMD, topper) ; les rôles attribuables, la proposition
 // et les réglages d'affichage en aval en découlent.
-S.screens={roles:{},rotation:0,usage:{backglass:true,fulldmd:true,topper:false}};
+S.screens={roles:{},rotation:0,lecture:0,usage:{backglass:true,fulldmd:true,topper:false}};
 let screensMon=[],screensApplied="",screensIdentifiedOnce=false;
 function dalleDe(role){const m=screensMon.find(x=>x.name===S.screens.roles[role]);return m?m.app_index+1:null}
 function resumeDisposition(){return usedRoles().filter(r=>dalleDe(r)).map(r=>t("role_"+r)+" → "+t("screens_dalle")+" "+dalleDe(r)).join(" · ")}
-function screensKey(){return JSON.stringify([S.screens.roles,S.screens.rotation,S.screens.usage])}
+function screensKey(){return JSON.stringify([S.screens.roles,S.screens.rotation,S.screens.lecture,S.screens.usage])}
 function usageFromRoles(){const u={};ROLE_KEYS.filter(r=>r!=="playfield").forEach(r=>u[r]=!!S.screens.roles[r]);return u}
 function usedRoles(){return ROLE_KEYS.filter(r=>r==="playfield"||S.screens.usage[r])}
 function missingRoles(){return usedRoles().filter(r=>!S.screens.roles[r])}
@@ -478,7 +485,7 @@ function renderScreens(){
     box.appendChild(el)});
   renderPreview()}
 function renderPreview(){
-  const pv=document.getElementById("screen-preview");const rot=+S.screens.rotation;
+  const pv=document.getElementById("screen-preview");const rot=(+S.screens.rotation+(+S.screens.lecture||0))%360;
   const order=ROLE_KEYS.filter(r=>S.screens.roles[r]).map(r=>[r,screensMon.find(m=>m.name===S.screens.roles[r])]).filter(x=>x[1]);
   if(!order.length){pv.innerHTML="<span class='hint'>"+t("screens_need_pf")+"</span>";return}
   const scale=180/Math.max(...order.map(([r,m])=>r==="playfield"&&(rot===90||rot===270)?m.height:m.width));
@@ -488,6 +495,9 @@ function renderPreview(){
 document.querySelectorAll("#rot-seg .segb").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#rot-seg .segb").forEach(o=>o.classList.remove("sel"));b.classList.add("sel");
   S.screens.rotation=+b.dataset.rot;renderPreview();refreshScreensStatus()});
+document.querySelectorAll("#lecture-seg .segb").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#lecture-seg .segb").forEach(o=>o.classList.remove("sel"));b.classList.add("sel");
+  S.screens.lecture=+b.dataset.lecture;renderPreview();refreshScreensStatus()});
 function setScreensStatus(key,ok,extra){const st=document.getElementById("screens-status");
   st.textContent=t(key)+(extra?" "+extra:"");
   st.dataset.state=ok?"ok":key==="screens_failed"?"err":key==="screens_applying"?"busy":"todo";
@@ -689,7 +699,7 @@ function checkDisk(){const d=disksInfo.find(x=>x.dev===S.disk);const ok=!!(S.dis
 function fillSummary(){
   const rows=[[t("locale"),S.locale],[t("keyboard"),S.xkb],[t("timezone"),S.tz],
     [t("screens"),ROLE_KEYS.filter(r=>S.screens.roles[r]).map(r=>t("role_"+r)+" = "+S.screens.roles[r]).join(", ")||"—"],
-    [t("orient_q"),t({0:"o_up",180:"o_down",90:"o_90",270:"o_270"}[+S.screens.rotation]||"o_up")],
+    [t("orient_q"),t({0:"o_up",180:"o_down"}[+S.screens.rotation]||"o_up")],
     [t("dmd_title"),S.screens.usage.fulldmd?t("role_fulldmd"):t("dmd_"+S.dmd.type)+(S.dmd.type==="zedmd_usb"&&S.dmd.device?" · "+S.dmd.device:S.dmd.type==="zedmd_wifi"?" · "+S.dmd.wifi_addr:"")],
     [t("sound_title"),(sndDevs.find(d=>d.id===S.sound.playfield)||{}).label||"—"],
     [t("dof_title"),S.dof.enabled?t("dof_enable"):t("role_none")],
