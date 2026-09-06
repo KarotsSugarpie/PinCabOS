@@ -156,6 +156,8 @@ class Chargement(unittest.TestCase):
             import flask
         except ImportError:
             self.skipTest("flask absent")
+        if not (hasattr(flask, "Flask") and hasattr(flask, "current_app")):
+            self.skipTest("flask remplacé par un bouchon (test_rotation_physique) : pas de vrai Flask ici")
         sys.path.insert(0, str(WEB))
         try:
             for cle in MODULES:
