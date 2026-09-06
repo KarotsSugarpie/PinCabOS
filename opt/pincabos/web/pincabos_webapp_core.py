@@ -15,6 +15,7 @@ Ce module ne lance rien au moment de l'import.
 
 from __future__ import annotations
 
+import html
 import os
 import shlex
 import subprocess
@@ -428,3 +429,30 @@ def pco_smb_mount_helper_command(source: str, mount_point: str | Path, cred_file
         f"{shlex.quote(str(cred_file))}"
     )
 
+
+# ---- Helpers partagés par app.py et les modules de pages (PINCABOS_WEBAPP_MODULES_V1) ----
+
+def esc(x):
+    return html.escape(str(x))
+
+
+def run_cmd(cmd, timeout=8):
+    try:
+        r = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+        return (r.stdout + r.stderr).strip()
+    except Exception as e:
+        return f"Erreur commande {' '.join(cmd)}: {e}"
+
+
+def shlex_quote(value):
+    import shlex
+    return shlex.quote(str(value))
+
+
+def service_status(name):
+    return pco_service_status(name)
