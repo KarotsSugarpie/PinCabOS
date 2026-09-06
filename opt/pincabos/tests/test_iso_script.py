@@ -226,3 +226,35 @@ class FichiersLivres(unittest.TestCase):
         self.assertIn("PINCABOS_LIVE_SQUASHFS_V1", helper)
         self.assertNotIn("-no-progress", helper)
         self.assertIn("ExecStart=/usr/local/sbin/pincabos-installer-dispatch", texte_fichier_livre("pincabos-live-installer-tty.service"))
+
+
+class OutilsCible(unittest.TestCase):
+    """PINCABOS_OUTILS_CIBLE_V1 : les blocs Python que le helper appliquait a la cible sont des outils livres."""
+    OUTILS = ("pincabos-cible-audio-privacy.py", "pincabos-cible-screen-privacy.py", "pincabos-cible-vpinfe-ini-purge.py",
+              "pincabos-cible-dashboard-helper-patch.py", "pincabos-cible-systemd-units.py")
+
+    def test_outils_presents_et_valides(self):
+        import py_compile
+        for nom in self.OUTILS:
+            chemin = os.path.join(RACINE, "opt/pincabos/tools/cible", nom)
+            self.assertTrue(os.path.exists(chemin), nom)
+            py_compile.compile(chemin, doraise=True)
+
+    def test_le_helper_les_appelle_depuis_la_cible(self):
+        helper = texte_fichier_livre("pincabos-install-payload")
+        self.assertIn("pco_outil_cible() {", helper)
+        self.assertIn('for d in "$TARGET/opt/pincabos/tools/cible" /opt/pincabos/tools/cible; do', helper)
+        for nom in self.OUTILS:
+            self.assertEqual(helper.count(f'python3 "$(pco_outil_cible {nom})"'), 1, nom)
+        for delim in ("PINCABOS_TARGET_AUDIO_PRIVACY_PY", "PINCABOS_SCREEN_PRIVACY_PY", "PINCABOS_VPINFE_INI_PURGE",
+                      "PINCABOS_DASHBOARD_HELPER_PATCH", "PINCABOS_REWRITE_SYSTEMD_UNITS"):
+            self.assertNotIn(delim, helper, delim)
+        # seul reste le bloc Python du script sanitize, ecrit tel quel sur la cible (VPINFE_DISPLAY_PY)
+        self.assertEqual(helper.count("python3 - "), 1)
+        self.assertIn("<<'VPINFE_DISPLAY_PY'", helper)
+
+    def test_les_outils_gardent_leurs_arguments(self):
+        helper = texte_fichier_livre("pincabos-install-payload")
+        self.assertIn('python3 "$(pco_outil_cible pincabos-cible-systemd-units.py)" "$TARGET"', helper)
+        self.assertIn('python3 "$(pco_outil_cible pincabos-cible-vpinfe-ini-purge.py)" "$TARGET/home/pinball/.config/vpinfe/vpinfe.ini"', helper)
+        self.assertIn('python3 "$(pco_outil_cible pincabos-cible-dashboard-helper-patch.py)" "$TARGET/usr/local/sbin/pincabos-dashboard-admin"', helper)
