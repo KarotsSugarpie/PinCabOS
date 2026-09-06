@@ -160,7 +160,7 @@ printf '127.0.0.1 localhost\n127.0.1.1 pincabos-installer\n' > "$ROOTFS_DIR/etc/
 
 echo "--- PinCabOS: installeur GUI (wizard + kiosk + dispatch) ---"
 mkdir -p "$ROOTFS_DIR/opt/pincabos/installer-gui"
-cp -a /opt/pincabos/installer-gui/. "$ROOTFS_DIR/opt/pincabos/installer-gui/"
+cp -a "$SRC/opt/pincabos/installer-gui/." "$ROOTFS_DIR/opt/pincabos/installer-gui/"
 install -m 755 "$SRC"/usr/local/sbin/pincabos-installer-dispatch \
   "$ROOTFS_DIR/usr/local/sbin/pincabos-installer-dispatch"
 install -m 755 "$SRC"/usr/local/bin/pincabos-kiosk.py \
