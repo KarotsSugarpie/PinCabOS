@@ -112,20 +112,22 @@ class ModeleLive(unittest.TestCase):
     def setUp(self):
         self.s = (Path(RACINE) / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
 
-    def test_drapeau_et_defaut(self):
-        self.assertIn('PCO_ISO_MODEL="${PCO_ISO_MODEL:-live}"', self.s)   # le live est le defaut
-        self.assertIn('--live) PCO_ISO_MODEL="live" ;;', self.s)
-        self.assertIn('--classic) PCO_ISO_MODEL="classic" ;;', self.s)   # roue de secours, une release
+    def test_le_modele_live_est_le_seul(self):
+        # PINCABOS_ISO_MODELE_LIVE_V2 : le classique (base Ubuntu + payload en morceaux) est retire
+        self.assertIn('PCO_ISO_MODEL="live"', self.s)
+        self.assertIn("--classic) echo \"ERROR: le modele classique a ete retire", self.s)
+        self.assertNotIn('PCO_ISO_MODEL" = "live"', self.s)
+        for reste in ('echo "=== 9) Download', 'echo "=== 15) Repack', 'echo "=== 19) Build final bootable ISO',
+                      "split -b 1900M", "PAYLOAD_ISO_READY", "BASE_ISO_URL", "PINCABOS_GRUB_TTY_POLICY", "mksquashfs"):
+            self.assertNotIn(reste, self.s, reste)
 
-    def test_branches_equilibrees(self):
-        # sections 9-11 (base Ubuntu) et 14-20 (repack, GRUB, xorriso) sont dans la branche classic
-        s = self.s
-        self.assertLess(s.index('if [ "$PCO_ISO_MODEL" = "live" ]; then\n  echo\n  echo "=== 9L)'), s.index('echo "=== 9) Download'))
-        self.assertLess(s.index('echo "=== 11) Locate'), s.index("fi   # PCO_ISO_MODEL classic (sections 9-11)"))
-        self.assertLess(s.index("fi   # PCO_ISO_MODEL classic (sections 9-11)"), s.index('echo "=== 12) Ensure'))
-        self.assertLess(s.index('echo "=== 14L) Live model'), s.index('echo "=== 14) No live desktop'))
-        self.assertLess(s.index('echo "=== 20) Final ISO validation'), s.index("fi   # PCO_ISO_MODEL classic (sections 14-20)"))
-        self.assertLess(s.index("fi   # PCO_ISO_MODEL classic (sections 14-20)"), s.index("pincabos_offer_web_publish() {"))
+    def test_helper_une_seule_forme_de_payload(self):
+        bloc = self.s[self.s.index("<<'PINCBOS_PAYLOAD_HELPER'"):self.s.index("\nPINCBOS_PAYLOAD_HELPER\n")]
+        self.assertIn("PINCABOS_LIVE_SQUASHFS_V1", bloc)  # contrat lu par le banc (681) et iso-live.sh
+        self.assertIn('[ -f "$LIVE_SQUASHFS" ] || { echo "ERROR: live squashfs missing', bloc)
+        self.assertIn('unsquashfs -f -d "$TARGET" "$LIVE_SQUASHFS"', bloc)
+        self.assertNotIn("tar.zst.part-", bloc)
+        self.assertNotIn("sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256", bloc)
 
     def test_live_utilise_le_payload_et_iso_live(self):
         self.assertIn('tar --zstd -xpf "$ARCHIVE" -C "$LIVE_ROOTFS" --numeric-owner', self.s)

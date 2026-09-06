@@ -15,37 +15,29 @@ fi
 VERSION="v8.1g"
 VERSION_UPPER="V8.1G"
 
-BASE_ISO_URL="https://releases.ubuntu.com/26.04/ubuntu-26.04-live-server-amd64.iso"
-BASE_SHA_URL="https://releases.ubuntu.com/26.04/SHA256SUMS"
-
 CACHE_DIR="/opt/pincabos/cache/iso-base"
-BASE_ISO="$CACHE_DIR/ubuntu-26.04-live-server-amd64.iso"
 
 BUILD_BASE="/opt/pincabos/build"
 WORK="$BUILD_BASE/live-v8.1g-english"
 PAYLOAD_FULL="$WORK/payload-full"
-PAYLOAD_ISO_READY="$WORK/iso-ready/pincabos-payload"
 ISO_DIR="$WORK/iso"
 ROOTFS_DIR="$WORK/squashfs-root"
-BOOT_WORK="$WORK/boot-work"
 
 OUT_DIR="$BUILD_BASE/output"
 OUT_ISO="$OUT_DIR/PinCabOS-beta-Installer.iso"
-VOLID="PINCABOS_V81G"
 
-# PINCABOS_ISO_MODELE_LIVE_V1
+# PINCABOS_ISO_MODELE_LIVE_V2
 # Le modele live est LE modele (decision Yann + Karots 05/09/2026) : le payload
 # EST le systeme live (casper/filesystem.squashfs), meme noyau, memes pilotes,
 # memes outils que le cab installe ; l assistant graphique y voit le vrai
-# materiel. Sections 9-11 et 14-20 sautees, ISO produite par iso-live.sh.
-# --classic (base Ubuntu live-server + payload en morceaux) n est garde qu une
-# release, comme roue de secours ; ses sections disparaissent des que Karots a
-# produit une ISO live.
-PCO_ISO_MODEL="${PCO_ISO_MODEL:-live}"
+# materiel. L ISO est produite par iso-live.sh. Le modele classique (base Ubuntu
+# live-server + payload en morceaux, sections 9-11 et 14-20) a ete retire :
+# --classic refuse, --live reste accepte par compatibilite.
+PCO_ISO_MODEL="live"
 for pco_arg in "$@"; do
   case "$pco_arg" in
-    --live) PCO_ISO_MODEL="live" ;;
-    --classic) PCO_ISO_MODEL="classic" ;;
+    --live) ;;
+    --classic) echo "ERROR: le modele classique a ete retire (PINCABOS_ISO_MODELE_LIVE_V2) : l ISO est le systeme, voir iso-live.sh"; exit 2 ;;
   esac
 done
 LIVE_ROOTFS="$WORK/live-rootfs"
@@ -155,14 +147,14 @@ find / \
   2>/dev/null || true
 
 echo
-echo "--- Removing stale partial downloads only, preserving cached base ISO ---"
+echo "--- Removing stale partial downloads only ---"
 find "$CACHE_DIR" -maxdepth 1 -type f -name '*.part' -print -delete 2>/dev/null || true
 
 echo
 echo "--- After cleanup ---"
 du -sh "$BUILD_BASE" "$OUT_DIR" /root/pincabos-v8* 2>/dev/null || true
 
-mkdir -p "$PAYLOAD_FULL" "$PAYLOAD_ISO_READY" "$ISO_DIR" "$ROOTFS_DIR" "$BOOT_WORK" "$OUT_DIR" "$CACHE_DIR"
+mkdir -p "$PAYLOAD_FULL" "$ISO_DIR" "$ROOTFS_DIR" "$OUT_DIR" "$CACHE_DIR"
 
 echo
 echo "=== 3) Install required host builder tools ==="
@@ -906,11 +898,9 @@ tar -I zstd -tf "$OVERLAY" | grep '^usr/share/plymouth/themes/pincabos/pincabos.
 echo "OK: Plymouth overlay valid"
 
 echo
-echo "=== 8) Split payload and make ISO-ready payload directory ==="
+echo "=== 8) Payload helper (live model) ==="
 sha256sum "$ARCHIVE" > "$PAYLOAD_FULL/pincabos-rootfs-cab-v8.1g.sha256"
 sha256sum "$OVERLAY" > "$PAYLOAD_FULL/pincabos-plymouth-theme-overlay-v8.1g.sha256"
-
-split -b 1900M -d -a 3 "$ARCHIVE" "$ARCHIVE.part-"
 
 cat > "$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh" <<'PINCBOS_PAYLOAD_HELPER'
 #!/usr/bin/env bash
@@ -954,34 +944,25 @@ fi
 echo "GO [OK] target filesystem is mounted RW and writable"
 
 # PINCABOS_LIVE_SQUASHFS_V1
-# Two payload shapes are supported:
-#   - live model : the ISO *is* the system, shipped as casper/filesystem.squashfs
-#   - classic    : a split zstd tarball next to this helper
+# One payload shape (PINCABOS_ISO_MODELE_LIVE_V2): the ISO *is* the system,
+# shipped as casper/filesystem.squashfs and verified by casper at boot.
 LIVE_SQUASHFS="$PAYLOAD_DIR/../casper/filesystem.squashfs"
 
 echo
-echo "=== 1) Verify chunks ==="
-if [ -f "$LIVE_SQUASHFS" ]; then
-  echo "Live squashfs detected, checksum already verified by casper at boot."
-else
-  ( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256 )
-fi
+echo "=== 1) Verify live squashfs ==="
+[ -f "$LIVE_SQUASHFS" ] || { echo "ERROR: live squashfs missing: $LIVE_SQUASHFS"; exit 1; }
+echo "Live squashfs detected, checksum already verified by casper at boot."
 
 echo
 echo "=== 2) Extract rootfs ==="
-if [ -f "$LIVE_SQUASHFS" ]; then
-  # Progress bar left on purpose: the graphical installer parses it.
-  unsquashfs -f -d "$TARGET" "$LIVE_SQUASHFS"
-  # Strip what only makes sense on live media.
-  rm -f "$TARGET/etc/pincabos-live" \
-        "$TARGET/etc/netplan/01-pincabos-live-dhcp.yaml"
-  rm -f "$TARGET/etc/systemd/system/pincabos-gui-install.target" \
-        "$TARGET/etc/systemd/system/pincabos-gui-install-prepare.service" \
-        "$TARGET/usr/local/sbin/pincabos-gui-install-prepare"
-else
-  cat "$PAYLOAD_DIR"/pincabos-rootfs-cab-v8.1g.tar.zst.part-* \
-    | tar --acls --xattrs --numeric-owner -I zstd -xpf - -C "$TARGET"
-fi
+# Progress bar left on purpose: the graphical installer parses it.
+unsquashfs -f -d "$TARGET" "$LIVE_SQUASHFS"
+# Strip what only makes sense on live media.
+rm -f "$TARGET/etc/pincabos-live" \
+      "$TARGET/etc/netplan/01-pincabos-live-dhcp.yaml"
+rm -f "$TARGET/etc/systemd/system/pincabos-gui-install.target" \
+      "$TARGET/etc/systemd/system/pincabos-gui-install-prepare.service" \
+      "$TARGET/usr/local/sbin/pincabos-gui-install-prepare"
 
 
 echo
@@ -2375,7 +2356,6 @@ if grep -qE '^After=.*graphical\.target' "$TARGET/etc/systemd/system/pincabos-sc
   echo "ERROR: screen topology service still has After=...graphical.target"
   exit 1
 fi
-
 
 
 echo
@@ -3783,135 +3763,17 @@ if grep -nE '\\\\$' "$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.
 fi
 echo "GO [OK] generated payload helper syntax valid"
 
-rm -rf "$PAYLOAD_ISO_READY"
-mkdir -p "$PAYLOAD_ISO_READY"
-
-cp -a "$ARCHIVE".part-* "$PAYLOAD_ISO_READY/"
-cp -a "$MANIFEST" "$PAYLOAD_ISO_READY/"
-cp -a "$OVERLAY" "$PAYLOAD_ISO_READY/"
-cp -a "$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh" "$PAYLOAD_ISO_READY/"
-
-(
-  cd "$PAYLOAD_ISO_READY"
-  sha256sum pincabos-rootfs-cab-v8.1g.tar.zst.part-* > pincabos-rootfs-cab-v8.1g.parts.sha256
-  sha256sum pincabos-plymouth-theme-overlay-v8.1g.tar.zst > pincabos-plymouth-theme-overlay-v8.1g.sha256
-  sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
-  sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
-)
 
 echo
-echo "ISO-ready payload:"
-ls -lh "$PAYLOAD_ISO_READY"
-du -sh "$PAYLOAD_ISO_READY"
-
-if [ "$PCO_ISO_MODEL" = "live" ]; then
-  echo
-  echo "=== 9L) Live model: the payload becomes the live root filesystem ==="
-  echo "PINCABOS_ISO_MODELE_LIVE_V1"
-  rm -rf "$LIVE_ROOTFS" "$ISO_DIR"
-  mkdir -p "$LIVE_ROOTFS" "$ISO_DIR/casper"
-  tar --zstd -xpf "$ARCHIVE" -C "$LIVE_ROOTFS" --numeric-owner
-  test -d "$LIVE_ROOTFS/opt/pincabos" || die "live rootfs incomplete: $LIVE_ROOTFS/opt/pincabos missing"
-  test -d "$LIVE_ROOTFS/lib/modules" || die "live rootfs incomplete: no kernel modules"
-  ROOTFS_DIR="$LIVE_ROOTFS"
-  echo "GO [OK] live rootfs unpacked in $LIVE_ROOTFS (sections 9-11 skipped: no Ubuntu base)"
-else
-
-echo
-echo "=== 9) Download or validate Ubuntu base ISO ==="
-mkdir -p "$CACHE_DIR"
-
-if [ ! -f "$BASE_ISO" ]; then
-  wget -O "$BASE_ISO.part" "$BASE_ISO_URL"
-  mv "$BASE_ISO.part" "$BASE_ISO"
-else
-  echo "Base ISO already cached: $BASE_ISO"
-fi
-
-wget -O "$CACHE_DIR/SHA256SUMS" "$BASE_SHA_URL"
-
-EXPECTED="$(grep "$(basename "$BASE_ISO")\$" "$CACHE_DIR/SHA256SUMS" | awk '{print $1}')"
-ACTUAL="$(sha256sum "$BASE_ISO" | awk '{print $1}')"
-
-echo "Expected: $EXPECTED"
-echo "Actual:   $ACTUAL"
-
-[ -n "$EXPECTED" ] || die "Cannot find base ISO checksum"
-[ "$EXPECTED" = "$ACTUAL" ] || die "Base ISO checksum mismatch"
-
-echo "OK: base ISO checksum valid"
-
-echo
-echo "=== 10) Extract base ISO ==="
-rm -rf "$ISO_DIR" "$ROOTFS_DIR"
-mkdir -p "$ISO_DIR" "$ROOTFS_DIR"
-
-xorriso -osirrox on -indev "$BASE_ISO" -extract / "$ISO_DIR"
-chmod -R u+w "$ISO_DIR"
-
-echo
-echo "=== 10.1) PinCabOS LEAN LIVE BASE V1 ==="
-echo "PINCABOS_LEAN_LIVE_BASE_V1"
-echo "Removing Ubuntu package repository unused by PinCabOS installer."
-
-for unused in \
-  "$ISO_DIR/pool" \
-  "$ISO_DIR/dists"
-do
-  if [ -e "$unused" ] || [ -L "$unused" ]; then
-    echo
-    echo "Removing unused ISO tree:"
-    du -sh "$unused" 2>/dev/null || true
-    rm -rf "$unused"
-    echo "GO [√] Removed: $unused"
-  else
-    echo "NOTICE: already absent: $unused"
-  fi
-done
-
-echo
-echo "--- Required boot/live trees remain ---"
-
-for required in \
-  "$ISO_DIR/casper" \
-  "$ISO_DIR/boot"
-do
-  if [ ! -e "$required" ]; then
-    die "LEAN LIVE BASE removed/missing required path: $required"
-  fi
-
-  echo "GO [√] Required: $required"
-done
-
-if [ -e "$ISO_DIR/EFI" ]; then
-  echo "GO [√] UEFI tree present: $ISO_DIR/EFI"
-else
-  echo "NOTICE: EFI directory not present; final UEFI validation will decide."
-fi
-
-echo
-echo "LEAN LIVE BASE V1 complete."
-
-echo
-echo "=== 11) Locate and unpack live squashfs ==="
-find "$ISO_DIR/casper" -maxdepth 3 -type f -name '*.squashfs' \
-  -printf '%12s  %p\n' 2>/dev/null | sort -n || true
-
-SQUASHFS="$(find "$ISO_DIR/casper" -maxdepth 3 -type f -name '*.squashfs' -printf '%s %p\n' 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)"
-# Base server : la couche minimale est LA racine auto-suffisante de la pile casper.
-if [ -f "$ISO_DIR/casper/ubuntu-server-minimal.squashfs" ]; then
-  SQUASHFS="$ISO_DIR/casper/ubuntu-server-minimal.squashfs"
-fi
-
-[ -n "$SQUASHFS" ] || die "No squashfs found under $ISO_DIR/casper"
-[ -f "$SQUASHFS" ] || die "Squashfs path invalid: $SQUASHFS"
-
-echo "Selected live squashfs:"
-ls -lh "$SQUASHFS"
-
-unsquashfs -d "$ROOTFS_DIR" "$SQUASHFS"
-
-fi   # PCO_ISO_MODEL classic (sections 9-11)
+echo "=== 9L) Live model: the payload becomes the live root filesystem ==="
+echo "PINCABOS_ISO_MODELE_LIVE_V1"
+rm -rf "$LIVE_ROOTFS" "$ISO_DIR"
+mkdir -p "$LIVE_ROOTFS" "$ISO_DIR/casper"
+tar --zstd -xpf "$ARCHIVE" -C "$LIVE_ROOTFS" --numeric-owner
+test -d "$LIVE_ROOTFS/opt/pincabos" || die "live rootfs incomplete: $LIVE_ROOTFS/opt/pincabos missing"
+test -d "$LIVE_ROOTFS/lib/modules" || die "live rootfs incomplete: no kernel modules"
+ROOTFS_DIR="$LIVE_ROOTFS"
+echo "GO [OK] live rootfs unpacked in $LIVE_ROOTFS"
 
 echo
 echo "=== 12) Ensure required live installer tools inside squashfs ==="
@@ -6763,710 +6625,23 @@ PINCBOS_SERVICE
 ln -sfn ../pincabos-live-installer-tty.service \
   "$ROOTFS_DIR/etc/systemd/system/multi-user.target.wants/pincabos-live-installer-tty.service"
 
-if [ "$PCO_ISO_MODEL" = "live" ]; then
-  echo
-  echo "=== 14L) Live model: ISO built by iso-live.sh ==="
-  cleanup_mounts
-  rm -f "$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop"
-  LIVE_SH="$(dirname "$(readlink -f "$0")")/iso-live.sh"
-  [ -f "$LIVE_SH" ] || LIVE_SH="/opt/pincabos/script/iso-live.sh"
-  test -f "$LIVE_SH" || die "iso-live.sh not found next to iso.sh nor in /opt/pincabos/script"
-  mkdir -p "$OUT_DIR"
-  bash "$LIVE_SH" --rootfs "$ROOTFS_DIR" --payload "$PAYLOAD_FULL" --out "$OUT_ISO" \
-    || die "iso-live.sh failed"
-  test -f "$OUT_ISO" || die "live ISO was not created"
-  ls -lh "$OUT_ISO"
-  sha256sum "$OUT_ISO" | tee "$OUT_ISO.sha256"
-  echo
-  echo "==============================================================="
-  echo " ISO CREATED OK (live model)"
-  echo "==============================================================="
-else
-
 echo
-echo "=== 14) No live desktop, no manual launcher (PINCABOS_ISO_UN_SEUL_CHEMIN_V1) ==="
+echo "=== 14L) Live model: ISO built by iso-live.sh ==="
+cleanup_mounts
 rm -f "$ROOTFS_DIR/etc/skel/Desktop/Install-PinCabOS.desktop"
-
-echo
-echo "=== 15) Repack live squashfs ==="
-rm -f "$SQUASHFS"
-mksquashfs "$ROOTFS_DIR" "$SQUASHFS" -comp xz -b 1M -noappend
-unsquashfs -s "$SQUASHFS" >/dev/null \
-  || die "Repacked live squashfs metadata validation failed"
-echo "GO [OK] repacked live squashfs metadata valid"
-
-echo
-echo "=== 16) Integrate payload into ISO tree ==="
-rm -rf "$ISO_DIR/pincabos-payload"
-mkdir -p "$ISO_DIR/pincabos-payload"
-rsync -aHAX --info=progress2 "$PAYLOAD_ISO_READY"/ "$ISO_DIR/pincabos-payload"/
-
-(
-  cd "$ISO_DIR/pincabos-payload"
-  sha256sum pincabos-rootfs-cab-v8.1g.tar.zst.part-* > pincabos-rootfs-cab-v8.1g.parts.sha256
-  sha256sum pincabos-plymouth-theme-overlay-v8.1g.tar.zst > pincabos-plymouth-theme-overlay-v8.1g.sha256
-  sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
-  sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
-)
-
-echo
-echo "=== 17) Add README and write custom PinCabOS GRUB menu ==="
-
-cat >"$ISO_DIR/PINCABOS-V8.1G-README.txt" <<'PINCBOS_README'
-PinCabOS Beta Installer
-
-Payload:
-- V8.1G lean payload from validated cabinet source
-- Includes /boot, GRUB, initrd, /lib/modules
-- Includes Plymouth theme overlay: pincabos
-- Excludes Tables, swap, old ISO builds, build cache
-- Preserves WebApp runtime venv when present
-
-Installer:
-- English text installer on tty1
-- Ubuntu Welcome/GDM disabled
-- Full disk install mode
-- Dualboot free-space-only mode
-- Rescue shell mode from ISO boot menu
-- EFI label in full mode: PCOS_EFI
-- Root label: rootfs
-- Bootloader ID: PinCabOS
-
-Dualboot safety:
-- Does not shrink existing partitions
-- Requires existing unallocated space
-- Reuses existing EFI partition without formatting it
-- Skips removable EFI overwrite in dualboot mode
-PINCBOS_README
-
-KERNEL_REL="$(find "$ISO_DIR/casper" -maxdepth 2 -type f \( -name 'vmlinuz' -o -name 'vmlinuz.*' -o -name 'vmlinuz-*' \) | sort | head -n1)"
-INITRD_REL="$(find "$ISO_DIR/casper" -maxdepth 2 -type f \( -name 'initrd' -o -name 'initrd.*' -o -name 'initrd-*' \) | sort | head -n1)"
-
-[ -n "$KERNEL_REL" ] || die "Cannot find casper kernel for GRUB menu"
-[ -n "$INITRD_REL" ] || die "Cannot find casper initrd for GRUB menu"
-
-KERNEL_REL="/${KERNEL_REL#$ISO_DIR/}"
-INITRD_REL="/${INITRD_REL#$ISO_DIR/}"
-
-echo "GRUB kernel: $KERNEL_REL"
-echo "GRUB initrd: $INITRD_REL"
-
-mkdir -p "$ISO_DIR/boot/grub"
-
-# PINCABOS_GRUB_FONT_COMPAT_V1
-echo "=== Validation police GRUB PinCabOS ==="
-
-GRUB_FONT_DIR="$ISO_DIR/boot/grub"
-GRUB_FONT_REAL="$GRUB_FONT_DIR/fonts/unicode.pf2"
-GRUB_FONT_COMPAT="$GRUB_FONT_DIR/font.pf2"
-
-if [ ! -s "$GRUB_FONT_REAL" ]; then
-    echo "WARNING: police GRUB absente de l ISO de base."
-
-    mkdir -p "$GRUB_FONT_DIR/fonts"
-
-    if [ -s /usr/share/grub/unicode.pf2 ]; then
-        cp -f \
-            /usr/share/grub/unicode.pf2 \
-            "$GRUB_FONT_REAL"
-    elif [ -s /boot/grub/fonts/unicode.pf2 ]; then
-        cp -f \
-            /boot/grub/fonts/unicode.pf2 \
-            "$GRUB_FONT_REAL"
-    elif [ -s /boot/grub/unicode.pf2 ]; then
-        cp -f \
-            /boot/grub/unicode.pf2 \
-            "$GRUB_FONT_REAL"
-    else
-        die "Impossible de trouver unicode.pf2 pour GRUB"
-    fi
-fi
-
-# Copie de compatibilité pour les firmwares/configurations
-# qui recherchent encore /boot/grub/font.pf2.
-cp -f \
-    "$GRUB_FONT_REAL" \
-    "$GRUB_FONT_COMPAT"
-
-test -s "$GRUB_FONT_REAL" || \
-    die "unicode.pf2 absent"
-
-test -s "$GRUB_FONT_COMPAT" || \
-    die "font.pf2 compat absent"
-
-echo "GO [OK] $GRUB_FONT_REAL"
-echo "GO [OK] $GRUB_FONT_COMPAT"
-
-
-# PINCABOS_ISO_UN_SEUL_CHEMIN_V1
-# Une seule entree : l'assistant graphique. Pas de mode live, pas d'installeur
-# texte, pas de secours dessus. Si l'assistant ne s'affiche pas, la panne est
-# annoncee en clair sur tty1 (pincabos-installer-failure), jamais masquee.
-cat >"$ISO_DIR/boot/grub/grub.cfg" <<PINCABOS_GRUB
-set default=0
-set timeout=3
-set timeout_style=menu
-
-if loadfont /boot/grub/fonts/unicode.pf2 ; then
-  set gfxmode=auto
-  insmod all_video
-  insmod gfxterm
-  terminal_output gfxterm
-fi
-
-set menu_color_normal=white/black
-set menu_color_highlight=black/light-gray
-
-menuentry "Install PinCabOS" {
-  set gfxpayload=keep
-  linux $KERNEL_REL boot=casper noprompt pincabos.installer=gui modprobe.blacklist=nouveau,nova_core,nova_drm,snd_hda_intel pcie_port_pm=off nouveau.modeset=0 systemd.unit=multi-user.target cloud-init=disabled quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=1 ---
-  initrd $INITRD_REL
-}
-PINCABOS_GRUB
-
-if [ -f "$ISO_DIR/boot/grub/loopback.cfg" ]; then
-  cp -a "$ISO_DIR/boot/grub/grub.cfg" "$ISO_DIR/boot/grub/loopback.cfg"
-fi
-
-while IFS= read -r cfg; do
-  sed -i \
-    -e 's/Try or Install Ubuntu/Install PinCabOS/g' \
-    -e 's/Ubuntu safe graphics/PinCabOS safe graphics/g' \
-    -e 's/Install Ubuntu/Install PinCabOS/g' \
-    -e 's/Ubuntu/PinCabOS/g' \
-    "$cfg" || true
-done < <(find "$ISO_DIR" -type f \( -name 'grub.cfg' -o -name 'loopback.cfg' -o -name 'txt.cfg' \) 2>/dev/null)
-
-echo "--- PinCabOS GRUB menu ---"
-sed -n '1,180p' "$ISO_DIR/boot/grub/grub.cfg"
-
-echo
-
-echo
-echo "=== 17B) PinCabOS GRUB branding/logo ==="
-echo "PINCABOS_GRUB_BRANDING_LOGO_V1"
-echo "PINCABOS_GRUB_BRANDING_PCOSINSTALLWP_V1"
-
-mkdir -p "$ISO_DIR/boot/grub"
-
-GRUB_LOGO_SRC=""
-for candidate in \
-  /opt/pincabos/install/PCOSInstallWP.png \
-  "/opt/pincabos/install PCOSInstallWP.png" \
-  /usr/share/plymouth/themes/pincabos/PCOLoading.png \
-  /usr/share/plymouth/themes/pincabos/pincabos.png \
-  /usr/share/pixmaps/pincabos.png
-do
-  if [ -f "$candidate" ]; then
-    GRUB_LOGO_SRC="$candidate"
-    break
-  fi
-done
-
-[ -n "$GRUB_LOGO_SRC" ] || die "PinCabOS GRUB logo source not found"
-
-echo "Using GRUB logo/background:"
-echo "$GRUB_LOGO_SRC"
-
-cp -f "$GRUB_LOGO_SRC" "$ISO_DIR/boot/grub/pincabos-grub.png"
-
-cat > "$ISO_DIR/boot/grub/pincabos-branding.cfg" <<'PINCABOS_GRUB_BRAND'
-# PINCABOS_GRUB_BRANDING_LOGO_V1
-# PINCABOS_GRUB_BRANDING_PCOSINSTALLWP_V1
-insmod all_video
-insmod gfxterm
-insmod png
-
-for f in /boot/grub/font.pf2 /boot/grub/fonts/unicode.pf2 /boot/grub/unicode.pf2; do
-  if loadfont "$f"; then
-    set pincabos_font_loaded=1
-    break
-  fi
-done
-
-set gfxmode=auto
-set gfxpayload=keep
-
-if [ "$pincabos_font_loaded" = "1" ]; then
-  terminal_output gfxterm
-fi
-
-set color_normal=white/black
-set color_highlight=black/light-gray
-
-if [ -f /boot/grub/pincabos-grub.png ]; then
-  background_image /boot/grub/pincabos-grub.png
-fi
-PINCABOS_GRUB_BRAND
-
-echo "--- Remove Ubuntu GRUB theme/wording from ISO grub configs ---"
-while IFS= read -r cfg; do
-  echo "Sanitizing: $cfg"
-  sed -i -E \
-    -e '/^[[:space:]]*set[[:space:]]+theme=/d' \
-    -e '/^[[:space:]]*export[[:space:]]+theme/d' \
-    -e 's/Ubuntu/PinCabOS Installer/g' \
-    "$cfg"
-done < <(find "$ISO_DIR" -type f \( -name 'grub.cfg' -o -name 'loopback.cfg' \) 2>/dev/null)
-
-GRUBCFG="$ISO_DIR/boot/grub/grub.cfg"
-[ -f "$GRUBCFG" ] || die "main GRUB config missing: $GRUBCFG"
-
-if ! grep -q 'pincabos-branding.cfg' "$GRUBCFG"; then
-  TMP_GRUBCFG="${GRUBCFG}.tmp"
-  {
-    echo "# PINCABOS_GRUB_BRANDING_LOGO_V1"
-    echo "# PINCABOS_GRUB_BRANDING_PCOSINSTALLWP_V1"
-    echo "source /boot/grub/pincabos-branding.cfg"
-    echo
-    cat "$GRUBCFG"
-  } > "$TMP_GRUBCFG"
-  mv "$TMP_GRUBCFG" "$GRUBCFG"
-fi
-
-echo "--- GRUB branding validation ---"
-ls -lah "$ISO_DIR/boot/grub/pincabos-grub.png" "$ISO_DIR/boot/grub/pincabos-branding.cfg"
-grep -RInE 'PINCABOS_GRUB_BRANDING|pincabos-branding|pincabos-grub|background_image|set theme=|Ubuntu' \
-  "$ISO_DIR/boot/grub" "$ISO_DIR/EFI" 2>/dev/null || true
-
-
-echo
-# PINCABOS_LIVE_TTY_BOOT_POLICY_V1
-echo "=== 17C) Enforce non-graphical PinCabOS live boot ==="
-
-python3 - "$ISO_DIR" <<'PINCABOS_GRUB_TTY_POLICY'
-from pathlib import Path
-import sys
-
-iso_root = Path(sys.argv[1])
-
-config_names = {
-    "grub.cfg",
-    "loopback.cfg",
-    "txt.cfg",
-}
-
-remove_exact = {
-    "quiet",
-    "splash",
-    "noplymouth",
-}
-
-remove_prefixes = (
-    "systemd.unit=",
-    "cloud-init=",
-    "plymouth.enable=",
-    "rd.plymouth=",
-    "console=",
-    "loglevel=",
-    "rd.udev.log_level=",
-    "systemd.show_status=",
-    "rd.systemd.show_status=",
-    "vt.global_cursor_default=",
-)
-
-changed_files = []
-
-for path in sorted(iso_root.rglob("*")):
-    if not path.is_file() or path.name not in config_names:
-        continue
-
-    original = path.read_text(
-        encoding="utf-8",
-        errors="replace",
-    )
-
-    output = []
-    changed = False
-
-    for line in original.splitlines(keepends=True):
-        stripped = line.lstrip()
-        newline = "\n" if line.endswith("\n") else ""
-
-        valid_command = (
-            stripped.startswith("linux ")
-            or stripped.startswith("linuxefi ")
-            or stripped.startswith("append ")
-        )
-
-        if not valid_command or "boot=casper" not in stripped:
-            output.append(line)
-            continue
-
-        indentation = line[:len(line) - len(stripped)]
-        tokens = stripped.rstrip("\n").split()
-
-        command = tokens[0]
-        parameters = []
-
-        for token in tokens[1:]:
-            if token in remove_exact:
-                continue
-
-            if token.startswith(remove_prefixes):
-                continue
-
-            parameters.append(token)
-
-        rescue = "pincabos.rescue=1" in parameters
-
-        try:
-            separator_index = parameters.index("---")
-        except ValueError:
-            separator_index = len(parameters)
-
-        if rescue:
-            additions = [
-                "systemd.unit=multi-user.target",
-                "cloud-init=disabled",
-                "plymouth.enable=0",
-                "rd.plymouth=0",
-                "noplymouth",
-                "console=tty1",
-                "loglevel=4",
-                "systemd.show_status=true",
-                "rd.systemd.show_status=true",
-                "vt.global_cursor_default=1",
-            ]
-        else:
-            additions = [
-                "systemd.unit=multi-user.target",
-                "cloud-init=disabled",
-                "quiet",
-                "splash",
-                "loglevel=3",
-                "rd.udev.log_level=3",
-                "systemd.show_status=false",
-                "rd.systemd.show_status=false",
-                "vt.global_cursor_default=1",
-            ]
-
-        parameters = (
-            parameters[:separator_index]
-            + additions
-            + parameters[separator_index:]
-        )
-
-        output.append(
-            indentation
-            + " ".join([command] + parameters)
-            + newline
-        )
-
-        changed = True
-
-    if changed:
-        path.write_text("".join(output), encoding="utf-8")
-        changed_files.append(str(path))
-
-if not changed_files:
-    raise SystemExit(
-        "NOGO: aucune ligne boot=casper n’a été corrigée"
-    )
-
-print("GRUB configurations corrected:")
-
-for item in changed_files:
-    print(f"  {item}")
-PINCABOS_GRUB_TTY_POLICY
-
-echo "--- Validate text-only live boot policy ---"
-
-LIVE_BOOT_LINES="$(
-  grep -RHE \
-    '^[[:space:]]*(linux|linuxefi|append)[[:space:]].*boot=casper' \
-    "$ISO_DIR/boot/grub" \
-    "$ISO_DIR/EFI" \
-    2>/dev/null || true
-)"
-
-[ -n "$LIVE_BOOT_LINES" ] \
-  || die "No live boot=casper lines found after TTY policy"
-
-# Politique inversee : le splash PinCabOS est desormais VOULU sur le live
-# (theme + plugin script dans l initrd via 17b, services plymouth demasques).
-if ! grep -Eq '(^|[[:space:]])splash([[:space:]]|$)' \
-    <<<"$LIVE_BOOT_LINES"; then
-  echo "$LIVE_BOOT_LINES"
-  die "Live boot entries are missing splash (PinCabOS live theme expected)"
-fi
-
-if grep -v 'systemd.unit=multi-user.target' \
-    <<<"$LIVE_BOOT_LINES" \
-    | grep -q .; then
-  echo "$LIVE_BOOT_LINES"
-  die "A live boot entry does not force multi-user.target"
-fi
-
-# Nouvelle politique : les entrees d installation affichent le splash PinCabOS ;
-# une entree qui a 'splash' ne doit donc PAS transporter les anti-plymouth.
-# (le rescue, sans 'splash', conserve son demarrage verbeux.)
-if grep 'splash' <<<"$LIVE_BOOT_LINES" \
-    | grep -Eq 'plymouth.enable=0|noplymouth|rd.plymouth=0'; then
-  echo "$LIVE_BOOT_LINES"
-  die "A splash boot entry still disables Plymouth"
-fi
-
-echo "$LIVE_BOOT_LINES"
-echo "GO [√] Live boot policy OK (splash install entries, verbose rescue)"
-
-echo
-echo "=== 17c) Trim casper: couches inutiles et langues hors FR/EN/DE/IT/ES ==="
-# Le live PinCabOS (TUI) ne monte que minimal.squashfs : les couches desktop
-# "standard" et les langues non proposees par l installateur sont du lest.
-CASPER_BEFORE=$(du -sm "$ISO_DIR/casper" | cut -f1)
-# couches standard CONSERVEES : standard.live contient l outillage casper du boot live
-for f in "$ISO_DIR/casper"/minimal.??.*; do
-  base=$(basename "$f")
-  lang=${base#minimal.}; lang=${lang%%.*}
-  case "$lang" in fr|en|de|it|es) ;; *) rm -f "$f" ;; esac
-done
-# une seule couche : casper empile TOUT squashfs present dans casper/
-for f in "$ISO_DIR/casper"/*.squashfs; do
-  [ "$f" = "$SQUASHFS" ] || rm -f "$f"
-done
-CASPER_AFTER=$(du -sm "$ISO_DIR/casper" | cut -f1)
-echo "casper: ${CASPER_BEFORE}M -> ${CASPER_AFTER}M"
-
-echo "=== 17b) Theme Plymouth live : deja embarque nativement ==="
-# obsolete depuis la regeneration native de l initrd (base server, etape 12) :
-# le theme y est verifie par le build ; un append cpio ici l ecraserait.
-
-echo "=== 18) Update casper metadata and md5sum ==="
-du -sx --block-size=1 "$ROOTFS_DIR" | cut -f1 > "$ISO_DIR/casper/filesystem.size"
-echo "$(du -sx --block-size=1 "$ROOTFS_DIR" | cut -f1)" > "${SQUASHFS}.size" || true
-
-(
-  cd "$ISO_DIR"
-  rm -f md5sum.txt
-  find . -type f \
-    ! -name md5sum.txt \
-    ! -path './isolinux/boot.cat' \
-    ! -path './boot.catalog' \
-    -print0 \
-    | sort -z \
-    | xargs -0 md5sum > md5sum.txt
-)
-
-echo
-echo "=== 19) Build final bootable ISO with explicit BIOS + UEFI ==="
-
-BIOS_IMG=""
-for p in \
-  "$ISO_DIR/boot/grub/i386-pc/eltorito.img" \
-  "$ISO_DIR/boot/grub/eltorito.img" \
-  "$ISO_DIR/boot/grub/i386-pc/core.img"
-do
-  if [ -f "$p" ]; then
-    BIOS_IMG="$p"
-    break
-  fi
-done
-
-if [ -z "$BIOS_IMG" ]; then
-  echo "Boot file audit:"
-  find "$ISO_DIR/boot" -maxdepth 5 -type f | sort | sed -n '1,240p'
-  die "BIOS El Torito image not found"
-fi
-
-BIOS_REL="${BIOS_IMG#$ISO_DIR/}"
-echo "BIOS boot image: $BIOS_REL"
-
-HYBRID_MBR="/usr/lib/grub/i386-pc/boot_hybrid.img"
-test -f "$HYBRID_MBR" || die "Missing GRUB hybrid MBR: $HYBRID_MBR"
-
-EFI_IMG="$BOOT_WORK/efiboot.img"
-rm -rf "$BOOT_WORK"
-mkdir -p "$BOOT_WORK"
-truncate -s 64M "$EFI_IMG"
-mformat -i "$EFI_IMG" -F ::
-
-if [ -d "$ISO_DIR/EFI" ]; then
-  mcopy -i "$EFI_IMG" -s "$ISO_DIR/EFI" ::/
-else
-  die "ISO tree has no /EFI directory"
-fi
-
-mdir -i "$EFI_IMG" ::/EFI/BOOT/BOOTX64.EFI >/dev/null 2>&1 \
-  || die "UEFI image missing EFI/BOOT/BOOTX64.EFI"
-
-rm -f "$OUT_ISO"
-
-xorriso -as mkisofs \
-  -r \
-  -J \
-  -joliet-long \
-  -l \
-  -V "$VOLID" \
-  -o "$OUT_ISO" \
-  --grub2-mbr "$HYBRID_MBR" \
-  -partition_offset 16 \
-  --mbr-force-bootable \
-  -append_partition 2 0xef "$EFI_IMG" \
-  -appended_part_as_gpt \
-  -iso_mbr_part_type 0x00 \
-  -c boot.catalog \
-  -b "$BIOS_REL" \
-  -no-emul-boot \
-  -boot-load-size 4 \
-  -boot-info-table \
-  --grub2-boot-info \
-  -eltorito-alt-boot \
-  -e '--interval:appended_partition_2:all::' \
-  -no-emul-boot \
-  "$ISO_DIR"
-
-echo
-echo "=== 20) Final ISO validation ==="
-test -f "$OUT_ISO" || die "ISO was not created"
+LIVE_SH="$(dirname "$(readlink -f "$0")")/iso-live.sh"
+[ -f "$LIVE_SH" ] || LIVE_SH="/opt/pincabos/script/iso-live.sh"
+test -f "$LIVE_SH" || die "iso-live.sh not found next to iso.sh nor in /opt/pincabos/script"
+mkdir -p "$OUT_DIR"
+bash "$LIVE_SH" --rootfs "$ROOTFS_DIR" --payload "$PAYLOAD_FULL" --out "$OUT_ISO" \
+  || die "iso-live.sh failed"
+test -f "$OUT_ISO" || die "live ISO was not created"
 ls -lh "$OUT_ISO"
 sha256sum "$OUT_ISO" | tee "$OUT_ISO.sha256"
-
-echo
-echo "--- El Torito boot report ---"
-xorriso -indev "$OUT_ISO" -report_el_torito plain | sed -n '1,220p'
-
-echo
-echo "--- ISO payload listing ---"
-xorriso -osirrox on -indev "$OUT_ISO" \
-  -find /pincabos-payload -maxdepth 1 -type f -exec lsdl \
-  | sed -n '1,120p'
-
-echo
-echo "--- ISO PinCabOS files sanity ---"
-xorriso -osirrox on -indev "$OUT_ISO" \
-  -find / -maxdepth 2 -type f -name 'PINCABOS*' -exec lsdl \
-  | sed -n '1,80p'
-
 echo
 echo "==============================================================="
-echo " ISO CREATED OK"
+echo " ISO CREATED OK (live model)"
 echo "==============================================================="
-echo "ISO:"
-echo "$OUT_ISO"
-echo
-echo "SHA256:"
-cat "$OUT_ISO.sha256"
-echo
-echo "Expected VM boot:"
-echo "  PinCabOS Beta Installer on tty1"
-echo "  No Ubuntu Welcome window"
-echo
-echo "Log:"
-echo "$LOG"
-echo "==============================================================="
-
-echo
-echo "==============================================================="
-echo " PINCABOS — NETTOYAGE APRÈS ISO RÉUSSIE"
-echo " PINCABOS_ISO_POST_SUCCESS_CLEANUP_V2"
-echo "==============================================================="
-
-FINAL_ISO="/opt/pincabos/build/output/PinCabOS-beta-Installer.iso"
-BUILD_WORK="/opt/pincabos/build/live-v8.1g-english"
-BUILD_LOGS="/opt/pincabos/build/logs"
-
-echo
-echo "=== Validation ISO avant nettoyage ==="
-
-if [ ! -s "$FINAL_ISO" ]; then
-  echo "ERREUR: ISO finale absente ou vide."
-  echo "Nettoyage annulé pour conserver les fichiers de diagnostic."
-  exit 1
-fi
-
-ISO_SIZE="$(stat -c '%s' "$FINAL_ISO" 2>/dev/null || echo 0)"
-
-if [ "$ISO_SIZE" -lt 1000000000 ]; then
-  echo "ERREUR: ISO anormalement petite: $ISO_SIZE octets"
-  echo "Nettoyage annulé."
-  exit 1
-fi
-
-ls -lh "$FINAL_ISO"
-sha256sum "$FINAL_ISO"
-
-echo
-echo "=== Suppression des répertoires de travail générés ==="
-
-for path in \
-  "$BUILD_WORK/payload-full" \
-  "$BUILD_WORK/iso-ready" \
-  "$BUILD_WORK/iso" \
-  "$BUILD_WORK/squashfs-root"
-do
-  case "$path" in
-    "$BUILD_WORK"/*)
-      if [ -e "$path" ]; then
-        echo "Suppression: $path"
-        rm -rf --one-file-system "$path"
-      fi
-      ;;
-    *)
-      echo "REFUS sécurité: chemin hors BUILD_WORK: $path"
-      exit 1
-      ;;
-  esac
-done
-
-echo
-echo "=== Suppression des listes et fichiers temporaires du build ==="
-
-find "$BUILD_WORK" -maxdepth 1 -type f \
-  \( \
-    -name 'payload-file-list-*' -o \
-    -name '*.tmp' -o \
-    -name '*.part' \
-  \) \
-  -print -delete 2>/dev/null || true
-
-echo
-echo "=== Suppression des backups du dossier script ==="
-
-find /opt/pincabos/script -maxdepth 1 -type f \
-  \( \
-    -name '*.bak' -o \
-    -name '*.bak-*' -o \
-    -name '*.backup' -o \
-    -name '*.orig' -o \
-    -name '*~' \
-  \) \
-  -print -delete 2>/dev/null || true
-
-echo
-echo "=== Garder seulement les 5 logs ISO les plus récents ==="
-
-if [ -d "$BUILD_LOGS" ]; then
-  mapfile -t OLD_LOGS < <(
-    find "$BUILD_LOGS" -maxdepth 1 -type f \
-      -name 'iso-*.log' \
-      -printf '%T@ %p\n' 2>/dev/null |
-    sort -nr |
-    tail -n +6 |
-    cut -d' ' -f2-
-  )
-
-  if [ "${#OLD_LOGS[@]}" -gt 0 ]; then
-    printf '%s\n' "${OLD_LOGS[@]}"
-    rm -f -- "${OLD_LOGS[@]}"
-  else
-    echo "Aucun ancien log à supprimer."
-  fi
-fi
-
-echo
-echo "=== Résultat final ==="
-du -sh /opt/pincabos/build 2>/dev/null || true
-du -sh /opt/pincabos/build/output 2>/dev/null || true
-ls -lh /opt/pincabos/build/output 2>/dev/null || true
-
-echo
-echo "OK: nettoyage post-build terminé."
-
-
-
-# ======================================================================
-fi   # PCO_ISO_MODEL classic (sections 14-20)
 
 # PINCABOS_OPTIONAL_WEB_PUBLISH_V1
 # Publication optionnelle de l'ISO apres un build reussi.
