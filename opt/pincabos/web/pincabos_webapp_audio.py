@@ -4,6 +4,13 @@
 from __future__ import annotations
 
 import glob
+try:
+    import pincabos_ini
+except ImportError:   # hors /opt (tests, depot) : le module vit a cote des outils
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "tools"))
+    import pincabos_ini
 import html
 import json
 import os
@@ -647,25 +654,8 @@ def audio_write_lines(path, lines):
 
 
 def audio_find_section(lines, section):
-    section_header = f"[{section}]"
-    start = None
-    end = len(lines)
-
-    for i, line in enumerate(lines):
-        if line.strip().lower() == section_header.lower():
-            start = i
-            break
-
-    if start is None:
-        return None, None
-
-    for j in range(start + 1, len(lines)):
-        stripped = lines[j].strip()
-        if stripped.startswith("[") and stripped.endswith("]"):
-            end = j
-            break
-
-    return start, end
+    # PINCABOS_INI_UNIQUE_V1 : bornes de section par l ecrivain unique
+    return pincabos_ini.Ini("\n".join(lines)).bornes(section)
 
 
 def audio_set_ini_key_with_comment(lines, section, key, value, function_name):
@@ -769,47 +759,10 @@ def audio_apply_to_vpx_vpinfe():
     vpinfe_home_ini = PINCABOS_VPINFE_INI
 
     def set_ini_key_native(lines, section, key, value):
-        section_header = f"[{section}]"
-        section_l = section.lower()
-        key_l = key.lower()
-
-        out = []
-        in_section = False
-        section_found = False
-        key_written = False
-
-        for line in lines:
-            stripped = line.strip()
-
-            if stripped.startswith("[") and stripped.endswith("]"):
-                if in_section and not key_written:
-                    out.append(f"{key} = {value}\n")
-                    key_written = True
-
-                in_section = stripped[1:-1].strip().lower() == section_l
-                if in_section:
-                    section_found = True
-
-                out.append(line)
-                continue
-
-            if in_section and "=" in stripped:
-                left = stripped.split("=", 1)[0].strip().lower()
-                if left == key_l:
-                    out.append(f"{key} = {value}\n")
-                    key_written = True
-                    continue
-
-            out.append(line)
-
-        if section_found and in_section and not key_written:
-            out.append(f"{key} = {value}\n")
-
-        if not section_found:
-            out.append(f"\n{section_header}\n")
-            out.append(f"{key} = {value}\n")
-
-        return out
+        # PINCABOS_INI_UNIQUE_V1 : delegue a l ecrivain INI unique (lignes avec leur fin de ligne)
+        ini = pincabos_ini.Ini("".join(lines))
+        ini.poser(section, key, value)
+        return [l + "\n" for l in ini.lignes]
 
     results.append("VPX: SoundDevice/SoundDeviceBG/MusicDevice/Sound3DDevice non modifiés automatiquement.")
     results.append("Raison: VPX semble utiliser des IDs numériques dans [Player], pas hw:X,Y ALSA.")

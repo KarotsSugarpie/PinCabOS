@@ -328,7 +328,7 @@ class Dof(unittest.TestCase):
         t = "[Plugin.DOF]\nEnable = 1\n\n[Plugin.vpx]\nEnable = \n"
         self.assertIn("[Plugin.DOF]\nEnable = 0\n\n[Plugin.vpx]", pd.poser_cle_ini(t, "Plugin.DOF", "Enable", "0"))
         self.assertEqual(pd.poser_cle_ini("[DOF]\nautre = 1\n", "DOF", "enabledof", "true"), "[DOF]\nautre = 1\nenabledof = true\n")
-        self.assertEqual(pd.poser_cle_ini("[X]\na = 1\n", "DOF", "enabledof", "false"), "[X]\na = 1\n\n[DOF]\nenabledof = false")
+        self.assertEqual(pd.poser_cle_ini("[X]\na = 1\n", "DOF", "enabledof", "false"), "[X]\na = 1\n\n[DOF]\nenabledof = false\n")   # INI_UNIQUE_V1 : fin de ligne conservee
 
     def test_premier_demarrage(self):
         tmp = Path(tempfile.mkdtemp())

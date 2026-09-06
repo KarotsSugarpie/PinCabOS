@@ -3,6 +3,13 @@ import urllib.error
 import urllib.request
 import sqlite3
 import tempfile
+try:
+    import pincabos_ini
+except ImportError:   # hors /opt (tests, depot) : le module vit a cote des outils
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "tools"))
+    import pincabos_ini
 import zipfile
 import mimetypes
 import urllib.parse
@@ -289,91 +296,28 @@ def pincabos_read_ini_lines(path):
 
 
 def pincabos_write_ini_lines(path, lines):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines).rstrip() + "\n")
+    # PINCABOS_INI_UNIQUE_V1 : ecriture atomique de l ecrivain unique (mode et proprietaire conserves)
+    pincabos_ini.ecrire_texte(path, "\n".join(lines).rstrip() + "\n")
 
 
 def pincabos_find_ini_section(lines, section):
-    section_header = f"[{section}]"
-    start = None
-    end = len(lines)
-
-    for i, line in enumerate(lines):
-        if line.strip().lower() == section_header.lower():
-            start = i
-            break
-
-    if start is None:
-        return None, None
-
-    for j in range(start + 1, len(lines)):
-        stripped = lines[j].strip()
-        if stripped.startswith("[") and stripped.endswith("]"):
-            end = j
-            break
-
-    return start, end
+    # PINCABOS_INI_UNIQUE_V1 : bornes de la section par l ecrivain unique
+    return pincabos_ini.Ini("\n".join(lines)).bornes(section)
 
 
 def pincabos_set_ini_key_with_comment(lines, section, key, value, function_name):
-    comment = pincabos_modified_comment(function_name)
-    start, end = pincabos_find_ini_section(lines, section)
-
-    if start is None:
-        if lines and lines[-1].strip():
-            lines.append("")
-        lines.append(comment)
-        lines.append(f"[{section}]")
-        lines.append(f"{key} = {value}")
-        return lines
-
-    key_lower = str(key).lower()
-    key_index = None
-
-    for i in range(start + 1, end):
-        stripped = lines[i].strip()
-        if not stripped or stripped.startswith(";") or stripped.startswith("#"):
-            continue
-        if "=" not in stripped:
-            continue
-
-        existing_key = stripped.split("=", 1)[0].strip().lower()
-        if existing_key == key_lower:
-            key_index = i
-            break
-
-    if key_index is not None:
-        if key_index > 0 and "par PinCabOS fonction(" in lines[key_index - 1]:
-            lines[key_index - 1] = comment
-        else:
-            lines.insert(key_index, comment)
-            key_index += 1
-
-        lines[key_index] = f"{key} = {value}"
-        return lines
-
-    insert_at = end
-    lines.insert(insert_at, comment)
-    lines.insert(insert_at + 1, f"{key} = {value}")
-    return lines
+    # PINCABOS_INI_UNIQUE_V1 : la cle sous son commentaire date, un seul commentaire
+    ini = pincabos_ini.Ini("\n".join(lines))
+    ini.poser(section, key, value, pincabos_modified_comment(function_name))
+    return ini.lignes
 
 
 def pincabos_set_ini_section_with_comment(lines, section, values, function_name):
-    comment = pincabos_modified_comment(function_name)
-    start, end = pincabos_find_ini_section(lines, section)
+    # PINCABOS_INI_UNIQUE_V1 : chaque cle sous son commentaire date
+    ini = pincabos_ini.Ini("\n".join(lines))
+    ini.poser_section(section, dict(values), pincabos_modified_comment(function_name))
+    return ini.lignes
 
-    block = [comment, f"[{section}]"]
-    for key, value in values.items():
-        block.append(f"{key} = {value}")
-
-    if start is None:
-        if lines and lines[-1].strip():
-            lines.append("")
-        lines.extend(block)
-        return lines
-
-    return lines[:start] + block + lines[end:]
 
 
 def shlex_quote(value):
@@ -2500,44 +2444,10 @@ def pincabos_write_manual_screen_roles(playfield_id, backglass_id, fulldmd_id, c
     lines = ini.read_text(errors="replace").splitlines() if ini.exists() else []
 
     def set_ini_key(lines, section, key, value):
-        section_l = section.lower()
-        key_l = key.lower()
-        out = []
-        in_sec = False
-        found_sec = False
-        found_key = False
-
-        for line in lines:
-            stripped = line.strip()
-
-            if stripped.startswith("[") and stripped.endswith("]"):
-                if in_sec and not found_key:
-                    out.append(f"{key} = {value}")
-                    found_key = True
-                in_sec = stripped[1:-1].strip().lower() == section_l
-                if in_sec:
-                    found_sec = True
-                out.append(line)
-                continue
-
-            if in_sec and "=" in line:
-                k = line.split("=", 1)[0].strip().lower()
-                if k == key_l:
-                    out.append(f"{key} = {value}")
-                    found_key = True
-                    continue
-
-            out.append(line)
-
-        if not found_sec:
-            if out and out[-1].strip():
-                out.append("")
-            out.append(f"[{section}]")
-            out.append(f"{key} = {value}")
-        elif in_sec and not found_key:
-            out.append(f"{key} = {value}")
-
-        return out
+        # PINCABOS_INI_UNIQUE_V1 : delegue a l ecrivain INI unique
+        ini = pincabos_ini.Ini("\n".join(lines))
+        ini.poser(section, key, value)
+        return ini.lignes
 
     lines = set_ini_key(lines, "Displays", "tablescreenid", str(playfield["id"]))
 
@@ -2709,47 +2619,10 @@ def pincabos_gpu_read_screens_config_for_apply():
 
 
 def pincabos_gpu_ini_set_key_local(lines, section, key, value):
-    section_l = section.lower()
-    key_l = key.lower()
-
-    out = []
-    in_sec = False
-    found_sec = False
-    found_key = False
-
-    for line in lines:
-        stripped = line.strip()
-
-        if stripped.startswith("[") and stripped.endswith("]"):
-            if in_sec and not found_key:
-                out.append(f"{key} = {value}")
-                found_key = True
-
-            in_sec = stripped[1:-1].strip().lower() == section_l
-            if in_sec:
-                found_sec = True
-
-            out.append(line)
-            continue
-
-        if in_sec and "=" in line:
-            k = line.split("=", 1)[0].strip().lower()
-            if k == key_l:
-                out.append(f"{key} = {value}")
-                found_key = True
-                continue
-
-        out.append(line)
-
-    if not found_sec:
-        if out and out[-1].strip():
-            out.append("")
-        out.append(f"[{section}]")
-        out.append(f"{key} = {value}")
-    elif in_sec and not found_key:
-        out.append(f"{key} = {value}")
-
-    return out
+    # PINCABOS_INI_UNIQUE_V1 : delegue a l ecrivain INI unique
+    ini = pincabos_ini.Ini("\n".join(lines))
+    ini.poser(section, key, value)
+    return ini.lignes
 
 
 def pincabos_gpu_apply_config_to_vpinfe():
@@ -5028,54 +4901,11 @@ def pincabos_set_ini_key_plain(lines, section, key, value):
     """
     Modifie/ajoute une clé INI sans ajouter de commentaire PinCabOS.
     Utilisé pour les INI officiels VPinFE/VPX afin de ne pas les polluer.
+    PINCABOS_INI_UNIQUE_V1 : délégué à l'écrivain unique (commentaire PinCabOS au-dessus retiré).
     """
-    section_header = f"[{section}]"
-    key_l = str(key).lower()
-    value = str(value)
-
-    out = []
-    in_section = False
-    found_section = False
-    written = False
-
-    for line in lines:
-        stripped = line.strip()
-
-        if stripped.startswith("[") and stripped.endswith("]"):
-            if in_section and not written:
-                out.append(f"{key} = {value}")
-                written = True
-            in_section = (stripped.lower() == section_header.lower())
-            if in_section:
-                found_section = True
-            out.append(line)
-            continue
-
-        if in_section:
-            # Supprimer les anciens commentaires auto PinCabOS juste avant/près des clés gérées.
-            if stripped.startswith(";") and "par PinCabOS fonction(" in stripped:
-                continue
-
-            if "=" in line:
-                k = line.split("=", 1)[0].strip().lower()
-                if k == key_l:
-                    out.append(f"{key} = {value}")
-                    written = True
-                    continue
-
-        out.append(line)
-
-    if found_section and in_section and not written:
-        out.append(f"{key} = {value}")
-        written = True
-
-    if not found_section:
-        if out and out[-1].strip():
-            out.append("")
-        out.append(section_header)
-        out.append(f"{key} = {value}")
-
-    return out
+    ini = pincabos_ini.Ini("\n".join(lines))
+    ini.poser(section, key, value, purger_commentaire=True)
+    return ini.lignes
 
 
 def save_fulldmd_to_configs(data):
@@ -8734,21 +8564,8 @@ def vpx_ballcab_backup(path):
 
 
 def vpx_ballcab_find_section(lines, section):
-    header = f"[{section}]".lower()
-    start = None
-    for index, line in enumerate(lines):
-        if line.strip().lower() == header:
-            start = index
-            break
-    if start is None:
-        return None, None
-    end = len(lines)
-    for index in range(start + 1, len(lines)):
-        text = lines[index].strip()
-        if text.startswith("[") and text.endswith("]"):
-            end = index
-            break
-    return start, end
+    # PINCABOS_INI_UNIQUE_V1 : bornes de section par l ecrivain unique
+    return pincabos_ini.Ini("\n".join(lines)).bornes(section)
 
 
 def vpx_ballcab_get_value(lines, section, key):
@@ -9095,25 +8912,8 @@ def vpx_simple_ball_write_lines(lines):
     VPX_SIMPLE_BALL_INI.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 def vpx_simple_ball_find_section(lines, section):
-    header = "[" + section + "]"
-    start = None
-    end = len(lines)
-
-    for i, line in enumerate(lines):
-        if line.strip().lower() == header.lower():
-            start = i
-            break
-
-    if start is None:
-        return None, None
-
-    for j in range(start + 1, len(lines)):
-        s = lines[j].strip()
-        if s.startswith("[") and s.endswith("]"):
-            end = j
-            break
-
-    return start, end
+    # PINCABOS_INI_UNIQUE_V1 : bornes de section par l ecrivain unique
+    return pincabos_ini.Ini("\n".join(lines)).bornes(section)
 
 def vpx_simple_ball_get(lines, section, key):
     start, end = vpx_simple_ball_find_section(lines, section)
