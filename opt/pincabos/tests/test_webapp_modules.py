@@ -30,6 +30,7 @@ MODULES = {
     "export": WEB / "pincabos_webapp_export.py",
     "disques": WEB / "pincabos_webapp_disques.py",
     "systeme": WEB / "pincabos_webapp_systeme.py",
+    "admin_pages": WEB / "pincabos_webapp_admin_pages.py",
 }
 ROUTES = {
     "gpu": {
@@ -71,10 +72,11 @@ ROUTES = {
         "/tools/external-disks/smb/disconnect", "/tools/external-disks/usb/mount", "/tools/external-disks/usb/unmount",
     },
     "systeme": {"/service-control", "/service-control/<service_key>/<action>", "/process-control/vpx/<action>"},
+    "admin_pages": {"/admin/about-supporters/save", "/admin/version/save"},
 }
 HELPERS = ("esc", "run_cmd", "shlex_quote", "service_status",
            "pincabos_meta", "pincabos_backup_config_file", "pincabos_write_json_with_meta", "get_ip",
-           "pincabos_get_vpinfe_paths_for_tools")
+           "pincabos_get_vpinfe_paths_for_tools", "pincabos_version")
 
 
 def routes_de(texte, decorateur):
@@ -130,8 +132,9 @@ def noms_libres(texte):
                 libres.add(e.id)
     for n in tree.body:  # niveau module : une constante calculée avec un nom absent casse l'import du module
         if not isinstance(n, (ast.FunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom, ast.Try)):
+            locaux = {e.id for c in ast.walk(n) if isinstance(c, ast.comprehension) for e in ast.walk(c.target) if isinstance(e, ast.Name)}
             for e in ast.walk(n):
-                if isinstance(e, ast.Name) and isinstance(e.ctx, ast.Load) and not hasattr(builtins, e.id):
+                if isinstance(e, ast.Name) and isinstance(e.ctx, ast.Load) and e.id not in locaux and not hasattr(builtins, e.id):
                     libres.add(e.id)
     return libres - definis
 
@@ -168,7 +171,9 @@ class Decoupage(unittest.TestCase):
                 if nom == "register":
                     continue
                 self.assertNotIn(f"def {nom}(", self.app, f"{nom} existe encore dans app.py")
-                self.assertNotRegex(self.app, rf"\b{nom}\(", f"{nom} appelé depuis app.py")  # un réexport (import) reste permis
+                if re.search(rf"(?m)^    {nom},$|^from \w+ import .*\b{nom}\b", self.app):
+                    continue  # réexporté (importé) par app.py : l'appel reste permis (ex. page() -> pied de page supporters)
+                self.assertNotRegex(self.app, rf"\b{nom}\(", f"{nom} appelé depuis app.py")
 
     def test_noms_deplaces_consommes_ailleurs_reexportes_par_app(self):
         """Les modules historiques lisent les helpers dans les globals d'app.py (`app_globals[...]`,
@@ -177,7 +182,7 @@ class Decoupage(unittest.TestCase):
         textes_autres = {p.name: p.read_text(encoding="utf-8") for p in autres}
         manquants = []
         for cle, texte in self.textes.items():
-            for nom in re.findall(r"^def (\w+)\(", texte, re.M):
+            for nom in re.findall(r"^def (\w+)\(", texte, re.M) + re.findall(r"^([A-Z][A-Z0-9_]+) = ", texte, re.M):
                 if nom == "register" or nom.startswith("_"):
                     continue
                 # un usage de code : appel, clé de dict (app_globals["x"]), .get("x") ; pas un simple mot dans une chaîne
@@ -202,6 +207,7 @@ class Decoupage(unittest.TestCase):
         i_reg = self.app.index("pco_gpu_routes.register(app, page)")
         i_dof = self.app.index("pco_dof_routes.register(app, page)")
         i_systeme = self.app.index("pco_systeme_routes.register(app, page)")
+        i_admin = self.app.index("pco_admin_pages_routes.register(app, page)")
         i_dmd = self.app.index("pco_dmd_routes.register(app, page)")
         i_console = self.app.index("pco_console_routes.register(app, page)")
         i_vpxball = self.app.index("pco_vpxball_routes.register(app, page)")
@@ -215,7 +221,8 @@ class Decoupage(unittest.TestCase):
         self.assertLess(i_dof, i_systeme)
         self.assertLess(i_systeme, i_dmd)
         self.assertLess(i_dmd, i_console)
-        self.assertLess(i_console, i_vpxball)
+        self.assertLess(i_console, i_admin)
+        self.assertLess(i_admin, i_vpxball)
         self.assertLess(i_vpxball, i_import)
         self.assertLess(i_import, i_disques)
         self.assertLess(i_disques, i_commander)
@@ -253,6 +260,7 @@ class Chargement(unittest.TestCase):
             import pincabos_webapp_export as export
             import pincabos_webapp_disques as disques
             import pincabos_webapp_systeme as systeme
+            import pincabos_webapp_admin_pages as admin_pages
             app = flask.Flask("test")
             gpu.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dof.register(app, lambda t, b: f"<p>{t}</p>{b}")
@@ -264,6 +272,7 @@ class Chargement(unittest.TestCase):
             export.register(app, lambda t, b: f"<p>{t}</p>{b}")
             disques.register(app, lambda t, b: f"<p>{t}</p>{b}")
             systeme.register(app, lambda t, b: f"<p>{t}</p>{b}")
+            admin_pages.register(app, lambda t, b: f"<p>{t}</p>{b}")
             regles = {r.rule for r in app.url_map.iter_rules()}
             for attendues in ROUTES.values():
                 self.assertTrue(attendues <= regles, attendues - regles)
@@ -277,6 +286,7 @@ class Chargement(unittest.TestCase):
             self.assertIn("export.tools_export_table", app.view_functions)
             self.assertIn("disques.tools_external_disks", app.view_functions)
             self.assertIn("systeme.service_control", app.view_functions)
+            self.assertIn("admin_pages.pincabos_admin_version_save", app.view_functions)
             self.assertEqual(gpu.page("x", "y"), "<p>x</p>y")  # page posée par register
             self.assertEqual(dof.page("x", "y"), "<p>x</p>y")
         finally:

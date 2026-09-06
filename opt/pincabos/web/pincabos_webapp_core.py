@@ -555,3 +555,24 @@ def pincabos_get_vpinfe_paths_for_tools():
     result["altsound"] = str(root / "PinMAME" / "altsound")
 
     return result
+
+
+# ---- Fichier maître version.json (PINCABOS_WEBAPP_MODULES_V1) ----
+
+def pincabos_version():
+    version_file = Path("/opt/pincabos/config/version.json")
+    default = {
+        "name": "PinCabOS",
+        "version": "Development",
+        "build": "dev",
+        "author": "Karots Sugarpie",
+    }
+
+    try:
+        if version_file.exists():
+            data = json.loads(version_file.read_text())
+            default.update(data)
+    except Exception:
+        pass
+
+    return default
