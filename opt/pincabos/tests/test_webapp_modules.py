@@ -27,6 +27,7 @@ MODULES = {
     "vpxball": WEB / "pincabos_webapp_vpxball.py",
     "commander": WEB / "pincabos_webapp_commander.py",
     "import": WEB / "pincabos_webapp_import.py",
+    "export": WEB / "pincabos_webapp_export.py",
 }
 ROUTES = {
     "gpu": {
@@ -62,6 +63,7 @@ ROUTES = {
         "/tools/import-table/manifest-conflict", "/api/import/vpsdb-search", "/tools/import-table/analyze", "/tools/import-table/analyze-run",
         "/tools/import-table/install", "/api/import/analyze-zip", "/api/import/apply-zip-choice",
     },
+    "export": {"/tools/export-table", "/download-export"},
 }
 HELPERS = ("esc", "run_cmd", "shlex_quote", "service_status",
            "pincabos_meta", "pincabos_backup_config_file", "pincabos_write_json_with_meta", "get_ip",
@@ -159,7 +161,25 @@ class Decoupage(unittest.TestCase):
                 if nom == "register":
                     continue
                 self.assertNotIn(f"def {nom}(", self.app, f"{nom} existe encore dans app.py")
-                self.assertNotRegex(self.app, rf"\b{nom}\(", f"{nom} appelé depuis app.py")
+                self.assertNotRegex(self.app, rf"\b{nom}\(", f"{nom} appelé depuis app.py")  # un réexport (import) reste permis
+
+    def test_noms_deplaces_consommes_ailleurs_reexportes_par_app(self):
+        """Les modules historiques lisent les helpers dans les globals d'app.py (`app_globals[...]`,
+        `runtime_globals`) : un nom déplacé qu'un autre module consomme doit rester importé dans app.py."""
+        autres = [p for p in WEB.glob("*.py") if p.name != "app.py" and p not in MODULES.values()]
+        textes_autres = {p.name: p.read_text(encoding="utf-8") for p in autres}
+        manquants = []
+        for cle, texte in self.textes.items():
+            for nom in re.findall(r"^def (\w+)\(", texte, re.M):
+                if nom == "register" or nom.startswith("_"):
+                    continue
+                # un usage de code : appel, clé de dict (app_globals["x"]), .get("x") ; pas un simple mot dans une chaîne
+                # (request.form.get("x") / request.args.get("x") sont des champs de formulaire, pas des helpers)
+                usage = re.compile(rf"(\b{nom}\(|\[\s*[\"']{nom}[\"']\s*\]|(?<!\.form)(?<!\.args)\.get\(\s*[\"']{nom}[\"'])")
+                consommateurs = [n for n, t in textes_autres.items() if usage.search(t)]
+                if consommateurs and not re.search(rf"\b{nom}\b", self.app):
+                    manquants.append((cle, nom, consommateurs))
+        self.assertEqual(manquants, [], "à réexporter dans app.py après register()")
 
     def test_helpers_partages_une_seule_fois_dans_le_noyau(self):
         core = CORE.read_text(encoding="utf-8")
@@ -179,6 +199,7 @@ class Decoupage(unittest.TestCase):
         i_vpxball = self.app.index("pco_vpxball_routes.register(app, page)")
         i_import = self.app.index("pco_import_routes.register(app, page)")
         i_commander = self.app.index("pco_commander_routes.register(app, page)")
+        i_export = self.app.index("pco_export_routes.register(app, page)")
         i_wrap = self.app.index("def _pco_dashboard_plus_final_install_wrapper")
         self.assertLess(i_page, i_reg)
         self.assertLess(i_reg, i_dof)
@@ -187,7 +208,8 @@ class Decoupage(unittest.TestCase):
         self.assertLess(i_console, i_vpxball)
         self.assertLess(i_vpxball, i_import)
         self.assertLess(i_import, i_commander)
-        self.assertLess(i_commander, i_wrap)
+        self.assertLess(i_commander, i_export)
+        self.assertLess(i_export, i_wrap)
 
     def test_register_pose_page_et_le_blueprint(self):
         for cle, texte in self.textes.items():
@@ -217,6 +239,7 @@ class Chargement(unittest.TestCase):
             import pincabos_webapp_vpxball as vpxball
             import pincabos_webapp_commander as commander
             import pincabos_webapp_import as importation
+            import pincabos_webapp_export as export
             app = flask.Flask("test")
             gpu.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dof.register(app, lambda t, b: f"<p>{t}</p>{b}")
@@ -225,6 +248,7 @@ class Chargement(unittest.TestCase):
             vpxball.register(app, lambda t, b: f"<p>{t}</p>{b}")
             commander.register(app, lambda t, b: f"<p>{t}</p>{b}")
             importation.register(app, lambda t, b: f"<p>{t}</p>{b}")
+            export.register(app, lambda t, b: f"<p>{t}</p>{b}")
             regles = {r.rule for r in app.url_map.iter_rules()}
             for attendues in ROUTES.values():
                 self.assertTrue(attendues <= regles, attendues - regles)
@@ -235,6 +259,7 @@ class Chargement(unittest.TestCase):
             self.assertIn("vpxball.tools_vpx_ball_cabinet", app.view_functions)
             self.assertIn("commander.tools_commander", app.view_functions)
             self.assertIn("import.tools_import_table_analyze", app.view_functions)
+            self.assertIn("export.tools_export_table", app.view_functions)
             self.assertEqual(gpu.page("x", "y"), "<p>x</p>y")  # page posée par register
             self.assertEqual(dof.page("x", "y"), "<p>x</p>y")
         finally:
