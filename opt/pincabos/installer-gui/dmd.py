@@ -23,6 +23,8 @@ import re
 import subprocess
 
 TOOL = "/opt/pincabos/tools/pincabos-zedmd"
+from pathlib import Path as _Path
+DECOR_DMD = _Path(__file__).resolve().parent / "static" / "decor" / "dmd.jpg"   # PINCABOS_INSTALLEUR_DECOR_ROLES_V1
 
 # id → mode de zedmd.json, famille, mode de détection, cible par défaut.
 #  detection : "serie" = port série candidat (ESP32 natif ou pont CP210x/CH340),
@@ -141,5 +143,12 @@ def tester(choix: dict, run=executer, secondes: int = 3) -> dict:
     rc, out = run(["set", json.dumps(config_json(ok), ensure_ascii=False)])
     if rc != 0:
         return {"ok": False, "sortie": out.strip()}
-    rc, out = run(["test", str(int(secondes))], timeout=secondes + 30)
+    # PINCABOS_INSTALLEUR_DECOR_ROLES_V1 : le visuel « DMD » de l assistant plutot qu une mire
+    visuel = DECOR_DMD if DECOR_DMD.is_file() else None
+    if visuel is not None:
+        rc, out = run(["image", str(visuel), str(int(secondes))], timeout=secondes + 30)
+        if rc == 2 and "commande inconnue" in out:   # ancien pincabos-zedmd
+            rc, out = run(["test", str(int(secondes))], timeout=secondes + 30)
+    else:
+        rc, out = run(["test", str(int(secondes))], timeout=secondes + 30)
     return {"ok": rc == 0, "sortie": out.strip()}

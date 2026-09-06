@@ -392,7 +392,7 @@ class Assistant(unittest.TestCase):
             for n in ("paysage0.png", "paysage1.jpg", "portrait0.png", "grub0.jpg"):
                 (g / n).write_bytes(b"x")
             mons = sc.moniteurs(QUERY, PROPS)
-            imgs = sc.images_decor(mons, {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0"}, g, random.Random(1))
+            imgs = sc.images_decor(mons, {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0"}, g, random.Random(1), decor=Path(d, "sans-visuels"))
             self.assertEqual(sorted(imgs), ["DP-0", "DP-2"])                       # jamais le playfield
             self.assertTrue(all(Path(v).name.startswith("paysage") for v in imgs.values()))
             self.assertEqual(sc.images_decor(mons, {"playfield": "HDMI-0"}, Path(d, "vide"), random.Random(1)), {})
@@ -613,9 +613,9 @@ class IdentifyXinerama(unittest.TestCase):
         # PINCABOS_INSTALLEUR_DECOR_ROLE_V1
         mons = [{"name": "HDMI-0"}, {"name": "DP-0"}, {"name": "DP-2"}, {"name": "DP-4"}]
         roles = {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}
-        self.assertEqual(sc.libelles_decor(mons, roles, {"backglass": "Backglass", "fulldmd": "Full DMD"}),
+        self.assertEqual(sc.libelles_decor(mons, roles, {"backglass": "Backglass", "fulldmd": "Full DMD"}, decor=Path("/nonexistent")),
                          {"DP-2": "BACKGLASS", "DP-0": "FULL DMD"})
-        self.assertEqual(sc.libelles_decor(mons, roles, None)["DP-0"], "FULL DMD")
+        self.assertEqual(sc.libelles_decor(mons, roles, None, decor=Path("/nonexistent"))["DP-0"], "FULL DMD")
         s = (INSTALLER / "screens.py").read_text(encoding="utf-8")
         self.assertIn('"--labels", json.dumps(etiquettes)', s)
         d = (INSTALLER / "decor.py").read_text(encoding="utf-8")
@@ -623,6 +623,33 @@ class IdentifyXinerama(unittest.TestCase):
         self.assertIn('ap.add_argument("--labels"', d)
         a = (INSTALLER / "app.py").read_text(encoding="utf-8")
         self.assertIn("pco_screens.lancer_decor(mons, roles, libelles=libelles)", a)
+
+    def test_visuels_par_role(self):
+        # PINCABOS_INSTALLEUR_DECOR_ROLES_V1 (Yann) : backglass, full DMD, topper recoivent leur visuel
+        import tempfile, random
+        mons = [{"name": "HDMI-0"}, {"name": "DP-0"}, {"name": "DP-2"}, {"name": "DP-4"}]
+        roles = {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}
+        with tempfile.TemporaryDirectory() as d:
+            g = Path(d, "galerie"); g.mkdir(); (g / "paysage0.png").write_bytes(b"x")
+            dec = Path(d, "decor"); dec.mkdir()
+            for r in ("backglass", "fulldmd", "topper"):
+                (dec / f"{r}.jpg").write_bytes(b"x")
+            imgs = sc.images_decor(mons, roles, g, random.Random(1), decor=dec)
+            self.assertEqual(Path(imgs["DP-2"]).name, "backglass.jpg")
+            self.assertEqual(Path(imgs["DP-0"]).name, "fulldmd.jpg")
+            self.assertEqual(Path(imgs["DP-4"]).name, "paysage0.png")     # sans role : galerie
+            self.assertNotIn("HDMI-0", imgs)
+            # le visuel nomme la dalle : plus d etiquette texte ; une dalle sans visuel la garde
+            self.assertEqual(sc.libelles_decor(mons, roles, None, decor=dec), {})
+            (dec / "fulldmd.jpg").unlink()
+            self.assertEqual(sc.libelles_decor(mons, roles, None, decor=dec), {"DP-0": "FULL DMD"})
+        for r in ("backglass", "fulldmd", "topper", "dmd"):
+            self.assertTrue((INSTALLER / "static/decor" / f"{r}.jpg").is_file(), r)
+        d = (INSTALLER / "dmd.py").read_text(encoding="utf-8")
+        self.assertIn('run(["image", str(visuel), str(int(secondes))]', d)
+        z = (Path(RACINE) / "opt/pincabos/tools/pincabos-zedmd").read_text(encoding="utf-8")
+        self.assertIn("def image(chemin, seconds):", z)
+        self.assertIn('load_image_frame(chemin, info.width, info.height, fit_mode="contain")', z)
 
     def test_bouton_inversion_et_i18n(self):
         w = (INSTALLER / "templates/wizard.html").read_text(encoding="utf-8")

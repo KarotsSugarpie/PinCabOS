@@ -93,7 +93,8 @@ class Validation(unittest.TestCase):
         self.assertTrue(r["ok"])
         self.assertEqual(appels[0][0], "set")
         self.assertEqual(json.loads(appels[0][1])["mode"], "usb")
-        self.assertEqual(appels[1], ["test", "2"])
+        # PINCABOS_INSTALLEUR_DECOR_ROLES_V1 : le visuel DMD de l assistant remplace la mire
+        self.assertEqual(appels[1][0], "image"); self.assertTrue(appels[1][1].endswith("/static/decor/dmd.jpg")); self.assertEqual(appels[1][2], "2")
         self.assertFalse(dm.tester({"type": "pin2dmd"}, run=run)["ok"])
 
 
