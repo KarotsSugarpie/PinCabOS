@@ -12,6 +12,8 @@
 #   iso.sh --etape 40      une seule etape (numero ou nom : 40, 40-payload)
 #   iso.sh --depuis 60     reprend a partir d une etape (les precedentes doivent avoir leur GO)
 #   iso.sh --jusqua 70     s arrete apres cette etape
+#   iso.sh --source DIR    photographie ce rootfs prepare (build-master.sh) au lieu du cab
+#                          courant : plus besoin d un cab source (PINCABOS_ISO_SOURCE_V1)
 #   --live accepte (compatibilite) ; --classic refuse (PINCABOS_ISO_MODELE_LIVE_V2)
 set -Eeuo pipefail
 
@@ -21,7 +23,7 @@ ETAPES_DIR="$PCO_ISO_SCRIPT_DIR/iso"
 [ -d "$ETAPES_DIR" ] || ETAPES_DIR="/opt/pincabos/script/iso"
 [ -f "$ETAPES_DIR/00-lib.sh" ] || { echo "ERROR: etapes absentes : $ETAPES_DIR"; exit 1; }
 
-SEULE=""; DEPUIS=""; JUSQUA=""; LISTE=0
+SEULE=""; DEPUIS=""; JUSQUA=""; LISTE=0; SOURCE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --live) ;;
@@ -30,7 +32,8 @@ while [ $# -gt 0 ]; do
     --etape) SEULE="${2:-}"; shift ;;
     --depuis) DEPUIS="${2:-}"; shift ;;
     --jusqua) JUSQUA="${2:-}"; shift ;;
-    -h|--help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --source) SOURCE="${2:-}"; shift ;;
+    -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "ERROR: argument inconnu : $1"; exit 1 ;;
   esac
   shift
@@ -52,6 +55,12 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
+# PINCABOS_ISO_SOURCE_V1 : la source, verifiee avant tout, transmise aux etapes
+if [ -n "$SOURCE" ]; then
+  SOURCE="$(readlink -f "$SOURCE" 2>/dev/null || printf '%s' "$SOURCE")"
+  [ -d "$SOURCE/opt/pincabos" ] || { echo "ERROR: --source $SOURCE : pas un rootfs PinCabOS (opt/pincabos absent)"; exit 1; }
+  export PCO_ISO_SOURCE="$SOURCE"
+fi
 # variables communes (WORK, LOG_DIR, ...) : la lib, sans journal ni trap ici
 PCO_ISO_LOG="" . "$ETAPES_DIR/00-lib.sh"
 # les marqueurs GO vivent hors de $WORK : l etape 10 efface $WORK (rm -rf), et c est normal
@@ -106,6 +115,7 @@ echo " PINCABOS — MASTER ISO BUILDER V8.1G ENGLISH"
 echo " Clean -> Payload -> ISO-ready -> Live installer -> Bootable ISO"
 echo "==============================================================="
 echo "ISO model: $PCO_ISO_MODEL"
+echo "Source: ${PCO_ISO_SOURCE:-/}"
 echo
 echo "Log:"
 echo "$LOG"

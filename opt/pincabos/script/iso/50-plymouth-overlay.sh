@@ -12,6 +12,6 @@ tar \
   --numeric-owner \
   -I 'zstd -T0 -10' \
   -cpf "$OVERLAY" \
-  -C / \
+  -C "$PCO_ISO_SOURCE" \
   usr/share/plymouth/themes/pincabos \
   etc/plymouth

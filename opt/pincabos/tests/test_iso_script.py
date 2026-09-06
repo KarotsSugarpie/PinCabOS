@@ -80,7 +80,7 @@ class PreferencesVpx(unittest.TestCase):
     def test_exclu_du_tar_neutralise_et_conserve(self):
         s = _texte()
         self.assertIn("--exclude='./home/pinball/.pincabos/vpx/VPinballX.ini'", s)
-        self.assertGreaterEqual(s.count('Path("/home/pinball/.pincabos/vpx")'), 1)
+        self.assertGreaterEqual(s.count('source_root / "home/pinball/.pincabos/vpx"'), 1)
         self.assertEqual(s.count('target / "home/pinball/.pincabos/vpx"'), 2)
         self.assertIn('"home/pinball/.pincabos/vpx/VPinballX.ini"', s)
 
