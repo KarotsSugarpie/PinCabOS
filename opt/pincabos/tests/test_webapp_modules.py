@@ -31,6 +31,7 @@ MODULES = {
     "disques": WEB / "pincabos_webapp_disques.py",
     "systeme": WEB / "pincabos_webapp_systeme.py",
     "admin_pages": WEB / "pincabos_webapp_admin_pages.py",
+    "alias": WEB / "pincabos_webapp_alias.py",
 }
 ROUTES = {
     "gpu": {
@@ -73,6 +74,10 @@ ROUTES = {
     },
     "systeme": {"/service-control", "/service-control/<service_key>/<action>", "/process-control/vpx/<action>"},
     "admin_pages": {"/admin/about-supporters/save", "/admin/version/save"},
+    "alias": {
+        "/wifi", "/screens", "/outputs", "/api/dof/manager/", "/external-disks", "/external-disks/",
+        "/import", "/import/", "/tables", "/tables/", "/api/menu/close-tab",
+    },
 }
 HELPERS = ("esc", "run_cmd", "shlex_quote", "service_status",
            "pincabos_meta", "pincabos_backup_config_file", "pincabos_write_json_with_meta", "get_ip",
@@ -215,6 +220,7 @@ class Decoupage(unittest.TestCase):
         i_disques = self.app.index("pco_disques_routes.register(app, page)")
         i_commander = self.app.index("pco_commander_routes.register(app, page)")
         i_export = self.app.index("pco_export_routes.register(app, page)")
+        i_alias = self.app.index("pco_alias_routes.register(app, page)")
         i_wrap = self.app.index("def _pco_dashboard_plus_final_install_wrapper")
         self.assertLess(i_page, i_reg)
         self.assertLess(i_reg, i_dof)
@@ -227,7 +233,8 @@ class Decoupage(unittest.TestCase):
         self.assertLess(i_import, i_disques)
         self.assertLess(i_disques, i_commander)
         self.assertLess(i_commander, i_export)
-        self.assertLess(i_export, i_wrap)
+        self.assertLess(i_export, i_alias)
+        self.assertLess(i_alias, i_wrap)
 
     def test_register_pose_page_et_le_blueprint(self):
         for cle, texte in self.textes.items():
@@ -261,6 +268,7 @@ class Chargement(unittest.TestCase):
             import pincabos_webapp_disques as disques
             import pincabos_webapp_systeme as systeme
             import pincabos_webapp_admin_pages as admin_pages
+            import pincabos_webapp_alias as alias
             app = flask.Flask("test")
             gpu.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dof.register(app, lambda t, b: f"<p>{t}</p>{b}")
@@ -273,6 +281,7 @@ class Chargement(unittest.TestCase):
             disques.register(app, lambda t, b: f"<p>{t}</p>{b}")
             systeme.register(app, lambda t, b: f"<p>{t}</p>{b}")
             admin_pages.register(app, lambda t, b: f"<p>{t}</p>{b}")
+            alias.register(app, lambda t, b: f"<p>{t}</p>{b}")
             regles = {r.rule for r in app.url_map.iter_rules()}
             for attendues in ROUTES.values():
                 self.assertTrue(attendues <= regles, attendues - regles)
@@ -287,6 +296,7 @@ class Chargement(unittest.TestCase):
             self.assertIn("disques.tools_external_disks", app.view_functions)
             self.assertIn("systeme.service_control", app.view_functions)
             self.assertIn("admin_pages.pincabos_admin_version_save", app.view_functions)
+            self.assertIn("alias.pincabos_legacy_tables_alias", app.view_functions)
             self.assertEqual(gpu.page("x", "y"), "<p>x</p>y")  # page posée par register
             self.assertEqual(dof.page("x", "y"), "<p>x</p>y")
         finally:
