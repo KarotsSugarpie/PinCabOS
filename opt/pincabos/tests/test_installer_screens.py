@@ -473,7 +473,7 @@ class Assistant(unittest.TestCase):
         src = Path(RACINE, "opt/pincabos/installer-gui/identify.py").read_text(encoding="utf-8")
         self.assertNotIn("fullscreen_on_monitor", src)
         self.assertIn('TITRE = "pincabos-identify-{n}"', src)
-        self.assertIn("win.set_title(TITRE.format(n=i + 1))", src)
+        self.assertIn("numero_openbox((geo.x, geo.y, geo.width, geo.height), heads, i + 1)", src)
         rc = Path(RACINE, "opt/pincabos/installer-gui/kiosk-rc.xml").read_text(encoding="utf-8")
         for n in (1, 2, 8):
             self.assertIn(f'<application title="pincabos-identify-{n}">', rc)
