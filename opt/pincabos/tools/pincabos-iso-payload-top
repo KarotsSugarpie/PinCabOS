@@ -27,6 +27,11 @@ while [ $# -gt 0 ]; do
 done
 [ -d "$ROOT" ] || { echo "NOGO: racine introuvable : $ROOT" >&2; exit 1; }
 [ -f "$ISO" ] || { echo "NOGO: iso.sh introuvable : $ISO" >&2; exit 1; }
+# PINCABOS_ISO_ETAPES_V1 : iso.sh est un orchestrateur, la commande tar vit dans
+# l etape 40 (opt/pincabos/script/iso/40-payload.sh) ; on y va si iso.sh ne porte pas le marqueur.
+if ! grep -q "PINCABOS_ISO_LEAN_EXCLUSIONS_V2" "$ISO" && [ -f "$(dirname "$ISO")/iso/40-payload.sh" ]; then
+    ISO="$(dirname "$ISO")/iso/40-payload.sh"
+fi
 
 # Les exclusions vivent entre le marqueur LEAN et la ligne de compression.
 debut=$(grep -n "PINCABOS_ISO_LEAN_EXCLUSIONS_V2" "$ISO" | head -1 | cut -d: -f1)
