@@ -1851,39 +1851,6 @@ from pincabos_webapp_export import (  # noqa: E402
 # Moved to modular route file by PinCabOS refactor (original lines 20289-20293).
 
 
-# Stage5A.3: route legacy retirée pour éviter doublon avec pcos_update_api_reboot.
-def pcos_update_clean_reboot():
-    import os
-    import subprocess
-    import time
-    from flask import jsonify
-
-    unit = "pincabos-reboot-" + str(int(time.time()))
-
-    cmd = [
-        "/usr/bin/systemd-run",
-        "--unit", unit,
-        "--collect",
-        "/bin/bash",
-        "-lc",
-        "sleep 1; /usr/bin/systemctl reboot"
-    ]
-
-    if os.geteuid() != 0:
-        cmd = ["/usr/bin/sudo", "-n"] + cmd
-
-    try:
-        subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-        return jsonify({"ok": True, "unit": unit, "message": "Redémarrage demandé"})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
 # --- PinCabOS update channel check patch ---
 # Moved to modular route file by PinCabOS refactor (original lines 20393-20476).
 
@@ -1902,99 +1869,10 @@ def pcos_update_clean_reboot():
 # Compatibilité routes/menu après nettoyage Alpha 1.1.
 # Ces routes ne remplacent pas les fonctions existantes; elles évitent les 404 de boutons/menu.
 
-@app.route("/wifi")
-def pincabos_alias_wifi():
-    return redirect("/network", code=302)
+# PINCABOS_WEBAPP_MODULES_V1 : alias historiques et fermeture d'onglet dans leur module.
+import pincabos_webapp_alias as pco_alias_routes
 
-@app.route("/screens")
-def pincabos_alias_screens():
-    # La vraie gestion écrans est maintenant dans GPU / Screens.
-    try:
-        return redirect("/gpu/screens", code=302)
-    except Exception:
-        return redirect("/gpu", code=302)
-
-@app.route("/outputs")
-def pincabos_alias_outputs():
-    # Outputs = ancien DOF côté menu.
-    return redirect("/dof", code=302)
-
-# Moved to modular route file by PinCabOS refactor (original lines 20663-20674).
-
-
-@app.route("/api/dof/manager/")
-def pincabos_api_dof_manager_slash_alias():
-    # Compatibilité avec fetch('/api/dof/manager/').
-    return jsonify({"ok": True, "status": "available", "message": "DOF manager route alias active"})
-
-# === PINCABOS LEGACY ROUTE ALIASES - BGFX MIGRATION ===
-# Created by Karots Sugarpie
-# Purpose:
-#   Keep Alpha15/old menu URLs working after Alpha16 tools route migration.
-# Safety:
-#   Redirect-only aliases. No filesystem or config mutation.
-
-@app.route("/external-disks")
-@app.route("/external-disks/")
-def pincabos_legacy_external_disks_alias():
-    return redirect("/tools/external-disks", code=302)
-
-@app.route("/import")
-@app.route("/import/")
-def pincabos_legacy_import_alias():
-    return redirect("/tools", code=302)
-
-@app.route("/tables")
-@app.route("/tables/")
-def pincabos_legacy_tables_alias():
-    return redirect("/tools", code=302)
-
-# === PINCABOS LEGACY ROUTE ALIASES - END ===
-
-
-# === PINCABOS MENU CLOSE ACTIVE CHROME TAB START ===
-@app.route("/api/menu/close-tab", methods=["POST"])
-def pincabos_menu_close_tab_api():
-    import os
-    import subprocess
-    from flask import jsonify
-
-    helper = "/opt/pincabos/bin/pincabos-close-active-chrome-tab.sh"
-
-    if not os.path.exists(helper):
-        return jsonify({"ok": False, "error": "helper_missing", "helper": helper}), 500
-
-    env = os.environ.copy()
-    env.setdefault("DISPLAY", ":0")
-
-    # Best effort Xauthority discovery for the pinball desktop session.
-    for xa in (
-        "/home/pinball/.Xauthority",
-        "/var/run/lightdm/root/:0",
-        "/run/user/1000/gdm/Xauthority",
-        "/run/user/1000/Xauthority",
-    ):
-        if os.path.exists(xa):
-            env.setdefault("XAUTHORITY", xa)
-            break
-
-    try:
-        proc = subprocess.run(
-            [helper],
-            env=env,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=3,
-        )
-        return jsonify({
-            "ok": proc.returncode == 0,
-            "returncode": proc.returncode,
-            "output": proc.stdout[-2000:],
-        }), (200 if proc.returncode == 0 else 500)
-    except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 500
-# === PINCABOS MENU CLOSE ACTIVE CHROME TAB END ===
+pco_alias_routes.register(app, page)
 
 
 # PinCabOS dashboard-plus final display correction
