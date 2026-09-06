@@ -329,7 +329,7 @@ class VoileEcrans(unittest.TestCase):
     def test_geometries(self):
         s = json.dumps({"playfield": {"geometry": "3840x2160+0+0"}, "backglass": {"geometry": "1920x1080+3840+0"},
                         "fulldmd": {"geometry": "1920x1080+5760+0"}, "topper": None})
-        self.assertEqual(self.ve.geometries(s), [(0, 0, 3840, 2160), (3840, 0, 1920, 1080), (5760, 0, 1920, 1080)])
+        self.assertEqual(self.ve.geometries(s), [('playfield', 0, 0, 3840, 2160), ('backglass', 3840, 0, 1920, 1080), ('fulldmd', 5760, 0, 1920, 1080)])
         self.assertEqual(self.ve.geometries("pas du json"), [])
         self.assertEqual(self.ve.geometries(None), [])
 

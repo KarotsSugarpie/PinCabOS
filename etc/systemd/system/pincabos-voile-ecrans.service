@@ -1,5 +1,5 @@
 [Unit]
-Description=PinCabOS - black veil over the screens until the frontend has painted
+Description=PinCabOS - splash visuals kept on the screens until the frontend has painted
 Documentation=https://pincabos.cc/
 # PINCABOS_VOILE_ECRANS_V1 : Chromium peint blanc avant son premier rendu
 ConditionKernelCommandLine=!pincabos.installer
