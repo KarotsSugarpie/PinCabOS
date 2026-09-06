@@ -35,7 +35,11 @@ FICHIERS_INSTALLATEUR = (
 
 
 def texte_installateur():
-    return "\n".join(open(os.path.join(RACINE, rel), encoding="utf-8").read() for rel in FICHIERS_INSTALLATEUR)
+    # PINCABOS_OUTILS_CIBLE_V1 : les outils Python appliques a la cible par le helper sont des fichiers (tools/cible/)
+    import glob
+    outils = sorted(glob.glob(os.path.join(RACINE, "opt/pincabos/tools/cible", "*.py")))
+    return "\n".join(open(chemin, encoding="utf-8").read() for chemin in
+                     [os.path.join(RACINE, rel) for rel in FICHIERS_INSTALLATEUR] + outils)
 
 
 def texte_fichier_livre(nom):
