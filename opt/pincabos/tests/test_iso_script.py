@@ -286,3 +286,10 @@ class FichiersDuDepotSurLaCible(unittest.TestCase):
         dropin = lire("etc/systemd/system/pincabos-vpinfe.service.d/90-pincabos-iso-start.conf")
         self.assertIn("display-manager.service network.target pincabos-screen-topology-boot.service", dropin)
         self.assertIn("PermitRootLogin no", lire("etc/ssh/sshd_config.d/00-pincabos-security.conf"))
+
+    def test_le_drop_in_iso_start_survit_au_retrait_des_drop_ins_herites(self):
+        # le helper retire les anciens drop-ins VPinFE (screen|display|topology|xrandr|iso-start) ; le courant est garde
+        helper = texte_fichier_livre("pincabos-install-payload")
+        i = helper.index('if [ "$dropin_name" = "90-pincabos-iso-start.conf" ]; then')
+        self.assertLess(i, helper.index('=~ (screen|display|topology|xrandr|iso-start)'))
+        self.assertIn("continue", helper[i:i + 120])

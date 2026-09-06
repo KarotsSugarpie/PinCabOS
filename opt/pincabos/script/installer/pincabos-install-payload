@@ -638,6 +638,10 @@ if [ -d "$VPINFE_DROPIN_DIR" ]; then
   while IFS= read -r -d '' dropin; do
     dropin_name="$(basename "$dropin")"
 
+    # PINCABOS_CIBLE_FICHIERS_DU_DEPOT_V1 : le drop-in courant vient du squashfs (depot), on le garde
+    if [ "$dropin_name" = "90-pincabos-iso-start.conf" ]; then
+      continue
+    fi
     if [[ "$dropin_name" =~ (screen|display|topology|xrandr|iso-start) ]] || \
        grep -Eqi \
          'pincabos-display-role|pincabos-screen-topology\.service|(^|[[:space:]])xrandr([[:space:]]|$)|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
