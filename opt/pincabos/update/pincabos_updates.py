@@ -185,6 +185,9 @@ def sha256(path):
 # les cabinets encore en 3.43 ou moins.
 PENDING_PREFIXES = (
     'opt/pincabos/launchers/',
+    # PINCABOS_MODELES_JOUEUR_V1 (06/09/2026) : modeles du compte du joueur ;
+    # l ISO les porte des maintenant, l OTA a la release suivante.
+    'opt/pincabos/templates/',
     # PINCABOS_SPLASH_FROM_SCREENS_V3 : 'opt/pincabos/media/splash/' a attendu ici
     # en 3.69 ; le parc connait le prefixe depuis, les visuels partent maintenant.
 )

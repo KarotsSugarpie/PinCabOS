@@ -7,6 +7,9 @@
 set -u
 FLAGS=/opt/pincabos/flags
 T=/opt/pincabos/tools
+# PINCABOS_MODELES_JOUEUR_V1 : complete le compte du joueur avec les modeles
+# manquants (jamais d ecrasement) avant que le son et le DOF n ecrivent dedans.
+[ -f "$T/pincabos_home_templates.py" ] && python3 "$T/pincabos_home_templates.py" apply || true
 if [ -f "$FLAGS/dof-installer.pending" ]; then
     if python3 "$T/pincabos-dof" apply-firstboot; then rm -f "$FLAGS/dof-installer.pending"; fi
 fi
