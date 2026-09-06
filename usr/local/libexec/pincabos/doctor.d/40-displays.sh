@@ -4,7 +4,9 @@ TOPOLOGY_SERVICE="pincabos-screen-topology-boot.service"
 SCREENS_JSON="/opt/pincabos/config/screens/screens.json"
 
 if pco_service_exists "$TOPOLOGY_SERVICE"; then
-  if pco_repairing; then
+  # PINCABOS_DOCTOR_MENAGEMENT_V1 : VPinFE exige (Requires) cette unite ; la redemarrer
+  # coupe le frontend et la table en cours. Une topologie active n'est pas touchee.
+  if pco_repairing && ! pco_service_active "$TOPOLOGY_SERVICE" && ! pco_partie_en_cours; then
     systemctl restart "$TOPOLOGY_SERVICE" || true
   fi
 
