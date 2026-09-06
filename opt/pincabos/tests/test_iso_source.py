@@ -67,7 +67,7 @@ class Source(unittest.TestCase):
         self.assertIn('install -m 755 "$SRC"/usr/local/sbin/pincabos-installer-dispatch', s80)
         self.assertIn('"$SRC"/etc/systemd/system/pincabos-gui-wizard.service', s80)
         for l in s80.splitlines():
-            if re.match(r"^\s*(cp|install) ", l) and "chroot" not in l:
+            if re.match(r"^\s*(cp|install) ", l) and "chroot" not in l and "resolv.conf" not in l:   # resolv.conf : celui de l hote, par nature
                 self.assertNotRegex(l, r"(cp|install)( -[-a-zA-Z0-9 ]+)? /(usr|etc|opt|boot|lib)/", l)
 
     def test_orchestrateur_source(self):
