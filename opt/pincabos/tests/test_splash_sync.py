@@ -190,6 +190,14 @@ class Theme(unittest.TestCase):
         self.assertEqual(t.count("{"), t.count("}"))
         self.assertNotIn("{{", t)
 
+    def test_variables_du_voile_declarees_au_niveau_global(self):
+        # PINCABOS_SPLASH_GLOBALES_V1 : une variable assignee d abord dans une fonction est locale
+        # (Plymouth script) ; le voile du playfield lisait des NULL et n etait jamais pose.
+        t = ss.theme(ECRANS_YANN, 0, self.IMAGES)
+        tete = t.split("fun placer()")[0]
+        for v in ("pf_sw", "pf_sh", "pf_iw", "pf_ih", "pf_ox", "pf_oy", "bar_width", "bar_lx", "bar_ly", "sw", "sh"):
+            self.assertRegex(tete, rf"(^|\n|; ){v} = 0;", v)
+
     def test_barre_a_vitesse_constante_sans_temporisation(self):
         # PINCABOS_SPLASH_BARRE_TEMPO_V2 : plus de tempo du splash (Yann 06/09) ; barre pleine en 8 s,
         # ou plus vite si Plymouth annonce plus avance ; jamais en arriere.

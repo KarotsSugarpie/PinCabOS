@@ -475,6 +475,13 @@ pf_place = 0;
 n_places = 0;
 n_total = 0;
 bar_height = 8;
+# PINCABOS_SPLASH_GLOBALES_V1 : dans le script Plymouth, une variable assignee pour la
+# premiere fois dans une fonction est LOCALE. Tout ce que placer() et geometrie_barre()
+# calculent pour poser_voile() doit exister ici, au niveau global (cab de Yann, 4.29 :
+# barre du playfield pleine des le depart ; reproduit sur VM).
+pf_sw = 0; pf_sh = 0; pf_iw = 0; pf_ih = 0; pf_ox = 0; pf_oy = 0;
+sw = 0; sh = 0; lw = 0; lh = 0; bw = 0; bh = 0;
+bar_width = 0; bar_lx = 0; bar_ly = 0;
 
 fun placer() {{
     n = 0;
