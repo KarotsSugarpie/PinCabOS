@@ -361,7 +361,7 @@ class PageEcran(unittest.TestCase):
         self.scr.CFG_FILE = Path(self.tmp) / "screens.json"
         self.scr.VPINFE_INI = Path(self.tmp) / "vpinfe.ini"
         self.scr.xrandr_query = lambda: QUERY
-        shutil.copy(Path(RACINE) / "home/pinball/.config/vpinfe/vpinfe.ini", self.scr.VPINFE_INI)
+        shutil.copy(Path(RACINE) / "opt/pincabos/templates/home/.config/vpinfe/vpinfe.ini", self.scr.VPINFE_INI)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)

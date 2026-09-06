@@ -287,3 +287,21 @@
 /home/pinball/.local/share/applications/
 /home/pinball/.config/mimeapps.list
 /home/pinball/.vpinball/Cache/
+
+# ------------------------------------------------------------
+# PINCABOS_MODELES_JOUEUR_V1 (06/09/2026) : les fichiers de config du
+# joueur sont des modeles sous /opt/pincabos/templates/home. Dans le
+# compte ne restent suivis que ce que l'OTA livre a chaud :
+# .config/openbox/autostart et .config/vpinfe/themes/PinCabOS.
+# ------------------------------------------------------------
+/home/pinball/.config/*
+!/home/pinball/.config/openbox/
+/home/pinball/.config/openbox/*
+!/home/pinball/.config/openbox/autostart
+!/home/pinball/.config/vpinfe/
+/home/pinball/.config/vpinfe/*
+!/home/pinball/.config/vpinfe/themes/
+/home/pinball/.config/vpinfe/themes/*
+!/home/pinball/.config/vpinfe/themes/PinCabOS/
+/home/pinball/.local/
+/home/pinball/.vpinball/

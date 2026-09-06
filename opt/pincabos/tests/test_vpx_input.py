@@ -10,7 +10,7 @@ from _charge import charger
 m = charger("opt/pincabos/tools/pincabos_vpx_input.py", "pco_vpx_input")
 
 REPO = Path(__file__).resolve().parents[3]
-REF_INI = REPO / "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+REF_INI = REPO / "opt/pincabos/templates/home/.local/share/VPinballX/10.8/VPinballX.ini"
 DUDES = "SDLJoy_0300a1eb8a2e00006f10000011010000_1"
 
 
@@ -234,7 +234,7 @@ class Vpinfe(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         self.ini = Path(self.tmp) / "vpinfe.ini"
-        shutil.copy(REPO / "home/pinball/.config/vpinfe/vpinfe.ini", self.ini)
+        shutil.copy(REPO / "opt/pincabos/templates/home/.config/vpinfe/vpinfe.ini", self.ini)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)

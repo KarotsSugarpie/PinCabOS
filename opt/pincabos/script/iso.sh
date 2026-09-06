@@ -5379,6 +5379,23 @@ ensure_target_vpx_link() {
     fi
 }
 
+apply_target_home_templates() {
+    # PINCABOS_MODELES_JOUEUR_V1 : ce que PinCabOS attend dans le compte du joueur
+    # (vpinfe.ini, bases de depart, theme Revolution, tableau de bord, unites
+    # PipeWire, ini VPX de reference et DOF, gamecontrollerdb) vit dans
+    # /opt/pincabos/templates/home et n est plus porte par l image du compte.
+    # Pose ce qui manque, n ecrase jamais un fichier deja la (mise a jour).
+    local outil="$TARGET/opt/pincabos/tools/pincabos_home_templates.py"
+    [ -f "$outil" ] || { pco_warn "player templates tool missing in the image"; return 0; }
+    echo
+    pco_step "Placing PinCabOS player templates in the target account"
+    if python3 "$outil" apply --root "$TARGET"; then
+        pco_go "player templates placed (existing files kept)"
+    else
+        pco_warn "player templates: see messages above"
+    fi
+}
+
 apply_target_identity() {
     echo
     pco_step "Applying PinCabOS identity to installed system (os-release, issue, GRUB_DISTRIBUTOR)"
@@ -6040,6 +6057,7 @@ install_payload() {
   apply_target_regional
   apply_target_orientation
   ensure_target_vpx_link
+  apply_target_home_templates
   apply_target_identity
   apply_target_screens
   apply_target_network
