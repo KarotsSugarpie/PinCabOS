@@ -39,21 +39,14 @@ class MenuGrub(unittest.TestCase):
         self.assertIn("pincabos.installer=gui", bloc)
         self.assertIn("systemd.unit=pincabos-gui-install.target", bloc)
 
-    def test_iso_classique_une_seule_entree(self):
-        bloc = bloc_grub(ISO, "PINCABOS_GRUB")
-        self.assertEqual(entrees(bloc), ["Install PinCabOS"])
-        self.assertIn("pincabos.installer=gui", bloc)
-        # la politique de boot d'iso.sh exige multi-user.target sur chaque entree
-        self.assertIn("systemd.unit=multi-user.target", bloc)
-
     def test_ni_live_ni_texte_ni_secours(self):
-        for script, marqueur in ((ISO_LIVE, "GRUBCFG"), (ISO, "PINCABOS_GRUB")):
+        for script, marqueur in ((ISO_LIVE, "GRUBCFG"),):  # le menu GRUB de l ISO vit dans iso-live.sh
             bloc = bloc_grub(script, marqueur)
             for interdit in ("installer=tui", "nomodeset", "pincabos.rescue", "Try ", "text", "safe", "rescue"):
                 self.assertNotIn(interdit, bloc, script.name + " : " + interdit)
 
     def test_delai_court(self):
-        for script, marqueur in ((ISO_LIVE, "GRUBCFG"), (ISO, "PINCABOS_GRUB")):
+        for script, marqueur in ((ISO_LIVE, "GRUBCFG"),):  # le menu GRUB de l ISO vit dans iso-live.sh
             bloc = bloc_grub(script, marqueur)
             m = re.search(r"set timeout=(\d+)", bloc)
             self.assertTrue(m and int(m.group(1)) <= 5, script.name + " : delai GRUB trop long")
