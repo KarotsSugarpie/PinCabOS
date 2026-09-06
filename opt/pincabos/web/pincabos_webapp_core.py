@@ -16,10 +16,14 @@ Ce module ne lance rien au moment de l'import.
 from __future__ import annotations
 
 import html
+import json
 import os
+import re
 import shlex
+import shutil
 import subprocess
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Mapping, Sequence
 
@@ -456,3 +460,39 @@ def shlex_quote(value):
 
 def service_status(name):
     return pco_service_status(name)
+
+
+# ---- Écritures de configuration tracées (sauvegarde + méta), partagées (PINCABOS_WEBAPP_MODULES_V1) ----
+
+def pincabos_meta(function_name):
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return {
+        "modified_at": stamp,
+        "modified_by": "PinCabOS",
+        "function": function_name
+    }
+
+
+def pincabos_backup_config_file(src, function_name="config"):
+    src = Path(src)
+    if not src.exists():
+        return None
+
+    safe_function = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(function_name)).strip("_") or "config"
+    backup_dir = Path("/opt/pincabos/backups/config-writes") / safe_function
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    dst = backup_dir / f"{src.name}.backup-{stamp}"
+    shutil.copy2(src, dst)
+    return dst
+
+
+def pincabos_write_json_with_meta(path, data, function_name):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if isinstance(data, dict):
+        data["_pincabos_meta"] = pincabos_meta(function_name)
+
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
