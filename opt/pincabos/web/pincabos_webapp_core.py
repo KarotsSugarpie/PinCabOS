@@ -510,3 +510,48 @@ def get_ip():
         return ip
     except Exception:
         return "inconnue"
+
+
+# ---- Chemins VPinFE / PinCabOS utilisés par les outils (Commander, export) (PINCABOS_WEBAPP_MODULES_V1) ----
+
+def pincabos_get_vpinfe_paths_for_tools():
+    """
+    Chemins utilisés par VPinFE / PinCabOS.
+    On lit tablerootdir si disponible, sinon on utilise le chemin PinCabOS standard.
+    """
+    from pathlib import Path
+
+    cfg_path = pincabos_vpx_ini_path()
+
+    result = {
+        "config": str(cfg_path),
+        "tables": "/home/pinball/Tables",
+        "roms": "/home/pinball/.vpinball/pinmame/roms",
+        "altcolor": "/home/pinball/.vpinball/pinmame/altcolor",
+        "altsound": "/home/pinball/.vpinball/pinmame/altsound",
+        "pupvideos": "/home/pinball/.vpinball/pupvideos",
+        "ultradmd": "/home/pinball/.vpinball/ultradmd",
+        "exports": "/home/pinball/Exports",
+    }
+
+    if cfg_path.exists():
+        try:
+            for line in cfg_path.read_text(errors="replace").splitlines():
+                if "=" not in line:
+                    continue
+
+                key, value = [x.strip() for x in line.split("=", 1)]
+
+                if key.lower() == "tablerootdir" and value:
+                    result["tables"] = value
+        except Exception:
+            pass
+
+    tables = Path(result["tables"])
+    root = tables.parent if tables.exists() else Path("/home/pinball")
+
+    result["roms"] = str(root / "PinMAME" / "roms")
+    result["altcolor"] = str(root / "PinMAME" / "altcolor")
+    result["altsound"] = str(root / "PinMAME" / "altsound")
+
+    return result

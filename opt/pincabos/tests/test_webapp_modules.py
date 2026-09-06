@@ -25,6 +25,7 @@ MODULES = {
     "dmd": WEB / "pincabos_webapp_dmd.py",
     "console": WEB / "pincabos_webapp_console.py",
     "vpxball": WEB / "pincabos_webapp_vpxball.py",
+    "commander": WEB / "pincabos_webapp_commander.py",
 }
 ROUTES = {
     "gpu": {
@@ -51,9 +52,15 @@ ROUTES = {
         "/tools/vpx-ball-cabinet/validate", "/tools/vpx-ball-cabinet/apply", "/tools/vpx-ball-simple/apply",
         "/userdata/UserBalls/<kind>/<path:filename>",
     },
+    "commander": {
+        "/tools/commander", "/tools/commander/download", "/tools/commander/duplicate", "/tools/commander/extract-zip", "/tools/commander/archive-selection", "/tools/commander/info",
+        "/tools/commander/create-folder", "/tools/commander/upload", "/tools/commander/extract-script", "/tools/commander/delete", "/tools/commander/rename", "/tools/commander/clipboard",
+        "/tools/commander/paste", "/tools/commander/live", "/tools/commander/live/file", "/tools/commander/live/save",
+    },
 }
 HELPERS = ("esc", "run_cmd", "shlex_quote", "service_status",
-           "pincabos_meta", "pincabos_backup_config_file", "pincabos_write_json_with_meta", "get_ip")
+           "pincabos_meta", "pincabos_backup_config_file", "pincabos_write_json_with_meta", "get_ip",
+           "pincabos_get_vpinfe_paths_for_tools")
 
 
 def routes_de(texte, decorateur):
@@ -165,13 +172,15 @@ class Decoupage(unittest.TestCase):
         i_dmd = self.app.index("pco_dmd_routes.register(app, page)")
         i_console = self.app.index("pco_console_routes.register(app, page)")
         i_vpxball = self.app.index("pco_vpxball_routes.register(app, page)")
+        i_commander = self.app.index("pco_commander_routes.register(app, page)")
         i_wrap = self.app.index("def _pco_dashboard_plus_final_install_wrapper")
         self.assertLess(i_page, i_reg)
         self.assertLess(i_reg, i_dof)
         self.assertLess(i_dof, i_dmd)
         self.assertLess(i_dmd, i_console)
         self.assertLess(i_console, i_vpxball)
-        self.assertLess(i_vpxball, i_wrap)
+        self.assertLess(i_vpxball, i_commander)
+        self.assertLess(i_commander, i_wrap)
 
     def test_register_pose_page_et_le_blueprint(self):
         for cle, texte in self.textes.items():
@@ -199,12 +208,14 @@ class Chargement(unittest.TestCase):
             import pincabos_webapp_dmd as dmd
             import pincabos_webapp_console as console
             import pincabos_webapp_vpxball as vpxball
+            import pincabos_webapp_commander as commander
             app = flask.Flask("test")
             gpu.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dof.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dmd.register(app, lambda t, b: f"<p>{t}</p>{b}")
             console.register(app, lambda t, b: f"<p>{t}</p>{b}")
             vpxball.register(app, lambda t, b: f"<p>{t}</p>{b}")
+            commander.register(app, lambda t, b: f"<p>{t}</p>{b}")
             regles = {r.rule for r in app.url_map.iter_rules()}
             for attendues in ROUTES.values():
                 self.assertTrue(attendues <= regles, attendues - regles)
@@ -213,6 +224,7 @@ class Chargement(unittest.TestCase):
             self.assertIn("dmd.fulldmd_page", app.view_functions)
             self.assertIn("console.console_page", app.view_functions)
             self.assertIn("vpxball.tools_vpx_ball_cabinet", app.view_functions)
+            self.assertIn("commander.tools_commander", app.view_functions)
             self.assertEqual(gpu.page("x", "y"), "<p>x</p>y")  # page posée par register
             self.assertEqual(dof.page("x", "y"), "<p>x</p>y")
         finally:
