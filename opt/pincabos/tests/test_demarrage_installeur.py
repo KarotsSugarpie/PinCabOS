@@ -86,7 +86,7 @@ class PlusDeRepliTexte(unittest.TestCase):
         self.assertNotIn("install -m 755 /usr/local/sbin/pincabos-gui-fallback", texte)
         self.assertNotIn("cp /etc/systemd/system/pincabos-tui-fallback.service", texte)
         self.assertNotIn("ExecStart=/usr/local/sbin/pincabos-live-installer-console", texte)
-        self.assertIn("install -m 755 /usr/local/sbin/pincabos-installer-failure", texte)
+        self.assertIn('install -m 755 "$SRC"/usr/local/sbin/pincabos-installer-failure', texte)   # PINCABOS_ISO_SOURCE_V1 : depuis la source
 
     def test_kiosque_relance_puis_panne_franche(self):
         unite = KIOSK.read_text(encoding="utf-8")

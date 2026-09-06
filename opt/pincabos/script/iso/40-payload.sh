@@ -80,6 +80,9 @@ roots = [
     source_root / "home/pinball/.pincabos/vpx",
     source_root / "home/pinball/.local/share/VPinballX",
     source_root / "home/pinball/.vpinball",
+    # PINCABOS_ISO_AUDIO_PRIVACY_MODELE_V1 : le modele du compte du joueur (#204) est
+    # un VPinballX.ini comme les autres ; la validation refusait l archive.
+    source_root / "opt/pincabos/templates/home/.local/share/VPinballX",
 ]
 
 for root in roots:
@@ -337,6 +340,7 @@ tar \
   --exclude='./home/pinball/.local/share/VPinballX/*/VPinballX.ini' \
   --exclude='./home/pinball/.vpinball/VPinballX.ini' \
   --exclude='./home/pinball/.pincabos/vpx/VPinballX.ini' \
+  --exclude='./opt/pincabos/templates/home/.local/share/VPinballX/*/VPinballX.ini' \
   --exclude='./opt/pincabos/config/screens/screens.json' \
   --exclude='./opt/pincabos/config/screens/bindings.json' \
   --exclude='./opt/pincabos/config/screens/display-bindings.json' \

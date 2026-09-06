@@ -41,6 +41,45 @@ class Source(unittest.TestCase):
                 self.assertNotRegex(l, r"-C / ", f"{e} : {l}")
                 self.assertNotRegex(l, r"(^|\s)(test|ls|cat|find) (-[a-z]+ )*/(boot|lib|etc|usr)\b", f"{e} : {l}")
 
+    def test_modele_vpx_sans_carte_audio(self):
+        # PINCABOS_ISO_AUDIO_PRIVACY_MODELE_V1 : execution reelle du lot B sur VM : l archive refusee
+        # a cause du modele de #204 (SoundDevice = Built-in Audio Analog Stereo)
+        m = (R / "opt/pincabos/templates/home/.local/share/VPinballX/10.8/VPinballX.ini").read_text(encoding="utf-8", errors="replace")
+        for l in m.splitlines():
+            if re.match(r"^\s*(SoundDevice|SoundDeviceBG)\s*=", l):
+                self.assertEqual(l.split("=", 1)[1].strip(), "", l)
+        s40 = (D / "40-payload.sh").read_text(encoding="utf-8")
+        self.assertIn('source_root / "opt/pincabos/templates/home/.local/share/VPinballX"', s40)
+        self.assertIn("--exclude='./opt/pincabos/templates/home/.local/share/VPinballX/*/VPinballX.ini'", s40)
+
+    def test_point_de_montage_du_cache_apt(self):
+        # PINCABOS_ISO_APT_CACHE_MOUNTPOINT_V1 : var/cache/* est exclu du payload
+        s80 = (D / "80-live-rootfs.sh").read_text(encoding="utf-8")
+        self.assertLess(s80.index('mkdir -p "$ROOTFS_DIR/var/cache/apt/archives/partial"'),
+                        s80.index('mount --bind "$CACHE_DIR/apt-archives"'))
+
+    def test_etape_80_copie_depuis_la_source(self):
+        # lot D (execution reelle sur le banc) : theme Plymouth, plugin script.so, dispatch/kiosque/unites
+        # du live etaient copies depuis l hote (« cannot stat /usr/share/plymouth/themes/pincabos »)
+        s80 = (D / "80-live-rootfs.sh").read_text(encoding="utf-8")
+        self.assertIn('cp -a "$SRC/usr/share/plymouth/themes/pincabos"', s80)
+        self.assertIn('cp "$SRC/$PLY_LIB/script.so"', s80)
+        self.assertIn('install -m 755 "$SRC"/usr/local/sbin/pincabos-installer-dispatch', s80)
+        self.assertIn('"$SRC"/etc/systemd/system/pincabos-gui-wizard.service', s80)
+        for l in s80.splitlines():
+            if re.match(r"^\s*(cp|install) ", l) and "chroot" not in l and "resolv.conf" not in l:   # resolv.conf : celui de l hote, par nature
+                self.assertNotRegex(l, r"(cp|install)( -[-a-zA-Z0-9 ]+)? /(usr|etc|opt|boot|lib)/", l)
+
+    def test_grep_sans_sigpipe(self):
+        # PINCABOS_ISO_GREP_SANS_SIGPIPE_V1 : jamais `lsinitramfs | grep -q` ni `tar -tf | grep -q` sous pipefail
+        for e in ("60-validation-payload", "80-live-rootfs"):
+            for l in (D / f"{e}.sh").read_text(encoding="utf-8").splitlines():
+                if not l.lstrip().startswith("#"):
+                    self.assertNotRegex(l, r"(lsinitramfs|tar -I zstd -tf)[^|]*\| *grep -[a-zA-Z]*q", f"{e} : {l}")
+        self.assertIn('INITRD_LISTE="$(lsinitramfs "$ISO_DIR/casper/initrd")"', (D / "80-live-rootfs.sh").read_text(encoding="utf-8"))
+        self.assertIn('ARCHIVE_LISTE="$(tar -I zstd -tf "$ARCHIVE")"', (D / "60-validation-payload.sh").read_text(encoding="utf-8"))
+        self.assertEqual((D / "60-validation-payload.sh").read_text(encoding="utf-8").count('<<<"$ARCHIVE_LISTE"'), 5)
+
     def test_orchestrateur_source(self):
         s = ISO.read_text(encoding="utf-8")
         self.assertIn('--source) SOURCE="${2:-}"; shift ;;', s)
