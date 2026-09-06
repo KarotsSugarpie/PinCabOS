@@ -29,6 +29,7 @@ MODULES = {
     "import": WEB / "pincabos_webapp_import.py",
     "export": WEB / "pincabos_webapp_export.py",
     "disques": WEB / "pincabos_webapp_disques.py",
+    "systeme": WEB / "pincabos_webapp_systeme.py",
 }
 ROUTES = {
     "gpu": {
@@ -69,6 +70,7 @@ ROUTES = {
         "/tools/external-disks", "/tools/external-disks/smb/detect", "/tools/external-disks/smb/mount", "/tools/external-disks/smb/unmount",
         "/tools/external-disks/smb/disconnect", "/tools/external-disks/usb/mount", "/tools/external-disks/usb/unmount",
     },
+    "systeme": {"/service-control", "/service-control/<service_key>/<action>", "/process-control/vpx/<action>"},
 }
 HELPERS = ("esc", "run_cmd", "shlex_quote", "service_status",
            "pincabos_meta", "pincabos_backup_config_file", "pincabos_write_json_with_meta", "get_ip",
@@ -199,6 +201,7 @@ class Decoupage(unittest.TestCase):
         i_page = self.app.index("\ndef page(title, body):")
         i_reg = self.app.index("pco_gpu_routes.register(app, page)")
         i_dof = self.app.index("pco_dof_routes.register(app, page)")
+        i_systeme = self.app.index("pco_systeme_routes.register(app, page)")
         i_dmd = self.app.index("pco_dmd_routes.register(app, page)")
         i_console = self.app.index("pco_console_routes.register(app, page)")
         i_vpxball = self.app.index("pco_vpxball_routes.register(app, page)")
@@ -209,7 +212,8 @@ class Decoupage(unittest.TestCase):
         i_wrap = self.app.index("def _pco_dashboard_plus_final_install_wrapper")
         self.assertLess(i_page, i_reg)
         self.assertLess(i_reg, i_dof)
-        self.assertLess(i_dof, i_dmd)
+        self.assertLess(i_dof, i_systeme)
+        self.assertLess(i_systeme, i_dmd)
         self.assertLess(i_dmd, i_console)
         self.assertLess(i_console, i_vpxball)
         self.assertLess(i_vpxball, i_import)
@@ -248,6 +252,7 @@ class Chargement(unittest.TestCase):
             import pincabos_webapp_import as importation
             import pincabos_webapp_export as export
             import pincabos_webapp_disques as disques
+            import pincabos_webapp_systeme as systeme
             app = flask.Flask("test")
             gpu.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dof.register(app, lambda t, b: f"<p>{t}</p>{b}")
@@ -258,6 +263,7 @@ class Chargement(unittest.TestCase):
             importation.register(app, lambda t, b: f"<p>{t}</p>{b}")
             export.register(app, lambda t, b: f"<p>{t}</p>{b}")
             disques.register(app, lambda t, b: f"<p>{t}</p>{b}")
+            systeme.register(app, lambda t, b: f"<p>{t}</p>{b}")
             regles = {r.rule for r in app.url_map.iter_rules()}
             for attendues in ROUTES.values():
                 self.assertTrue(attendues <= regles, attendues - regles)
@@ -270,6 +276,7 @@ class Chargement(unittest.TestCase):
             self.assertIn("import.tools_import_table_analyze", app.view_functions)
             self.assertIn("export.tools_export_table", app.view_functions)
             self.assertIn("disques.tools_external_disks", app.view_functions)
+            self.assertIn("systeme.service_control", app.view_functions)
             self.assertEqual(gpu.page("x", "y"), "<p>x</p>y")  # page posée par register
             self.assertEqual(dof.page("x", "y"), "<p>x</p>y")
         finally:
