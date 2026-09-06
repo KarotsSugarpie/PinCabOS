@@ -78,7 +78,7 @@ case "$PCO_ISO_SOURCE" in
   *) SRC="${PCO_ISO_SOURCE%/}" ;;
 esac
 # le manifeste vpxtool epingle par la source, si elle en porte un (sinon celui de l hote)
-[ -f "$SRC/opt/pincabos/update/vpxtool-release.json" ] && VPXTOOL_MANIFEST="$SRC/opt/pincabos/update/vpxtool-release.json"
+if [ -f "$SRC/opt/pincabos/update/vpxtool-release.json" ]; then VPXTOOL_MANIFEST="$SRC/opt/pincabos/update/vpxtool-release.json"; fi
 
 # PINCABOS_ISO_ETAPES_V1 : ce qu une etape calcule et qu une autre relit (avant : une
 # variable du meme shell). Ecrit par pco_etat_ecrire VAR, relu ici par chaque etape.

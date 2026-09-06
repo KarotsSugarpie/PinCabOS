@@ -115,7 +115,7 @@ echo " PINCABOS — MASTER ISO BUILDER V8.1G ENGLISH"
 echo " Clean -> Payload -> ISO-ready -> Live installer -> Bootable ISO"
 echo "==============================================================="
 echo "ISO model: $PCO_ISO_MODEL"
-echo "Source: $PCO_ISO_SOURCE"
+echo "Source: ${PCO_ISO_SOURCE:-/}"
 echo
 echo "Log:"
 echo "$LOG"
