@@ -75,7 +75,9 @@ class PageAdminComposee(unittest.TestCase):
         self.assertIn("from pincabos_webapp_core import esc, pincabos_version", self.mod)
 
     def test_pied_de_page_supporters_toujours_appele_par_page(self):
-        self.assertIn("supporters_html = pincabos_footer_supporters_inline_html()", self.app)
+        gabarit = WEB / "pincabos_webapp_gabarit.py"  # page() vit dans le gabarit depuis le lot 12
+        source_page = gabarit.read_text(encoding="utf-8") if gabarit.exists() else self.app
+        self.assertIn("supporters_html = pincabos_footer_supporters_inline_html()", source_page)
         self.assertIn("def pincabos_footer_supporters_inline_html():", self.mod)
 
     def test_module_sain(self):

@@ -208,7 +208,7 @@ class Decoupage(unittest.TestCase):
                 self.assertNotIn(f"\ndef {nom}(", texte, (cle, nom))
 
     def test_enregistrement_apres_page_et_avant_les_enrobages(self):
-        i_page = self.app.index("\ndef page(title, body):")
+        i_page = self.app.index("from pincabos_webapp_gabarit import (")  # page() vit dans le gabarit (lot 12)
         i_reg = self.app.index("pco_gpu_routes.register(app, page)")
         i_dof = self.app.index("pco_dof_routes.register(app, page)")
         i_systeme = self.app.index("pco_systeme_routes.register(app, page)")
