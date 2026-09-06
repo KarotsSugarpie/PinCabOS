@@ -58,6 +58,18 @@ class Source(unittest.TestCase):
         self.assertLess(s80.index('mkdir -p "$ROOTFS_DIR/var/cache/apt/archives/partial"'),
                         s80.index('mount --bind "$CACHE_DIR/apt-archives"'))
 
+    def test_etape_80_copie_depuis_la_source(self):
+        # lot D (execution reelle sur le banc) : theme Plymouth, plugin script.so, dispatch/kiosque/unites
+        # du live etaient copies depuis l hote (« cannot stat /usr/share/plymouth/themes/pincabos »)
+        s80 = (D / "80-live-rootfs.sh").read_text(encoding="utf-8")
+        self.assertIn('cp -a "$SRC/usr/share/plymouth/themes/pincabos"', s80)
+        self.assertIn('cp "$SRC/$PLY_LIB/script.so"', s80)
+        self.assertIn('install -m 755 "$SRC"/usr/local/sbin/pincabos-installer-dispatch', s80)
+        self.assertIn('"$SRC"/etc/systemd/system/pincabos-gui-wizard.service', s80)
+        for l in s80.splitlines():
+            if re.match(r"^\s*(cp|install) ", l) and "chroot" not in l:
+                self.assertNotRegex(l, r"(cp|install)( -[-a-zA-Z0-9 ]+)? /(usr|etc|opt|boot|lib)/", l)
+
     def test_orchestrateur_source(self):
         s = ISO.read_text(encoding="utf-8")
         self.assertIn('--source) SOURCE="${2:-}"; shift ;;', s)

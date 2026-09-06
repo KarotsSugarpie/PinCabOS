@@ -17,7 +17,7 @@ echo "GO [OK] live rootfs unpacked in $LIVE_ROOTFS"
 
 echo
 echo "=== 12) Ensure required live installer tools inside squashfs ==="
-cp -a /etc/resolv.conf "$ROOTFS_DIR/etc/resolv.conf" || true
+cp -L /etc/resolv.conf "$ROOTFS_DIR/etc/resolv.conf" || true   # -L : sous WSL ou systemd-resolved, un lien
 
 echo
 echo "--- PinCabOS hard reset apt sources inside live chroot ---"
@@ -120,19 +120,19 @@ rm -rf "$ROOTFS_DIR/var/lib/apt/lists"/* "$ROOTFS_DIR/var/cache/apt/archives"/*.
 echo
 echo "--- PinCabOS: theme Plymouth + regeneration initrd live (base server) ---"
 mkdir -p "$ROOTFS_DIR/usr/share/plymouth/themes" "$ROOTFS_DIR/etc/plymouth"
-cp -a /usr/share/plymouth/themes/pincabos "$ROOTFS_DIR/usr/share/plymouth/themes/"
+cp -a "$SRC/usr/share/plymouth/themes/pincabos" "$ROOTFS_DIR/usr/share/plymouth/themes/"
 # Splash du LIVE : la mascotte "Tux au flipper" (theme install de Karots),
 # le systeme installe garde le logo classique.
-cp /usr/share/plymouth/themes/pincabos-install/PCOSLinuxWP.png \
+cp "$SRC/usr/share/plymouth/themes/pincabos-install/PCOSLinuxWP.png" \
    "$ROOTFS_DIR/usr/share/plymouth/themes/pincabos/pincabos.png"
 printf '[Daemon]\nTheme=pincabos\nShowDelay=0\n' > "$ROOTFS_DIR/etc/plymouth/plymouthd.conf"
 # Le plugin "script" n est pas dans le paquet plymouth de base : on le garantit.
 DEBIAN_FRONTEND=noninteractive chroot "$ROOTFS_DIR" apt-get install -y -qq plymouth-themes 2>/dev/null || true
 PLY_LIB="usr/lib/x86_64-linux-gnu/plymouth"
 if [ ! -f "$ROOTFS_DIR/$PLY_LIB/script.so" ]; then
-  cp "/$PLY_LIB/script.so" "$ROOTFS_DIR/$PLY_LIB/script.so"
+  cp "$SRC/$PLY_LIB/script.so" "$ROOTFS_DIR/$PLY_LIB/script.so"
 fi
-[ ! -f "/$PLY_LIB/label.so" ] || cp -n "/$PLY_LIB/label.so" "$ROOTFS_DIR/$PLY_LIB/" || true
+[ ! -f "$SRC/$PLY_LIB/label.so" ] || cp -n "$SRC/$PLY_LIB/label.so" "$ROOTFS_DIR/$PLY_LIB/" || true
 chroot "$ROOTFS_DIR" update-alternatives --install \
   /usr/share/plymouth/themes/default.plymouth default.plymouth \
   /usr/share/plymouth/themes/pincabos/pincabos.plymouth 200
@@ -161,19 +161,19 @@ printf '127.0.0.1 localhost\n127.0.1.1 pincabos-installer\n' > "$ROOTFS_DIR/etc/
 echo "--- PinCabOS: installeur GUI (wizard + kiosk + dispatch) ---"
 mkdir -p "$ROOTFS_DIR/opt/pincabos/installer-gui"
 cp -a /opt/pincabos/installer-gui/. "$ROOTFS_DIR/opt/pincabos/installer-gui/"
-install -m 755 /usr/local/sbin/pincabos-installer-dispatch \
+install -m 755 "$SRC"/usr/local/sbin/pincabos-installer-dispatch \
   "$ROOTFS_DIR/usr/local/sbin/pincabos-installer-dispatch"
-install -m 755 /usr/local/bin/pincabos-kiosk.py \
+install -m 755 "$SRC"/usr/local/bin/pincabos-kiosk.py \
   "$ROOTFS_DIR/usr/local/bin/pincabos-kiosk.py"
-install -m 755 /usr/local/bin/pincabos-kiosk-session \
+install -m 755 "$SRC"/usr/local/bin/pincabos-kiosk-session \
   "$ROOTFS_DIR/usr/local/bin/pincabos-kiosk-session"
 # PINCABOS_INSTALLEUR_UN_SEUL_CHEMIN_V1 : plus d'installeur texte de secours ;
 # si le kiosque ne tient pas, la panne est annoncee en clair sur tty1.
-install -m 755 /usr/local/sbin/pincabos-installer-failure \
+install -m 755 "$SRC"/usr/local/sbin/pincabos-installer-failure \
   "$ROOTFS_DIR/usr/local/sbin/pincabos-installer-failure"
-cp /etc/systemd/system/pincabos-gui-wizard.service \
-   /etc/systemd/system/pincabos-gui-kiosk.service \
-   /etc/systemd/system/pincabos-installer-failure.service \
+cp "$SRC"/etc/systemd/system/pincabos-gui-wizard.service \
+   "$SRC"/etc/systemd/system/pincabos-gui-kiosk.service \
+   "$SRC"/etc/systemd/system/pincabos-installer-failure.service \
    "$ROOTFS_DIR/etc/systemd/system/"
 rm -f "$ROOTFS_DIR/usr/local/sbin/pincabos-gui-fallback" \
       "$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-console" \
