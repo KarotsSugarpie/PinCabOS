@@ -90,7 +90,6 @@ class Etapes(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
             self.assertIn("RUN 20-b", r.stdout); self.assertNotIn("RUN 10-a", r.stdout)
             self.assertTrue((work / "logs/etat/20.go").is_file())
-            self.assertTrue((work / "logs/etat/10.go").is_file())
             r = subprocess.run(["bash", str(orch), "--depuis", "20", "--jusqua", "20"], capture_output=True, text=True, env=env)
             self.assertIn("RUN 20-b", r.stdout); self.assertNotIn("RUN 30-c", r.stdout)
             r = subprocess.run(["bash", str(orch)], capture_output=True, text=True, env=dict(env, CASSE="1"))
@@ -99,6 +98,7 @@ class Etapes(unittest.TestCase):
             self.assertIn("--etape 20", r.stdout)
             self.assertNotIn("RUN 30-c", r.stdout)
             self.assertFalse((work / "logs/etat/20.go").exists())
+            self.assertTrue((work / "logs/etat/10.go").is_file())   # le GO de 10 survit au rm -rf "$WORK" de l etape 10
             r = subprocess.run(["bash", str(orch), "--classic"], capture_output=True, text=True, env=env)
             self.assertEqual(r.returncode, 2)
 
