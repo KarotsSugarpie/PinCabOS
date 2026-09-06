@@ -52,7 +52,8 @@ class Nettoyage(unittest.TestCase):
 
     def test_screens_layout_text_conserve_pour_la_premiere_execution(self):
         # lu dans les globals d'app.py par pincabos_webapp_firstrun : ce n'est pas du code mort
-        self.assertIn("def screens_layout_text():", sources_web()["app.py"])
+        self.assertNotIn("def screens_layout_text():", sources_web()["app.py"])
+        self.assertIn("def screens_layout_text():", sources_web()["pincabos_webapp_firstrun.py"], "déplacée chez son seul consommateur")
         self.assertIn("screens_layout_text()", sources_web()["pincabos_webapp_firstrun.py"])
 
 

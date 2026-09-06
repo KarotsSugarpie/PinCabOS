@@ -15,6 +15,13 @@ from pathlib import Path
 
 from flask import Blueprint, redirect, request
 
+from pincabos_webapp_supporters import (
+    pincabos_about_supporters_default,
+    pincabos_about_supporters_load,
+    pincabos_about_supporters_normalize_list,
+    pincabos_about_supporters_save,
+)
+
 import pincabos_webapp_dev_admin
 from pincabos_webapp_core import esc, pincabos_version
 from pincabos_webapp_dev_admin import pincabos_admin_require_login
@@ -28,69 +35,6 @@ page = None  # gabarit HTML commun, posé par register()
 # Identifiants admin / dev (repris d'app.py)
 # ---------------------------------------------------------------------------
 # === PINCABOS DEV REAL LOGIN START ===
-# PINCABOS_ADMIN_CREDENTIALS_FAIL_CLOSED_V1
-def _pco_read_auth_value(env_name, *paths):
-    value = os.environ.get(env_name, "").strip()
-    if value:
-        return value
-    for raw_path in paths:
-        try:
-            candidate = Path(raw_path)
-            if candidate.is_file():
-                value = candidate.read_text(encoding="utf-8").strip()
-                if value:
-                    return value
-        except OSError:
-            pass
-    return ""
-
-
-ADMIN_LOGIN_USER = _pco_read_auth_value(
-    "PINCABOS_ADMIN_LOGIN",
-    "/opt/pincabos/config/admin-login.txt",
-    "/opt/pincabos/config/dev-login.txt",
-)
-ADMIN_LOGIN_PASS = _pco_read_auth_value(
-    "PINCABOS_ADMIN_PASSWORD",
-    "/opt/pincabos/config/admin-password.txt",
-    "/opt/pincabos/config/dev-password.txt",
-)
-# PINCABOS_ADMIN_CREDENTIALS_FAIL_CLOSED_V1_END
-
-
-# PINCABOS_ADMIN_DEFAULT_CREDENTIALS_V1
-# Les fichiers de secrets ne sont pas versionnes : sur une image fraiche ils
-# manquent et les pages /admin et /dev repondaient "identifiants non
-# configures". On retombe sur un identifiant par DEFAUT documente, que
-# `pincabos-admin-password` permet de remplacer, et les pages affichent un
-# avertissement tant qu'il est en place.
-PINCABOS_DEFAULT_ADMIN_USER = "admin"
-PINCABOS_DEFAULT_ADMIN_PASS = "PinCabOS123$"
-
-# La page /dev a ses PROPRES identifiants : deux acces distincts, deux secrets
-# distincts. Les fichiers dev-login.txt / dev-password.txt restent maitres.
-PINCABOS_DEFAULT_DEV_USER = "PinCabOsDev"
-PINCABOS_DEFAULT_DEV_PASS = "PinCabOSDev123$"
-
-PINCABOS_ADMIN_CREDENTIALS_ARE_DEFAULT = not (ADMIN_LOGIN_USER and ADMIN_LOGIN_PASS)
-
-if not ADMIN_LOGIN_USER:
-    ADMIN_LOGIN_USER = PINCABOS_DEFAULT_ADMIN_USER
-if not ADMIN_LOGIN_PASS:
-    ADMIN_LOGIN_PASS = PINCABOS_DEFAULT_ADMIN_PASS
-# Fichier present mais illisible par la WebApp (proprietaire root) : sans ce
-# controle, on retombe sur le defaut sans rien dire et l'ancien mot de passe
-# continue de fonctionner.
-PINCABOS_ADMIN_UNREADABLE_SECRETS = [
-    candidate
-    for candidate in (
-        "/opt/pincabos/config/admin-password.txt",
-        "/opt/pincabos/config/admin-login.txt",
-        "/opt/pincabos/config/dev-password.txt",
-    )
-    if os.path.exists(candidate) and not os.access(candidate, os.R_OK)
-]
-# PINCABOS_ADMIN_DEFAULT_CREDENTIALS_V1_END
 
 
 # ---------------------------------------------------------------------------
@@ -98,85 +42,6 @@ PINCABOS_ADMIN_UNREADABLE_SECRETS = [
 # ---------------------------------------------------------------------------
 
 # === PINCABOS ABOUT SUPPORTERS ADMIN START ===
-ABOUT_SUPPORTERS_CONFIG = Path("/opt/pincabos/config/about-supporters.json")
-
-def pincabos_about_supporters_default():
-    return {
-        "title": "Testeurs / Soutiens fondateurs",
-        "intro": "Merci aux personnes qui aident à tester PinCabOS, rapporter les problèmes, proposer des idées et soutenir le développement du projet.",
-        "supporters": [
-            "Strung Flo",
-            "Nicolas Prou",
-            "Olivier Chéron",
-        ],
-        "founders_title": "Nom Fondateurs",
-        "founders": [],
-    }
-
-def pincabos_about_supporters_normalize_list(value):
-    if isinstance(value, str):
-        return [x.strip() for x in value.splitlines() if x.strip()]
-    if isinstance(value, list):
-        return [str(x).strip() for x in value if str(x).strip()]
-    return []
-
-def pincabos_about_supporters_load():
-    import json
-
-    default = pincabos_about_supporters_default()
-
-    try:
-        if ABOUT_SUPPORTERS_CONFIG.exists():
-            data = json.loads(ABOUT_SUPPORTERS_CONFIG.read_text(errors="replace"))
-            if not isinstance(data, dict):
-                data = {}
-        else:
-            data = {}
-    except Exception:
-        data = {}
-
-    supporters = pincabos_about_supporters_normalize_list(data.get("supporters", default["supporters"]))
-    founders = pincabos_about_supporters_normalize_list(data.get("founders", default["founders"]))
-
-    if not supporters:
-        supporters = default["supporters"]
-
-    return {
-        "title": str(data.get("title") or default["title"]).strip(),
-        "intro": str(data.get("intro") or default["intro"]).strip(),
-        "supporters": supporters,
-        "founders_title": str(data.get("founders_title") or default["founders_title"]).strip(),
-        "founders": founders,
-    }
-
-def pincabos_about_supporters_save(data):
-    import json
-    import datetime
-
-    ABOUT_SUPPORTERS_CONFIG.parent.mkdir(parents=True, exist_ok=True)
-
-    backup_dir = Path("/opt/pincabos/backups/about-supporters")
-    backup_dir.mkdir(parents=True, exist_ok=True)
-
-    try:
-        backup_dir.chmod(0o775)
-    except Exception:
-        pass
-
-    if ABOUT_SUPPORTERS_CONFIG.exists():
-        ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        backup = backup_dir / ("about-supporters.json.backup-admin-" + ts)
-        backup.write_text(ABOUT_SUPPORTERS_CONFIG.read_text(errors="replace"), encoding="utf-8")
-
-    ABOUT_SUPPORTERS_CONFIG.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8"
-    )
-
-    try:
-        ABOUT_SUPPORTERS_CONFIG.chmod(0o664)
-    except Exception:
-        pass
 
 
 def pincabos_about_supporters_admin_card():
@@ -234,60 +99,6 @@ def pincabos_about_supporters_admin_card():
 
 
 # === PINCABOS FOOTER ABOUT SUPPORTERS START ===
-# PINCABOS_FOOTER_LAYOUT_V14_1
-# Les contributeurs sont rendus directement à droite du QR dans le footer.
-def pincabos_footer_supporters_inline_html():
-    try:
-        data = pincabos_about_supporters_load()
-    except Exception:
-        data = {}
-
-    title = esc(str(data.get("title") or "Testeurs / Soutiens fondateurs"))
-    intro = esc(str(
-        data.get("intro")
-        or "Merci aux personnes qui aident à tester PinCabOS, rapporter les problèmes, proposer des idées et soutenir le développement du projet."
-    ))
-
-    founders = data.get("founders") or []
-    supporters = data.get("supporters") or []
-
-    entries = []
-    seen = set()
-
-    for name in founders:
-        clean = str(name or "").strip()
-        key = clean.casefold()
-        if clean and key not in seen:
-            seen.add(key)
-            entries.append(("founder", clean))
-
-    for name in supporters:
-        clean = str(name or "").strip()
-        key = clean.casefold()
-        if clean and key not in seen:
-            seen.add(key)
-            entries.append(("supporter", clean))
-
-    tags = []
-    for kind, name in entries:
-        stars = "★★" if kind == "founder" else "★"
-        tags.append(
-            '<span class="pco-footer-contributor-v14 ' + kind + '">'
-            '<i>' + stars + '</i><strong>' + esc(name) + '</strong><i>' + stars + '</i>'
-            '</span>'
-        )
-
-    if not tags:
-        tags.append('<span class="pco-footer-contributors-empty-v14">Aucun testeur/supporter configuré.</span>')
-
-    return (
-        '<section id="pincabos-footer-supporters-inline-v14" '
-        'class="pincabos-footer-supporters-inline-v14">'
-        '<h2>★ ' + title + ' ★</h2>'
-        '<p>' + intro + '</p>'
-        '<div class="pco-footer-contributors-list-v14">' + "".join(tags) + '</div>'
-        '</section>'
-    )
 
 
 def _admin_page_avec_carte_supporters(html):

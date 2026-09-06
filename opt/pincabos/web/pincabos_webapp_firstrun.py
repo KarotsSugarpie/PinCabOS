@@ -21,6 +21,29 @@ from pathlib import Path
 
 from flask import jsonify, redirect, request, send_file, session, url_for
 
+from pincabos_webapp_core import (
+    PINCABOS_FIRSTRUN_CFG,
+    esc,
+    firstrun_default_cfg,
+    firstrun_load_cfg,
+    firstrun_required_keys,
+    get_ip,
+    pco_script,
+    run_cmd,
+)
+from pincabos_webapp_gabarit import page
+from pincabos_webapp_gpu import gpu_info_text, pincabos_gpu_apply_config_to_vpinfe, pincabos_gpu_apply_config_to_vpx
+
+
+def screens_layout_text():
+    try:
+        f = Path("/opt/pincabos/config/screens/screens.json")
+        if f.exists():
+            return f.read_text(errors="replace")
+    except Exception as e:
+        return f"Erreur lecture screens.json: {e}"
+    return "Aucune auto-détection écran sauvegardée pour le moment."
+
 ROUTES: list[tuple[str, dict, object]] = []
 BEFORE_REQUESTS: list[object] = []
 AFTER_REQUESTS: list[object] = []
@@ -40,18 +63,9 @@ def after_request(func):
     AFTER_REQUESTS.append(func)
     return func
 
-def register(host_app, runtime_globals: dict):
-    """Bind shared helpers once, then register module-owned routes unchanged."""
-    protected = {'ROUTES', 'route', 'register', '__name__', '__file__', '__package__'}
-    for key, value in runtime_globals.items():
-        if key not in protected:
-            globals()[key] = value
-    # Publish moved helpers back to the host namespace for legacy core pages that
-    # still call them (for example page() -> firstrun_load_cfg()).
-    prefixes = ("audio_", "ssf_", "inputs_", "firstrun_", "pincabos_", "PINCABOS_", "AUDIO_")
-    for key, value in list(globals().items()):
-        if key.startswith(prefixes):
-            runtime_globals[key] = value
+def register(host_app, runtime_globals=None):
+    """Enregistre les routes et crochets du module. Autonome : ses dépendances sont importées en tête
+    (PINCABOS_WEBAPP_AUTONOMIE_V1) ; `runtime_globals` n'est plus lu."""
     for before_func in BEFORE_REQUESTS:
         host_app.before_request(before_func)
     for after_func in AFTER_REQUESTS:
@@ -60,22 +74,7 @@ def register(host_app, runtime_globals: dict):
         host_app.add_url_rule(rule, endpoint=view_func.__name__, view_func=view_func, **options)
 
 
-
-PINCABOS_FIRSTRUN_CFG = "/opt/pincabos/config/firstrun.json"
 PINCABOS_FIRSTRUN_GPU_STATE = Path("/opt/pincabos/config/firstrun-gpu-state.json")
-
-
-def firstrun_default_cfg():
-    return {
-        "show_popup": True,
-        "network": False,
-        "gpu": False,
-        "screens": False,
-    }
-
-
-def firstrun_required_keys():
-    return ["network", "gpu", "screens"]
 
 
 def firstrun_boot_time_ts():
@@ -86,7 +85,6 @@ def firstrun_boot_time_ts():
     except Exception:
         pass
     return 0.0
-
 
 
 def _firstrun_boot_id():
@@ -204,26 +202,6 @@ def firstrun_gpu_status_text(state=None):
     if state.get("ready"):
         return "Gestion GPU manuelle détectée et reboot confirmé. Les écrans peuvent être configurés."
     return "État GPU incomplet. Relance la gestion GPU manuelle puis redémarre."
-
-
-def firstrun_load_cfg():
-    from pathlib import Path
-    import json
-
-    cfg = firstrun_default_cfg()
-    p = Path(PINCABOS_FIRSTRUN_CFG)
-
-    if p.exists():
-        try:
-            data = json.loads(p.read_text(errors="replace"))
-            if isinstance(data, dict):
-                for key in cfg.keys():
-                    if key in data:
-                        cfg[key] = data[key]
-        except Exception:
-            pass
-
-    return cfg
 
 
 def firstrun_save_cfg(cfg):

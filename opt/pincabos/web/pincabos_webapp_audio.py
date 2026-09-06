@@ -28,6 +28,26 @@ from pathlib import Path
 
 from flask import jsonify, redirect, request, send_file, session, url_for
 
+from pincabos_webapp_core import (
+    PINCABOS_VPINFE_INI,
+    esc,
+    pincabos_backup_config_file,
+    pincabos_vpinfe_ini_path,
+    pincabos_vpx_ini_path,
+    pincabos_write_json_with_meta,
+    shlex_quote,
+)
+from pincabos_webapp_gabarit import page
+
+# Chemins audio (repris d'app.py)
+AUDIO_VPX_INI = pincabos_vpx_ini_path()
+
+
+AUDIO_VPINFE_INI = pincabos_vpinfe_ini_path()
+
+
+AUDIO_BACKUP_DIR = Path("/opt/pincabos/backups/audio-ssf")
+
 ROUTES: list[tuple[str, dict, object]] = []
 BEFORE_REQUESTS: list[object] = []
 AFTER_REQUESTS: list[object] = []
@@ -47,18 +67,9 @@ def after_request(func):
     AFTER_REQUESTS.append(func)
     return func
 
-def register(host_app, runtime_globals: dict):
-    """Bind shared helpers once, then register module-owned routes unchanged."""
-    protected = {'ROUTES', 'route', 'register', '__name__', '__file__', '__package__'}
-    for key, value in runtime_globals.items():
-        if key not in protected:
-            globals()[key] = value
-    # Publish moved helpers back to the host namespace for legacy core pages that
-    # still call them (for example page() -> firstrun_load_cfg()).
-    prefixes = ("audio_", "ssf_", "inputs_", "firstrun_", "pincabos_", "PINCABOS_", "AUDIO_")
-    for key, value in list(globals().items()):
-        if key.startswith(prefixes):
-            runtime_globals[key] = value
+def register(host_app, runtime_globals=None):
+    """Enregistre les routes et crochets du module. Autonome : ses dépendances sont importées en tête
+    (PINCABOS_WEBAPP_AUTONOMIE_V1) ; `runtime_globals` n'est plus lu."""
     for before_func in BEFORE_REQUESTS:
         host_app.before_request(before_func)
     for after_func in AFTER_REQUESTS:

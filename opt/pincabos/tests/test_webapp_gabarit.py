@@ -31,10 +31,7 @@ class Gabarit(unittest.TestCase):
             self.assertRegex(self.mod, rf"(?m)^def {nom}\(|^{nom} = ")
 
     def test_app_importe_le_gabarit_avant_l_application_et_le_reexporte(self):
-        i = self.app.index("from pincabos_webapp_gabarit import (")
-        bloc = self.app[i:self.app.index(")", i)]
-        for nom in NOMS:
-            self.assertIn(f"    {nom},\n", bloc, nom)
+        i = self.app.index("from pincabos_webapp_gabarit import page, pincabos_firstrun_is_complete")
         self.assertLess(i, self.app.index("\napp = Flask("))
         # les modules reçoivent toujours page par register(app, page)
         self.assertGreaterEqual(self.app.count(".register(app, page)"), 10)
@@ -49,13 +46,13 @@ class Gabarit(unittest.TestCase):
 
     def test_pied_de_page_support_voit_pincabos_version(self):
         # `pincabos_version() if "pincabos_version" in globals() else {}` : le nom doit exister dans le module
-        self.assertIn("from pincabos_webapp_core import esc, get_ip, pincabos_version", self.mod)
+        self.assertIn("pincabos_version", self.mod[:1200], "importé en tête du gabarit")
         self.assertIn('if "pincabos_version" in globals()', self.mod)
 
     def test_page_lit_l_etat_du_wizard_par_import_direct(self):
-        self.assertIn("from pincabos_webapp_firstrun import firstrun_load_cfg, firstrun_required_keys", self.mod)
+        self.assertIn("from pincabos_webapp_core import esc, firstrun_load_cfg, firstrun_required_keys, get_ip, pincabos_version", self.mod)
         self.assertIn("firstrun_load_cfg().get('show_popup', True)", self.mod)
-        self.assertIn("from pincabos_webapp_admin_pages import pincabos_footer_supporters_inline_html", self.mod)
+        self.assertIn("from pincabos_webapp_supporters import pincabos_footer_supporters_inline_html", self.mod)
 
     def test_module_sain(self):
         ast.parse(self.mod)

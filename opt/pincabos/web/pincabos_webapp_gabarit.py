@@ -9,9 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pincabos_webapp_admin_pages import pincabos_footer_supporters_inline_html
-from pincabos_webapp_core import esc, get_ip, pincabos_version
-from pincabos_webapp_firstrun import firstrun_load_cfg, firstrun_required_keys
+from pincabos_webapp_core import esc, firstrun_load_cfg, firstrun_required_keys, get_ip, pincabos_version
+from pincabos_webapp_supporters import pincabos_footer_supporters_inline_html
 
 
 # PINCABOS_WEBAPP_SCREEN_STATE_V3_BEGIN
