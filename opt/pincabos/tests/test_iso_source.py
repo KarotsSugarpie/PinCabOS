@@ -73,8 +73,9 @@ class Source(unittest.TestCase):
     def test_grep_sans_sigpipe(self):
         # PINCABOS_ISO_GREP_SANS_SIGPIPE_V1 : jamais `lsinitramfs | grep -q` ni `tar -tf | grep -q` sous pipefail
         for e in ("60-validation-payload", "80-live-rootfs"):
-            s = (D / f"{e}.sh").read_text(encoding="utf-8")
-            self.assertNotRegex(s, r"(lsinitramfs|tar -I zstd -tf)[^\n|]*\| *grep -[a-zA-Z]*q", e)
+            for l in (D / f"{e}.sh").read_text(encoding="utf-8").splitlines():
+                if not l.lstrip().startswith("#"):
+                    self.assertNotRegex(l, r"(lsinitramfs|tar -I zstd -tf)[^|]*\| *grep -[a-zA-Z]*q", f"{e} : {l}")
         self.assertIn('INITRD_LISTE="$(lsinitramfs "$ISO_DIR/casper/initrd")"', (D / "80-live-rootfs.sh").read_text(encoding="utf-8"))
         self.assertIn('ARCHIVE_LISTE="$(tar -I zstd -tf "$ARCHIVE")"', (D / "60-validation-payload.sh").read_text(encoding="utf-8"))
         self.assertEqual((D / "60-validation-payload.sh").read_text(encoding="utf-8").count('<<<"$ARCHIVE_LISTE"'), 5)
