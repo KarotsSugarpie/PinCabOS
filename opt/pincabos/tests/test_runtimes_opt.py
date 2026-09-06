@@ -132,6 +132,8 @@ class Migration(unittest.TestCase):
         # le compte garde deux liens de compatibilite, absolus vers /opt/pinball
         self.assertEqual(os.readlink(h / "vpx"), "/opt/pinball/vpx")
         self.assertEqual(os.readlink(h / "vpinfe"), "/opt/pinball/vpinfe")
+        for lien in (d / "vpx", h / "vpx", h / "vpinfe"):
+            self.assertEqual(os.lstat(lien).st_uid, int(self.uid), f"le lien {lien} appartient au joueur (lchown, pas chown -h)")
         # le reste du compte n'a pas bouge
         self.assertTrue((h / "Tables").is_dir()); self.assertTrue((h / ".config/vpinfe/vpinfe.ini").is_file())
         self.assertIn("VPX " + bundle + " -> /opt/pinball", r.stdout); self.assertIn("VPinFE -> /opt/pinball/vpinfe", r.stdout)

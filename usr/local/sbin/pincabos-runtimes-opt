@@ -54,10 +54,19 @@ run() {
     "$@"
 }
 present() { [ -e "$1" ] || [ -L "$1" ]; }
+proprietaire_lien() {   # le lien lui-meme au joueur ; `chown -h` de uutils 0.8 (Ubuntu 25.10) ne change rien : lchown
+    [ "$(stat -c %u "$1" 2>/dev/null)" = "$UID_P" ] && return 0
+    chown -h "$UID_P:$GID_P" "$1" 2>/dev/null || true
+    [ "$(stat -c %u "$1" 2>/dev/null)" = "$UID_P" ] && return 0
+    python3 -c 'import os, sys; os.lchown(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))' "$1" "$UID_P" "$GID_P" 2>/dev/null || true
+}
 lien() {   # lien <cible> <chemin> : pose (ou repose) un lien, au joueur
-    if [ -L "$2" ] && [ "$(readlink "$2")" = "$1" ]; then return 0; fi
+    if [ -L "$2" ] && [ "$(readlink "$2")" = "$1" ]; then
+        [ "$DRY" -eq 1 ] || proprietaire_lien "$2"
+        return 0
+    fi
     run ln -sfn "$1" "$2"
-    [ "$DRY" -eq 1 ] || chown -h "$UID_P:$GID_P" "$2" 2>/dev/null || true
+    [ "$DRY" -eq 1 ] || proprietaire_lien "$2"
 }
 ecarter() {  # ecarter <chemin> : le compte a une copie alors que /opt/pinball a deja la sienne
     local a="$1.avant-opt"
