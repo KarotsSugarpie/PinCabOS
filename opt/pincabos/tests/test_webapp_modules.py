@@ -161,7 +161,25 @@ class Decoupage(unittest.TestCase):
                 if nom == "register":
                     continue
                 self.assertNotIn(f"def {nom}(", self.app, f"{nom} existe encore dans app.py")
-                self.assertNotRegex(self.app, rf"\b{nom}\(", f"{nom} appelé depuis app.py")
+                self.assertNotRegex(self.app, rf"\b{nom}\(", f"{nom} appelé depuis app.py")  # un réexport (import) reste permis
+
+    def test_noms_deplaces_consommes_ailleurs_reexportes_par_app(self):
+        """Les modules historiques lisent les helpers dans les globals d'app.py (`app_globals[...]`,
+        `runtime_globals`) : un nom déplacé qu'un autre module consomme doit rester importé dans app.py."""
+        autres = [p for p in WEB.glob("*.py") if p.name != "app.py" and p not in MODULES.values()]
+        textes_autres = {p.name: p.read_text(encoding="utf-8") for p in autres}
+        manquants = []
+        for cle, texte in self.textes.items():
+            for nom in re.findall(r"^def (\w+)\(", texte, re.M):
+                if nom == "register" or nom.startswith("_"):
+                    continue
+                # un usage de code : appel, clé de dict (app_globals["x"]), .get("x") ; pas un simple mot dans une chaîne
+                # (request.form.get("x") / request.args.get("x") sont des champs de formulaire, pas des helpers)
+                usage = re.compile(rf"(\b{nom}\(|\[\s*[\"']{nom}[\"']\s*\]|(?<!\.form)(?<!\.args)\.get\(\s*[\"']{nom}[\"'])")
+                consommateurs = [n for n, t in textes_autres.items() if usage.search(t)]
+                if consommateurs and not re.search(rf"\b{nom}\b", self.app):
+                    manquants.append((cle, nom, consommateurs))
+        self.assertEqual(manquants, [], "à réexporter dans app.py après register()")
 
     def test_helpers_partages_une_seule_fois_dans_le_noyau(self):
         core = CORE.read_text(encoding="utf-8")

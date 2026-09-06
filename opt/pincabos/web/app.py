@@ -1369,6 +1369,13 @@ import pincabos_webapp_dof as pco_dof_routes
 
 pco_gpu_routes.register(app, page)
 pco_dof_routes.register(app, page)
+# Helpers GPU lus dans les globals d'app.py par pincabos_webapp_firstrun (runtime_globals,
+# actions de la première exécution) : réexportés ici, même nom, même objet.
+from pincabos_webapp_gpu import (  # noqa: E402
+    gpu_info_text,
+    pincabos_gpu_apply_config_to_vpinfe,
+    pincabos_gpu_apply_config_to_vpx,
+)
 
 
 @app.route("/service-control", methods=["POST"])
@@ -3178,6 +3185,16 @@ pco_commander_routes.register(app, page)
 import pincabos_webapp_export as pco_export_routes
 
 pco_export_routes.register(app, page)
+# Helpers d'export lus dans les globals d'app.py par pincabos_batch_transfer (app_globals[...])
+# et pincabos_webapp_exports (runtime_globals) : réexportés ici, même nom, même objet.
+from pincabos_webapp_export import (  # noqa: E402
+    pincabos_write_full_folder_export_manifest,
+    pincabos_zip_full_table_folder,
+    pincabos_export_safe_filename,
+    pincabos_detect_vpsid_for_export,
+    pincabos_table_export_dirs,
+    pincabos_export_should_exclude_relative,
+)
 
 
 # === INPUTS COMMANDER V1 - PINCABOS START ===
