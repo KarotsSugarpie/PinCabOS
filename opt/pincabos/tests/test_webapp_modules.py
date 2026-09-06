@@ -26,6 +26,7 @@ MODULES = {
     "console": WEB / "pincabos_webapp_console.py",
     "vpxball": WEB / "pincabos_webapp_vpxball.py",
     "commander": WEB / "pincabos_webapp_commander.py",
+    "import": WEB / "pincabos_webapp_import.py",
 }
 ROUTES = {
     "gpu": {
@@ -56,6 +57,10 @@ ROUTES = {
         "/tools/commander", "/tools/commander/download", "/tools/commander/duplicate", "/tools/commander/extract-zip", "/tools/commander/archive-selection", "/tools/commander/info",
         "/tools/commander/create-folder", "/tools/commander/upload", "/tools/commander/extract-script", "/tools/commander/delete", "/tools/commander/rename", "/tools/commander/clipboard",
         "/tools/commander/paste", "/tools/commander/live", "/tools/commander/live/file", "/tools/commander/live/save",
+    },
+    "import": {
+        "/tools/import-table/manifest-conflict", "/api/import/vpsdb-search", "/tools/import-table/analyze", "/tools/import-table/analyze-run",
+        "/tools/import-table/install", "/api/import/analyze-zip", "/api/import/apply-zip-choice",
     },
 }
 HELPERS = ("esc", "run_cmd", "shlex_quote", "service_status",
@@ -172,6 +177,7 @@ class Decoupage(unittest.TestCase):
         i_dmd = self.app.index("pco_dmd_routes.register(app, page)")
         i_console = self.app.index("pco_console_routes.register(app, page)")
         i_vpxball = self.app.index("pco_vpxball_routes.register(app, page)")
+        i_import = self.app.index("pco_import_routes.register(app, page)")
         i_commander = self.app.index("pco_commander_routes.register(app, page)")
         i_wrap = self.app.index("def _pco_dashboard_plus_final_install_wrapper")
         self.assertLess(i_page, i_reg)
@@ -179,7 +185,8 @@ class Decoupage(unittest.TestCase):
         self.assertLess(i_dof, i_dmd)
         self.assertLess(i_dmd, i_console)
         self.assertLess(i_console, i_vpxball)
-        self.assertLess(i_vpxball, i_commander)
+        self.assertLess(i_vpxball, i_import)
+        self.assertLess(i_import, i_commander)
         self.assertLess(i_commander, i_wrap)
 
     def test_register_pose_page_et_le_blueprint(self):
@@ -209,6 +216,7 @@ class Chargement(unittest.TestCase):
             import pincabos_webapp_console as console
             import pincabos_webapp_vpxball as vpxball
             import pincabos_webapp_commander as commander
+            import pincabos_webapp_import as importation
             app = flask.Flask("test")
             gpu.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dof.register(app, lambda t, b: f"<p>{t}</p>{b}")
@@ -216,6 +224,7 @@ class Chargement(unittest.TestCase):
             console.register(app, lambda t, b: f"<p>{t}</p>{b}")
             vpxball.register(app, lambda t, b: f"<p>{t}</p>{b}")
             commander.register(app, lambda t, b: f"<p>{t}</p>{b}")
+            importation.register(app, lambda t, b: f"<p>{t}</p>{b}")
             regles = {r.rule for r in app.url_map.iter_rules()}
             for attendues in ROUTES.values():
                 self.assertTrue(attendues <= regles, attendues - regles)
@@ -225,6 +234,7 @@ class Chargement(unittest.TestCase):
             self.assertIn("console.console_page", app.view_functions)
             self.assertIn("vpxball.tools_vpx_ball_cabinet", app.view_functions)
             self.assertIn("commander.tools_commander", app.view_functions)
+            self.assertIn("import.tools_import_table_analyze", app.view_functions)
             self.assertEqual(gpu.page("x", "y"), "<p>x</p>y")  # page posée par register
             self.assertEqual(dof.page("x", "y"), "<p>x</p>y")
         finally:
