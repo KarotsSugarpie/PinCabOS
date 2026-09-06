@@ -34,12 +34,35 @@ FICHIERS_INSTALLATEUR = (
 )
 
 
+# PINCABOS_CIBLE_FICHIERS_DU_DEPOT_V1 : ce que le helper ne reecrit plus, la cible le tient du depot porte dans l image
+FICHIERS_CIBLE = (
+    "etc/sudoers.d/99-pincabos-pinball-root",
+    "etc/polkit-1/rules.d/49-pincabos-pinball-root.rules",
+    "usr/local/sbin/pincabos-firstboot-network-webapp-fix",
+    "etc/systemd/system/pincabos-firstboot-network-webapp-fix.service",
+    "etc/systemd/system/pincabos-webapp.service.d/90-pincabos-stable-start.conf",
+    "usr/local/sbin/pincabos-webapp-fallback-start",
+    "etc/systemd/system/pincabos-webapp-fallback.service",
+    "usr/local/sbin/pincabos-firstboot-hardware-autoconfig",
+    "etc/systemd/system/pincabos-firstboot-hardware-autoconfig.service",
+    "etc/systemd/system/pincabos-screen-topology-boot.service",
+    "usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize",
+    "usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard",
+    "etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf",
+    "etc/systemd/system/pincabos-vpinfe.service.d/90-pincabos-iso-start.conf",
+    "usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix",
+    "etc/systemd/system/pincabos-firstboot-vpinfe-packaged-runtime-fix.service",
+    "usr/local/sbin/pincabos-firstboot-initramfs-refresh",
+    "etc/systemd/system/pincabos-firstboot-initramfs-refresh.service",
+)
+
+
 def texte_installateur():
     # PINCABOS_OUTILS_CIBLE_V1 : les outils Python appliques a la cible par le helper sont des fichiers (tools/cible/)
     import glob
     outils = sorted(glob.glob(os.path.join(RACINE, "opt/pincabos/tools/cible", "*.py")))
     return "\n".join(open(chemin, encoding="utf-8").read() for chemin in
-                     [os.path.join(RACINE, rel) for rel in FICHIERS_INSTALLATEUR] + outils)
+                     [os.path.join(RACINE, rel) for rel in FICHIERS_INSTALLATEUR + FICHIERS_CIBLE] + outils)
 
 
 def texte_fichier_livre(nom):

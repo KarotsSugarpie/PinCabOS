@@ -74,6 +74,36 @@ rm -f "$TARGET/etc/systemd/system/pincabos-gui-install.target" \
       "$TARGET/etc/systemd/system/pincabos-gui-install-prepare.service" \
       "$TARGET/usr/local/sbin/pincabos-gui-install-prepare"
 
+# PINCABOS_CIBLE_FICHIERS_DU_DEPOT_V1 : scripts de premier demarrage, gardes VPinFE, unites et
+# regles pinball viennent du systeme extrait (le depot est porte dans l image) ; le helper ne les
+# reecrit plus. Une image qui ne les porterait pas ne doit pas s installer en silence.
+for pco_attendu in \
+  "etc/sudoers.d/99-pincabos-pinball-root" \
+  "etc/polkit-1/rules.d/49-pincabos-pinball-root.rules" \
+  "usr/local/sbin/pincabos-firstboot-network-webapp-fix" \
+  "etc/systemd/system/pincabos-firstboot-network-webapp-fix.service" \
+  "etc/systemd/system/pincabos-webapp.service.d/90-pincabos-stable-start.conf" \
+  "usr/local/sbin/pincabos-webapp-fallback-start" \
+  "etc/systemd/system/pincabos-webapp-fallback.service" \
+  "usr/local/sbin/pincabos-firstboot-hardware-autoconfig" \
+  "etc/systemd/system/pincabos-firstboot-hardware-autoconfig.service" \
+  "etc/systemd/system/pincabos-screen-topology-boot.service" \
+  "usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize" \
+  "usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard" \
+  "etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf" \
+  "etc/systemd/system/pincabos-vpinfe.service.d/90-pincabos-iso-start.conf" \
+  "usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix" \
+  "etc/systemd/system/pincabos-firstboot-vpinfe-packaged-runtime-fix.service" \
+  "usr/local/sbin/pincabos-firstboot-initramfs-refresh" \
+  "etc/systemd/system/pincabos-firstboot-initramfs-refresh.service"
+do
+  if [ ! -e "$TARGET/$pco_attendu" ]; then
+    echo "ERROR: fichier attendu absent de la cible extraite: $pco_attendu"
+    exit 78
+  fi
+done
+echo "GO [OK] fichiers du depot presents dans la cible (18 verifies)"
+
 
 echo
 echo "=== PinCabOS Live pinball identity compatibility ==="
@@ -206,10 +236,6 @@ fi
 
 # Full root via sudo without password, while keeping the interactive account UID 1000.
 install -d -m 0750 "$TARGET/etc/sudoers.d"
-cat > "$TARGET/etc/sudoers.d/99-pincabos-pinball-root" <<'SUDOEOF'
-# PinCabOS dedicated cabinet account — intentional full local administration
-pinball ALL=(ALL:ALL) NOPASSWD: ALL
-SUDOEOF
 chmod 0440 "$TARGET/etc/sudoers.d/99-pincabos-pinball-root"
 
 if [ -x "$TARGET/usr/sbin/visudo" ]; then
@@ -223,14 +249,6 @@ fi
 
 # Full local Polkit authorization for the dedicated cabinet account.
 install -d -m 0755 "$TARGET/etc/polkit-1/rules.d"
-cat > "$TARGET/etc/polkit-1/rules.d/49-pincabos-pinball-root.rules" <<'POLKITEOF'
-// PinCabOS dedicated cabinet account — intentional full local administration
-polkit.addRule(function(action, subject) {
-    if (subject.user == "pinball") {
-        return polkit.Result.YES;
-    }
-});
-POLKITEOF
 chmod 0644 "$TARGET/etc/polkit-1/rules.d/49-pincabos-pinball-root.rules"
 
 test -s "$TARGET/etc/sudoers.d/99-pincabos-pinball-root"
@@ -366,213 +384,9 @@ mkdir -p "$TARGET/etc/systemd/system"
 mkdir -p "$TARGET/etc/systemd/system/multi-user.target.wants"
 mkdir -p "$TARGET/var/lib/pincabos"
 
-cat > "$TARGET/usr/local/sbin/pincabos-firstboot-network-webapp-fix" <<'FIRSTBOOT_NETWEB'
-#!/usr/bin/env bash
-set -u
-
-LOG="/var/log/pincabos-firstboot-network-webapp-fix.log"
-FLAG="/var/lib/pincabos/firstboot-network-webapp.done"
-
-mkdir -p /var/log /var/lib/pincabos
-
-{
-  echo "==============================================================="
-  echo " PinCabOS first boot network + WebApp fix"
-  echo " Started: $(date -Is)"
-  echo "==============================================================="
-
-  if [ -f "$FLAG" ]; then
-    echo "Already completed."
-    exit 0
-  fi
-
-  echo
-  echo "=== Disable unused print services ==="
-  for unit in cups.service cups.socket cups.path cups-browsed.service; do
-    systemctl mask "$unit" >/dev/null 2>&1 || true
-    systemctl disable "$unit" >/dev/null 2>&1 || true
-    systemctl stop "$unit" >/dev/null 2>&1 || true
-  done
-
-  echo
-  echo "=== Clean Chrome crash restore state ==="
-  if [ -d /home/pinball/.config/google-chrome ]; then
-    find /home/pinball/.config/google-chrome -maxdepth 4 -type f \( \
-      -name 'Current Session' -o \
-      -name 'Current Tabs' -o \
-      -name 'Last Session' -o \
-      -name 'Last Tabs' \
-    \) -print -delete 2>/dev/null || true
-
-    find /home/pinball/.config/google-chrome -maxdepth 2 \( \
-      -name 'SingletonCookie' -o \
-      -name 'SingletonLock' -o \
-      -name 'SingletonSocket' \
-    \) -print -delete 2>/dev/null || true
-
-    chown -R pinball:pinball /home/pinball/.config/google-chrome 2>/dev/null || true
-  fi
-
-  echo
-  echo "=== Detect first ethernet interface ==="
-  IFACE=""
-  for p in /sys/class/net/*; do
-    n="${p##*/}"
-    [ "$n" = "lo" ] && continue
-    [ -d "/sys/class/net/$n" ] || continue
-    IFACE="$n"
-    break
-  done
-
-  echo "Detected interface: ${IFACE:-none}"
-
-  # PINCABOS_INSTALLEUR_RESEAU_V1 : si l'installateur a configure le reseau
-  # (profils NetworkManager deja en place), ce fichier generique ne doit pas
-  # reapparaitre : netplan fusionnerait son dhcp4: true avec le profil.
-  if [ -e /opt/pincabos/flags/network-installer.done ] || ls /etc/netplan/90-NM-*.yaml >/dev/null 2>&1; then
-    echo "Network configured by the installer / NetworkManager: generic DHCP netplan skipped."
-    IFACE=""
-  fi
-
-  if [ -n "$IFACE" ]; then
-    ip link set "$IFACE" up 2>/dev/null || true
-
-    echo
-    echo "=== Write generic DHCP netplan ==="
-    mkdir -p /etc/netplan
-    cat > /etc/netplan/01-pincabos-dhcp.yaml <<NETPLAN
-network:
-  version: 2
-  renderer: NetworkManager
-  ethernets:
-    $IFACE:
-      dhcp4: true
-      dhcp6: true
-      optional: true
-NETPLAN
-
-    chmod 600 /etc/netplan/01-pincabos-dhcp.yaml 2>/dev/null || true
-  fi
-
-  # PINCABOS_NETPLAN_SANITIZE_V1
-  # Ecarter la configuration reseau heritee du cab de build (interface et
-  # adresse fixe qui n'existent pas sur cette machine).
-  for stale in /etc/netplan/00-pincabos-dhcp4.yaml; do
-    if [ -f "$stale" ]; then
-      mv -f "$stale" "${stale}.pincabos-disabled" 2>/dev/null || true
-      echo "Neutralise (config du cab de build): $(basename "$stale")"
-    fi
-  done
-
-  echo
-  echo "=== Enable NetworkManager and DHCP ==="
-  systemctl daemon-reload || true
-  systemctl enable NetworkManager.service >/dev/null 2>&1 || true
-  systemctl start NetworkManager.service >/dev/null 2>&1 || true
-
-  if command -v nmcli >/dev/null 2>&1 && [ -n "$IFACE" ]; then
-    nmcli networking on >/dev/null 2>&1 || true
-    nmcli device set "$IFACE" managed yes >/dev/null 2>&1 || true
-    nmcli connection delete "PinCabOS DHCP" >/dev/null 2>&1 || true
-    nmcli connection add type ethernet ifname "$IFACE" con-name "PinCabOS DHCP" \
-      connection.autoconnect yes ipv4.method auto ipv6.method auto >/dev/null 2>&1 || true
-    nmcli connection up "PinCabOS DHCP" >/dev/null 2>&1 || true
-  fi
-
-  if command -v netplan >/dev/null 2>&1; then
-    netplan generate >/dev/null 2>&1 || true
-    netplan apply >/dev/null 2>&1 || true
-  fi
-
-  sleep 3
-  ip -br addr || true
-
-  echo
-  echo "=== Enable/start PinCabOS WebApp single service ==="
-  systemctl daemon-reload || true
-
-  # Kill the old legacy alias loop. Only pincabos-webapp.service should run.
-  systemctl stop pincabos-web.service >/dev/null 2>&1 || true
-  systemctl disable pincabos-web.service >/dev/null 2>&1 || true
-  systemctl mask pincabos-web.service >/dev/null 2>&1 || true
-  systemctl reset-failed pincabos-web.service >/dev/null 2>&1 || true
-  systemctl reset-failed pincabos-webapp.service >/dev/null 2>&1 || true
-
-  if systemctl list-unit-files | grep -q '^pincabos-webapp\.service'; then
-    systemctl enable pincabos-webapp.service >/dev/null 2>&1 || true
-    systemctl start pincabos-webapp.service >/dev/null 2>&1 || true
-  else
-    echo "NOTICE: pincabos-webapp.service not listed."
-  fi
-
-  echo
-  echo "=== Wait for local web port ==="
-  WEB_OK=0
-  for i in $(seq 1 30); do
-    if command -v curl >/dev/null 2>&1 && curl -fsS --max-time 2 http://127.0.0.1/ >/dev/null 2>&1; then
-      WEB_OK=1
-      break
-    fi
-
-    if ss -lnt 2>/dev/null | grep -qE ':(80|5000|8000|8080)\s'; then
-      WEB_OK=1
-      break
-    fi
-
-    sleep 2
-  done
-
-  echo "WEB_OK=$WEB_OK"
-
-  if [ "$WEB_OK" != "1" ]; then
-    echo
-    echo "=== Official WebApp did not answer; enabling fallback ==="
-    systemctl enable pincabos-webapp-fallback.service >/dev/null 2>&1 || true
-    systemctl restart pincabos-webapp-fallback.service >/dev/null 2>&1 || true
-
-    for i in $(seq 1 20); do
-      if ss -lnt 2>/dev/null | grep -qE ':80\s'; then
-        WEB_OK=1
-        break
-      fi
-      sleep 2
-    done
-  fi
-
-  echo "WEB_OK_AFTER_FALLBACK=$WEB_OK"
-  systemctl status pincabos-webapp.service --no-pager -l || true
-  systemctl status pincabos-webapp-fallback.service --no-pager -l || true
-  ss -lntup 2>/dev/null | grep -E '(:80|:5000|:8000|:8080)' || true
-
-  touch "$FLAG"
-  systemctl disable pincabos-firstboot-network-webapp-fix.service >/dev/null 2>&1 || true
-
-  echo
-  echo "Completed: $(date -Is)"
-} >> "$LOG" 2>&1
-
-exit 0
-FIRSTBOOT_NETWEB
 
 chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-network-webapp-fix"
 
-cat > "$TARGET/etc/systemd/system/pincabos-firstboot-network-webapp-fix.service" <<'FIRSTBOOT_NETWEB_SERVICE'
-[Unit]
-Description=PinCabOS first boot network and WebApp self-heal
-After=local-fs.target dbus.service NetworkManager.service
-Before=display-manager.service lightdm.service gdm.service gdm3.service graphical.target
-Wants=NetworkManager.service
-ConditionPathExists=!/var/lib/pincabos/firstboot-network-webapp.done
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/pincabos-firstboot-network-webapp-fix
-TimeoutStartSec=2min
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-FIRSTBOOT_NETWEB_SERVICE
 
 ln -sfn ../pincabos-firstboot-network-webapp-fix.service \
   "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-firstboot-network-webapp-fix.service"
@@ -591,85 +405,14 @@ rm -f "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-web.service" 
 rm -f "$TARGET/etc/systemd/system/default.target.wants/pincabos-web.service" || true
 ln -sfn /dev/null "$TARGET/etc/systemd/system/pincabos-web.service"
 
-cat > "$TARGET/etc/systemd/system/pincabos-webapp.service.d/90-pincabos-stable-start.conf" <<'WEBAPP_OVERRIDE'
-[Unit]
-StartLimitIntervalSec=120
-StartLimitBurst=3
-
-[Service]
-Restart=on-failure
-RestartSec=8
-WEBAPP_OVERRIDE
 
 echo
 echo "=== Install WebApp fallback launcher/service ==="
 echo "PINCABOS_WEBAPP_FALLBACK_SERVICE_V1"
 
-cat > "$TARGET/usr/local/sbin/pincabos-webapp-fallback-start" <<'WEBAPP_FALLBACK'
-#!/usr/bin/env bash
-set -euo pipefail
-
-cd /opt/pincabos/web
-
-PYTHON_CANDIDATES=(
-  /opt/pincabos/web/.venv/bin/python
-  /opt/pincabos/web/venv/bin/python
-  /opt/pincabos/.venv/bin/python
-  /opt/pincabos/venv/bin/python
-  /usr/bin/python3
-)
-
-for py in "${PYTHON_CANDIDATES[@]}"; do
-  [ -x "$py" ] || continue
-
-  if "$py" - <<'PYTEST' >/dev/null 2>&1
-import flask
-PYTEST
-  then
-    echo "Using Python runtime: $py"
-
-    exec "$py" - <<'PYRUN'
-import os
-import sys
-
-os.chdir("/opt/pincabos/web")
-sys.path.insert(0, "/opt/pincabos/web")
-
-import app as pincabos_app_module
-
-app = getattr(pincabos_app_module, "app", None)
-if app is None:
-    raise SystemExit("ERROR: app.py does not expose Flask object named app")
-
-app.run(host="0.0.0.0", port=80, debug=False, use_reloader=False)
-PYRUN
-  fi
-done
-
-echo "ERROR: no Python runtime with Flask found for PinCabOS WebApp"
-exit 1
-WEBAPP_FALLBACK
 
 chmod 755 "$TARGET/usr/local/sbin/pincabos-webapp-fallback-start"
 
-cat > "$TARGET/etc/systemd/system/pincabos-webapp-fallback.service" <<'WEBAPP_FALLBACK_SERVICE'
-[Unit]
-Description=PinCabOS WebApp fallback direct Flask service
-After=network-online.target
-Wants=network-online.target
-Conflicts=pincabos-web.service
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/pincabos/web
-ExecStart=/usr/local/sbin/pincabos-webapp-fallback-start
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-WEBAPP_FALLBACK_SERVICE
 
 echo
 echo "=== Pre-enable WebApp service in installed target when present ==="
@@ -834,251 +577,9 @@ chown -R pinball:pinball \
 echo
 echo "=== Install first-boot universal GPU configuration ==="
 
-cat > "$TARGET/usr/local/sbin/pincabos-firstboot-hardware-autoconfig" <<'HARDWARE_AUTOCONFIG'
-#!/usr/bin/env bash
-set -u
-
-LOG="/var/log/pincabos-firstboot-hardware-autoconfig.log"
-STATE_DIR="/var/lib/pincabos"
-DONE="$STATE_DIR/hardware-autoconfig.done"
-PENDING="$STATE_DIR/hardware-autoconfig.reboot-pending"
-FAILED="$STATE_DIR/hardware-autoconfig.failed"
-
-mkdir -p "$STATE_DIR" /var/log
-
-exec >>"$LOG" 2>&1
-
-echo
-echo "==============================================================="
-echo " PinCabOS automatic GPU configuration"
-echo " Started: $(date -Is)"
-echo "==============================================================="
-
-if [ -f "$DONE" ]; then
-  echo "Already completed."
-  exit 0
-fi
-
-GPU_LINES="$(
-  lspci -Dnn 2>/dev/null |
-    grep -Ei 'VGA compatible controller|3D controller|Display controller' ||
-    true
-)"
-
-echo
-echo "=== Detected GPU devices ==="
-printf '%s\n' "$GPU_LINES"
-
-HAS_NVIDIA=0
-HAS_AMD=0
-HAS_INTEL=0
-HAS_VM=0
-
-grep -Eqi '\[10de:' <<<"$GPU_LINES" && HAS_NVIDIA=1
-grep -Eqi '\[(1002|1022):' <<<"$GPU_LINES" && HAS_AMD=1
-grep -Eqi '\[8086:' <<<"$GPU_LINES" && HAS_INTEL=1
-grep -Eqi '\[(1af4|1234|15ad|1b36):' <<<"$GPU_LINES" && HAS_VM=1
-
-echo
-echo "NVIDIA=$HAS_NVIDIA AMD=$HAS_AMD INTEL=$HAS_INTEL VM=$HAS_VM"
-
-network_ready() {
-  getent hosts archive.ubuntu.com >/dev/null 2>&1 ||
-  getent hosts security.ubuntu.com >/dev/null 2>&1
-}
-
-ensure_mesa_runtime() {
-  local missing=0
-
-  for package in \
-    mesa-vulkan-drivers \
-    mesa-utils \
-    libgl1-mesa-dri \
-    libglx-mesa0
-  do
-    dpkg-query -W -f='${Status}' "$package" 2>/dev/null |
-      grep -q 'install ok installed' || missing=1
-  done
-
-  if [ "$missing" = "0" ]; then
-    echo "Mesa graphics runtime already installed."
-    return 0
-  fi
-
-  if ! network_ready; then
-    echo "NOTICE: Mesa package repair deferred; network unavailable."
-    return 1
-  fi
-
-  apt-get update || return 1
-
-  DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    mesa-vulkan-drivers \
-    mesa-utils \
-    libgl1-mesa-dri \
-    libglx-mesa0
-}
-
-if [ "$HAS_NVIDIA" = "1" ]; then
-  echo
-  echo "=== NVIDIA automatic configuration ==="
-
-  if [ -f "$PENDING" ]; then
-    echo "Verifying NVIDIA after requested reboot."
-
-    if command -v nvidia-smi >/dev/null 2>&1 &&
-       nvidia-smi >/dev/null 2>&1; then
-      echo "NVIDIA driver operational after reboot."
-      rm -f "$PENDING" "$FAILED"
-      touch "$DONE"
-      exit 0
-    fi
-
-    echo "ERROR: NVIDIA is still unavailable after automatic repair."
-    lspci -Dnnk 2>/dev/null |
-      grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
-      true
-    lsmod | grep -Ei 'nvidia|nouveau' || true
-    dmesg 2>/dev/null | grep -Ei 'nvidia|nouveau|NVRM' | tail -100 || true
-
-    touch "$FAILED" "$DONE"
-    rm -f "$PENDING"
-    exit 0
-  fi
-
-  if command -v nvidia-smi >/dev/null 2>&1 &&
-     nvidia-smi >/dev/null 2>&1; then
-    echo "NVIDIA driver already operational."
-    nvidia-smi || true
-    touch "$DONE"
-    exit 0
-  fi
-
-  if ! command -v ubuntu-drivers >/dev/null 2>&1; then
-    echo "ERROR: ubuntu-drivers is unavailable."
-    touch "$FAILED" "$DONE"
-    exit 0
-  fi
-
-  if ! network_ready; then
-    echo "NOTICE: network unavailable; NVIDIA setup will retry next boot."
-    exit 0
-  fi
-
-  echo
-  echo "--- Available/recommended NVIDIA drivers ---"
-  ubuntu-drivers devices || true
-  ubuntu-drivers list || true
-
-  echo
-  echo "--- Disable nouveau before NVIDIA activation ---"
-
-  cat > /etc/modprobe.d/pincabos-disable-nouveau.conf <<'NOUVEAU'
-blacklist nouveau
-options nouveau modeset=0
-NOUVEAU
-
-  apt-get update || {
-    echo "NOTICE: apt update failed; retrying next boot."
-    exit 0
-  }
-
-  echo
-  echo "--- Install Ubuntu recommended desktop NVIDIA driver ---"
-
-  if ! DEBIAN_FRONTEND=noninteractive ubuntu-drivers install; then
-    echo "ERROR: ubuntu-drivers install failed."
-    touch "$FAILED" "$DONE"
-    exit 0
-  fi
-
-  update-initramfs -u -k all || true
-
-  touch "$PENDING"
-
-  echo
-  echo "NVIDIA driver changed. Automatic reboot required."
-  sync
-  sleep 3
-  systemctl reboot || reboot
-  exit 0
-fi
-
-if [ "$HAS_AMD" = "1" ]; then
-  echo
-  echo "=== AMD/ATI configuration ==="
-  ensure_mesa_runtime || true
-  modprobe amdgpu 2>/dev/null || true
-
-  lspci -Dnnk 2>/dev/null |
-    grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
-    true
-
-  touch "$DONE"
-  exit 0
-fi
-
-if [ "$HAS_INTEL" = "1" ]; then
-  echo
-  echo "=== Intel configuration ==="
-  ensure_mesa_runtime || true
-
-  modprobe xe 2>/dev/null ||
-  modprobe i915 2>/dev/null ||
-  true
-
-  lspci -Dnnk 2>/dev/null |
-    grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
-    true
-
-  touch "$DONE"
-  exit 0
-fi
-
-if [ "$HAS_VM" = "1" ]; then
-  echo
-  echo "=== Virtual GPU configuration ==="
-  ensure_mesa_runtime || true
-
-  modprobe virtio_gpu 2>/dev/null ||
-  modprobe qxl 2>/dev/null ||
-  modprobe vmwgfx 2>/dev/null ||
-  true
-
-  echo "Virtual machine display accepted; one-screen mode is valid."
-  touch "$DONE"
-  exit 0
-fi
-
-echo
-echo "Unknown or generic graphics device."
-echo "Using kernel modesetting/Mesa without forcing a vendor package."
-ensure_mesa_runtime || true
-touch "$DONE"
-
-echo "Completed: $(date -Is)"
-exit 0
-HARDWARE_AUTOCONFIG
 
 chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-hardware-autoconfig"
 
-cat > "$TARGET/etc/systemd/system/pincabos-firstboot-hardware-autoconfig.service" <<'HARDWARE_SERVICE'
-[Unit]
-Description=PinCabOS automatic GPU configuration
-After=NetworkManager.service network-online.target pincabos-firstboot-network-webapp-fix.service
-Wants=network-online.target
-Before=display-manager.service lightdm.service gdm.service gdm3.service graphical.target
-ConditionPathExists=!/var/lib/pincabos/hardware-autoconfig.done
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/pincabos-firstboot-hardware-autoconfig
-TimeoutStartSec=30min
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-HARDWARE_SERVICE
 
 ln -sfn ../pincabos-firstboot-hardware-autoconfig.service \
   "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-firstboot-hardware-autoconfig.service"
@@ -1137,6 +638,10 @@ if [ -d "$VPINFE_DROPIN_DIR" ]; then
   while IFS= read -r -d '' dropin; do
     dropin_name="$(basename "$dropin")"
 
+    # PINCABOS_CIBLE_FICHIERS_DU_DEPOT_V1 : le drop-in courant vient du squashfs (depot), on le garde
+    if [ "$dropin_name" = "90-pincabos-iso-start.conf" ]; then
+      continue
+    fi
     if [[ "$dropin_name" =~ (screen|display|topology|xrandr|iso-start) ]] || \
        grep -Eqi \
          'pincabos-display-role|pincabos-screen-topology\.service|(^|[[:space:]])xrandr([[:space:]]|$)|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
@@ -1216,21 +721,6 @@ else
   SCREEN_TOPOLOGY_EXEC="/usr/bin/true"
 fi
 
-cat > "$TARGET/etc/systemd/system/pincabos-screen-topology-boot.service" <<SCREEN_TOPOLOGY_BOOT_SERVICE
-[Unit]
-Description=PinCabOS automatic X11 topology before VPinFE
-After=pincabos-firstboot-hardware-autoconfig.service display-manager.service
-Wants=display-manager.service
-Before=pincabos-vpinfe.service
-[Service]
-Type=oneshot
-ExecStart=$SCREEN_TOPOLOGY_EXEC
-RemainAfterExit=yes
-TimeoutStartSec=110
-
-[Install]
-WantedBy=graphical.target
-SCREEN_TOPOLOGY_BOOT_SERVICE
 
 ln -sfn ../pincabos-screen-topology-boot.service \
   "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-screen-topology-boot.service" || true
@@ -1264,230 +754,6 @@ chown "$PINBALL_UID:$PINBALL_GID" \
 echo
 echo "=== Install runtime VPinFE display sanitizer ==="
 
-cat > "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize" <<'VPINFE_DISPLAY_SANITIZER'
-#!/usr/bin/env bash
-set -u
-
-INI="/home/pinball/.config/vpinfe/vpinfe.ini"
-SCREENS="/opt/pincabos/config/screens/screens.json"
-# PINCABOS_VPINFE_SANITIZER_TMP_FALLBACK_V2
-TMP_ROOT="${TMPDIR:-/tmp}"
-
-if [ ! -d "$TMP_ROOT" ] || [ ! -w "$TMP_ROOT" ]; then
-  TMP_ROOT="/tmp"
-fi
-
-XRANDR_TMP="$(
-  mktemp "$TMP_ROOT/pincabos-vpinfe-xrandr.XXXXXX"
-)" || exit 0
-
-trap 'rm -f "$XRANDR_TMP"' EXIT
-
-[ -f "$INI" ] || exit 0
-[ -f "$SCREENS" ] || exit 0
-
-/usr/sbin/runuser -u pinball -- \
-  /usr/bin/env \
-    DISPLAY=:0 \
-    XAUTHORITY=/home/pinball/.Xauthority \
-    /usr/bin/xrandr --query \
-    >"$XRANDR_TMP" 2>/dev/null || exit 0
-
-python3 - "$INI" "$SCREENS" "$XRANDR_TMP" <<'VPINFE_DISPLAY_PY'
-from pathlib import Path
-import json
-import os
-import pwd
-import re
-import sys
-import tempfile
-
-ini = Path(sys.argv[1])
-screens_file = Path(sys.argv[2])
-xrandr_file = Path(sys.argv[3])
-
-connected = []
-
-for line in xrandr_file.read_text(
-    encoding="utf-8",
-    errors="replace",
-).splitlines():
-    match = re.match(
-        r"^(\S+)\s+connected(?:\s+primary)?\s+"
-        r"\d+x\d+\+-?\d+\+-?\d+",
-        line,
-    )
-
-    if match:
-        connected.append(match.group(1))
-
-
-if not connected:
-    print("VPinFE sanitizer: aucun écran actif.")
-    raise SystemExit(0)
-
-
-try:
-    screens = json.loads(
-        screens_file.read_text(encoding="utf-8")
-    )
-except Exception as error:
-    print(f"VPinFE sanitizer: screens.json invalide: {error}")
-    raise SystemExit(0)
-
-
-def valid_role(role, already_used):
-    item = screens.get(role)
-
-    if not isinstance(item, dict):
-        return "", ""
-
-    name = str(item.get("name") or "").strip()
-
-    if (
-        not name
-        or name not in connected
-        or name in already_used
-    ):
-        return "", ""
-
-    try:
-        screen_id = int(item.get("id"))
-    except (TypeError, ValueError):
-        return "", ""
-
-    if screen_id < 0 or screen_id >= len(connected):
-        return "", ""
-
-    already_used.add(name)
-    return str(screen_id), name
-
-
-used = set()
-
-table_id, table_name = valid_role("playfield", used)
-
-if table_id == "":
-    table_id = "0"
-    table_name = connected[0]
-    used.add(table_name)
-
-bg_id, bg_name = valid_role("backglass", used)
-dmd_id, dmd_name = valid_role("fulldmd", used)
-
-updates = {
-    "tablescreenid": table_id,
-    "bgscreenid": bg_id,
-    "dmdscreenid": dmd_id,
-    "fulldmdscreenid": dmd_id,
-}
-
-if not bg_id:
-    updates["bgwindowoverride"] = ""
-
-if not dmd_id:
-    updates["dmdwindowoverride"] = ""
-
-
-original = ini.read_text(
-    encoding="utf-8",
-    errors="replace",
-)
-
-lines = original.splitlines()
-output = []
-section = ""
-found_displays = False
-written = set()
-
-
-def append_missing():
-    for key, value in updates.items():
-        if key not in written:
-            output.append(f"{key} = {value}")
-            written.add(key)
-
-
-for line in lines:
-    match = re.match(r"^\s*\[([^\]]+)\]\s*$", line)
-
-    if match:
-        if section == "displays":
-            append_missing()
-
-        section = match.group(1).strip().lower()
-
-        if section == "displays":
-            found_displays = True
-
-        output.append(line)
-        continue
-
-    if section == "displays" and "=" in line:
-        key = line.split("=", 1)[0].strip().lower()
-
-        if key in updates:
-            if key not in written:
-                output.append(f"{key} = {updates[key]}")
-                written.add(key)
-            continue
-
-    output.append(line)
-
-
-if found_displays:
-    if section == "displays":
-        append_missing()
-else:
-    if output and output[-1].strip():
-        output.append("")
-
-    output.append("[Displays]")
-    append_missing()
-
-
-content = "\n".join(output).rstrip() + "\n"
-
-if content != original:
-    fd, temporary = tempfile.mkstemp(
-        prefix=f".{ini.name}.",
-        dir=str(ini.parent),
-    )
-
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(content)
-            handle.flush()
-            os.fsync(handle.fileno())
-
-        stat = ini.stat()
-        os.chmod(temporary, stat.st_mode & 0o777)
-        os.chown(temporary, stat.st_uid, stat.st_gid)
-        os.replace(temporary, ini)
-    finally:
-        try:
-            os.unlink(temporary)
-        except FileNotFoundError:
-            pass
-
-
-try:
-    pinball = pwd.getpwnam("pinball")
-    os.chown(ini, pinball.pw_uid, pinball.pw_gid)
-except (KeyError, PermissionError):
-    pass
-
-
-print(
-    "VPinFE displays sanitized: "
-    f"PF={table_name}:{table_id} "
-    f"BG={bg_name or 'none'}:{bg_id or 'blank'} "
-    f"DMD={dmd_name or 'none'}:{dmd_id or 'blank'}"
-)
-VPINFE_DISPLAY_PY
-
-exit 0
-VPINFE_DISPLAY_SANITIZER
 
 chmod 755 \
   "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize"
@@ -1509,148 +775,6 @@ install -d \
   -m 0700 \
   "$TARGET/var/tmp/pincabos-vpinfe"
 
-cat > "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard" <<'VPINFE_PROFILE_GUARD'
-#!/usr/bin/env bash
-set -u
-
-TMP_ROOT="/var/tmp/pincabos-vpinfe"
-PINBALL_UID="$(id -u pinball)"
-
-echo "=== PinCabOS VPinFE Chrome prestart guard ==="
-
-install -d \
-  -o pinball \
-  -g pinball \
-  -m 0700 \
-  "$TMP_ROOT"
-
-find_vpinfe_chrome_pids() {
-  local proc pid owner comm cmdline
-
-  for proc in /proc/[0-9]*; do
-    [ -d "$proc" ] || continue
-
-    pid="${proc##*/}"
-    owner="$(stat -c %u "$proc" 2>/dev/null || true)"
-
-    [ "$owner" = "$PINBALL_UID" ] || continue
-    [ -r "$proc/comm" ] || continue
-    [ -r "$proc/cmdline" ] || continue
-
-    comm="$(cat "$proc/comm" 2>/dev/null || true)"
-    cmdline="$(tr '\0' ' ' < "$proc/cmdline" 2>/dev/null || true)"
-
-    case "$comm" in
-      chrome|google-chrome|chromium|chromium-browser)
-        ;;
-      *)
-        continue
-        ;;
-    esac
-
-    case "$cmdline" in
-      *"--user-data-dir=/tmp/vpinfe_chromium_"*|\
-      *"--user-data-dir=/var/tmp/pincabos-vpinfe/vpinfe_chromium_"*)
-        printf '%s\n' "$pid"
-        ;;
-    esac
-  done
-}
-
-mapfile -t stale_pids < <(find_vpinfe_chrome_pids)
-
-if [ "${#stale_pids[@]}" -gt 0 ]; then
-  echo "Stopping stale VPinFE Chrome processes: ${stale_pids[*]}"
-  kill -TERM "${stale_pids[@]}" 2>/dev/null || true
-
-  for attempt in $(seq 1 8); do
-    remaining=()
-
-    for pid in "${stale_pids[@]}"; do
-      [ -d "/proc/$pid" ] && remaining+=("$pid")
-    done
-
-    [ "${#remaining[@]}" -eq 0 ] && break
-    sleep 1
-  done
-
-  remaining=()
-
-  for pid in "${stale_pids[@]}"; do
-    [ -d "/proc/$pid" ] && remaining+=("$pid")
-  done
-
-  if [ "${#remaining[@]}" -gt 0 ]; then
-    echo "Forcing stale VPinFE Chrome processes: ${remaining[*]}"
-    kill -KILL "${remaining[@]}" 2>/dev/null || true
-    sleep 1
-  fi
-fi
-
-echo "Removing stale VPinFE temporary profiles"
-
-find /tmp \
-  -mindepth 1 \
-  -maxdepth 1 \
-  -type d \
-  -name 'vpinfe_chromium_*' \
-  -print \
-  -exec rm -rf -- {} + \
-  2>/dev/null || true
-
-find "$TMP_ROOT" \
-  -mindepth 1 \
-  -maxdepth 1 \
-  -type d \
-  -name 'vpinfe_chromium_*' \
-  -print \
-  -exec rm -rf -- {} + \
-  2>/dev/null || true
-
-CHROME_RUNNING=0
-
-for proc in /proc/[0-9]*; do
-  [ -r "$proc/comm" ] || continue
-
-  [ "$(stat -c %u "$proc" 2>/dev/null || true)" = "$PINBALL_UID" ] \
-    || continue
-
-  comm="$(cat "$proc/comm" 2>/dev/null || true)"
-
-  case "$comm" in
-    chrome|google-chrome|chromium|chromium-browser)
-      CHROME_RUNNING=1
-      break
-      ;;
-  esac
-done
-
-if [ "$CHROME_RUNNING" -eq 0 ] && \
-   [ -d /home/pinball/.config/google-chrome ]; then
-
-  echo "Removing stale Singleton locks from inactive Chrome profile"
-
-  find /home/pinball/.config/google-chrome \
-    -maxdepth 2 \
-    \( \
-      -name SingletonLock -o \
-      -name SingletonCookie -o \
-      -name SingletonSocket \
-    \) \
-    -print \
-    -delete \
-    2>/dev/null || true
-fi
-
-install -d \
-  -o pinball \
-  -g pinball \
-  -m 0700 \
-  "$TMP_ROOT"
-
-echo "VPinFE Chrome prestart guard completed"
-exit 0
-VPINFE_PROFILE_GUARD
 
 chmod 755 \
   "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard"
@@ -1658,11 +782,6 @@ chmod 755 \
 chown root:root \
   "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard"
 
-cat > "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf" <<'VPINFE_GUARD_DROPIN'
-[Service]
-# PINCABOS_VPINFE_CHROME_PROFILE_GUARD_V2
-ExecStartPre=/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard
-VPINFE_GUARD_DROPIN
 
 chmod 644 \
   "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf"
@@ -1712,21 +831,6 @@ do
     "$TARGET/etc/systemd/system/$legacy_unit"
 done
 
-cat > "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/90-pincabos-iso-start.conf" <<'VPINFE_OVERRIDE'
-[Unit]
-After=pincabos-firstboot-hardware-autoconfig.service display-manager.service network-online.target pincabos-screen-topology-boot.service
-Requires=pincabos-screen-topology-boot.service
-Wants=network-online.target
-StartLimitIntervalSec=120
-StartLimitBurst=3
-
-[Service]
-ExecStartPre=/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize
-Restart=always
-RestartSec=6
-TimeoutStartSec=90
-TimeoutStopSec=25
-VPINFE_OVERRIDE
 
 echo
 echo "==============================================================="
@@ -1956,90 +1060,9 @@ else
   echo "WARNING: pincabos-vpinfe.service not found in target"
 fi
 
-cat > "$TARGET/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix" <<'FIRSTBOOT_VPINFE'
-#!/usr/bin/env bash
-set -u
-
-LOG="/var/log/pincabos-firstboot-vpinfe-packaged-runtime-fix.log"
-FLAG="/var/lib/pincabos/firstboot-vpinfe-packaged-runtime.done"
-
-mkdir -p /var/log /var/lib/pincabos
-
-{
-  echo "==============================================================="
-  echo " PinCabOS first boot VPinFE packaged runtime fix"
-  echo " Started: $(date -Is)"
-  echo "==============================================================="
-
-  if [ -f "$FLAG" ]; then
-    echo "Already completed."
-    exit 0
-  fi
-
-  echo
-  echo "=== Runtime files ==="
-  ls -lah /home/pinball/vpinfe 2>/dev/null || true
-  ls -lah /home/pinball/vpinfe/_internal 2>/dev/null | sed -n '1,80p' || true
-  ls -lah /opt/pincabos/tools/run-vpinfe-systemd.sh 2>/dev/null || true
-
-  echo
-  echo "=== Permissions ==="
-  chown -R pinball:pinball /home/pinball/vpinfe 2>/dev/null || true
-  chown -R pinball:pinball /home/pinball/.config/vpinfe 2>/dev/null || true
-  chown -R pinball:pinball /opt/pincabos/config/vpinfe 2>/dev/null || true
-  chmod 755 /opt/pincabos/tools/run-vpinfe-systemd.sh 2>/dev/null || true
-
-  echo
-  echo "=== Enable/start VPinFE ==="
-  systemctl daemon-reload || true
-  systemctl reset-failed pincabos-vpinfe.service >/dev/null 2>&1 || true
-  systemctl enable pincabos-vpinfe.service >/dev/null 2>&1 || true
-  systemctl restart pincabos-vpinfe.service >/dev/null 2>&1 || true
-
-  echo
-  echo "=== Wait for VPinFE port 8001 ==="
-  VPINFE_OK=0
-  for i in $(seq 1 45); do
-    if ss -lnt 2>/dev/null | grep -qE ':8001\s'; then
-      VPINFE_OK=1
-      break
-    fi
-    sleep 2
-  done
-
-  echo "VPINFE_OK=$VPINFE_OK"
-  systemctl status pincabos-vpinfe.service --no-pager -l || true
-  journalctl -u pincabos-vpinfe.service -b --no-pager -n 160 || true
-  ss -lntup 2>/dev/null | grep -E '(:8001|:80|:5000|:8080)' || true
-
-  touch "$FLAG"
-  systemctl disable pincabos-firstboot-vpinfe-packaged-runtime-fix.service >/dev/null 2>&1 || true
-
-  echo
-  echo "Completed: $(date -Is)"
-} >> "$LOG" 2>&1
-
-exit 0
-FIRSTBOOT_VPINFE
 
 chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix"
 
-cat > "$TARGET/etc/systemd/system/pincabos-firstboot-vpinfe-packaged-runtime-fix.service" <<'FIRSTBOOT_VPINFE_SERVICE'
-[Unit]
-Description=PinCabOS first boot VPinFE packaged runtime fix
-After=display-manager.service network-online.target pincabos-firstboot-network-webapp-fix.service
-Wants=network-online.target
-ConditionPathExists=!/var/lib/pincabos/firstboot-vpinfe-packaged-runtime.done
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix
-TimeoutStartSec=3min
-RemainAfterExit=yes
-
-[Install]
-WantedBy=graphical.target
-FIRSTBOOT_VPINFE_SERVICE
 
 # The unified hardware/topology pipeline now starts VPinFE.
 # Keep the diagnostic unit available, but do not enable a competing starter.
@@ -2092,64 +1115,9 @@ ls "$TARGET"/boot/vmlinuz-* >/dev/null
 
 mkdir -p "$TARGET/usr/local/sbin" "$TARGET/etc/systemd/system" "$TARGET/etc/systemd/system/multi-user.target.wants" "$TARGET/var/lib/pincabos"
 
-cat > "$TARGET/usr/local/sbin/pincabos-firstboot-initramfs-refresh" <<'FIRSTBOOT_REFRESH'
-#!/usr/bin/env bash
-set -u
-
-FLAG="/var/lib/pincabos/firstboot-initramfs-refresh.done"
-LOG="/var/log/pincabos-firstboot-initramfs-refresh.log"
-
-mkdir -p /var/lib/pincabos /tmp /var/tmp /var/log /var/cache/apt/archives/partial
-chmod 1777 /tmp /var/tmp 2>/dev/null || true
-
-{
-  echo "==============================================================="
-  echo " PinCabOS first boot initramfs refresh"
-  echo " Started: $(date -Is)"
-  echo "==============================================================="
-
-  if [ -f "$FLAG" ]; then
-    echo "Already completed."
-    exit 0
-  fi
-
-  if command -v plymouth-set-default-theme >/dev/null 2>&1; then
-    plymouth-set-default-theme pincabos || true
-  fi
-
-  if command -v update-initramfs >/dev/null 2>&1; then
-    update-initramfs -u -k all || true
-  fi
-
-  if command -v update-grub >/dev/null 2>&1; then
-    update-grub || true
-  fi
-
-  touch "$FLAG"
-  systemctl disable pincabos-firstboot-initramfs-refresh.service >/dev/null 2>&1 || true
-
-  echo "Completed: $(date -Is)"
-} >> "$LOG" 2>&1
-
-exit 0
-FIRSTBOOT_REFRESH
 
 chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-initramfs-refresh"
 
-cat > "$TARGET/etc/systemd/system/pincabos-firstboot-initramfs-refresh.service" <<'FIRSTBOOT_SERVICE'
-[Unit]
-Description=PinCabOS first boot initramfs refresh
-After=local-fs.target
-ConditionPathExists=!/var/lib/pincabos/firstboot-initramfs-refresh.done
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/pincabos-firstboot-initramfs-refresh
-TimeoutStartSec=10min
-
-[Install]
-WantedBy=multi-user.target
-FIRSTBOOT_SERVICE
 
 ln -sfn ../pincabos-firstboot-initramfs-refresh.service \
   "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-firstboot-initramfs-refresh.service"
