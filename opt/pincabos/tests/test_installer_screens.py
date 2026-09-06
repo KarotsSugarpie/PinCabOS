@@ -392,7 +392,7 @@ class Assistant(unittest.TestCase):
             for n in ("paysage0.png", "paysage1.jpg", "portrait0.png", "grub0.jpg"):
                 (g / n).write_bytes(b"x")
             mons = sc.moniteurs(QUERY, PROPS)
-            imgs = sc.images_decor(mons, {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0"}, g, random.Random(1))
+            imgs = sc.images_decor(mons, {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0"}, g, random.Random(1), decor=Path(d, "sans-visuels"))
             self.assertEqual(sorted(imgs), ["DP-0", "DP-2"])                       # jamais le playfield
             self.assertTrue(all(Path(v).name.startswith("paysage") for v in imgs.values()))
             self.assertEqual(sc.images_decor(mons, {"playfield": "HDMI-0"}, Path(d, "vide"), random.Random(1)), {})
@@ -613,9 +613,9 @@ class IdentifyXinerama(unittest.TestCase):
         # PINCABOS_INSTALLEUR_DECOR_ROLE_V1
         mons = [{"name": "HDMI-0"}, {"name": "DP-0"}, {"name": "DP-2"}, {"name": "DP-4"}]
         roles = {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}
-        self.assertEqual(sc.libelles_decor(mons, roles, {"backglass": "Backglass", "fulldmd": "Full DMD"}),
+        self.assertEqual(sc.libelles_decor(mons, roles, {"backglass": "Backglass", "fulldmd": "Full DMD"}, decor=Path("/nonexistent")),
                          {"DP-2": "BACKGLASS", "DP-0": "FULL DMD"})
-        self.assertEqual(sc.libelles_decor(mons, roles, None)["DP-0"], "FULL DMD")
+        self.assertEqual(sc.libelles_decor(mons, roles, None, decor=Path("/nonexistent"))["DP-0"], "FULL DMD")
         s = (INSTALLER / "screens.py").read_text(encoding="utf-8")
         self.assertIn('"--labels", json.dumps(etiquettes)', s)
         d = (INSTALLER / "decor.py").read_text(encoding="utf-8")
