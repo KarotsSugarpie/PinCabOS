@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _charge import charger, RACINE
+from _charge import charger, RACINE, texte_installateur
 
 m = charger("opt/pincabos/tools/pincabos_identity.py", "pco_identity")
 
@@ -187,7 +187,7 @@ class Application(unittest.TestCase):
 
 class Installation(unittest.TestCase):
     def test_iso_sh_applique_l_identite_sur_la_cible(self):
-        s = (Path(RACINE) / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         self.assertIn("apply_target_identity() {", s)
         self.assertIn('pincabos_identity.py" apply --root "$TARGET" --no-grub', s)
         a, b, c = s.index("  apply_target_orientation\n"), s.index("  apply_target_identity\n"), s.index("  refresh_target_initrd_for_orientation\n")

@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _charge import charger, RACINE
+from _charge import charger, RACINE, texte_installateur
 
 R = Path(RACINE)
 pa = charger("opt/pincabos/tools/pincabos_audio.py", "pco_audio_mod")
@@ -404,7 +404,7 @@ class Assistant(unittest.TestCase):
 
 class Integration(unittest.TestCase):
     def test_iso_sh(self):
-        s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         self.assertIn("apply_target_audio() {", s); self.assertIn("apply_target_dof() {", s)
         self.assertIn("  apply_target_dmd\n  apply_target_audio\n  apply_target_dof\n  apply_target_toys\n", s)
         self.assertIn('"$TARGET/opt/pincabos/config/audio-router.json"', s)

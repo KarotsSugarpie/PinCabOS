@@ -9,7 +9,7 @@ import subprocess
 import unittest
 from pathlib import Path
 
-from _charge import RACINE
+from _charge import RACINE, texte_installateur
 
 R = Path(RACINE)
 ISO = R / "opt/pincabos/script/iso.sh"
@@ -79,7 +79,7 @@ class PlusDeRepliTexte(unittest.TestCase):
             self.assertFalse((R / rel).exists(), rel)
 
     def test_iso_ne_fabrique_plus_la_console(self):
-        texte = ISO.read_text(encoding="utf-8")
+        texte = texte_installateur()
         # iso.sh ne fabrique ni ne copie plus ces pieces (il ne fait que les effacer)
         self.assertNotIn("<<'PINCABOS_LIVE_CONSOLE'", texte)
         self.assertNotIn("<<'PINCBOS_DESKTOP'", texte)
@@ -129,7 +129,7 @@ class SplashDuMedia(unittest.TestCase):
 
     def test_cible_recoit_son_splash_a_l_installation(self):
         # PINCABOS_SPLASH_CIBLE_V1 : premier demarrage = galeries du cab installe, initrd non refait deux fois
-        s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         appel = 'chroot "$TARGET" /usr/local/sbin/pincabos-splash-sync --force'
         self.assertIn(appel, s)
         self.assertLess(s.index("apply_target_screens() {"), s.index(appel))

@@ -1,0 +1,2844 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TARGET="${1:-/target}"
+PAYLOAD_DIR="${2:-/cdrom/pincabos-payload}"
+
+echo "==============================================================="
+echo " PINCABOS V8.1G — INSTALL LEAN CAB PAYLOAD"
+echo "==============================================================="
+
+[ "$(id -u)" -eq 0 ] || { echo "ERROR: root required"; exit 1; }
+[ -d "$TARGET" ] || { echo "ERROR: target missing: $TARGET"; exit 1; }
+findmnt "$TARGET" >/dev/null || { echo "ERROR: $TARGET not mounted"; exit 1; }
+
+# PINCABOS_TARGET_RW_PREFLIGHT_V1
+TARGET_MOUNT_OPTIONS="$(findmnt -rn -o OPTIONS --target "$TARGET" 2>/dev/null || true)"
+case ",$TARGET_MOUNT_OPTIONS," in
+  *,rw,*) ;;
+  *)
+    echo "ERROR: target is not mounted read-write: $TARGET"
+    findmnt -T "$TARGET" -o SOURCE,TARGET,FSTYPE,OPTIONS 2>/dev/null || true
+    exit 76
+    ;;
+esac
+
+TARGET_RW_PROBE="$TARGET/.pincabos-rw-probe-$$"
+if ! (
+  umask 077
+  printf 'PinCabOS write probe\n' > "$TARGET_RW_PROBE"
+  sync "$TARGET_RW_PROBE" 2>/dev/null || sync
+  rm -f "$TARGET_RW_PROBE"
+); then
+  rm -f "$TARGET_RW_PROBE" 2>/dev/null || true
+  echo "ERROR: target write probe failed before payload extraction"
+  findmnt -T "$TARGET" -o SOURCE,TARGET,FSTYPE,OPTIONS 2>/dev/null || true
+  exit 77
+fi
+
+echo "GO [OK] target filesystem is mounted RW and writable"
+
+# PINCABOS_LIVE_SQUASHFS_V1
+# One payload shape (PINCABOS_ISO_MODELE_LIVE_V2): the ISO *is* the system,
+# shipped as casper/filesystem.squashfs and verified by casper at boot.
+LIVE_SQUASHFS="$PAYLOAD_DIR/../casper/filesystem.squashfs"
+
+echo
+echo "=== 1) Verify live squashfs ==="
+[ -f "$LIVE_SQUASHFS" ] || { echo "ERROR: live squashfs missing: $LIVE_SQUASHFS"; exit 1; }
+echo "Live squashfs detected, checksum already verified by casper at boot."
+
+echo
+echo "=== 2) Extract rootfs ==="
+# Progress bar left on purpose: the graphical installer parses it.
+unsquashfs -f -d "$TARGET" "$LIVE_SQUASHFS"
+# Strip what only makes sense on live media.
+rm -f "$TARGET/etc/pincabos-live" \
+      "$TARGET/etc/netplan/01-pincabos-live-dhcp.yaml"
+rm -f "$TARGET/etc/systemd/system/pincabos-gui-install.target" \
+      "$TARGET/etc/systemd/system/pincabos-gui-install-prepare.service" \
+      "$TARGET/usr/local/sbin/pincabos-gui-install-prepare"
+
+
+echo
+echo "=== PinCabOS Live pinball identity compatibility ==="
+echo "PINCABOS_LIVE_PINBALL_NSS_IDENTITY_V2"
+
+#
+# The payload has now been extracted.
+# Resolve the REAL target account from /target.
+#
+PINBALL_UID="$(
+    awk -F: '$1=="pinball" {print $3; exit}' \
+        "$TARGET/etc/passwd"
+)"
+
+PINBALL_GID="$(
+    awk -F: '$1=="pinball" {print $4; exit}' \
+        "$TARGET/etc/passwd"
+)"
+
+if [ -z "$PINBALL_UID" ] || [ -z "$PINBALL_GID" ]; then
+    echo "ERROR: target user pinball does not exist after payload extraction."
+    echo "Target passwd:"
+    grep '^pinball:' "$TARGET/etc/passwd" 2>/dev/null || true
+    exit 71
+fi
+
+case "$PINBALL_UID" in
+    *[!0-9]*|'')
+        echo "ERROR: invalid target pinball UID: $PINBALL_UID"
+        exit 72
+        ;;
+esac
+
+case "$PINBALL_GID" in
+    *[!0-9]*|'')
+        echo "ERROR: invalid target pinball GID: $PINBALL_GID"
+        exit 73
+        ;;
+esac
+
+echo "Target pinball UID:GID = $PINBALL_UID:$PINBALL_GID"
+
+#
+# The installer helper itself executes in the Ubuntu Live environment.
+#
+# Some existing PinCabOS installation operations still legitimately use:
+#
+#   install -o pinball -g pinball
+#   chown pinball:pinball
+#
+# Those commands resolve names against the LIVE /etc/passwd, not
+# /target/etc/passwd.
+#
+# Create a temporary NSS identity in the Live system.
+# It disappears automatically when the Live ISO reboots.
+#
+
+if [ -f /etc/passwd ]; then
+    sed -i '/^pinball:/d' /etc/passwd
+fi
+
+if [ -f /etc/group ]; then
+    sed -i '/^pinball:/d' /etc/group
+fi
+
+printf 'pinball:x:%s:%s:PinCabOS Live Installer:/home/pinball:/bin/bash\n' \
+    "$PINBALL_UID" \
+    "$PINBALL_GID" \
+    >> /etc/passwd
+
+printf 'pinball:x:%s:\n' \
+    "$PINBALL_GID" \
+    >> /etc/group
+
+#
+# Verify NSS resolution BEFORE continuing.
+#
+LIVE_PINBALL_UID="$(id -u pinball 2>/dev/null || true)"
+LIVE_PINBALL_GID="$(id -g pinball 2>/dev/null || true)"
+
+if [ "$LIVE_PINBALL_UID" != "$PINBALL_UID" ] ||
+   [ "$LIVE_PINBALL_GID" != "$PINBALL_GID" ]; then
+
+    echo "ERROR: Live pinball NSS identity validation failed."
+    echo "Expected : $PINBALL_UID:$PINBALL_GID"
+    echo "Live     : ${LIVE_PINBALL_UID:-missing}:${LIVE_PINBALL_GID:-missing}"
+    exit 74
+fi
+
+echo "GO [√] Live user pinball ready: $LIVE_PINBALL_UID:$LIVE_PINBALL_GID"
+
+#
+# Extra validation: the TARGET account must still be unchanged.
+#
+TARGET_CHECK_UID="$(
+    awk -F: '$1=="pinball" {print $3; exit}' \
+        "$TARGET/etc/passwd"
+)"
+
+TARGET_CHECK_GID="$(
+    awk -F: '$1=="pinball" {print $4; exit}' \
+        "$TARGET/etc/passwd"
+)"
+
+if [ "$TARGET_CHECK_UID:$TARGET_CHECK_GID" != "$PINBALL_UID:$PINBALL_GID" ]; then
+    echo "ERROR: target pinball identity changed unexpectedly."
+    exit 75
+fi
+
+echo "GO [√] Target pinball identity validated."
+
+
+# PINCABOS_PINBALL_ROOT_ADMIN_POLICY_V1
+echo
+echo "=== 2c) PINCABOS POLICY: pinball UID 1000 + full local administration ==="
+
+PCOS_TARGET_PB_UID="$(awk -F: '$1=="pinball"{print $3; exit}' "$TARGET/etc/passwd" 2>/dev/null || true)"
+PCOS_TARGET_PB_GID="$(awk -F: '$1=="pinball"{print $4; exit}' "$TARGET/etc/passwd" 2>/dev/null || true)"
+
+if [ "$PCOS_TARGET_PB_UID" != "1000" ] || [ "$PCOS_TARGET_PB_GID" != "1000" ]; then
+  echo "ERROR: PinCabOS invariant failed: pinball must be uid=1000 gid=1000"
+  echo "       detected uid=${PCOS_TARGET_PB_UID:-missing} gid=${PCOS_TARGET_PB_GID:-missing}"
+  exit 1
+fi
+
+if [ ! -x "$TARGET/usr/bin/sudo" ]; then
+  echo "ERROR: sudo missing from target rootfs"
+  exit 1
+fi
+
+# Full root via sudo without password, while keeping the interactive account UID 1000.
+install -d -m 0750 "$TARGET/etc/sudoers.d"
+cat > "$TARGET/etc/sudoers.d/99-pincabos-pinball-root" <<'SUDOEOF'
+# PinCabOS dedicated cabinet account — intentional full local administration
+pinball ALL=(ALL:ALL) NOPASSWD: ALL
+SUDOEOF
+chmod 0440 "$TARGET/etc/sudoers.d/99-pincabos-pinball-root"
+
+if [ -x "$TARGET/usr/sbin/visudo" ]; then
+  chroot "$TARGET" /usr/sbin/visudo -cf /etc/sudoers.d/99-pincabos-pinball-root
+fi
+
+# Keep standard sudo group membership too.
+if [ -x "$TARGET/usr/sbin/usermod" ] && grep -q '^sudo:' "$TARGET/etc/group"; then
+  chroot "$TARGET" /usr/sbin/usermod -aG sudo pinball
+fi
+
+# Full local Polkit authorization for the dedicated cabinet account.
+install -d -m 0755 "$TARGET/etc/polkit-1/rules.d"
+cat > "$TARGET/etc/polkit-1/rules.d/49-pincabos-pinball-root.rules" <<'POLKITEOF'
+// PinCabOS dedicated cabinet account — intentional full local administration
+polkit.addRule(function(action, subject) {
+    if (subject.user == "pinball") {
+        return polkit.Result.YES;
+    }
+});
+POLKITEOF
+chmod 0644 "$TARGET/etc/polkit-1/rules.d/49-pincabos-pinball-root.rules"
+
+test -s "$TARGET/etc/sudoers.d/99-pincabos-pinball-root"
+test -s "$TARGET/etc/polkit-1/rules.d/49-pincabos-pinball-root.rules"
+
+# PINCABOS_ACCOUNTS_POLICY_V1
+# Mot de passe par defaut du compte cabinet, et root verrouille : toute
+# l'administration passe par le sudo NOPASSWD installe ci-dessus.
+if [ -x "$TARGET/usr/sbin/chpasswd" ]; then
+  printf 'pinball:%s\n' 'Pinball123$' | chroot "$TARGET" /usr/sbin/chpasswd
+  echo "GO [OK] pinball default password set (change it after first boot)"
+
+  printf 'root:%s\n' '!*' | chroot "$TARGET" /usr/sbin/chpasswd -e
+  echo "GO [OK] root account locked (administration via sudo)"
+else
+  echo "WARN: chpasswd missing from target; account passwords left untouched"
+fi
+
+echo "GO [OK] target pinball uid=1000 gid=1000"
+echo "GO [OK] sudo NOPASSWD: ALL installed"
+echo "GO [OK] unrestricted local Polkit rule installed"
+
+# PINCABOS_SSH_HARDENING_V1
+# root est deja verrouille (root:!*), ce qui interdit le login par mot de
+# passe. Mais le defaut OpenSSH d'Ubuntu (prohibit-password) laisse le login
+# root PAR CLE ouvert. On le ferme pour tous les cabs, la ou l'administration
+# passe de toute facon par le sudo NOPASSWD du compte pinball installe plus
+# haut. Un build beta qui a besoin d'un acces root SSH pose son propre drop-in
+# et deverrouille root ; l'ISO propre, elle, naît fermee.
+install -d -m 0755 "$TARGET/etc/ssh/sshd_config.d"
+cat > "$TARGET/etc/ssh/sshd_config.d/00-pincabos-security.conf" <<'SSHHARDEOF'
+# PinCabOS - durcissement SSH par defaut.
+# Interdit toute connexion SSH du compte root (mot de passe ET cle).
+# L'administration locale passe par le compte pinball (sudo NOPASSWD).
+PermitRootLogin no
+SSHHARDEOF
+chmod 0644 "$TARGET/etc/ssh/sshd_config.d/00-pincabos-security.conf"
+test -s "$TARGET/etc/ssh/sshd_config.d/00-pincabos-security.conf"
+echo "GO [OK] SSH root login disabled by default"
+
+
+echo
+echo "=== 3) Extract Plymouth overlay ==="
+( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256 )
+tar --acls --xattrs --numeric-owner -I zstd \
+  -xpf "$PAYLOAD_DIR/pincabos-plymouth-theme-overlay-v8.1g.tar.zst" \
+  -C "$TARGET"
+
+echo
+echo "=== 4) Validate boot/Plymouth ==="
+ls "$TARGET"/boot/vmlinuz-* >/dev/null
+ls "$TARGET"/boot/initrd.img-* >/dev/null
+ls "$TARGET"/lib/modules/* >/dev/null
+test -f "$TARGET/usr/share/plymouth/themes/pincabos/pincabos.plymouth"
+
+echo
+echo "=== 5) Chroot mounts ==="
+mkdir -p "$TARGET"/dev "$TARGET"/proc "$TARGET"/sys "$TARGET"/run "$TARGET"/boot/efi
+mountpoint -q "$TARGET/dev"  || mount --bind /dev  "$TARGET/dev"
+mountpoint -q "$TARGET/proc" || mount --bind /proc "$TARGET/proc"
+mountpoint -q "$TARGET/sys"  || mount --bind /sys  "$TARGET/sys"
+mountpoint -q "$TARGET/run"  || mount --bind /run  "$TARGET/run"
+
+echo
+echo "=== 6) Restore required target dirs + force quiet splash + Plymouth ==="
+
+# These directories must exist in the installed target.
+# /var/tmp is required by update-initramfs/mktemp.
+mkdir -p "$TARGET/tmp"
+mkdir -p "$TARGET/var/tmp"
+mkdir -p "$TARGET/var/log"
+mkdir -p "$TARGET/var/cache"
+mkdir -p "$TARGET/var/cache/apt/archives/partial"
+mkdir -p "$TARGET/var/lib/initramfs-tools"
+mkdir -p "$TARGET/etc/plymouth"
+
+chmod 1777 "$TARGET/tmp"
+chmod 1777 "$TARGET/var/tmp"
+
+echo
+echo "=== Ensure installed target has /usr/bin/python3 ==="
+echo "PINCABOS_TARGET_ENSURE_PYTHON3_SYMLINK_V1"
+if [ ! -e "$TARGET/usr/bin/python3" ]; then
+  PYBIN="$(find "$TARGET/usr/bin" -maxdepth 1 -type f -name 'python3.*' | sort -V | tail -n 1 || true)"
+  if [ -n "$PYBIN" ]; then
+    ln -sfn "$(basename "$PYBIN")" "$TARGET/usr/bin/python3"
+    echo "Created /usr/bin/python3 -> $(basename "$PYBIN")"
+  else
+    echo "WARNING: no python3 binary found in installed target"
+  fi
+fi
+
+echo
+echo "=== PinCabOS first boot network + WebApp self-heal ==="
+# PINCABOS_ISO_AUDIO_TARGET_SANITIZER_V1
+#
+# Défense supplémentaire dans le système cible assemblé.
+
+echo "PINCABOS_ISO_AUDIO_TARGET_SANITIZER_V1"
+
+rm -f \
+  "$TARGET/etc/asound.conf" \
+  "$TARGET/var/lib/alsa/asound.state" \
+  "$TARGET/home/pinball/.asoundrc" \
+  "$TARGET/opt/pincabos/config/audio-router.json" \
+  "$TARGET/opt/pincabos/config/audio.json" \
+  "$TARGET/opt/pincabos/config/audio-ssf.json" \
+  "$TARGET/opt/pincabos/config/ssf-commander.json"
+
+rm -rf \
+  "$TARGET/home/pinball/.config/pulse" \
+  "$TARGET/home/pinball/.config/pipewire" \
+  "$TARGET/home/pinball/.config/wireplumber" \
+  "$TARGET/home/pinball/.local/state/pipewire" \
+  "$TARGET/home/pinball/.local/state/wireplumber" \
+  "$TARGET/var/lib/pipewire"
+
+python3 - "$TARGET" <<'PINCABOS_TARGET_AUDIO_PRIVACY_PY'
+from pathlib import Path
+import re
+import sys
+
+target = Path(sys.argv[1])
+
+roots = [
+    target / "home/pinball/.pincabos/vpx",  # PINCABOS_VPX_PREF_PATH_V1
+    target / "home/pinball/.local/share/VPinballX",
+    target / "home/pinball/.vpinball",
+]
+
+hardware_audio_key = re.compile(
+    r"^\s*("
+    r"SoundDevice|"
+    r"SoundDeviceBG|"
+    r"MusicDevice|"
+    r"Sound3DDevice|"
+    r"AudioDevice|"
+    r"AudioDeviceBG"
+    r")\s*=.*$",
+    re.IGNORECASE,
+)
+
+updated = 0
+
+for root in roots:
+    if not root.exists():
+        continue
+
+    for ini in root.rglob("VPinballX.ini"):
+        if not ini.is_file() or ini.is_symlink():
+            continue
+
+        original = ini.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+
+        sanitized = "".join(
+            line
+            for line in original.splitlines(keepends=True)
+            if not hardware_audio_key.match(line)
+        )
+
+        if sanitized != original:
+            ini.write_text(
+                sanitized,
+                encoding="utf-8",
+            )
+            updated += 1
+
+print(
+    f"GO [√] Target VPX audio mappings removed: {updated}"
+)
+PINCABOS_TARGET_AUDIO_PRIVACY_PY
+
+install \
+  -d \
+  -o pinball \
+  -g pinball \
+  -m 2775 \
+  "$TARGET/opt/pincabos/config"
+
+echo "GO [√] Target personal audio state removed"
+
+echo "PINCABOS_FIRSTBOOT_NET_WEBAPP_FIX_V1"
+
+mkdir -p "$TARGET/usr/local/sbin"
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/multi-user.target.wants"
+mkdir -p "$TARGET/var/lib/pincabos"
+
+cat > "$TARGET/usr/local/sbin/pincabos-firstboot-network-webapp-fix" <<'FIRSTBOOT_NETWEB'
+#!/usr/bin/env bash
+set -u
+
+LOG="/var/log/pincabos-firstboot-network-webapp-fix.log"
+FLAG="/var/lib/pincabos/firstboot-network-webapp.done"
+
+mkdir -p /var/log /var/lib/pincabos
+
+{
+  echo "==============================================================="
+  echo " PinCabOS first boot network + WebApp fix"
+  echo " Started: $(date -Is)"
+  echo "==============================================================="
+
+  if [ -f "$FLAG" ]; then
+    echo "Already completed."
+    exit 0
+  fi
+
+  echo
+  echo "=== Disable unused print services ==="
+  for unit in cups.service cups.socket cups.path cups-browsed.service; do
+    systemctl mask "$unit" >/dev/null 2>&1 || true
+    systemctl disable "$unit" >/dev/null 2>&1 || true
+    systemctl stop "$unit" >/dev/null 2>&1 || true
+  done
+
+  echo
+  echo "=== Clean Chrome crash restore state ==="
+  if [ -d /home/pinball/.config/google-chrome ]; then
+    find /home/pinball/.config/google-chrome -maxdepth 4 -type f \( \
+      -name 'Current Session' -o \
+      -name 'Current Tabs' -o \
+      -name 'Last Session' -o \
+      -name 'Last Tabs' \
+    \) -print -delete 2>/dev/null || true
+
+    find /home/pinball/.config/google-chrome -maxdepth 2 \( \
+      -name 'SingletonCookie' -o \
+      -name 'SingletonLock' -o \
+      -name 'SingletonSocket' \
+    \) -print -delete 2>/dev/null || true
+
+    chown -R pinball:pinball /home/pinball/.config/google-chrome 2>/dev/null || true
+  fi
+
+  echo
+  echo "=== Detect first ethernet interface ==="
+  IFACE=""
+  for p in /sys/class/net/*; do
+    n="${p##*/}"
+    [ "$n" = "lo" ] && continue
+    [ -d "/sys/class/net/$n" ] || continue
+    IFACE="$n"
+    break
+  done
+
+  echo "Detected interface: ${IFACE:-none}"
+
+  # PINCABOS_INSTALLEUR_RESEAU_V1 : si l'installateur a configure le reseau
+  # (profils NetworkManager deja en place), ce fichier generique ne doit pas
+  # reapparaitre : netplan fusionnerait son dhcp4: true avec le profil.
+  if [ -e /opt/pincabos/flags/network-installer.done ] || ls /etc/netplan/90-NM-*.yaml >/dev/null 2>&1; then
+    echo "Network configured by the installer / NetworkManager: generic DHCP netplan skipped."
+    IFACE=""
+  fi
+
+  if [ -n "$IFACE" ]; then
+    ip link set "$IFACE" up 2>/dev/null || true
+
+    echo
+    echo "=== Write generic DHCP netplan ==="
+    mkdir -p /etc/netplan
+    cat > /etc/netplan/01-pincabos-dhcp.yaml <<NETPLAN
+network:
+  version: 2
+  renderer: NetworkManager
+  ethernets:
+    $IFACE:
+      dhcp4: true
+      dhcp6: true
+      optional: true
+NETPLAN
+
+    chmod 600 /etc/netplan/01-pincabos-dhcp.yaml 2>/dev/null || true
+  fi
+
+  # PINCABOS_NETPLAN_SANITIZE_V1
+  # Ecarter la configuration reseau heritee du cab de build (interface et
+  # adresse fixe qui n'existent pas sur cette machine).
+  for stale in /etc/netplan/00-pincabos-dhcp4.yaml; do
+    if [ -f "$stale" ]; then
+      mv -f "$stale" "${stale}.pincabos-disabled" 2>/dev/null || true
+      echo "Neutralise (config du cab de build): $(basename "$stale")"
+    fi
+  done
+
+  echo
+  echo "=== Enable NetworkManager and DHCP ==="
+  systemctl daemon-reload || true
+  systemctl enable NetworkManager.service >/dev/null 2>&1 || true
+  systemctl start NetworkManager.service >/dev/null 2>&1 || true
+
+  if command -v nmcli >/dev/null 2>&1 && [ -n "$IFACE" ]; then
+    nmcli networking on >/dev/null 2>&1 || true
+    nmcli device set "$IFACE" managed yes >/dev/null 2>&1 || true
+    nmcli connection delete "PinCabOS DHCP" >/dev/null 2>&1 || true
+    nmcli connection add type ethernet ifname "$IFACE" con-name "PinCabOS DHCP" \
+      connection.autoconnect yes ipv4.method auto ipv6.method auto >/dev/null 2>&1 || true
+    nmcli connection up "PinCabOS DHCP" >/dev/null 2>&1 || true
+  fi
+
+  if command -v netplan >/dev/null 2>&1; then
+    netplan generate >/dev/null 2>&1 || true
+    netplan apply >/dev/null 2>&1 || true
+  fi
+
+  sleep 3
+  ip -br addr || true
+
+  echo
+  echo "=== Enable/start PinCabOS WebApp single service ==="
+  systemctl daemon-reload || true
+
+  # Kill the old legacy alias loop. Only pincabos-webapp.service should run.
+  systemctl stop pincabos-web.service >/dev/null 2>&1 || true
+  systemctl disable pincabos-web.service >/dev/null 2>&1 || true
+  systemctl mask pincabos-web.service >/dev/null 2>&1 || true
+  systemctl reset-failed pincabos-web.service >/dev/null 2>&1 || true
+  systemctl reset-failed pincabos-webapp.service >/dev/null 2>&1 || true
+
+  if systemctl list-unit-files | grep -q '^pincabos-webapp\.service'; then
+    systemctl enable pincabos-webapp.service >/dev/null 2>&1 || true
+    systemctl start pincabos-webapp.service >/dev/null 2>&1 || true
+  else
+    echo "NOTICE: pincabos-webapp.service not listed."
+  fi
+
+  echo
+  echo "=== Wait for local web port ==="
+  WEB_OK=0
+  for i in $(seq 1 30); do
+    if command -v curl >/dev/null 2>&1 && curl -fsS --max-time 2 http://127.0.0.1/ >/dev/null 2>&1; then
+      WEB_OK=1
+      break
+    fi
+
+    if ss -lnt 2>/dev/null | grep -qE ':(80|5000|8000|8080)\s'; then
+      WEB_OK=1
+      break
+    fi
+
+    sleep 2
+  done
+
+  echo "WEB_OK=$WEB_OK"
+
+  if [ "$WEB_OK" != "1" ]; then
+    echo
+    echo "=== Official WebApp did not answer; enabling fallback ==="
+    systemctl enable pincabos-webapp-fallback.service >/dev/null 2>&1 || true
+    systemctl restart pincabos-webapp-fallback.service >/dev/null 2>&1 || true
+
+    for i in $(seq 1 20); do
+      if ss -lnt 2>/dev/null | grep -qE ':80\s'; then
+        WEB_OK=1
+        break
+      fi
+      sleep 2
+    done
+  fi
+
+  echo "WEB_OK_AFTER_FALLBACK=$WEB_OK"
+  systemctl status pincabos-webapp.service --no-pager -l || true
+  systemctl status pincabos-webapp-fallback.service --no-pager -l || true
+  ss -lntup 2>/dev/null | grep -E '(:80|:5000|:8000|:8080)' || true
+
+  touch "$FLAG"
+  systemctl disable pincabos-firstboot-network-webapp-fix.service >/dev/null 2>&1 || true
+
+  echo
+  echo "Completed: $(date -Is)"
+} >> "$LOG" 2>&1
+
+exit 0
+FIRSTBOOT_NETWEB
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-network-webapp-fix"
+
+cat > "$TARGET/etc/systemd/system/pincabos-firstboot-network-webapp-fix.service" <<'FIRSTBOOT_NETWEB_SERVICE'
+[Unit]
+Description=PinCabOS first boot network and WebApp self-heal
+After=local-fs.target dbus.service NetworkManager.service
+Before=display-manager.service lightdm.service gdm.service gdm3.service graphical.target
+Wants=NetworkManager.service
+ConditionPathExists=!/var/lib/pincabos/firstboot-network-webapp.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-network-webapp-fix
+TimeoutStartSec=2min
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+FIRSTBOOT_NETWEB_SERVICE
+
+ln -sfn ../pincabos-firstboot-network-webapp-fix.service \
+  "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-firstboot-network-webapp-fix.service"
+
+echo
+echo "=== Force single WebApp service, mask legacy alias ==="
+echo "PINCABOS_WEBAPP_SINGLE_SERVICE_FIX_V1"
+
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/multi-user.target.wants"
+mkdir -p "$TARGET/etc/systemd/system/pincabos-webapp.service.d"
+
+# The old pincabos-web.service is only a legacy alias and can loop with webapp.
+# Mask it in the installed target so only pincabos-webapp.service is used.
+rm -f "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-web.service" || true
+rm -f "$TARGET/etc/systemd/system/default.target.wants/pincabos-web.service" || true
+ln -sfn /dev/null "$TARGET/etc/systemd/system/pincabos-web.service"
+
+cat > "$TARGET/etc/systemd/system/pincabos-webapp.service.d/90-pincabos-stable-start.conf" <<'WEBAPP_OVERRIDE'
+[Unit]
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Restart=on-failure
+RestartSec=8
+WEBAPP_OVERRIDE
+
+echo
+echo "=== Install WebApp fallback launcher/service ==="
+echo "PINCABOS_WEBAPP_FALLBACK_SERVICE_V1"
+
+cat > "$TARGET/usr/local/sbin/pincabos-webapp-fallback-start" <<'WEBAPP_FALLBACK'
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /opt/pincabos/web
+
+PYTHON_CANDIDATES=(
+  /opt/pincabos/web/.venv/bin/python
+  /opt/pincabos/web/venv/bin/python
+  /opt/pincabos/.venv/bin/python
+  /opt/pincabos/venv/bin/python
+  /usr/bin/python3
+)
+
+for py in "${PYTHON_CANDIDATES[@]}"; do
+  [ -x "$py" ] || continue
+
+  if "$py" - <<'PYTEST' >/dev/null 2>&1
+import flask
+PYTEST
+  then
+    echo "Using Python runtime: $py"
+
+    exec "$py" - <<'PYRUN'
+import os
+import sys
+
+os.chdir("/opt/pincabos/web")
+sys.path.insert(0, "/opt/pincabos/web")
+
+import app as pincabos_app_module
+
+app = getattr(pincabos_app_module, "app", None)
+if app is None:
+    raise SystemExit("ERROR: app.py does not expose Flask object named app")
+
+app.run(host="0.0.0.0", port=80, debug=False, use_reloader=False)
+PYRUN
+  fi
+done
+
+echo "ERROR: no Python runtime with Flask found for PinCabOS WebApp"
+exit 1
+WEBAPP_FALLBACK
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-webapp-fallback-start"
+
+cat > "$TARGET/etc/systemd/system/pincabos-webapp-fallback.service" <<'WEBAPP_FALLBACK_SERVICE'
+[Unit]
+Description=PinCabOS WebApp fallback direct Flask service
+After=network-online.target
+Wants=network-online.target
+Conflicts=pincabos-web.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/pincabos/web
+ExecStart=/usr/local/sbin/pincabos-webapp-fallback-start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+WEBAPP_FALLBACK_SERVICE
+
+echo
+echo "=== Pre-enable WebApp service in installed target when present ==="
+if [ -f "$TARGET/etc/systemd/system/pincabos-webapp.service" ]; then
+  ln -sfn ../pincabos-webapp.service \
+    "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-webapp.service" || true
+elif [ -f "$TARGET/lib/systemd/system/pincabos-webapp.service" ]; then
+  ln -sfn /lib/systemd/system/pincabos-webapp.service \
+    "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-webapp.service" || true
+elif [ -f "$TARGET/usr/lib/systemd/system/pincabos-webapp.service" ]; then
+  ln -sfn /usr/lib/systemd/system/pincabos-webapp.service \
+    "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-webapp.service" || true
+else
+  echo "NOTICE: pincabos-webapp.service not found in target at install time."
+fi
+
+echo
+
+
+echo
+echo "==============================================================="
+echo " PinCabOS installed target automatic GPU/display pipeline"
+echo " PINCABOS_TARGET_AUTO_GPU_DISPLAY_VPINFE_PIPELINE_V1"
+echo "==============================================================="
+
+mkdir -p "$TARGET/usr/local/sbin"
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/multi-user.target.wants"
+mkdir -p "$TARGET/var/lib/pincabos"
+mkdir -p "$TARGET/opt/pincabos/config/screens"
+mkdir -p "$TARGET/opt/pincabos/state"
+
+echo
+echo "=== Remove source-cabinet GPU and display identity ==="
+
+rm -f \
+  "$TARGET/opt/pincabos/config/screens/screens.json" \
+  "$TARGET/opt/pincabos/config/screens/screens-detected.json" \
+  "$TARGET/opt/pincabos/config/screens/screens.env" \
+  "$TARGET/opt/pincabos/config/screens/layout.conf" \
+  "$TARGET/opt/pincabos/config/screens/display-role-bindings.json" \
+  "$TARGET/opt/pincabos/config/display-aliases.env" \
+  "$TARGET/opt/pincabos/state/screens-apply-last-success.flag" \
+  "$TARGET/opt/pincabos/state/gpu-update-last-success.flag" \
+  "$TARGET/opt/pincabos/state/gpu-update-required-reboot.flag" \
+  "$TARGET/var/lib/pincabos/hardware-autoconfig.done" \
+  "$TARGET/var/lib/pincabos/hardware-autoconfig.reboot-pending" \
+  "$TARGET/var/lib/pincabos/hardware-autoconfig.failed"
+
+echo
+echo "=== Remove source X11 and XRandR identity ==="
+echo "PINCABOS_TARGET_SOURCE_HARDWARE_IDENTITY_PURGE_V2"
+
+# PINCABOS_TARGET_LIVE_INSTALLER_RESIDUE_PURGE_V1
+echo "Purge live-installer residue from installed target"
+
+rm -f \
+  "$TARGET/etc/systemd/system/pincabos-live-installer-tty.service" \
+  "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-live-installer-tty.service" \
+  "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-live-installer-tty.service" \
+  "$TARGET/usr/local/sbin/pincabos-live-installer" \
+  "$TARGET/etc/skel/Desktop/Install-PinCabOS.desktop" \
+  2>/dev/null || true
+
+
+# A generated xorg.conf must never be transferred to another machine.
+rm -f \
+  "$TARGET/etc/X11/xorg.conf" \
+  "$TARGET/etc/X11/xorg.conf.backup" \
+  "$TARGET/etc/X11/xorg.conf.nvidia-xconfig-original" \
+  "$TARGET/etc/X11/xorg.conf.failsafe" 2>/dev/null || true
+
+find "$TARGET/etc/X11" -maxdepth 1 \
+  \( -type f -o -type l \) \
+  -name 'xorg.conf.*' -delete 2>/dev/null || true
+
+# Keep generic input configuration, but remove local GPU/monitor layouts.
+if [ -d "$TARGET/etc/X11/xorg.conf.d" ]; then
+  while IFS= read -r -d '' conf; do
+    if grep -Eqi \
+      'Section[[:space:]]+"(Device|Monitor|Screen|ServerLayout)"|Driver[[:space:]]+"(nvidia|nouveau|amdgpu|radeon|intel|modesetting)"|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+      "$conf"; then
+      echo "Removing source Xorg fragment: ${conf#$TARGET}"
+      rm -f "$conf"
+    fi
+  done < <(
+    find "$TARGET/etc/X11/xorg.conf.d" -maxdepth 1 \
+      -type f -name '*.conf' -print0 2>/dev/null
+  )
+fi
+
+# Remove desktop-specific monitor databases and static XRandR startup files.
+for profile in \
+  "$TARGET/home/pinball" \
+  "$TARGET/root"
+do
+  [ -d "$profile" ] || continue
+
+  rm -f \
+    "$profile/.config/monitors.xml" \
+    "$profile/.config/monitors.xml~" 2>/dev/null || true
+
+  rm -rf "$profile/.screenlayout" 2>/dev/null || true
+
+  for startup_file in \
+    "$profile/.xprofile" \
+    "$profile/.xsessionrc" \
+    "$profile/.xinitrc" \
+    "$profile/.config/openbox/autostart" \
+    "$profile/.config/lxsession/LXDE/autostart" \
+    "$profile/.config/lxsession/LXDE-pi/autostart"
+  do
+    [ -f "$startup_file" ] || continue
+
+    if grep -Eqi \
+      '(^|[[:space:]])xrandr([[:space:]]|$)|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+      "$startup_file"; then
+      echo "Removing source display startup file: ${startup_file#$TARGET}"
+      rm -f "$startup_file"
+    fi
+  done
+
+  if [ -d "$profile/.config/autostart" ]; then
+    while IFS= read -r -d '' autostart_file; do
+      if grep -Eqi \
+        '(^|[[:space:]])xrandr([[:space:]]|$)|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+        "$autostart_file"; then
+        echo "Removing source display autostart: ${autostart_file#$TARGET}"
+        rm -f "$autostart_file"
+      fi
+    done < <(
+      find "$profile/.config/autostart" -maxdepth 1 \
+        -type f -print0 2>/dev/null
+    )
+  fi
+done
+
+# Remove system-level scripts that impose a source-machine XRandR layout.
+for startup_dir in \
+  "$TARGET/etc/lightdm/lightdm.conf.d" \
+  "$TARGET/etc/X11/Xsession.d" \
+  "$TARGET/etc/xdg/autostart"
+do
+  [ -d "$startup_dir" ] || continue
+
+  while IFS= read -r -d '' startup_file; do
+    if grep -Eqi \
+      '(^|[[:space:]])xrandr([[:space:]]|$)|display-setup-script=.*xrandr|session-setup-script=.*xrandr|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+      "$startup_file"; then
+      echo "Removing source system display startup: ${startup_file#$TARGET}"
+      rm -f "$startup_file"
+    fi
+  done < <(
+    find "$startup_dir" -maxdepth 1 -type f -print0 2>/dev/null
+  )
+done
+
+chown -R pinball:pinball \
+  "$TARGET/opt/pincabos/config/screens" \
+  "$TARGET/opt/pincabos/state" 2>/dev/null || true
+
+echo
+echo "=== Install first-boot universal GPU configuration ==="
+
+cat > "$TARGET/usr/local/sbin/pincabos-firstboot-hardware-autoconfig" <<'HARDWARE_AUTOCONFIG'
+#!/usr/bin/env bash
+set -u
+
+LOG="/var/log/pincabos-firstboot-hardware-autoconfig.log"
+STATE_DIR="/var/lib/pincabos"
+DONE="$STATE_DIR/hardware-autoconfig.done"
+PENDING="$STATE_DIR/hardware-autoconfig.reboot-pending"
+FAILED="$STATE_DIR/hardware-autoconfig.failed"
+
+mkdir -p "$STATE_DIR" /var/log
+
+exec >>"$LOG" 2>&1
+
+echo
+echo "==============================================================="
+echo " PinCabOS automatic GPU configuration"
+echo " Started: $(date -Is)"
+echo "==============================================================="
+
+if [ -f "$DONE" ]; then
+  echo "Already completed."
+  exit 0
+fi
+
+GPU_LINES="$(
+  lspci -Dnn 2>/dev/null |
+    grep -Ei 'VGA compatible controller|3D controller|Display controller' ||
+    true
+)"
+
+echo
+echo "=== Detected GPU devices ==="
+printf '%s\n' "$GPU_LINES"
+
+HAS_NVIDIA=0
+HAS_AMD=0
+HAS_INTEL=0
+HAS_VM=0
+
+grep -Eqi '\[10de:' <<<"$GPU_LINES" && HAS_NVIDIA=1
+grep -Eqi '\[(1002|1022):' <<<"$GPU_LINES" && HAS_AMD=1
+grep -Eqi '\[8086:' <<<"$GPU_LINES" && HAS_INTEL=1
+grep -Eqi '\[(1af4|1234|15ad|1b36):' <<<"$GPU_LINES" && HAS_VM=1
+
+echo
+echo "NVIDIA=$HAS_NVIDIA AMD=$HAS_AMD INTEL=$HAS_INTEL VM=$HAS_VM"
+
+network_ready() {
+  getent hosts archive.ubuntu.com >/dev/null 2>&1 ||
+  getent hosts security.ubuntu.com >/dev/null 2>&1
+}
+
+ensure_mesa_runtime() {
+  local missing=0
+
+  for package in \
+    mesa-vulkan-drivers \
+    mesa-utils \
+    libgl1-mesa-dri \
+    libglx-mesa0
+  do
+    dpkg-query -W -f='${Status}' "$package" 2>/dev/null |
+      grep -q 'install ok installed' || missing=1
+  done
+
+  if [ "$missing" = "0" ]; then
+    echo "Mesa graphics runtime already installed."
+    return 0
+  fi
+
+  if ! network_ready; then
+    echo "NOTICE: Mesa package repair deferred; network unavailable."
+    return 1
+  fi
+
+  apt-get update || return 1
+
+  DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    mesa-vulkan-drivers \
+    mesa-utils \
+    libgl1-mesa-dri \
+    libglx-mesa0
+}
+
+if [ "$HAS_NVIDIA" = "1" ]; then
+  echo
+  echo "=== NVIDIA automatic configuration ==="
+
+  if [ -f "$PENDING" ]; then
+    echo "Verifying NVIDIA after requested reboot."
+
+    if command -v nvidia-smi >/dev/null 2>&1 &&
+       nvidia-smi >/dev/null 2>&1; then
+      echo "NVIDIA driver operational after reboot."
+      rm -f "$PENDING" "$FAILED"
+      touch "$DONE"
+      exit 0
+    fi
+
+    echo "ERROR: NVIDIA is still unavailable after automatic repair."
+    lspci -Dnnk 2>/dev/null |
+      grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
+      true
+    lsmod | grep -Ei 'nvidia|nouveau' || true
+    dmesg 2>/dev/null | grep -Ei 'nvidia|nouveau|NVRM' | tail -100 || true
+
+    touch "$FAILED" "$DONE"
+    rm -f "$PENDING"
+    exit 0
+  fi
+
+  if command -v nvidia-smi >/dev/null 2>&1 &&
+     nvidia-smi >/dev/null 2>&1; then
+    echo "NVIDIA driver already operational."
+    nvidia-smi || true
+    touch "$DONE"
+    exit 0
+  fi
+
+  if ! command -v ubuntu-drivers >/dev/null 2>&1; then
+    echo "ERROR: ubuntu-drivers is unavailable."
+    touch "$FAILED" "$DONE"
+    exit 0
+  fi
+
+  if ! network_ready; then
+    echo "NOTICE: network unavailable; NVIDIA setup will retry next boot."
+    exit 0
+  fi
+
+  echo
+  echo "--- Available/recommended NVIDIA drivers ---"
+  ubuntu-drivers devices || true
+  ubuntu-drivers list || true
+
+  echo
+  echo "--- Disable nouveau before NVIDIA activation ---"
+
+  cat > /etc/modprobe.d/pincabos-disable-nouveau.conf <<'NOUVEAU'
+blacklist nouveau
+options nouveau modeset=0
+NOUVEAU
+
+  apt-get update || {
+    echo "NOTICE: apt update failed; retrying next boot."
+    exit 0
+  }
+
+  echo
+  echo "--- Install Ubuntu recommended desktop NVIDIA driver ---"
+
+  if ! DEBIAN_FRONTEND=noninteractive ubuntu-drivers install; then
+    echo "ERROR: ubuntu-drivers install failed."
+    touch "$FAILED" "$DONE"
+    exit 0
+  fi
+
+  update-initramfs -u -k all || true
+
+  touch "$PENDING"
+
+  echo
+  echo "NVIDIA driver changed. Automatic reboot required."
+  sync
+  sleep 3
+  systemctl reboot || reboot
+  exit 0
+fi
+
+if [ "$HAS_AMD" = "1" ]; then
+  echo
+  echo "=== AMD/ATI configuration ==="
+  ensure_mesa_runtime || true
+  modprobe amdgpu 2>/dev/null || true
+
+  lspci -Dnnk 2>/dev/null |
+    grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
+    true
+
+  touch "$DONE"
+  exit 0
+fi
+
+if [ "$HAS_INTEL" = "1" ]; then
+  echo
+  echo "=== Intel configuration ==="
+  ensure_mesa_runtime || true
+
+  modprobe xe 2>/dev/null ||
+  modprobe i915 2>/dev/null ||
+  true
+
+  lspci -Dnnk 2>/dev/null |
+    grep -A4 -Ei 'VGA compatible controller|3D controller|Display controller' ||
+    true
+
+  touch "$DONE"
+  exit 0
+fi
+
+if [ "$HAS_VM" = "1" ]; then
+  echo
+  echo "=== Virtual GPU configuration ==="
+  ensure_mesa_runtime || true
+
+  modprobe virtio_gpu 2>/dev/null ||
+  modprobe qxl 2>/dev/null ||
+  modprobe vmwgfx 2>/dev/null ||
+  true
+
+  echo "Virtual machine display accepted; one-screen mode is valid."
+  touch "$DONE"
+  exit 0
+fi
+
+echo
+echo "Unknown or generic graphics device."
+echo "Using kernel modesetting/Mesa without forcing a vendor package."
+ensure_mesa_runtime || true
+touch "$DONE"
+
+echo "Completed: $(date -Is)"
+exit 0
+HARDWARE_AUTOCONFIG
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-hardware-autoconfig"
+
+cat > "$TARGET/etc/systemd/system/pincabos-firstboot-hardware-autoconfig.service" <<'HARDWARE_SERVICE'
+[Unit]
+Description=PinCabOS automatic GPU configuration
+After=NetworkManager.service network-online.target pincabos-firstboot-network-webapp-fix.service
+Wants=network-online.target
+Before=display-manager.service lightdm.service gdm.service gdm3.service graphical.target
+ConditionPathExists=!/var/lib/pincabos/hardware-autoconfig.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-hardware-autoconfig
+TimeoutStartSec=30min
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+HARDWARE_SERVICE
+
+ln -sfn ../pincabos-firstboot-hardware-autoconfig.service \
+  "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-firstboot-hardware-autoconfig.service"
+
+
+echo
+echo "=== PinCabOS installed target VPinFE packaged runtime fix ==="
+echo "PINCABOS_TARGET_VPINFE_PACKAGED_RUNTIME_FIX_V1"
+
+echo
+echo "=== Resolve pinball numeric ownership from installed target ==="
+echo "PINCABOS_TARGET_PINBALL_NUMERIC_OWNER_V1"
+
+TARGET_PASSWD="$TARGET/etc/passwd"
+
+if [ ! -f "$TARGET_PASSWD" ]; then
+  echo "ERROR: target passwd missing: $TARGET_PASSWD"
+  exit 1
+fi
+
+PINBALL_UID="$(
+  awk -F: '$1 == "pinball" { print $3; exit }' "$TARGET_PASSWD"
+)"
+
+PINBALL_GID="$(
+  awk -F: '$1 == "pinball" { print $4; exit }' "$TARGET_PASSWD"
+)"
+
+case "$PINBALL_UID" in
+  ''|*[!0-9]*)
+    echo "ERROR: invalid or missing target pinball UID: ${PINBALL_UID:-empty}"
+    exit 1
+    ;;
+esac
+
+case "$PINBALL_GID" in
+  ''|*[!0-9]*)
+    echo "ERROR: invalid or missing target pinball GID: ${PINBALL_GID:-empty}"
+    exit 1
+    ;;
+esac
+
+echo "Target pinball ownership: UID=$PINBALL_UID GID=$PINBALL_GID"
+
+
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/graphical.target.wants"
+mkdir -p "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d"
+
+echo
+echo "=== Remove legacy VPinFE display/topology drop-ins ==="
+
+VPINFE_DROPIN_DIR="$TARGET/etc/systemd/system/pincabos-vpinfe.service.d"
+
+if [ -d "$VPINFE_DROPIN_DIR" ]; then
+  while IFS= read -r -d '' dropin; do
+    dropin_name="$(basename "$dropin")"
+
+    if [[ "$dropin_name" =~ (screen|display|topology|xrandr|iso-start) ]] || \
+       grep -Eqi \
+         'pincabos-display-role|pincabos-screen-topology\.service|(^|[[:space:]])xrandr([[:space:]]|$)|HDMI-[0-9]|DP-[0-9]|DVI-[A-Za-z0-9-]*|Virtual-[0-9]' \
+         "$dropin"; then
+      echo "Removing legacy VPinFE drop-in: ${dropin#$TARGET}"
+      rm -f "$dropin"
+    fi
+  done < <(
+    find "$VPINFE_DROPIN_DIR" -maxdepth 1 \
+      -type f -name '*.conf' -print0 2>/dev/null
+  )
+fi
+
+mkdir -p "$TARGET/usr/local/sbin"
+mkdir -p "$TARGET/var/lib/pincabos"
+
+if [ -f "$TARGET/opt/pincabos/tools/run-vpinfe-systemd.sh" ]; then
+  chmod 755 "$TARGET/opt/pincabos/tools/run-vpinfe-systemd.sh" || true
+fi
+
+if [ -d "$TARGET/home/pinball/vpinfe" ]; then
+  chown -R "$PINBALL_UID:$PINBALL_GID" "$TARGET/home/pinball/vpinfe" || true
+  find "$TARGET/home/pinball/vpinfe" -maxdepth 2 -type f -iname '*vpinfe*' -exec chmod 755 {} \; 2>/dev/null || true
+fi
+
+chown -R "$PINBALL_UID:$PINBALL_GID" "$TARGET/home/pinball/.config/vpinfe" 2>/dev/null || true
+chown -R "$PINBALL_UID:$PINBALL_GID" "$TARGET/opt/pincabos/config/vpinfe" 2>/dev/null || true
+
+
+echo
+# PINCABOS_ISO_SCREEN_PRIVACY_V1
+
+echo "=== Remove source cabinet screen identity ==="
+
+rm -f \
+  "$TARGET/opt/pincabos/config/screens/screens.json" \
+  "$TARGET/opt/pincabos/config/screens/bindings.json" \
+  "$TARGET/opt/pincabos/config/screens/display-bindings.json" \
+  "$TARGET/home/pinball/.config/monitors.xml"
+
+install \
+  -d \
+  -o pinball \
+  -g pinball \
+  -m 2775 \
+  "$TARGET/opt/pincabos/config/screens"
+
+python3 - "$TARGET" <<'PINCABOS_SCREEN_PRIVACY_PY'
+from pathlib import Path
+import re
+import sys
+
+target = Path(sys.argv[1])
+
+vpx_hardware_keys = {
+    "playfielddisplay",
+    "playfieldx",
+    "playfieldy",
+    "playfieldwidth",
+    "playfieldheight",
+    "playfieldfswidth",
+    "playfieldfsheight",
+    "playfieldfsrefreshrate",
+    "backglassdisplay",
+    "backglassx",
+    "backglassy",
+    "backglasswidth",
+    "backglassheight",
+    "backglassfswidth",
+    "backglassfsheight",
+    "backglassfsrefreshrate",
+    "scoreviewdisplay",
+    "scoreviewx",
+    "scoreviewy",
+    "scoreviewwidth",
+    "scoreviewheight",
+    "scoreviewfswidth",
+    "scoreviewfsheight",
+    "scoreviewfsrefreshrate",
+    "topperdisplay",
+    "topperx",
+    "toppery",
+    "topperwidth",
+    "topperheight",
+    "topperfswidth",
+    "topperfsheight",
+    "previewdisplay",
+    "previewx",
+    "previewy",
+    "previewwidth",
+    "previewheight",
+    "previewfswidth",
+    "previewfsheight",
+}
+
+vpinfe_hardware_keys = {
+    "tablescreenid",
+    "bgscreenid",
+    "dmdscreenid",
+    "fulldmdscreenid",
+    "tableorientation",
+    "tablerotation",
+    "cabmode",
+}
+
+
+def sanitize_ini(
+    path,
+    forbidden_keys,
+    removed_sections,
+):
+    if not path.is_file():
+        return False
+
+    original = path.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    output = []
+    skip_section = False
+
+    for line in original.splitlines(
+        keepends=True
+    ):
+        section_match = re.match(
+            r"^\s*\[([^\]]+)\]\s*$",
+            line,
+        )
+
+        if section_match:
+            section_name = (
+                section_match.group(1)
+                .strip()
+                .lower()
+            )
+
+            skip_section = (
+                section_name
+                in removed_sections
+            )
+
+            if skip_section:
+                continue
+
+        if skip_section:
+            continue
+
+        key_match = re.match(
+            r"^\s*([^;#][^=]*?)\s*=",
+            line,
+        )
+
+        if key_match:
+            key = (
+                key_match.group(1)
+                .strip()
+                .lower()
+            )
+
+            if key in forbidden_keys:
+                continue
+
+        output.append(line)
+
+    sanitized = "".join(output)
+
+    if sanitized == original:
+        return False
+
+    path.write_text(
+        sanitized,
+        encoding="utf-8",
+    )
+
+    return True
+
+
+vpx_updated = 0
+
+vpx_roots = [
+    target / "home/pinball/.pincabos/vpx",  # PINCABOS_VPX_PREF_PATH_V1
+    target / "home/pinball/.local/share/VPinballX",
+    target / "home/pinball/.vpinball",
+]
+
+for root in vpx_roots:
+    if not root.exists():
+        continue
+
+    for ini in root.rglob("VPinballX.ini"):
+        if sanitize_ini(
+            ini,
+            vpx_hardware_keys,
+            {"pincabos.screens"},
+        ):
+            vpx_updated += 1
+
+vpinfe = (
+    target
+    / "home/pinball/.config/vpinfe/vpinfe.ini"
+)
+
+vpinfe_updated = sanitize_ini(
+    vpinfe,
+    vpinfe_hardware_keys,
+    {"pincabos.screens"},
+)
+
+print(
+    "GO [√] VPX display identities removed:",
+    vpx_updated,
+)
+
+print(
+    "GO [√] VPinFE display identity removed:",
+    int(vpinfe_updated),
+)
+PINCABOS_SCREEN_PRIVACY_PY
+
+chown -R \
+  pinball:pinball \
+  "$TARGET/opt/pincabos/config/screens"
+
+echo "GO [√] Target screen identity neutralized"
+
+echo "=== PinCabOS installed target screen topology systemd cycle fix ==="
+echo "PINCABOS_TARGET_SCREEN_TOPOLOGY_BOOT_SYSTEMD_CYCLE_FIX_V1"
+
+mkdir -p "$TARGET/etc/systemd/system"
+mkdir -p "$TARGET/etc/systemd/system/graphical.target.wants"
+
+# The restored payload may contain an older unit with:
+#   After=display-manager.service graphical.target
+# That creates a systemd ordering cycle because the same unit is WantedBy=graphical.target.
+# Always rewrite the target unit here so VPinFE can safely wait for topology preflight.
+
+SCREEN_TOPOLOGY_PREFLIGHT="/usr/local/libexec/pincabos/pincabos-screen-topology-preflight.sh"
+SCREEN_TOPOLOGY_PREFLIGHT_TARGET="$TARGET${SCREEN_TOPOLOGY_PREFLIGHT}"
+
+if [ -f "$SCREEN_TOPOLOGY_PREFLIGHT_TARGET" ] && \
+   [ -f "$TARGET/opt/pincabos/scripts/pincabos-screen-topology.py" ]; then
+  chmod 755 "$SCREEN_TOPOLOGY_PREFLIGHT_TARGET" || true
+  chmod 755 "$TARGET/opt/pincabos/scripts/pincabos-screen-topology.py" || true
+  SCREEN_TOPOLOGY_EXEC="$SCREEN_TOPOLOGY_PREFLIGHT"
+else
+  echo "NOTICE: topology engine incomplete in target; using harmless no-op service."
+  SCREEN_TOPOLOGY_EXEC="/usr/bin/true"
+fi
+
+cat > "$TARGET/etc/systemd/system/pincabos-screen-topology-boot.service" <<SCREEN_TOPOLOGY_BOOT_SERVICE
+[Unit]
+Description=PinCabOS automatic X11 topology before VPinFE
+After=pincabos-firstboot-hardware-autoconfig.service display-manager.service
+Wants=display-manager.service
+Before=pincabos-vpinfe.service
+[Service]
+Type=oneshot
+ExecStart=$SCREEN_TOPOLOGY_EXEC
+RemainAfterExit=yes
+TimeoutStartSec=110
+
+[Install]
+WantedBy=graphical.target
+SCREEN_TOPOLOGY_BOOT_SERVICE
+
+ln -sfn ../pincabos-screen-topology-boot.service \
+  "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-screen-topology-boot.service" || true
+
+if grep -qE '^After=.*graphical\.target' "$TARGET/etc/systemd/system/pincabos-screen-topology-boot.service"; then
+  echo "ERROR: screen topology service still has After=...graphical.target"
+  exit 1
+fi
+
+
+echo
+echo "==============================================================="
+echo " PinCabOS target VPinFE universal display sanitation"
+echo " PINCABOS_TARGET_VPINFE_SINGLE_SCREEN_STABILITY_V1"
+echo "==============================================================="
+
+mkdir -p \
+  "$TARGET/usr/local/libexec/pincabos" \
+  "$TARGET/etc/systemd/system/timers.target.wants" \
+  "$TARGET/etc/systemd/system/paths.target.wants"
+
+echo
+echo "=== Purge inherited VPinFE display identity ==="
+
+python3 - \
+  "$TARGET/home/pinball/.config/vpinfe/vpinfe.ini" \
+  <<'PINCABOS_VPINFE_INI_PURGE'
+from pathlib import Path
+import os
+import re
+import sys
+import tempfile
+
+path = Path(sys.argv[1])
+
+updates = {
+    "tablescreenid": "0",
+    "bgscreenid": "",
+    "dmdscreenid": "",
+    "fulldmdscreenid": "",
+    "tablewindowoverride": "",
+    "bgwindowoverride": "",
+    "dmdwindowoverride": "",
+}
+
+original = (
+    path.read_text(encoding="utf-8", errors="replace")
+    if path.exists()
+    else ""
+)
+
+lines = original.splitlines()
+output = []
+section = ""
+found_displays = False
+written = set()
+
+
+def append_missing():
+    for key, value in updates.items():
+        if key not in written:
+            output.append(f"{key} = {value}")
+            written.add(key)
+
+
+for line in lines:
+    match = re.match(r"^\s*\[([^\]]+)\]\s*$", line)
+
+    if match:
+        if section == "displays":
+            append_missing()
+
+        section = match.group(1).strip().lower()
+
+        if section == "displays":
+            found_displays = True
+
+        output.append(line)
+        continue
+
+    if section == "displays" and "=" in line:
+        key = line.split("=", 1)[0].strip().lower()
+
+        if key in updates:
+            if key not in written:
+                output.append(f"{key} = {updates[key]}")
+                written.add(key)
+            continue
+
+    output.append(line)
+
+
+if found_displays:
+    if section == "displays":
+        append_missing()
+else:
+    if output and output[-1].strip():
+        output.append("")
+
+    output.append("[Displays]")
+    append_missing()
+
+
+content = "\n".join(output).rstrip() + "\n"
+
+path.parent.mkdir(parents=True, exist_ok=True)
+
+fd, temporary = tempfile.mkstemp(
+    prefix=f".{path.name}.",
+    dir=str(path.parent),
+)
+
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+    if path.exists():
+        stat = path.stat()
+        os.chmod(temporary, stat.st_mode & 0o777)
+        os.chown(temporary, stat.st_uid, stat.st_gid)
+    else:
+        os.chmod(temporary, 0o644)
+
+    os.replace(temporary, path)
+finally:
+    try:
+        os.unlink(temporary)
+    except FileNotFoundError:
+        pass
+
+print("OK: identité écrans VPinFE source supprimée.")
+PINCABOS_VPINFE_INI_PURGE
+
+chown "$PINBALL_UID:$PINBALL_GID" \
+  "$TARGET/home/pinball/.config/vpinfe/vpinfe.ini" \
+  2>/dev/null || true
+
+echo
+echo "=== Install runtime VPinFE display sanitizer ==="
+
+cat > "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize" <<'VPINFE_DISPLAY_SANITIZER'
+#!/usr/bin/env bash
+set -u
+
+INI="/home/pinball/.config/vpinfe/vpinfe.ini"
+SCREENS="/opt/pincabos/config/screens/screens.json"
+# PINCABOS_VPINFE_SANITIZER_TMP_FALLBACK_V2
+TMP_ROOT="${TMPDIR:-/tmp}"
+
+if [ ! -d "$TMP_ROOT" ] || [ ! -w "$TMP_ROOT" ]; then
+  TMP_ROOT="/tmp"
+fi
+
+XRANDR_TMP="$(
+  mktemp "$TMP_ROOT/pincabos-vpinfe-xrandr.XXXXXX"
+)" || exit 0
+
+trap 'rm -f "$XRANDR_TMP"' EXIT
+
+[ -f "$INI" ] || exit 0
+[ -f "$SCREENS" ] || exit 0
+
+/usr/sbin/runuser -u pinball -- \
+  /usr/bin/env \
+    DISPLAY=:0 \
+    XAUTHORITY=/home/pinball/.Xauthority \
+    /usr/bin/xrandr --query \
+    >"$XRANDR_TMP" 2>/dev/null || exit 0
+
+python3 - "$INI" "$SCREENS" "$XRANDR_TMP" <<'VPINFE_DISPLAY_PY'
+from pathlib import Path
+import json
+import os
+import pwd
+import re
+import sys
+import tempfile
+
+ini = Path(sys.argv[1])
+screens_file = Path(sys.argv[2])
+xrandr_file = Path(sys.argv[3])
+
+connected = []
+
+for line in xrandr_file.read_text(
+    encoding="utf-8",
+    errors="replace",
+).splitlines():
+    match = re.match(
+        r"^(\S+)\s+connected(?:\s+primary)?\s+"
+        r"\d+x\d+\+-?\d+\+-?\d+",
+        line,
+    )
+
+    if match:
+        connected.append(match.group(1))
+
+
+if not connected:
+    print("VPinFE sanitizer: aucun écran actif.")
+    raise SystemExit(0)
+
+
+try:
+    screens = json.loads(
+        screens_file.read_text(encoding="utf-8")
+    )
+except Exception as error:
+    print(f"VPinFE sanitizer: screens.json invalide: {error}")
+    raise SystemExit(0)
+
+
+def valid_role(role, already_used):
+    item = screens.get(role)
+
+    if not isinstance(item, dict):
+        return "", ""
+
+    name = str(item.get("name") or "").strip()
+
+    if (
+        not name
+        or name not in connected
+        or name in already_used
+    ):
+        return "", ""
+
+    try:
+        screen_id = int(item.get("id"))
+    except (TypeError, ValueError):
+        return "", ""
+
+    if screen_id < 0 or screen_id >= len(connected):
+        return "", ""
+
+    already_used.add(name)
+    return str(screen_id), name
+
+
+used = set()
+
+table_id, table_name = valid_role("playfield", used)
+
+if table_id == "":
+    table_id = "0"
+    table_name = connected[0]
+    used.add(table_name)
+
+bg_id, bg_name = valid_role("backglass", used)
+dmd_id, dmd_name = valid_role("fulldmd", used)
+
+updates = {
+    "tablescreenid": table_id,
+    "bgscreenid": bg_id,
+    "dmdscreenid": dmd_id,
+    "fulldmdscreenid": dmd_id,
+}
+
+if not bg_id:
+    updates["bgwindowoverride"] = ""
+
+if not dmd_id:
+    updates["dmdwindowoverride"] = ""
+
+
+original = ini.read_text(
+    encoding="utf-8",
+    errors="replace",
+)
+
+lines = original.splitlines()
+output = []
+section = ""
+found_displays = False
+written = set()
+
+
+def append_missing():
+    for key, value in updates.items():
+        if key not in written:
+            output.append(f"{key} = {value}")
+            written.add(key)
+
+
+for line in lines:
+    match = re.match(r"^\s*\[([^\]]+)\]\s*$", line)
+
+    if match:
+        if section == "displays":
+            append_missing()
+
+        section = match.group(1).strip().lower()
+
+        if section == "displays":
+            found_displays = True
+
+        output.append(line)
+        continue
+
+    if section == "displays" and "=" in line:
+        key = line.split("=", 1)[0].strip().lower()
+
+        if key in updates:
+            if key not in written:
+                output.append(f"{key} = {updates[key]}")
+                written.add(key)
+            continue
+
+    output.append(line)
+
+
+if found_displays:
+    if section == "displays":
+        append_missing()
+else:
+    if output and output[-1].strip():
+        output.append("")
+
+    output.append("[Displays]")
+    append_missing()
+
+
+content = "\n".join(output).rstrip() + "\n"
+
+if content != original:
+    fd, temporary = tempfile.mkstemp(
+        prefix=f".{ini.name}.",
+        dir=str(ini.parent),
+    )
+
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        stat = ini.stat()
+        os.chmod(temporary, stat.st_mode & 0o777)
+        os.chown(temporary, stat.st_uid, stat.st_gid)
+        os.replace(temporary, ini)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+try:
+    pinball = pwd.getpwnam("pinball")
+    os.chown(ini, pinball.pw_uid, pinball.pw_gid)
+except (KeyError, PermissionError):
+    pass
+
+
+print(
+    "VPinFE displays sanitized: "
+    f"PF={table_name}:{table_id} "
+    f"BG={bg_name or 'none'}:{bg_id or 'blank'} "
+    f"DMD={dmd_name or 'none'}:{dmd_id or 'blank'}"
+)
+VPINFE_DISPLAY_PY
+
+exit 0
+VPINFE_DISPLAY_SANITIZER
+
+chmod 755 \
+  "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize"
+
+echo
+echo "==============================================================="
+echo " PinCabOS target VPinFE Chrome profile stability"
+echo " PINCABOS_TARGET_VPINFE_CHROME_PROFILE_GUARD_V2"
+echo "==============================================================="
+
+mkdir -p \
+  "$TARGET/usr/local/libexec/pincabos" \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d" \
+  "$TARGET/var/tmp"
+
+install -d \
+  -o "$PINBALL_UID" \
+  -g "$PINBALL_GID" \
+  -m 0700 \
+  "$TARGET/var/tmp/pincabos-vpinfe"
+
+cat > "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard" <<'VPINFE_PROFILE_GUARD'
+#!/usr/bin/env bash
+set -u
+
+TMP_ROOT="/var/tmp/pincabos-vpinfe"
+PINBALL_UID="$(id -u pinball)"
+
+echo "=== PinCabOS VPinFE Chrome prestart guard ==="
+
+install -d \
+  -o pinball \
+  -g pinball \
+  -m 0700 \
+  "$TMP_ROOT"
+
+find_vpinfe_chrome_pids() {
+  local proc pid owner comm cmdline
+
+  for proc in /proc/[0-9]*; do
+    [ -d "$proc" ] || continue
+
+    pid="${proc##*/}"
+    owner="$(stat -c %u "$proc" 2>/dev/null || true)"
+
+    [ "$owner" = "$PINBALL_UID" ] || continue
+    [ -r "$proc/comm" ] || continue
+    [ -r "$proc/cmdline" ] || continue
+
+    comm="$(cat "$proc/comm" 2>/dev/null || true)"
+    cmdline="$(tr '\0' ' ' < "$proc/cmdline" 2>/dev/null || true)"
+
+    case "$comm" in
+      chrome|google-chrome|chromium|chromium-browser)
+        ;;
+      *)
+        continue
+        ;;
+    esac
+
+    case "$cmdline" in
+      *"--user-data-dir=/tmp/vpinfe_chromium_"*|\
+      *"--user-data-dir=/var/tmp/pincabos-vpinfe/vpinfe_chromium_"*)
+        printf '%s\n' "$pid"
+        ;;
+    esac
+  done
+}
+
+mapfile -t stale_pids < <(find_vpinfe_chrome_pids)
+
+if [ "${#stale_pids[@]}" -gt 0 ]; then
+  echo "Stopping stale VPinFE Chrome processes: ${stale_pids[*]}"
+  kill -TERM "${stale_pids[@]}" 2>/dev/null || true
+
+  for attempt in $(seq 1 8); do
+    remaining=()
+
+    for pid in "${stale_pids[@]}"; do
+      [ -d "/proc/$pid" ] && remaining+=("$pid")
+    done
+
+    [ "${#remaining[@]}" -eq 0 ] && break
+    sleep 1
+  done
+
+  remaining=()
+
+  for pid in "${stale_pids[@]}"; do
+    [ -d "/proc/$pid" ] && remaining+=("$pid")
+  done
+
+  if [ "${#remaining[@]}" -gt 0 ]; then
+    echo "Forcing stale VPinFE Chrome processes: ${remaining[*]}"
+    kill -KILL "${remaining[@]}" 2>/dev/null || true
+    sleep 1
+  fi
+fi
+
+echo "Removing stale VPinFE temporary profiles"
+
+find /tmp \
+  -mindepth 1 \
+  -maxdepth 1 \
+  -type d \
+  -name 'vpinfe_chromium_*' \
+  -print \
+  -exec rm -rf -- {} + \
+  2>/dev/null || true
+
+find "$TMP_ROOT" \
+  -mindepth 1 \
+  -maxdepth 1 \
+  -type d \
+  -name 'vpinfe_chromium_*' \
+  -print \
+  -exec rm -rf -- {} + \
+  2>/dev/null || true
+
+CHROME_RUNNING=0
+
+for proc in /proc/[0-9]*; do
+  [ -r "$proc/comm" ] || continue
+
+  [ "$(stat -c %u "$proc" 2>/dev/null || true)" = "$PINBALL_UID" ] \
+    || continue
+
+  comm="$(cat "$proc/comm" 2>/dev/null || true)"
+
+  case "$comm" in
+    chrome|google-chrome|chromium|chromium-browser)
+      CHROME_RUNNING=1
+      break
+      ;;
+  esac
+done
+
+if [ "$CHROME_RUNNING" -eq 0 ] && \
+   [ -d /home/pinball/.config/google-chrome ]; then
+
+  echo "Removing stale Singleton locks from inactive Chrome profile"
+
+  find /home/pinball/.config/google-chrome \
+    -maxdepth 2 \
+    \( \
+      -name SingletonLock -o \
+      -name SingletonCookie -o \
+      -name SingletonSocket \
+    \) \
+    -print \
+    -delete \
+    2>/dev/null || true
+fi
+
+install -d \
+  -o pinball \
+  -g pinball \
+  -m 0700 \
+  "$TMP_ROOT"
+
+echo "VPinFE Chrome prestart guard completed"
+exit 0
+VPINFE_PROFILE_GUARD
+
+chmod 755 \
+  "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard"
+
+chown root:root \
+  "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard"
+
+cat > "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf" <<'VPINFE_GUARD_DROPIN'
+[Service]
+# PINCABOS_VPINFE_CHROME_PROFILE_GUARD_V2
+ExecStartPre=/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard
+VPINFE_GUARD_DROPIN
+
+chmod 644 \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf"
+
+chown root:root \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf"
+
+test -d "$TARGET/var/tmp/pincabos-vpinfe"
+test -x "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard"
+
+grep -q \
+  'PINCABOS_VPINFE_CHROME_PROFILE_GUARD_V2' \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/45-pincabos-vpinfe-prestart-guard.conf"
+
+grep -q \
+  'PINCABOS_VPINFE_SANITIZER_TMP_FALLBACK_V2' \
+  "$TARGET/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize"
+
+echo "GO: VPinFE Chrome guard, TMPDIR and sanitizer fallback installed"
+
+echo
+echo "=== Fix Dashboard screens/apply helper ==="
+
+python3 - \
+  "$TARGET/usr/local/sbin/pincabos-dashboard-admin" \
+  <<'PINCABOS_DASHBOARD_HELPER_PATCH'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+
+if not path.exists():
+    raise SystemExit(f"ERROR: helper absent: {path}")
+
+text = path.read_text(encoding="utf-8")
+
+old = """    screens:apply)
+      log 'screen topology one-shot apply'
+      exec systemctl start pincabos-screen-topology.service
+      ;;
+"""
+
+new = """    screens:apply)
+      log 'screen topology unified apply'
+      systemctl restart pincabos-screen-topology-boot.service
+      systemctl restart pincabos-vpinfe.service
+      echo 'Topologie appliquée et VPinFE redémarré.'
+      ;;
+"""
+
+if new in text:
+    print("NOTICE: Dashboard helper déjà corrigé.")
+elif text.count(old) == 1:
+    path.write_text(
+        text.replace(old, new, 1),
+        encoding="utf-8",
+    )
+    print("OK: Dashboard utilise la topologie unifiée.")
+else:
+    raise SystemExit(
+        "ERROR: bloc screens/apply absent ou non unique."
+    )
+PINCABOS_DASHBOARD_HELPER_PATCH
+
+chmod 750 \
+  "$TARGET/usr/local/sbin/pincabos-dashboard-admin"
+
+chown root:root \
+  "$TARGET/usr/local/sbin/pincabos-dashboard-admin"
+
+echo
+echo "=== Mask obsolete topology timer and path ==="
+
+for legacy_unit in \
+  pincabos-screen-topology.timer \
+  pincabos-screen-topology.path
+do
+  rm -f \
+    "$TARGET/etc/systemd/system/timers.target.wants/$legacy_unit" \
+    "$TARGET/etc/systemd/system/paths.target.wants/$legacy_unit" \
+    "$TARGET/etc/systemd/system/multi-user.target.wants/$legacy_unit" \
+    "$TARGET/etc/systemd/system/graphical.target.wants/$legacy_unit" \
+    2>/dev/null || true
+
+  ln -sfn /dev/null \
+    "$TARGET/etc/systemd/system/$legacy_unit"
+done
+
+cat > "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/90-pincabos-iso-start.conf" <<'VPINFE_OVERRIDE'
+[Unit]
+After=pincabos-firstboot-hardware-autoconfig.service display-manager.service network-online.target pincabos-screen-topology-boot.service
+Requires=pincabos-screen-topology-boot.service
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+ExecStartPre=/usr/local/libexec/pincabos/pincabos-vpinfe-display-sanitize
+Restart=always
+RestartSec=6
+TimeoutStartSec=90
+TimeoutStopSec=25
+VPINFE_OVERRIDE
+
+echo
+echo "==============================================================="
+echo " PinCabOS installed target graphical systemd cycle sanitation"
+echo " PINCABOS_TARGET_SYSTEMD_GRAPHICAL_CYCLE_SANITIZE_V1"
+echo " PINCABOS_TARGET_SYSTEMD_GRAPHICAL_CYCLE_SANITIZE_V2"
+echo "==============================================================="
+
+mkdir -p \
+  "$TARGET/etc/systemd/system" \
+  "$TARGET/etc/systemd/system/graphical.target.wants" \
+  "$TARGET/etc/systemd/system/multi-user.target.wants" \
+  "$TARGET/etc/systemd/system/default.target.wants" \
+  "$TARGET/etc/systemd/system/timers.target.wants" \
+  "$TARGET/etc/systemd/system/paths.target.wants"
+
+pincabos_target_find_unit() {
+  local unit="$1"
+
+  if [ -f "$TARGET/etc/systemd/system/$unit" ]; then
+    printf '%s\n' "$TARGET/etc/systemd/system/$unit"
+    return 0
+  fi
+
+  if [ -f "$TARGET/lib/systemd/system/$unit" ]; then
+    printf '%s\n' "$TARGET/lib/systemd/system/$unit"
+    return 0
+  fi
+
+  if [ -f "$TARGET/usr/lib/systemd/system/$unit" ]; then
+    printf '%s\n' "$TARGET/usr/lib/systemd/system/$unit"
+    return 0
+  fi
+
+  return 1
+}
+
+pincabos_target_prepare_canonical_unit() {
+  local unit="$1"
+  local source_unit
+  local canonical_unit
+
+  source_unit="$(
+    pincabos_target_find_unit "$unit"
+  )" || {
+    echo "NOTICE: target unit missing: $unit"
+    return 1
+  }
+
+  canonical_unit="$TARGET/etc/systemd/system/$unit"
+
+  if [ "$source_unit" != "$canonical_unit" ]; then
+    cp -a "$source_unit" "$canonical_unit"
+  fi
+
+  chmod 644 "$canonical_unit"
+  chown root:root "$canonical_unit" 2>/dev/null || true
+
+  echo "Canonical target unit prepared: $unit"
+}
+
+MANAGED_GRAPHICAL_UNITS=(
+  pincabos-dashboard-live.service
+  pincabos-fulldmd-no-title.service
+  pincabos-backglass-bridge.service
+  pincabos-switch-graphical-vt.service
+)
+
+echo
+echo "=== Prepare canonical managed units ==="
+
+for managed_unit in "${MANAGED_GRAPHICAL_UNITS[@]}"; do
+  pincabos_target_prepare_canonical_unit \
+    "$managed_unit" || true
+done
+
+echo
+echo "=== Rewrite real systemd unit dependencies ==="
+
+python3 - "$TARGET" <<'PINCABOS_REWRITE_SYSTEMD_UNITS'
+from pathlib import Path
+import re
+import sys
+
+target = Path(sys.argv[1])
+systemd_root = target / "etc/systemd/system"
+
+legacy_dependencies = {
+    "graphical.target",
+    "pincabos-display-roles.service",
+    "pincabos-display-role-app-sync.service",
+    "pincabos-display-role-finalizer.service",
+    "pincabos-display-role-normalizer.service",
+    "pincabos-screen-topology.service",
+    "pincabos-screen-topology.timer",
+    "pincabos-screen-topology.path",
+}
+
+definitions = {
+    "pincabos-dashboard-live.service": {
+        "after": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+        "wants": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+    },
+    "pincabos-fulldmd-no-title.service": {
+        "after": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+        "wants": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+    },
+    "pincabos-backglass-bridge.service": {
+        "after": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+        "wants": [
+            "display-manager.service",
+            "pincabos-screen-topology-boot.service",
+        ],
+    },
+    "pincabos-switch-graphical-vt.service": {
+        "after": [
+            "display-manager.service",
+            "pincabos-final-graphical-guard.service",
+        ],
+        "wants": [
+            "display-manager.service",
+        ],
+    },
+}
+
+
+def unique(values):
+    result = []
+
+    for value in values:
+        if value and value not in result:
+            result.append(value)
+
+    return result
+
+
+def filter_tokens(tokens):
+    return [
+        token
+        for token in tokens
+        if token not in legacy_dependencies
+    ]
+
+
+def rewrite_unit(path, desired_after, desired_wants):
+    original = path.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    lines = original.splitlines()
+    output = []
+
+    section = ""
+    unit_dependencies_written = False
+    install_target_written = False
+
+    existing_after = []
+    existing_wants = []
+
+    def write_unit_dependencies():
+        nonlocal unit_dependencies_written
+
+        if unit_dependencies_written:
+            return
+
+        final_after = unique(
+            filter_tokens(existing_after)
+            + desired_after
+        )
+
+        final_wants = unique(
+            filter_tokens(existing_wants)
+            + desired_wants
+        )
+
+        if final_after:
+            output.append(
+                "After=" + " ".join(final_after)
+            )
+
+        if final_wants:
+            output.append(
+                "Wants=" + " ".join(final_wants)
+            )
+
+        unit_dependencies_written = True
+
+    for line in lines:
+        stripped = line.strip()
+
+        section_match = re.match(
+            r"^\[([^\]]+)\]$",
+            stripped,
+        )
+
+        if section_match:
+            if section == "Unit":
+                write_unit_dependencies()
+
+            if (
+                section == "Install"
+                and not install_target_written
+            ):
+                output.append(
+                    "WantedBy=graphical.target"
+                )
+                install_target_written = True
+
+            section = section_match.group(1)
+            output.append(line)
+            continue
+
+        if section == "Unit":
+            dependency_match = re.match(
+                r"^(After|Wants|Requires|Before)"
+                r"\s*=\s*(.*)$",
+                stripped,
+                re.IGNORECASE,
+            )
+
+            if dependency_match:
+                key = dependency_match.group(1)
+                key_lower = key.lower()
+
+                tokens = filter_tokens(
+                    dependency_match.group(2).split()
+                )
+
+                if key_lower == "after":
+                    existing_after.extend(tokens)
+                    continue
+
+                if key_lower == "wants":
+                    existing_wants.extend(tokens)
+                    continue
+
+                if tokens:
+                    output.append(
+                        key + "=" + " ".join(tokens)
+                    )
+
+                continue
+
+        if section == "Install":
+            if re.match(
+                r"^WantedBy\s*=",
+                stripped,
+                re.IGNORECASE,
+            ):
+                continue
+
+        output.append(line)
+
+    if section == "Unit":
+        write_unit_dependencies()
+
+    if section == "Install" and not install_target_written:
+        output.append("WantedBy=graphical.target")
+        install_target_written = True
+
+    if not any(
+        line.strip() == "[Install]"
+        for line in output
+    ):
+        output.extend([
+            "",
+            "[Install]",
+            "WantedBy=graphical.target",
+        ])
+
+    content = "\n".join(output).rstrip() + "\n"
+
+    path.write_text(
+        content,
+        encoding="utf-8",
+    )
+
+
+def clean_dropin(path):
+    original = path.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    output = []
+
+    for line in original.splitlines():
+        stripped = line.strip()
+
+        dependency_match = re.match(
+            r"^(After|Wants|Requires|Before)"
+            r"\s*=\s*(.*)$",
+            stripped,
+            re.IGNORECASE,
+        )
+
+        if dependency_match:
+            tokens = filter_tokens(
+                dependency_match.group(2).split()
+            )
+
+            if tokens:
+                output.append(
+                    dependency_match.group(1)
+                    + "="
+                    + " ".join(tokens)
+                )
+
+            continue
+
+        wanted_by_match = re.match(
+            r"^WantedBy\s*=\s*(.*)$",
+            stripped,
+            re.IGNORECASE,
+        )
+
+        if wanted_by_match:
+            tokens = [
+                token
+                for token in wanted_by_match.group(1).split()
+                if token != "multi-user.target"
+            ]
+
+            if tokens:
+                output.append(
+                    "WantedBy=" + " ".join(tokens)
+                )
+
+            continue
+
+        output.append(line)
+
+    path.write_text(
+        "\n".join(output).rstrip() + "\n",
+        encoding="utf-8",
+    )
+
+
+for unit, definition in definitions.items():
+    unit_path = systemd_root / unit
+
+    if not unit_path.is_file():
+        print(f"NOTICE: unit not present: {unit}")
+        continue
+
+    rewrite_unit(
+        unit_path,
+        definition["after"],
+        definition["wants"],
+    )
+
+    dropin_dir = systemd_root / f"{unit}.d"
+
+    if dropin_dir.is_dir():
+        for dropin in sorted(
+            dropin_dir.glob("*.conf")
+        ):
+            clean_dropin(dropin)
+
+    print(f"Rewritten target unit: {unit}")
+PINCABOS_REWRITE_SYSTEMD_UNITS
+
+echo
+echo "=== Remove obsolete ordering drop-ins ==="
+
+rm -f \
+  "$TARGET/etc/systemd/system/pincabos-dashboard-live.service.d/70-after-graphical-x11.conf" \
+  "$TARGET/etc/systemd/system/pincabos-dashboard-live.service.d/90-display-roles.conf" \
+  "$TARGET/etc/systemd/system/pincabos-dashboard-live.service.d/95-pincabos-iso-ordering.conf" \
+  "$TARGET/etc/systemd/system/pincabos-scoreview-router.service.d/95-pincabos-iso-ordering.conf" \
+  "$TARGET/etc/systemd/system/pincabos-fulldmd-no-title.service.d/95-pincabos-iso-ordering.conf" \
+  "$TARGET/etc/systemd/system/pincabos-switch-graphical-vt.service.d/95-pincabos-iso-ordering.conf" \
+  "$TARGET/etc/systemd/system/pincabos-backglass-bridge.service.d/95-pincabos-iso-ordering.conf" \
+  2>/dev/null || true
+
+echo
+echo "=== Enable managed units only in graphical.target ==="
+
+for managed_unit in "${MANAGED_GRAPHICAL_UNITS[@]}"; do
+  if [ ! -f "$TARGET/etc/systemd/system/$managed_unit" ]; then
+    echo "NOTICE: canonical unit missing: $managed_unit"
+    continue
+  fi
+
+  find "$TARGET/etc/systemd/system" \
+    -mindepth 2 \
+    -maxdepth 3 \
+    -type l \
+    -name "$managed_unit" \
+    -delete 2>/dev/null || true
+
+  ln -sfn \
+    "../$managed_unit" \
+    "$TARGET/etc/systemd/system/graphical.target.wants/$managed_unit"
+
+  echo "Enabled only in graphical.target: $managed_unit"
+done
+
+echo
+echo "=== Validate topology unit ordering ==="
+
+TOPOLOGY_UNIT="$TARGET/etc/systemd/system/pincabos-screen-topology-boot.service"
+
+if [ ! -f "$TOPOLOGY_UNIT" ]; then
+  echo "ERROR: missing topology boot unit"
+  exit 1
+fi
+
+if grep -Eq \
+  '^After=.*(^|[[:space:]])graphical\.target([[:space:]]|$)' \
+  "$TOPOLOGY_UNIT"
+then
+  echo "ERROR: topology boot unit still contains After=graphical.target"
+  exit 1
+fi
+
+rm -f \
+  "$TARGET/etc/systemd/system/pincabos-vpinfe.service.d/55-pincabos-screen-topology.conf" \
+  2>/dev/null || true
+
+echo
+echo "=== Validate rewritten unit files ==="
+
+for managed_unit in "${MANAGED_GRAPHICAL_UNITS[@]}"; do
+  managed_path="$TARGET/etc/systemd/system/$managed_unit"
+
+  [ -f "$managed_path" ] || continue
+
+  if grep -Eq \
+    '^After=.*(^|[[:space:]])graphical\.target([[:space:]]|$)' \
+    "$managed_path"
+  then
+    echo "ERROR: $managed_unit still contains After=graphical.target"
+    exit 1
+  fi
+
+  if grep -Eq \
+    '^(After|Wants|Requires|Before)=.*pincabos-(display-roles|display-role-|screen-topology\.service)' \
+    "$managed_path"
+  then
+    echo "ERROR: $managed_unit still references an obsolete display engine"
+    exit 1
+  fi
+
+  if [ -L "$TARGET/etc/systemd/system/multi-user.target.wants/$managed_unit" ]; then
+    echo "ERROR: $managed_unit remains enabled in multi-user.target"
+    exit 1
+  fi
+
+  if [ ! -L "$TARGET/etc/systemd/system/graphical.target.wants/$managed_unit" ]; then
+    echo "ERROR: $managed_unit is not enabled in graphical.target"
+    exit 1
+  fi
+
+  echo "OK: clean graphical ordering: $managed_unit"
+done
+
+echo
+echo "=== Validate target systemd ordering graph ==="
+
+SYSTEMD_VERIFY_LOG="$(
+  mktemp /tmp/pincabos-target-systemd-verify.XXXXXX
+)"
+
+systemd-analyze --root="$TARGET" verify \
+  pincabos-screen-topology-boot.service \
+  pincabos-vpinfe.service \
+  pincabos-dashboard-live.service \
+  pincabos-switch-graphical-vt.service \
+  pincabos-backglass-bridge.service \
+  >"$SYSTEMD_VERIFY_LOG" 2>&1 || true
+
+if grep -Eqi \
+  'ordering cycle|cyclic ordering dependency|unable to break cycle|transaction order is cyclic' \
+  "$SYSTEMD_VERIFY_LOG"
+then
+  echo "ERROR: target systemd ordering cycle remains"
+  cat "$SYSTEMD_VERIFY_LOG"
+  rm -f "$SYSTEMD_VERIFY_LOG"
+  exit 1
+fi
+
+echo "OK: no target graphical ordering cycle detected"
+
+grep -Ei \
+  'pincabos-|warning|error|failed' \
+  "$SYSTEMD_VERIFY_LOG" |
+  tail -100 || true
+
+rm -f "$SYSTEMD_VERIFY_LOG"
+
+unset -f pincabos_target_find_unit
+unset -f pincabos_target_prepare_canonical_unit
+unset MANAGED_GRAPHICAL_UNITS
+
+echo
+echo "=== Enable VPinFE service in graphical.target ==="
+if [ -f "$TARGET/etc/systemd/system/pincabos-vpinfe.service" ]; then
+  ln -sfn ../pincabos-vpinfe.service \
+    "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-vpinfe.service" || true
+elif [ -f "$TARGET/lib/systemd/system/pincabos-vpinfe.service" ]; then
+  ln -sfn /lib/systemd/system/pincabos-vpinfe.service \
+    "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-vpinfe.service" || true
+elif [ -f "$TARGET/usr/lib/systemd/system/pincabos-vpinfe.service" ]; then
+  ln -sfn /usr/lib/systemd/system/pincabos-vpinfe.service \
+    "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-vpinfe.service" || true
+else
+  echo "WARNING: pincabos-vpinfe.service not found in target"
+fi
+
+cat > "$TARGET/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix" <<'FIRSTBOOT_VPINFE'
+#!/usr/bin/env bash
+set -u
+
+LOG="/var/log/pincabos-firstboot-vpinfe-packaged-runtime-fix.log"
+FLAG="/var/lib/pincabos/firstboot-vpinfe-packaged-runtime.done"
+
+mkdir -p /var/log /var/lib/pincabos
+
+{
+  echo "==============================================================="
+  echo " PinCabOS first boot VPinFE packaged runtime fix"
+  echo " Started: $(date -Is)"
+  echo "==============================================================="
+
+  if [ -f "$FLAG" ]; then
+    echo "Already completed."
+    exit 0
+  fi
+
+  echo
+  echo "=== Runtime files ==="
+  ls -lah /home/pinball/vpinfe 2>/dev/null || true
+  ls -lah /home/pinball/vpinfe/_internal 2>/dev/null | sed -n '1,80p' || true
+  ls -lah /opt/pincabos/tools/run-vpinfe-systemd.sh 2>/dev/null || true
+
+  echo
+  echo "=== Permissions ==="
+  chown -R pinball:pinball /home/pinball/vpinfe 2>/dev/null || true
+  chown -R pinball:pinball /home/pinball/.config/vpinfe 2>/dev/null || true
+  chown -R pinball:pinball /opt/pincabos/config/vpinfe 2>/dev/null || true
+  chmod 755 /opt/pincabos/tools/run-vpinfe-systemd.sh 2>/dev/null || true
+
+  echo
+  echo "=== Enable/start VPinFE ==="
+  systemctl daemon-reload || true
+  systemctl reset-failed pincabos-vpinfe.service >/dev/null 2>&1 || true
+  systemctl enable pincabos-vpinfe.service >/dev/null 2>&1 || true
+  systemctl restart pincabos-vpinfe.service >/dev/null 2>&1 || true
+
+  echo
+  echo "=== Wait for VPinFE port 8001 ==="
+  VPINFE_OK=0
+  for i in $(seq 1 45); do
+    if ss -lnt 2>/dev/null | grep -qE ':8001\s'; then
+      VPINFE_OK=1
+      break
+    fi
+    sleep 2
+  done
+
+  echo "VPINFE_OK=$VPINFE_OK"
+  systemctl status pincabos-vpinfe.service --no-pager -l || true
+  journalctl -u pincabos-vpinfe.service -b --no-pager -n 160 || true
+  ss -lntup 2>/dev/null | grep -E '(:8001|:80|:5000|:8080)' || true
+
+  touch "$FLAG"
+  systemctl disable pincabos-firstboot-vpinfe-packaged-runtime-fix.service >/dev/null 2>&1 || true
+
+  echo
+  echo "Completed: $(date -Is)"
+} >> "$LOG" 2>&1
+
+exit 0
+FIRSTBOOT_VPINFE
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix"
+
+cat > "$TARGET/etc/systemd/system/pincabos-firstboot-vpinfe-packaged-runtime-fix.service" <<'FIRSTBOOT_VPINFE_SERVICE'
+[Unit]
+Description=PinCabOS first boot VPinFE packaged runtime fix
+After=display-manager.service network-online.target pincabos-firstboot-network-webapp-fix.service
+Wants=network-online.target
+ConditionPathExists=!/var/lib/pincabos/firstboot-vpinfe-packaged-runtime.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-vpinfe-packaged-runtime-fix
+TimeoutStartSec=3min
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target
+FIRSTBOOT_VPINFE_SERVICE
+
+# The unified hardware/topology pipeline now starts VPinFE.
+# Keep the diagnostic unit available, but do not enable a competing starter.
+rm -f "$TARGET/etc/systemd/system/graphical.target.wants/pincabos-firstboot-vpinfe-packaged-runtime-fix.service" || true
+
+echo "=== Mask unused CUPS units in installed target ==="
+for unit in cups.service cups.socket cups.path cups-browsed.service; do
+  ln -sfn /dev/null "$TARGET/etc/systemd/system/$unit" || true
+done
+
+if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' "$TARGET/etc/default/grub"; then
+  sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=0"/' "$TARGET/etc/default/grub"
+else
+  echo 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash loglevel=3 rd.udev.log_level=3 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=0"' >> "$TARGET/etc/default/grub"
+fi
+
+printf '[Daemon]\nTheme=pincabos\n' > "$TARGET/etc/plymouth/plymouthd.conf"
+
+if chroot "$TARGET" /bin/sh -c 'command -v plymouth-set-default-theme >/dev/null 2>&1'; then
+  chroot "$TARGET" plymouth-set-default-theme pincabos || true
+else
+  echo "NOTICE: plymouth-set-default-theme missing; using update-alternatives fallback"
+  chroot "$TARGET" update-alternatives --install \
+    /usr/share/plymouth/themes/default.plymouth \
+    default.plymouth \
+    /usr/share/plymouth/themes/pincabos/pincabos.plymouth \
+    100 || true
+
+  chroot "$TARGET" update-alternatives --set \
+    default.plymouth \
+    /usr/share/plymouth/themes/pincabos/pincabos.plymouth || true
+fi
+
+echo
+echo "=== 7) Validate target temp dirs before initramfs ==="
+test -d "$TARGET/var/tmp"
+test -d "$TARGET/tmp"
+test "$(stat -c %a "$TARGET/var/tmp")" = "1777" || chmod 1777 "$TARGET/var/tmp"
+test "$(stat -c %a "$TARGET/tmp")" = "1777" || chmod 1777 "$TARGET/tmp"
+ls -ld "$TARGET/tmp" "$TARGET/var/tmp"
+
+echo
+echo "=== 8) Install safe first-boot initramfs refresh + grub ==="
+
+# Do NOT run update-initramfs inside the live installer.
+# The payload already contains /boot/initrd.img-* from the source cabinet.
+# Running mkinitramfs inside the live chroot was the blocker on /var/tmp.
+ls "$TARGET"/boot/initrd.img-* >/dev/null
+ls "$TARGET"/boot/vmlinuz-* >/dev/null
+
+mkdir -p "$TARGET/usr/local/sbin" "$TARGET/etc/systemd/system" "$TARGET/etc/systemd/system/multi-user.target.wants" "$TARGET/var/lib/pincabos"
+
+cat > "$TARGET/usr/local/sbin/pincabos-firstboot-initramfs-refresh" <<'FIRSTBOOT_REFRESH'
+#!/usr/bin/env bash
+set -u
+
+FLAG="/var/lib/pincabos/firstboot-initramfs-refresh.done"
+LOG="/var/log/pincabos-firstboot-initramfs-refresh.log"
+
+mkdir -p /var/lib/pincabos /tmp /var/tmp /var/log /var/cache/apt/archives/partial
+chmod 1777 /tmp /var/tmp 2>/dev/null || true
+
+{
+  echo "==============================================================="
+  echo " PinCabOS first boot initramfs refresh"
+  echo " Started: $(date -Is)"
+  echo "==============================================================="
+
+  if [ -f "$FLAG" ]; then
+    echo "Already completed."
+    exit 0
+  fi
+
+  if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+    plymouth-set-default-theme pincabos || true
+  fi
+
+  if command -v update-initramfs >/dev/null 2>&1; then
+    update-initramfs -u -k all || true
+  fi
+
+  if command -v update-grub >/dev/null 2>&1; then
+    update-grub || true
+  fi
+
+  touch "$FLAG"
+  systemctl disable pincabos-firstboot-initramfs-refresh.service >/dev/null 2>&1 || true
+
+  echo "Completed: $(date -Is)"
+} >> "$LOG" 2>&1
+
+exit 0
+FIRSTBOOT_REFRESH
+
+chmod 755 "$TARGET/usr/local/sbin/pincabos-firstboot-initramfs-refresh"
+
+cat > "$TARGET/etc/systemd/system/pincabos-firstboot-initramfs-refresh.service" <<'FIRSTBOOT_SERVICE'
+[Unit]
+Description=PinCabOS first boot initramfs refresh
+After=local-fs.target
+ConditionPathExists=!/var/lib/pincabos/firstboot-initramfs-refresh.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pincabos-firstboot-initramfs-refresh
+TimeoutStartSec=10min
+
+[Install]
+WantedBy=multi-user.target
+FIRSTBOOT_SERVICE
+
+ln -sfn ../pincabos-firstboot-initramfs-refresh.service \
+  "$TARGET/etc/systemd/system/multi-user.target.wants/pincabos-firstboot-initramfs-refresh.service"
+
+chroot "$TARGET" update-grub || true
+
+echo
+echo "=== 9) GRUB EFI ==="
+mountpoint -q "$TARGET/boot/efi" || {
+  echo "ERROR: EFI not mounted on $TARGET/boot/efi"
+  exit 1
+}
+
+INSTALL_MODE="${PINCABOS_INSTALL_MODE:-full}"
+echo "Install mode for GRUB: $INSTALL_MODE"
+
+chroot "$TARGET" grub-install \
+  --target=x86_64-efi \
+  --efi-directory=/boot/efi \
+  --bootloader-id=PinCabOS \
+  --recheck
+
+if [ "$INSTALL_MODE" = "full" ]; then
+  chroot "$TARGET" grub-install \
+    --target=x86_64-efi \
+    --efi-directory=/boot/efi \
+    --bootloader-id=PinCabOS \
+    --removable \
+    --recheck || true
+else
+  echo "Dualboot mode: skipping removable EFI install to preserve existing EFI/BOOT."
+fi
+
+echo
+echo "OK — V8.1G target installed"

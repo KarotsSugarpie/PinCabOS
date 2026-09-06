@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -u
+
+PAYLOAD="/cdrom/pincabos-payload"
+HELPER="$PAYLOAD/pincabos-v8.1g-install-cab-payload-to-target.sh"
+CHECKSUM="$PAYLOAD/pincabos-rootfs-cab-v8.1g.parts.sha256"
+
+for second in $(seq 1 90); do
+  if [ -d "$PAYLOAD" ] &&
+     [ -x "$HELPER" ] &&
+     [ -s "$CHECKSUM" ]; then
+    exit 0
+  fi
+
+  sleep 1
+done
+
+echo
+echo "NOGO: PinCabOS payload was not mounted under /cdrom."
+echo
+echo "Current /cdrom contents:"
+ls -lah /cdrom 2>/dev/null || true
+
+exit 1

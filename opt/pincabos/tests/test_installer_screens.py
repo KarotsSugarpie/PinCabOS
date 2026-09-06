@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _charge import charger, RACINE
+from _charge import charger, RACINE, texte_installateur
 
 sc = charger("opt/pincabos/installer-gui/screens.py", "pco_installer_screens")
 
@@ -380,7 +380,7 @@ class Assistant(unittest.TestCase):
         self.assertIsNone(cal2["fulldmd"])
         self.assertEqual(cal2["dmd"]["screen_id"], str(sans["backglass"]["id"]))
         self.assertEqual(cal2["dmd"]["width"], sans["backglass"]["width"] // 2)
-        s = Path(RACINE, "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         self.assertIn('PCO_ANS_CALIBRATIONS_FILE', s)
         self.assertIn('rm -f "$TARGET/opt/pincabos/config/fulldmd-calibration.json"', s)
 
@@ -545,7 +545,7 @@ class Assistant(unittest.TestCase):
 
 class Integration(unittest.TestCase):
     def test_iso_sh_pose_screens_sur_la_cible(self):
-        s = (Path(RACINE) / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         self.assertIn("apply_target_screens() {", s)
         self.assertIn('install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/screens/screens.json"', s)
         a, b, c = s.index("  apply_target_identity\n"), s.index("  apply_target_screens\n"), s.index("  refresh_target_initrd_for_orientation\n")
