@@ -54,7 +54,8 @@ fi
 
 # variables communes (WORK, LOG_DIR, ...) : la lib, sans journal ni trap ici
 PCO_ISO_LOG="" . "$ETAPES_DIR/00-lib.sh"
-ETAT_DIR="$WORK/etapes"
+# les marqueurs GO vivent hors de $WORK : l etape 10 efface $WORK (rm -rf), et c est normal
+ETAT_DIR="$LOG_DIR/etat"
 mkdir -p "$LOG_DIR/etapes" "$ETAT_DIR"
 
 if [ "$LISTE" -eq 1 ]; then
@@ -99,7 +100,7 @@ LOG="$LOG_DIR/iso-v8.1g-$(date +%Y%m%d-%H%M%S).log"
 export PCO_ISO_LOG="$LOG"
 exec > >(tee -a "$LOG") 2>&1
 
-[ -n "$SEULE" ] || clear
+[ -n "$SEULE" ] || { [ -t 1 ] && clear || true; }
 echo "==============================================================="
 echo " PINCABOS — MASTER ISO BUILDER V8.1G ENGLISH"
 echo " Clean -> Payload -> ISO-ready -> Live installer -> Bootable ISO"
@@ -121,7 +122,7 @@ for e in "${A_FAIRE[@]}"; do
   journal_etape="$LOG_DIR/etapes/$(basename "$LOG" .log)-$n.log"
   if bash "$ETAPES_DIR/$e" 2>&1 | tee "$journal_etape"; then
     duree=$(( $(date +%s) - debut ))
-    date -Is > "$ETAT_DIR/$n.go"
+    mkdir -p "$ETAT_DIR" && date -Is > "$ETAT_DIR/$n.go"
     echo "GO [OK] etape ${e%.sh} terminee en ${duree}s"
   else
     duree=$(( $(date +%s) - debut ))

@@ -75,7 +75,8 @@ class Etapes(unittest.TestCase):
             (racine / "iso/00-lib.sh").write_text(
                 f'WORK="{work}"\nLOG_DIR="{work}/logs"\nPCO_ISO_MODEL="live"\ncleanup_mounts() {{ :; }}\ndie() {{ echo "ERROR: $*"; exit 1; }}\n', encoding="utf-8")
             for n in ("10-a", "20-b", "30-c"):
-                (racine / f"iso/{n}.sh").write_text(f'#!/bin/bash\necho "RUN {n}"\n[ "{n}" = "20-b" ] && [ -n "${{CASSE:-}}" ] && exit 3\nexit 0\n', encoding="utf-8")
+                # l etape 10 reelle fait rm -rf "$WORK" : les marqueurs GO doivent y survivre
+                (racine / f"iso/{n}.sh").write_text(f'#!/bin/bash\n. "$(dirname "$0")/00-lib.sh"\n[ "{n}" = "10-a" ] && rm -rf "$WORK"\necho "RUN {n}"\n[ "{n}" = "20-b" ] && [ -n "${{CASSE:-}}" ] && exit 3\nexit 0\n', encoding="utf-8")
             orch = racine / "iso.sh"
             orch.write_text(ISO.read_text(encoding="utf-8"), encoding="utf-8")
             orch.chmod(0o755)
@@ -88,7 +89,8 @@ class Etapes(unittest.TestCase):
             r = subprocess.run(["bash", str(orch), "--etape", "20"], capture_output=True, text=True, env=env)
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
             self.assertIn("RUN 20-b", r.stdout); self.assertNotIn("RUN 10-a", r.stdout)
-            self.assertTrue((work / "etapes/20.go").is_file())
+            self.assertTrue((work / "logs/etat/20.go").is_file())
+            self.assertTrue((work / "logs/etat/10.go").is_file())
             r = subprocess.run(["bash", str(orch), "--depuis", "20", "--jusqua", "20"], capture_output=True, text=True, env=env)
             self.assertIn("RUN 20-b", r.stdout); self.assertNotIn("RUN 30-c", r.stdout)
             r = subprocess.run(["bash", str(orch)], capture_output=True, text=True, env=dict(env, CASSE="1"))
@@ -96,7 +98,7 @@ class Etapes(unittest.TestCase):
             self.assertIn("NOGO [***] etape 20-b", r.stdout)
             self.assertIn("--etape 20", r.stdout)
             self.assertNotIn("RUN 30-c", r.stdout)
-            self.assertFalse((work / "etapes/20.go").exists())
+            self.assertFalse((work / "logs/etat/20.go").exists())
             r = subprocess.run(["bash", str(orch), "--classic"], capture_output=True, text=True, env=env)
             self.assertEqual(r.returncode, 2)
 
