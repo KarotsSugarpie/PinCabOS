@@ -413,7 +413,7 @@ class Assistant(unittest.TestCase):
         import xml.dom.minidom
         xml.dom.minidom.parseString(rc)
         a = Path(RACINE, "opt/pincabos/installer-gui/app.py").read_text(encoding="utf-8")
-        self.assertIn('res["decor"] = pco_screens.lancer_decor(mons, roles)', a)
+        self.assertIn('res["decor"] = pco_screens.lancer_decor(mons, roles, libelles=libelles)', a)
 
     def test_egerie_sur_chaque_page(self):
         # PINCABOS_INSTALLEUR_EGERIE_V3 (Yann : repartie de facon homogene sur les pages)
