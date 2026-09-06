@@ -7,7 +7,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/pincabos --repair --firstboot
+# PINCABOS_DOCTOR_MENAGEMENT_V1 : jamais de redemarrage de service au premier demarrage
+ExecStart=/usr/local/sbin/pincabos --repair --firstboot --no-restart
 ExecStartPost=/usr/bin/touch /var/lib/pincabos/doctor-firstboot.done
 SuccessExitStatus=0 2
 TimeoutStartSec=20min

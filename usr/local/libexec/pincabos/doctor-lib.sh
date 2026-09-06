@@ -52,16 +52,35 @@ pco_service_active() {
   systemctl is-active --quiet "$1"
 }
 
+# PINCABOS_DOCTOR_MENAGEMENT_V1 (Yann, cab 06/09/2026) : le doctor ne coupe jamais une
+# partie ni un frontend sain. Le finaliseur de premier demarrage tournait 45 s apres le
+# boot en mode reparation : la topologie (Requires de VPinFE) etait redemarree et VPinFE
+# relance -> VPX tue en pleine table de calibration (ecran noir).
+pco_partie_en_cours() {
+  pgrep -x VPinballX_BGFX >/dev/null 2>&1 || pgrep -f '/VPinballX' >/dev/null 2>&1
+}
+
+pco_peut_redemarrer() {
+  # un service ACTIF n'est redemarre que si le mode le demande, hors partie, hors premier demarrage
+  [ "$PCO_SERVICE_RESTART" -eq 1 ] && [ "$PCO_FIRSTBOOT" -ne 1 ] && ! pco_partie_en_cours
+}
+
 pco_enable_service() {
   local unit="$1"
   systemctl unmask "$unit" >/dev/null 2>&1 || true
   systemctl enable "$unit" >/dev/null 2>&1 || true
 
-  if [ "$PCO_SERVICE_RESTART" -eq 1 ]; then
-    systemctl restart "$unit"
-  else
-    systemctl start "$unit"
+  if systemctl is-active --quiet "$unit"; then
+    if pco_peut_redemarrer; then
+      systemctl restart "$unit"
+    fi
+    return 0
   fi
+  if pco_partie_en_cours; then
+    echo "  $unit inactif : partie en cours, aucun demarrage pendant le jeu"
+    return 0
+  fi
+  systemctl start "$unit"
 }
 
 pco_as_pinball() {
