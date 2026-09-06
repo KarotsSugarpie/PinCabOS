@@ -393,6 +393,35 @@ def commande_pinball(args: list) -> list:
             "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus", *args]
 
 
+# PINCABOS_AUDIO_UNMUTE_V1 (cab de Yann, 06/09/2026, installation neuve) : le profil
+# surround etait actif et le volume regle, mais la sortie restait coupee : sink PipeWire
+# « Mute: yes » et commutateurs ALSA Front / Surround / Center / LFE sur off (etat de la
+# carte au premier profil multicanal), mute memorise par WirePlumber et rejoue a chaque
+# demarrage. On leve le mute des deux cotes, puis WirePlumber memorise l etat ouvert.
+COMMUTATEURS_ALSA = ("Master", "PCM", "Front", "Surround", "Center", "LFE", "Side", "Headphone", "Speaker")
+CANAUX_ALSA_PLEINS = ("PCM", "Front", "Surround", "Center", "LFE", "Side")
+
+
+def reactiver_sortie(sink: dict, run=executer) -> list:
+    """Leve le mute PipeWire du sink et ouvre les commutateurs ALSA de sa carte."""
+    journal = []
+    nom = str(sink.get("name") or "")
+    if nom:
+        rc, out = run(commande_pinball(["/usr/bin/pactl", "set-sink-mute", nom, "0"]), timeout=10)
+        journal.append(f"mute PipeWire leve : {nom} ({'ok' if rc == 0 else out.strip()[-80:]})")
+    carte = str(sink.get("card") or "")
+    if carte != "":
+        ouverts = []
+        for ctrl in COMMUTATEURS_ALSA:
+            rc, _ = run(["amixer", "-q", "-c", carte, "sset", ctrl, "unmute"], timeout=5)
+            if rc == 0:
+                ouverts.append(ctrl)
+                if ctrl in CANAUX_ALSA_PLEINS:
+                    run(["amixer", "-q", "-c", carte, "sset", ctrl, "100%"], timeout=5)
+        journal.append(f"commutateurs ALSA carte {carte} ouverts : {', '.join(ouverts) or 'aucun'}")
+    return journal
+
+
 def appliquer_premier_demarrage(cfg: dict, run=executer, vpx_ini: Path = VPX_INI, vpx_legacy_ini: Path = VPX_LEGACY_INI) -> list:
     """Traduit le choix de l'installeur (ALSA) en réglages de la session : VPX, sortie par défaut, volume."""
     journal = []
@@ -455,6 +484,9 @@ def appliquer_premier_demarrage(cfg: dict, run=executer, vpx_ini: Path = VPX_INI
         # (vu en VM : « is not a valid number »).
         rc, out = run(commande_pinball(["/usr/bin/pactl", "set-default-sink", pf["name"]]), timeout=10)
         journal.append(f"sortie par défaut : {pf['name']} ({'ok' if rc == 0 else out.strip()[-80:]})")
+        journal += reactiver_sortie(pf, run)
+        if bg and bg.get("name") != pf.get("name"):
+            journal += reactiver_sortie(bg, run)
         vol = int(inst.get("volume", 70))
         rc, out = run(commande_pinball(["/usr/bin/pactl", "set-sink-volume", pf["name"], f"{vol}%"]), timeout=10)
         journal.append(f"volume : {vol} % ({'ok' if rc == 0 else out.strip()[-80:]})")

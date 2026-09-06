@@ -533,8 +533,26 @@ def cmd_apply_session() -> int:
     if resultat.returncode != 0:
         print(f"profil {profil} non rejoue : {resultat.stderr.strip()}")
         return 1
+    # PINCABOS_AUDIO_UNMUTE_V1 : un profil rejoue ne doit pas laisser la sortie coupee
+    for ligne in reactiver_sinks_de_la_carte(nom):
+        print(ligne)
     print(f"GO: profil {profil} rejoue")
     return 0
+
+
+def reactiver_sinks_de_la_carte(nom_carte: str) -> list[str]:
+    """Leve le mute PipeWire des sinks de la carte (alsa_card.X -> alsa_output.X.*)."""
+    suffixe = nom_carte.split(".", 1)[1] if "." in nom_carte else nom_carte
+    lignes = []
+    res = pactl("list", "short", "sinks")
+    if res.returncode != 0:
+        return lignes
+    for l in res.stdout.splitlines():
+        champs = l.split("\t")
+        if len(champs) > 1 and suffixe and suffixe in champs[1]:
+            r = pactl("set-sink-mute", champs[1], "0")
+            lignes.append(f"mute leve : {champs[1]} ({'ok' if r.returncode == 0 else r.stderr.strip()[-60:]})")
+    return lignes
 
 
 def main() -> int:

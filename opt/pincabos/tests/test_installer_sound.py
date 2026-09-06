@@ -291,6 +291,20 @@ class Audio(unittest.TestCase):
             self.assertIn("SoundDevice = HDA Intel Analog", texte)
             self.assertTrue(any("ini créé" in l for l in j), j)
 
+    def test_reactiver_sortie(self):
+        # PINCABOS_AUDIO_UNMUTE_V1 (cab de Yann 06/09 : sink « Mute: yes », Front/Surround/Center/LFE off)
+        appels = []
+        def run(args, timeout=20, **kw):
+            appels.append(list(args))
+            return (1, "") if args[:2] == ["amixer", "-q"] and args[5] == "Side" else (0, "")
+        j = pa.reactiver_sortie({"name": "alsa_output.pci-0000_00_1f.3.analog-surround-51", "card": "0"}, run=run)
+        self.assertEqual(appels[0][-3:], ["set-sink-mute", "alsa_output.pci-0000_00_1f.3.analog-surround-51", "0"])
+        self.assertIn(["amixer", "-q", "-c", "0", "sset", "Front", "unmute"], appels)
+        self.assertIn(["amixer", "-q", "-c", "0", "sset", "Front", "100%"], appels)
+        self.assertNotIn(["amixer", "-q", "-c", "0", "sset", "Master", "100%"], appels)   # Master : volume du widget
+        self.assertNotIn(["amixer", "-q", "-c", "0", "sset", "Side", "100%"], appels)     # commutateur absent : pas de volume
+        self.assertTrue(any("Front, Surround, Center, LFE" in l for l in j), j)
+
     def test_premier_demarrage(self):
         tmp = Path(tempfile.mkdtemp())
         try:
@@ -306,8 +320,12 @@ class Audio(unittest.TestCase):
             self.assertTrue(any("/usr/bin/pactl" in a and "set-default-sink" in a for a in appels))
             self.assertTrue(any("set-sink-volume" in a and "65%" in a for a in appels))
             self.assertFalse(any("wpctl" in " ".join(a) for a in appels))   # wpctl set-default veut un id numerique
-            self.assertTrue(all(a[:3] == ["runuser", "-u", "pinball"] for a in appels))
-            self.assertEqual(len(j), 4)   # + la ligne de migration du dossier VPX (PINCABOS_VPX_PREF_MIGRATION_V1)
+            self.assertTrue(all(a[:3] == ["runuser", "-u", "pinball"] for a in appels if a[0] != "amixer"))
+            # PINCABOS_AUDIO_UNMUTE_V1 : le mute est leve (PipeWire + ALSA) pour la sortie playfield et la backbox
+            self.assertTrue(any("set-sink-mute" in a and "0" == a[-1] for a in appels), appels)
+            self.assertTrue(any(a[:2] == ["amixer", "-q"] and "unmute" in a for a in appels), appels)
+            self.assertTrue(any("mute PipeWire leve" in l for l in j), j)
+            self.assertEqual(len(j), 8)   # migration + VPX + defaut + 2 x (mute, ALSA) + volume
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
@@ -329,6 +347,20 @@ class Dof(unittest.TestCase):
         self.assertIn("[Plugin.DOF]\nEnable = 0\n\n[Plugin.vpx]", pd.poser_cle_ini(t, "Plugin.DOF", "Enable", "0"))
         self.assertEqual(pd.poser_cle_ini("[DOF]\nautre = 1\n", "DOF", "enabledof", "true"), "[DOF]\nautre = 1\nenabledof = true\n")
         self.assertEqual(pd.poser_cle_ini("[X]\na = 1\n", "DOF", "enabledof", "false"), "[X]\na = 1\n\n[DOF]\nenabledof = false\n")   # INI_UNIQUE_V1 : fin de ligne conservee
+
+    def test_reactiver_sortie(self):
+        # PINCABOS_AUDIO_UNMUTE_V1 (cab de Yann 06/09 : sink « Mute: yes », Front/Surround/Center/LFE off)
+        appels = []
+        def run(args, timeout=20, **kw):
+            appels.append(list(args))
+            return (1, "") if args[:2] == ["amixer", "-q"] and args[5] == "Side" else (0, "")
+        j = pa.reactiver_sortie({"name": "alsa_output.pci-0000_00_1f.3.analog-surround-51", "card": "0"}, run=run)
+        self.assertEqual(appels[0][-3:], ["set-sink-mute", "alsa_output.pci-0000_00_1f.3.analog-surround-51", "0"])
+        self.assertIn(["amixer", "-q", "-c", "0", "sset", "Front", "unmute"], appels)
+        self.assertIn(["amixer", "-q", "-c", "0", "sset", "Front", "100%"], appels)
+        self.assertNotIn(["amixer", "-q", "-c", "0", "sset", "Master", "100%"], appels)   # Master : volume du widget
+        self.assertNotIn(["amixer", "-q", "-c", "0", "sset", "Side", "100%"], appels)     # commutateur absent : pas de volume
+        self.assertTrue(any("Front, Surround, Center, LFE" in l for l in j), j)
 
     def test_premier_demarrage(self):
         tmp = Path(tempfile.mkdtemp())
