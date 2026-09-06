@@ -32,6 +32,8 @@ class Composants(unittest.TestCase):
             self.assertTrue(c["install"].startswith("home/pinball/"))
         vpx = d["components"]["vpx"]
         self.assertIn("5436", vpx["url"]); self.assertIn("5436", vpx["install"])
+        # variante slim : l archive complete embarque un Chromium de 633 Mo inutile (ISO +160 Mo, rootfs +660 Mo)
+        self.assertTrue(d["components"]["vpinfe"]["archive"].endswith("-linux-x64-slim.zip"))
         self.assertEqual(vpx["links"]["home/pinball/vpx"], Path(vpx["install"]).name, "~/vpx pointe sur le bundle epingle")
 
     def test_libdof_canonique_du_depot(self):
