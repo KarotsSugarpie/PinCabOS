@@ -21,6 +21,7 @@ import os
 import re
 import shlex
 import shutil
+import socket
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime
@@ -496,3 +497,16 @@ def pincabos_write_json_with_meta(path, data, function_name):
         data["_pincabos_meta"] = pincabos_meta(function_name)
 
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+
+
+# ---- Adresse IP de la machine (PINCABOS_WEBAPP_MODULES_V1) ----
+
+def get_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "inconnue"
