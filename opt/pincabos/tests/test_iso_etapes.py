@@ -56,6 +56,16 @@ class Etapes(unittest.TestCase):
         self.assertIn('ROOTFS_DIR="$LIVE_ROOTFS"', (D / "90-iso.sh").read_text(encoding="utf-8"))
         self.assertIn('ROOTFS_DIR="$LIVE_ROOTFS"', (D / "80-live-rootfs.sh").read_text(encoding="utf-8"))
 
+    def test_lib_sourcable_sous_set_e(self):
+        # une ligne « [ -f x ] && ... » en fin de fichier source rend 1 sous set -e : chaque etape mourait a la ligne 4
+        lib = (D / "00-lib.sh").read_text(encoding="utf-8")
+        for l in lib.splitlines():
+            self.assertFalse(l.startswith("[ ") and " && " in l, f"forme fatale sous set -e : {l}")
+        self.assertNotIn('echo "ISO model', lib)
+        r = subprocess.run(["bash", "-c", 'set -Eeuo pipefail; BUILD_BASE=x; . "$1"; echo SOURCE_OK', "_", str(D / "00-lib.sh")],
+                           capture_output=True, text=True, env=dict(os.environ, PCO_ISO_SCRIPT_DIR=str(R / "opt/pincabos/script")))
+        self.assertIn("SOURCE_OK", r.stdout, r.stderr)
+
     def test_orchestrateur_a_blanc(self):
         """Etapes factices : ordre, --liste, --etape, --depuis, --jusqua, NOGO qui arrete."""
         with tempfile.TemporaryDirectory() as d:

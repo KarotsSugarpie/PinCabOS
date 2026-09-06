@@ -36,22 +36,18 @@ LIVE_ROOTFS="$WORK/live-rootfs"
 # installes tels quels ; plus de heredoc.
 INSTALLER_SRC="${PCO_ISO_SCRIPT_DIR:-$(dirname "$(readlink -f "$0")")}/installer"
 [ -d "$INSTALLER_SRC" ] || INSTALLER_SRC="/opt/pincabos/script/installer"
-echo "ISO model: $PCO_ISO_MODEL"
 
 LOG_DIR="$BUILD_BASE/logs"
 mkdir -p "$LOG_DIR"
 LOG="${PCO_ISO_LOG:-$LOG_DIR/iso-v8.1g-$(date +%Y%m%d-%H%M%S).log}"
 
-echo
 
 die() {
-  echo
   echo "ERROR: $*"
   exit 1
 }
 
 run() {
-  echo
   echo ">>> $*"
   "$@"
 }
@@ -82,4 +78,4 @@ pco_etat_ecrire() {
   mv -f "$ETAT_ENV.tmp" "$ETAT_ENV"
 }
 # shellcheck disable=SC1090
-[ -f "$ETAT_ENV" ] && . "$ETAT_ENV"
+if [ -f "$ETAT_ENV" ]; then . "$ETAT_ENV"; fi
