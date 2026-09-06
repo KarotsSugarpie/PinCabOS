@@ -121,6 +121,13 @@ if [ -d "$D/vpinfe" ]; then
     lien "$DEST_REL/vpinfe" "$H/vpinfe"
 fi
 
+# les trois liens appartiennent au joueur, quel que soit le chemin pris plus haut
+if [ "$DRY" -eq 0 ]; then
+    for l in "$D/vpx" "$H/vpx" "$H/vpinfe"; do
+        [ -L "$l" ] && proprietaire_lien "$l"
+    done
+fi
+
 if [ "$CHANGE" -eq 0 ]; then
     log "rien a faire : runtimes deja sous $DEST_REL"
 fi
