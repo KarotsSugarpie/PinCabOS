@@ -249,12 +249,40 @@ class OutilsCible(unittest.TestCase):
         for delim in ("PINCABOS_TARGET_AUDIO_PRIVACY_PY", "PINCABOS_SCREEN_PRIVACY_PY", "PINCABOS_VPINFE_INI_PURGE",
                       "PINCABOS_DASHBOARD_HELPER_PATCH", "PINCABOS_REWRITE_SYSTEMD_UNITS"):
             self.assertNotIn(delim, helper, delim)
-        # seul reste le bloc Python du script sanitize, ecrit tel quel sur la cible (VPINFE_DISPLAY_PY)
-        self.assertEqual(helper.count("python3 - "), 1)
-        self.assertIn("<<'VPINFE_DISPLAY_PY'", helper)
+        # plus aucun bloc Python dans le helper (le script sanitize vient du depot, PINCABOS_CIBLE_FICHIERS_DU_DEPOT_V1)
+        self.assertEqual(helper.count("python3 - "), 0)
 
     def test_les_outils_gardent_leurs_arguments(self):
         helper = texte_fichier_livre("pincabos-install-payload")
         self.assertIn('python3 "$(pco_outil_cible pincabos-cible-systemd-units.py)" "$TARGET"', helper)
         self.assertIn('python3 "$(pco_outil_cible pincabos-cible-vpinfe-ini-purge.py)" "$TARGET/home/pinball/.config/vpinfe/vpinfe.ini"', helper)
         self.assertIn('python3 "$(pco_outil_cible pincabos-cible-dashboard-helper-patch.py)" "$TARGET/usr/local/sbin/pincabos-dashboard-admin"', helper)
+
+
+class FichiersDuDepotSurLaCible(unittest.TestCase):
+    """PINCABOS_CIBLE_FICHIERS_DU_DEPOT_V1 : le helper ne reecrit plus ce que le squashfs porte deja."""
+
+    def test_un_seul_fichier_encore_ecrit_par_le_helper(self):
+        helper = texte_fichier_livre("pincabos-install-payload")
+        ecrits = re.findall(r'cat\s*>\s*"\$TARGET/([^"]+)"', helper)
+        self.assertEqual(ecrits, ["etc/ssh/sshd_config.d/00-pincabos-security.conf"])
+
+    def test_la_garde_verifie_les_fichiers_du_depot(self):
+        from _charge import FICHIERS_CIBLE
+        helper = texte_fichier_livre("pincabos-install-payload")
+        self.assertIn("PINCABOS_CIBLE_FICHIERS_DU_DEPOT_V1", helper)
+        for rel in FICHIERS_CIBLE:
+            self.assertIn(f'  "{rel}"', helper, rel)
+            self.assertTrue(os.path.exists(os.path.join(RACINE, rel)), rel)
+        self.assertIn('echo "ERROR: fichier attendu absent de la cible extraite: $pco_attendu"', helper)
+        self.assertIn("exit 78", helper)
+
+    def test_le_depot_porte_les_versions_les_plus_recentes(self):
+        lire = lambda rel: open(os.path.join(RACINE, rel), encoding="utf-8").read()
+        reseau = lire("usr/local/sbin/pincabos-firstboot-network-webapp-fix")
+        self.assertIn("PINCABOS_INSTALLEUR_RESEAU_V1", reseau)   # venait du heredoc (fix(network) 17/08)
+        self.assertIn("PINCABOS_NETPLAN_SANITIZE_V1", reseau)
+        self.assertIn("PINCABOS_PROFILE_GC_ASYNC_V1", lire("usr/local/libexec/pincabos/pincabos-vpinfe-prestart-guard"))  # perf(demarrage) 05/09
+        dropin = lire("etc/systemd/system/pincabos-vpinfe.service.d/90-pincabos-iso-start.conf")
+        self.assertIn("display-manager.service network.target pincabos-screen-topology-boot.service", dropin)
+        self.assertIn("PermitRootLogin no", lire("etc/ssh/sshd_config.d/00-pincabos-security.conf"))
