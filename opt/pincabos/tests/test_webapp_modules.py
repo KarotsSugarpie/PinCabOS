@@ -23,6 +23,7 @@ MODULES = {
     "gpu": WEB / "pincabos_webapp_gpu.py",
     "dof": WEB / "pincabos_webapp_dof.py",
     "dmd": WEB / "pincabos_webapp_dmd.py",
+    "console": WEB / "pincabos_webapp_console.py",
 }
 ROUTES = {
     "gpu": {
@@ -40,9 +41,13 @@ ROUTES = {
         "/dmd/apply", "/dmd-screen", "/api/dmd/save", "/launch-dmd-calibrator", "/close-dmd-calibrator",
         "/fulldmd-log-page-disabled",
     },
+    "console": {
+        "/console", "/console/", "/root-password", "/network/wifi-hotspot", "/network/wifi-hotspot-stop",
+        "/toggle-webapp-screen", "/launch-webapp-screen", "/close-webapp-screen",
+    },
 }
 HELPERS = ("esc", "run_cmd", "shlex_quote", "service_status",
-           "pincabos_meta", "pincabos_backup_config_file", "pincabos_write_json_with_meta")
+           "pincabos_meta", "pincabos_backup_config_file", "pincabos_write_json_with_meta", "get_ip")
 
 
 def routes_de(texte, decorateur):
@@ -147,11 +152,13 @@ class Decoupage(unittest.TestCase):
         i_reg = self.app.index("pco_gpu_routes.register(app, page)")
         i_dof = self.app.index("pco_dof_routes.register(app, page)")
         i_dmd = self.app.index("pco_dmd_routes.register(app, page)")
+        i_console = self.app.index("pco_console_routes.register(app, page)")
         i_wrap = self.app.index("def _pco_dashboard_plus_final_install_wrapper")
         self.assertLess(i_page, i_reg)
         self.assertLess(i_reg, i_dof)
         self.assertLess(i_dof, i_dmd)
-        self.assertLess(i_dmd, i_wrap)
+        self.assertLess(i_dmd, i_console)
+        self.assertLess(i_console, i_wrap)
 
     def test_register_pose_page_et_le_blueprint(self):
         for cle, texte in self.textes.items():
@@ -177,16 +184,19 @@ class Chargement(unittest.TestCase):
             import pincabos_webapp_gpu as gpu
             import pincabos_webapp_dof as dof
             import pincabos_webapp_dmd as dmd
+            import pincabos_webapp_console as console
             app = flask.Flask("test")
             gpu.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dof.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dmd.register(app, lambda t, b: f"<p>{t}</p>{b}")
+            console.register(app, lambda t, b: f"<p>{t}</p>{b}")
             regles = {r.rule for r in app.url_map.iter_rules()}
             for attendues in ROUTES.values():
                 self.assertTrue(attendues <= regles, attendues - regles)
             self.assertIn("gpu.gpu_page", app.view_functions)
             self.assertIn("dof.dof_page", app.view_functions)
             self.assertIn("dmd.fulldmd_page", app.view_functions)
+            self.assertIn("console.console_page", app.view_functions)
             self.assertEqual(gpu.page("x", "y"), "<p>x</p>y")  # page posée par register
             self.assertEqual(dof.page("x", "y"), "<p>x</p>y")
         finally:
