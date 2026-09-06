@@ -2064,9 +2064,6 @@ def pincabos_standard_table_folder_name(name):
     return pincabos_force_standard_table_name(name)
 
 
-# Moved to modular route file by PinCabOS refactor (original lines 15782-15833).
-
-
 def pincabos_import_from_manifest_dir(extract_dir, table_folder_override=None, overwrite_existing=False):
     root, manifest_path = pincabos_find_manifest_root(extract_dir)
 

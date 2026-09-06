@@ -106,14 +106,12 @@ PINNED_VPX_TABLES_DIR = PINCABOS_VPX_TABLES_DIR
 PINNED_VPX_INI = PINCABOS_VPX_INI
 # === PINCABOS OFFICIAL VPX PATHS END ===
 
-# === PINCABOS OFFICIAL VPINFE PATHS START ===
 # Stage2 clean:
 # Les chemins VPinFE sont centralises dans pincabos_webapp_core.py.
 # VPinFE current: pco_path('vpinfe_current')
 # Runtime ini: chemin runtime officiel résolu depuis version.json / manifest PinCabOS
 # Config ini: /home/pinball/.config/vpinfe/vpinfe.ini
 # Template ini: /opt/pincabos/essentials/VPinFEfiles/vpinfe.ini
-# === PINCABOS OFFICIAL VPINFE PATHS END ===
 
 
 from datetime import datetime
@@ -139,17 +137,6 @@ from pincabos_webapp_gabarit import (  # noqa: E402
     safe_file_text,
     pincabos_support_footer_html,
 )
-
-
-# PinCabOS config write audit helpers
-def pincabos_modified_comment(function_name):
-    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return f"; Modifié {stamp} par PinCabOS fonction({function_name})"
-
-
-def pincabos_modified_hash_comment(function_name):
-    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return f"# Modifié {stamp} par PinCabOS fonction({function_name})"
 
 
 def pincabos_read_ini_lines(path):
@@ -252,79 +239,7 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 JOB_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def latest_job_file():
-    jobs = sorted(JOB_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
-    return jobs[0] if jobs else None
-
-def read_job(job_file):
-    if not job_file or not job_file.exists():
-        return None
-    try:
-        return json.loads(job_file.read_text())
-    except Exception:
-        return None
-
-def get_job_status():
-    job_file = latest_job_file()
-    job = read_job(job_file)
-
-    if not job:
-        return {
-            "has_job": False,
-            "status": "idle",
-            "target": "",
-            "progress": 0,
-            "message": "Aucune mise à jour lancée.",
-            "log": "",
-            "log_name": "aucun"
-        }
-
-    log_file = Path(job.get("log_file", ""))
-    exit_file = Path(job.get("exit_file", ""))
-
-    log_text = ""
-    if log_file.exists():
-        try:
-            log_text = log_file.read_text(errors="replace")[-20000:]
-        except Exception as e:
-            log_text = f"Erreur lecture log: {e}"
-
-    started = float(job.get("started", time.time()))
-    elapsed = max(0, time.time() - started)
-
-    if exit_file.exists():
-        try:
-            code = int(exit_file.read_text().strip())
-        except Exception:
-            code = 999
-
-        if code == 0:
-            status = "complete"
-            progress = 100
-            message = "Tâche terminée avec succès."
-        else:
-            status = "error"
-            progress = 100
-            message = f"Tâche terminée avec erreur. Code: {code}"
-    else:
-        status = "running"
-        progress = min(95, int(8 + elapsed * 2))
-        message = "Tâche en cours..."
-
-    payload = {
-        "has_job": True,
-        "status": status,
-        "target": job.get("target", ""),
-        "progress": progress,
-        "message": message,
-        "log": log_text,
-        "log_name": log_file.name if log_file.exists() else "log en attente"
-    }
-    return payload
-
-
 # === FIRST RUN WIZARD - PINCABOS START ===
-# Moved to modular route file by PinCabOS refactor (original lines 1123-1123).
 # Tools hub routes are registered after the main page() layout helper is available.
 # PINCABOS_IMPEXP_NATIVE_V1: native Import / Export Centers; no iframe and no response injection.
 app.config["PINCABOS_IMPEXP_NATIVE_UI"] = True
@@ -332,38 +247,7 @@ register_tools_routes(app, page)
 from pincabos_impexp import register_pincabos_impexp_routes
 register_pincabos_impexp_routes(app, globals())
 
-# Moved to modular route file by PinCabOS refactor (original lines 1127-1133).
 
-# Moved to modular route file by PinCabOS refactor (original lines 1135-1136).
-
-# Moved to modular route file by PinCabOS refactor (original lines 1138-1145).
-
-# Moved to modular route file by PinCabOS refactor (original lines 1147-1178).
-
-# Moved to modular route file by PinCabOS refactor (original lines 1180-1188).
-
-# Moved to modular route file by PinCabOS refactor (original lines 1190-1207).
-
-# Moved to modular route file by PinCabOS refactor (original lines 1209-1225).
-
-# Moved to modular route file by PinCabOS refactor (original lines 1227-1256).
-
-# Moved to modular route file by PinCabOS refactor (original lines 1258-1288).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 1344-1753).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 1756-1770).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 1773-1832).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 1835-1854).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 1857-1878).
 # === FIRST RUN WIZARD - PINCABOS END ===
 
 # === PINCABOS FIRST RUN AUTO REDIRECT START ===
@@ -411,27 +295,6 @@ def pincabos_first_run_auto_redirect():
 # Route help_page déplacée vers /opt/pincabos/web/PinCabOS-AboutHelp.py
 
 
-# Moved to modular route file by PinCabOS refactor (original lines 2196-2270).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 2273-2279).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 2283-2368).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 2371-2377).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 2381-2448).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 2451-2458).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 2461-2605).
-
-
 # === PINCABOS_ABOUT_HELP_REFACTOR_V1 ===
 # Route about_page déplacée vers /opt/pincabos/web/PinCabOS-AboutHelp.py
 
@@ -472,14 +335,6 @@ import pincabos_webapp_systeme as pco_systeme_routes
 pco_systeme_routes.register(app, page)
 
 
-# Moved to modular route file by PinCabOS refactor (original lines 7246-7515).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 7518-7520).
-
-# Moved to modular route file by PinCabOS refactor (original lines 7522-7627).
-
-
 # PINCABOS_WEBAPP_MODULES_V1 : pages DMD / FullDMD dans leur module.
 import pincabos_webapp_dmd as pco_dmd_routes
 
@@ -492,172 +347,21 @@ import pincabos_webapp_console as pco_console_routes
 pco_console_routes.register(app, page)
 
 
-# Moved to modular route file by PinCabOS refactor (original lines 9709-9709).
-
-# Moved to modular route file by PinCabOS refactor (original lines 9711-9723).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9726-9737).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9740-9753).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9756-9758).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9762-9809).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9813-9823).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9826-9827).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9830-9831).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9834-9855).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9858-9869).
-
-
 AUDIO_VPX_INI = pincabos_vpx_ini_path()
 AUDIO_VPINFE_INI = pincabos_vpinfe_ini_path()
 AUDIO_BACKUP_DIR = Path("/opt/pincabos/backups/audio-ssf")
 
 
-# Moved to modular route file by PinCabOS refactor (original lines 9877-9885).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9888-9890).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9893-9896).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9899-9901).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9904-9923).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9926-9972).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9975-9994).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 9997-10007).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10010-10094).
-
-
-# === PINCABOS AUDIO OPTIONAL ALSA CARD HELPER START ===
-# Moved to modular route file by PinCabOS refactor (original lines 10098-10107).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10110-10189).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10192-10318).
-
-
-# === PINCABOS AUDIO INI READ HELPERS RESTORE START ===
-# Moved to modular route file by PinCabOS refactor (original lines 10325-10356).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10359-10364).
-# === PINCABOS AUDIO INI READ HELPERS RESTORE END ===
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10368-10442).
-# === PINCABOS AUDIO INI VALUES CARD END ===
-
-
 # === PINCABOS AUDIO SYSTEM VOLUME BALANCE START ===
-
-# Moved to modular route file by PinCabOS refactor (original lines 10448-10459).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10462-10471).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10474-10508).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10511-10554).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10557-10646).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10649-10650).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 10653-10826).
-
-
-# === PINCABOS AUDIO SSF PAGE ROUTE FIX START ===
-# Moved to modular route file by PinCabOS refactor (original lines 10830-11028).
-# === PINCABOS AUDIO SSF PAGE ROUTE FIX END ===
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11032-11082).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11085-11088).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11091-11096).
 
 
 # === PINCABOS AUDIO VU HTML ROUTE START ===
-# Moved to modular route file by PinCabOS refactor (original lines 11100-11102).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11105-11106).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11109-11131).
 
 
 # === SSF COMMANDER V1 - PINCABOS START ===
-# Moved to modular route file by PinCabOS refactor (original lines 11135-11135).
 
-# Moved to modular route file by PinCabOS refactor (original lines 11137-11147).
-
-# Moved to modular route file by PinCabOS refactor (original lines 11149-11154).
-
-# Moved to modular route file by PinCabOS refactor (original lines 11156-11158).
-
-# Moved to modular route file by PinCabOS refactor (original lines 11160-11190).
-
-# Moved to modular route file by PinCabOS refactor (original lines 11192-11288).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11291-11303).
 
 # === PINCABOS AUDIO WAV ROUTES REAL START ===
-# Moved to modular route file by PinCabOS refactor (original lines 11306-11407).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11410-11450).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11453-11457).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11460-11554).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11557-11595).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11598-11627).
 
 
 # PINCABOS_WEBAPP_MODULES_V1 : identifiants admin, page admin composée, supporters, version.json dans leur module.
@@ -679,162 +383,14 @@ from pincabos_webapp_admin_pages import (  # noqa: E402
 )
 
 
-# Moved to modular route file by PinCabOS refactor (original lines 11637-11641).
+# Stage5B.4B: legacy route disabled, real iframe route is pincabos_admin_frame_cleanup_dry_run.
 
-# Moved to modular route file by PinCabOS refactor (original lines 11643-11661).
-
-# === PINCABOS ADMIN HIDDEN PAGE START ===
-
-# Moved to modular route file by PinCabOS refactor (original lines 11667-11671).
-
-# Moved to modular route file by PinCabOS refactor (original lines 11673-11701).
-
-# === PINCABOS ADMIN SIMPLE STATUS HELPERS START ===
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11716-11767).
-
-# Moved to modular route file by PinCabOS refactor (original lines 11769-11803).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11806-11868).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 11871-11950).
-
-# Moved to modular route file by PinCabOS refactor (original lines 11952-11987).
-
-# Moved to modular route file by PinCabOS refactor (original lines 11989-12004).
-
-
-# === PinCabOS managed block: admin-log-options-html BEGIN ===
-# Moved to modular route file by PinCabOS refactor (original lines 12010-12033).
-# === PinCabOS managed block: admin-log-options-html END ===
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 12037-12358).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 12361-12362).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 12365-12376).
-
-# Moved to modular route file by PinCabOS refactor (original lines 12378-12383).
-
-# === PINCABOS ADMIN RESTORE STABLE START ===
-
-# Moved to modular route file by PinCabOS refactor (original lines 12389-12393).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 12396-12402).
-
-# Moved to modular route file by PinCabOS refactor (original lines 12404-12410).
-
-# Moved to modular route file by PinCabOS refactor (original lines 12412-12418).
-
-# Moved to modular route file by PinCabOS refactor (original lines 12420-12423).
-
-# Moved to modular route file by PinCabOS refactor (original lines 12425-12441).
-
-# Moved to modular route file by PinCabOS refactor (original lines 12443-12455).
-
-# Moved to modular route file by PinCabOS refactor (original lines 12457-12460).
-# === PINCABOS ADMIN RESTORE STABLE END ===
-
-
-# === PINCABOS FOOTER ABOUT SUPPORTERS END ===
-
-
-# === PinCabOS managed block: admin-publy-webpass-secret BEGIN ===
-# Moved to modular route file by PinCabOS refactor (original lines 13078-13079).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13082-13089).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13092-13099).
-# === PinCabOS managed block: admin-publy-webpass-secret END ===
-
-# === PINCABOS ADMIN PUBLISH IFRAME GET ROUTES START ===
-
-# Moved to modular route file by PinCabOS refactor (original lines 13104-13118).
-
-
-# === PinCabOS managed block: admin-publy-helper BEGIN ===
-# Moved to modular route file by PinCabOS refactor (original lines 13123-13140).
-# === PinCabOS managed block: admin-publy-helper END ===
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13144-13150).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13153-13159).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13164-13177).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13179-13184).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13186-13191).
-
-
-# === PinCabOS managed block: admin-log-helpers BEGIN ===
-# Moved to modular route file by PinCabOS refactor (original lines 13196-13199).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13202-13219).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13222-13258).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13261-13283).
-# === PinCabOS managed block: admin-log-helpers END ===
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13287-13301).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13303-13348).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13350-13360).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13362-13375).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13377-13396).
-# === PINCABOS ADMIN LOGS MANAGER END ===
+# Stage5B.4B: legacy route disabled, real iframe route is pincabos_admin_frame_cleanup_apply.
 
 
 # Stage5B.4B: legacy route disabled, real iframe route is pincabos_admin_frame_cleanup_dry_run.
-# Moved to modular route file by PinCabOS refactor (original lines 13401-13406).
 
 # Stage5B.4B: legacy route disabled, real iframe route is pincabos_admin_frame_cleanup_apply.
-# Moved to modular route file by PinCabOS refactor (original lines 13409-13414).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13417-13420).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13422-13517).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13519-13559).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13561-13567).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13569-13575).
-
-# Stage5B.4B: legacy route disabled, real iframe route is pincabos_admin_frame_cleanup_dry_run.
-# Moved to modular route file by PinCabOS refactor (original lines 13578-13583).
-
-# Stage5B.4B: legacy route disabled, real iframe route is pincabos_admin_frame_cleanup_apply.
-# Moved to modular route file by PinCabOS refactor (original lines 13586-13591).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13593-13605).
-
-# Moved to modular route file by PinCabOS refactor (original lines 13607-13615).
-# === PINCABOS ADMIN HIDDEN PAGE END ===
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 13619-13631).
 
 
 # PINCABOS_WEBAPP_MODULES_V1 : bille VPX (cabinet, simple, UserBalls) dans son module.
@@ -843,13 +399,7 @@ import pincabos_webapp_vpxball as pco_vpxball_routes
 pco_vpxball_routes.register(app, page)
 
 
-# === PINCABOS AUDIO WAV STOP ROUTE FIX START ===
-# Moved to modular route file by PinCabOS refactor (original lines 14990-15004).
-# === PINCABOS AUDIO WAV STOP ROUTE FIX END ===
-
-
 # /tools route is registered from tools.py
-# Moved to modular route file by PinCabOS refactor (original lines 15010-15044).
 
 
 # PINCABOS_WEBAPP_MODULES_V1 : import de tables (pages et API) dans son module.
@@ -888,88 +438,13 @@ from pincabos_webapp_export import (  # noqa: E402
 )
 
 
-# === INPUTS COMMANDER V1 - PINCABOS START ===
-# Moved to modular route file by PinCabOS refactor (original lines 18659-18660).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18662-18698).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18700-18704).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18706-18729).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18731-18733).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18735-18741).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18743-18755).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18757-18767).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18769-18783).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18785-18795).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18797-18870).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18872-18878).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18880-18881).
-
-# Moved to modular route file by PinCabOS refactor (original lines 18883-18924).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 18927-18951).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 18954-19312).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 19315-19378).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 19381-19419).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 19422-19450).
-# === INPUTS COMMANDER V1 - PINCABOS END ===
-
-
 # Stage5A.3: route legacy retirée pour éviter doublon avec pcos_update_api_status.
-# Moved to modular route file by PinCabOS refactor (original lines 19455-19488).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 19491-19502).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 19505-19541).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 19544-19547).
-
-# Moved to modular route file by PinCabOS refactor (original lines 19549-19784).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 20218-20279).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 20282-20286).
-
-
-# Moved to modular route file by PinCabOS refactor (original lines 20289-20293).
 
 
 # --- PinCabOS update channel check patch ---
-# Moved to modular route file by PinCabOS refactor (original lines 20393-20476).
 
 
-# Moved to modular route file by PinCabOS refactor (original lines 20479-20529).
 # --- /PinCabOS update channel check patch ---
-
-
-# Removed obsolete duplicate route block: # === PINCABOS VMTEST ROUTE ALIASES START ===
-
-
-# Removed obsolete duplicate route block: # === PINCABOS VMTEST CONSOLE PAGE START ===
 
 
 # === PinCabOS cab-current route aliases ===

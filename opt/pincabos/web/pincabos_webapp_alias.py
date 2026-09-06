@@ -32,8 +32,6 @@ def pincabos_alias_outputs():
     # Outputs = ancien DOF côté menu.
     return redirect("/dof", code=302)
 
-# Moved to modular route file by PinCabOS refactor (original lines 20663-20674).
-
 
 @alias_bp.route("/api/dof/manager/")
 def pincabos_api_dof_manager_slash_alias():
