@@ -19,6 +19,7 @@ set -euo pipefail
 TABLES_DIR="/home/pinball/Tables"
 MEDIA_DIR="/opt/pincabos/assets/sample-tables"
 CONFIG="/opt/pincabos/config/sample-tables.json"
+B2S_TOOL="/opt/pincabos/tools/pincabos-sample-b2s.py"
 REGIONAL="/etc/pincabos/regional.conf"
 MARKER=".pincabos-sample-table"
 OWNER="pinball:pinball"
@@ -165,6 +166,17 @@ EOF
             done
         else
             echo "medias de demonstration absents : $MEDIA_DIR/$key" >&2
+        fi
+
+        # PINCABOS_SAMPLE_B2S_V1 (Yann) : sans backglass, la fenetre Backglass et le
+        # Score View restent noirs en jeu. Un B2S generique (Miss Tilt, logos Visual
+        # Pinball et PinCabOS) habille les deux ecrans. Compose sur place (GdkPixbuf).
+        if [ -x "$B2S_TOOL" ] && [ ! -f "$dest/$name.directb2s" ]; then
+            if python3 "$B2S_TOOL" --vpx "$dest/$name.vpx" --key "$key" >/dev/null 2>&1; then
+                chown pinball:pinball "$dest/$name.directb2s" 2>/dev/null || true
+            else
+                echo "B2S de demonstration non genere pour $name" >&2
+            fi
         fi
 
         echo "table de demonstration installee : $name"
