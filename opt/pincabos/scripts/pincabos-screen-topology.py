@@ -404,6 +404,32 @@ def apply_consumers(roles):
 
     playfield = roles["playfield"]
 
+    # PINCABOS_TOPOLOGIE_SOURCE_UNIQUE_V1 : la topologie est la SEULE a poser les
+    # sections d affichage des deux INI. Les pages Ecran et GPU ecrivent
+    # screens.json puis l appellent ; avant, chacune posait ses cles (cabmode
+    # true/false selon le dernier passe, deux sections [PinCabOs.Screens] /
+    # [PinCabOS.Screens]). Mode cabinet, orientation et rotation viennent d ici.
+    document = load_json(SCREENS, {})
+    if not isinstance(document, dict):
+        document = {}
+    cabinet_mode = document.get("cabinet_mode", True)
+    cabmode = "true" if (cabinet_mode is True or str(cabinet_mode).lower() in ("true", "1", "yes", "on")) else "false"
+    orientation = str(document.get("playfield_orientation", "landscape")).strip().lower()
+    if orientation not in ("landscape", "portrait"):
+        orientation = "landscape"
+    rotation = str(document.get("playfield_rotation", "0")).strip()
+    if rotation not in ("0", "90", "180", "270"):
+        rotation = "0"
+    suivi = {
+        "managed_by": "PinCabOS topology",
+        "cabinet_mode": cabmode,
+        "playfield_orientation": orientation,
+        "playfield_rotation": rotation,
+        "playfield_name": str(roles["playfield"].get("name", "") or ""),
+        "backglass_name": str(roles["backglass"].get("name", "") or "") if roles["backglass"]["available"] else "",
+        "fulldmd_name": str(roles["fulldmd"].get("name", "") or "") if roles["fulldmd"]["available"] else "",
+    }
+
     if not playfield["available"]:
         log("Playfield absent : fichiers applicatifs conservés sans modification.")
         return
@@ -441,6 +467,10 @@ def apply_consumers(roles):
             "bgscreenid": bg_id,
             "dmdscreenid": dmd_id,
             "fulldmdscreenid": dmd_id,
+            "cabmode": cabmode,
+            "tableorientation": orientation,
+            # PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation est faite par xrandr ; VPinFE recoit 0.
+            "tablerotation": "0",
             **displays_cal,
         })
 
@@ -453,6 +483,7 @@ def apply_consumers(roles):
         config = update_section(config, "PinCabOs.Screens", {
             "fulldmd_id": dmd_id,
             "dmd_id": dmd_id,
+            **suivi,
             **screens_cal,
         })
 
@@ -529,6 +560,7 @@ def apply_consumers(roles):
         config = update_section(config, "PinCabOs.Screens", {
             "fulldmd_id": dmd_id,
             "dmd_id": dmd_id,
+            **suivi,
             **screens_cal,
         })
         config = update_section(config, "PinCabOs.DMD", {

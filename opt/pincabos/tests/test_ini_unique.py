@@ -146,7 +146,6 @@ class EcrivainUnique(unittest.TestCase):
         "opt/pincabos/web/pincabos_webapp_audio.py": ("set_ini_key_native", "audio_find_section"),
         "opt/pincabos/tools/pincabos_audio.py": ("poser_cle",),
         "opt/pincabos/tools/pincabos_dof.py": ("poser_cle_ini",),
-        "opt/pincabos/web/screen.py": ("apply_vpinfe",),
     }
     BOUCLE = re.compile(r'\.startswith\("\["\) and \w+\.endswith\("\]"\)')
 
@@ -174,7 +173,11 @@ class EcrivainUnique(unittest.TestCase):
                 self.assertTrue(corps, (rel, f))
                 self.assertIn("pincabos_ini.", corps, f"{rel}:{f} ne délègue pas à l'écrivain unique")
                 self.assertIsNone(self.BOUCLE.search(corps), f"{rel}:{f} réimplémente la boucle d'édition d'INI")
-        self.assertNotIn("import configparser", (R / "opt/pincabos/web/screen.py").read_text(encoding="utf-8"))
+        # la page Ecran n ecrit plus d INI du tout : elle appelle la topologie (TOPOLOGIE_SOURCE_UNIQUE_V1)
+        ecran = (R / "opt/pincabos/web/screen.py").read_text(encoding="utf-8")
+        self.assertNotIn("import configparser", ecran)
+        self.assertNotIn("pincabos_ini", ecran)
+        self.assertIn("--adopt-current-roles", ecran)
 
 
 if __name__ == "__main__":

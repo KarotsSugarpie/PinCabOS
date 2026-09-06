@@ -367,17 +367,21 @@ class PageEcran(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_vpinfe_recoit_toujours_zero(self):
+        """PINCABOS_TOPOLOGIE_SOURCE_UNIQUE_V1 : la page n'écrit plus de clés ; elle appelle la
+        topologie, seule à poser les sections d'affichage (tablerotation = 0 y compris)."""
         self.scr.CFG_FILE.write_text(json.dumps(config("180")), encoding="utf-8")
-        self.scr.apply_vpinfe()
-        texte = self.scr.VPINFE_INI.read_text(encoding="utf-8")
-        displays = texte.split("[Displays]", 1)[1].split("\n[", 1)[0]
-        self.assertRegex(displays, r"tablerotation = 0\n")
-        self.assertRegex(displays, r"tablescreenid = 0\n")
-        self.assertRegex(displays, r"bgscreenid = 1\n")
-        self.assertRegex(displays, r"fulldmdscreenid = 2\n")
-        self.assertIn("[PinCabOs.FullDMD]", texte, "les autres sections restent")
+        appels = []
+        self.scr.run_cmd = lambda cmd, timeout=30: (appels.append(list(cmd)), (0, "ok\n"))[1]
+        avant = self.scr.VPINFE_INI.read_text(encoding="utf-8")
+        r = self.scr.apply_vpinfe()
+        self.assertTrue(r.startswith("GO:"), r)
+        self.assertEqual(appels[-1][-2:], ["/opt/pincabos/scripts/pincabos-screen-topology.py", "--adopt-current-roles"])
+        self.assertEqual(self.scr.VPINFE_INI.read_text(encoding="utf-8"), avant, "la page ne touche plus l'ini")
+        self.assertTrue(self.scr.apply_vpx().startswith("GO:"))
+        self.scr.run_cmd = lambda cmd, timeout=30: (1, "boum")
+        self.assertTrue(self.scr.apply_vpinfe().startswith("NOGO:"))
         self.assertEqual(json.loads(self.scr.CFG_FILE.read_text())["playfield_rotation"], "180",
-                         "la source de verite garde la rotation")
+                         "screens.json garde la rotation physique, c'est la topologie qui la lit")
 
     def test_libelles_de_la_page(self):
         s = SCREEN_PY.read_text(encoding="utf-8")
@@ -400,8 +404,13 @@ class Coherence(unittest.TestCase):
     def test_app_py_n_envoie_plus_la_rotation_a_vpinfe(self):
         s = APP_PY.read_text(encoding="utf-8")
         self.assertNotIn('"Displays", "tablerotation", playfield_rotation)', s)
-        self.assertEqual(s.count('"Displays", "tablerotation", "0")'), 2)
-        self.assertIn('"PinCabOS.Screens", "playfield_rotation", playfield_rotation)', s, "la valeur physique reste tracee")
+        # PINCABOS_TOPOLOGIE_SOURCE_UNIQUE_V1 : la page GPU ne pose plus les cles VPinFE elle-meme,
+        # seul le formulaire des roles manuels ecrit encore tablerotation = 0 ; la topologie le pose aussi.
+        self.assertEqual(s.count('"Displays", "tablerotation", "0")'), 1)
+        self.assertIn("pincabos_gpu_rejouer_topologie", s)
+        topo = Path(RACINE, "opt/pincabos/scripts/pincabos-screen-topology.py").read_text(encoding="utf-8")
+        self.assertIn('"tablerotation": "0",', topo)
+        self.assertIn('"playfield_rotation": rotation,', topo, "la valeur physique reste tracee, par la topologie")
 
     def test_module_executable_seul(self):
         tmp = tempfile.mkdtemp()

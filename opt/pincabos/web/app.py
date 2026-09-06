@@ -2626,175 +2626,31 @@ def pincabos_gpu_ini_set_key_local(lines, section, key, value):
 
 
 def pincabos_gpu_apply_config_to_vpinfe():
-    from pathlib import Path
-    from datetime import datetime
-    import shutil
+    # PINCABOS_TOPOLOGIE_SOURCE_UNIQUE_V1 : plus d ecriture directe ; screens.json est
+    # la verite et la topologie (seule a poser les sections d affichage) l applique.
+    return pincabos_gpu_rejouer_topologie("VPinFE")
+
+
+def pincabos_gpu_rejouer_topologie(cible):
     import subprocess
+    r = subprocess.run(
+        ["/usr/bin/sudo", "-n", "/usr/bin/python3", "/opt/pincabos/scripts/pincabos-screen-topology.py", "--adopt-current-roles"],
+        capture_output=True, text=True, timeout=60, check=False)
+    queue = "\n".join(((r.stdout or "") + (r.stderr or "")).strip().splitlines()[-6:])
+    etat = "appliqué" if r.returncode == 0 else f"ERREUR (code {r.returncode})"
+    return f"""{cible} : {etat} par la topologie depuis screens.json.
 
-    data, playfield, backglass, fulldmd = pincabos_gpu_read_screens_config_for_apply()
+La topologie est la seule à poser les sections d'affichage ([Displays], [PinCabOs.*],
+sorties Backglass / ScoreView / Topper de VPX) : mode cabinet, orientation, identifiants
+d'écrans et calibrations FullDMD / DMD, en une passe, pour VPinFE et VPX.
 
-    cabinet_mode = bool(data.get("cabinet_mode", True))
-
-    playfield_orientation = str(data.get("playfield_orientation", "landscape")).strip().lower()
-    if playfield_orientation not in ("landscape", "portrait"):
-        playfield_orientation = "landscape"
-
-    playfield_rotation = str(data.get("playfield_rotation", "0")).strip()
-    if playfield_rotation not in ("0", "90", "180", "270"):
-        playfield_rotation = "0"
-
-    ini = pincabos_vpinfe_ini_path()
-    ini.parent.mkdir(parents=True, exist_ok=True)
-
-    backup = ""
-    if ini.exists():
-        backup = str(ini) + ".backup-screens-" + datetime.now().strftime("%Y%m%d-%H%M%S")
-        shutil.copy2(ini, backup)
-
-    lines = ini.read_text(errors="replace").splitlines() if ini.exists() else []
-
-    lines = pincabos_gpu_ini_set_key_local(lines, "Displays", "cabmode", "true" if cabinet_mode else "false")
-    lines = pincabos_gpu_ini_set_key_local(lines, "Displays", "tablescreenid", str(playfield.get("id", "")))
-    lines = pincabos_gpu_ini_set_key_local(lines, "Displays", "tableorientation", playfield_orientation)
-    # PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation est faite par xrandr ; VPinFE recoit 0.
-    lines = pincabos_gpu_ini_set_key_local(lines, "Displays", "tablerotation", "0")
-
-    lines = pincabos_gpu_ini_set_key_local(
-        lines, "Displays", "bgscreenid",
-        str(backglass.get("id", "")) if backglass else ""
-    )
-
-    lines = pincabos_gpu_ini_set_key_local(
-        lines, "Displays", "dmdscreenid",
-        str(fulldmd.get("id", "")) if fulldmd else ""
-    )
-
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "managed_by", "PinCabOS GPU Screens")
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "mode", str(data.get("mode", "manual")))
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "cabinet_mode", "true" if cabinet_mode else "false")
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "playfield_orientation", playfield_orientation)
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "playfield_rotation", playfield_rotation)
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "playfield_name", str(playfield.get("name", "")))
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "backglass_name", str(backglass.get("name", "")) if backglass else "")
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "fulldmd_name", str(fulldmd.get("name", "")) if fulldmd else "")
-
-    ini.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    subprocess.run(["/bin/chown", "pinball:pinball", str(ini)], timeout=5, check=False)
-
-    return f"""VPinFE appliqué.
-
-Fichier:
-{ini}
-
-Backup:
-{backup or "aucun, fichier créé"}
-
-Valeurs écrites:
-[Displays]
-cabmode = {"true" if cabinet_mode else "false"}
-tablescreenid = {playfield.get("id", "")}
-bgscreenid = {backglass.get("id", "") if backglass else ""}
-dmdscreenid = {fulldmd.get("id", "") if fulldmd else ""}
-tableorientation = {playfield_orientation}
-tablerotation = 0  (rotation physique {playfield_rotation}° appliquée par xrandr)
+{queue}
 """
 
 
 def pincabos_gpu_apply_config_to_vpx():
-    from pathlib import Path
-    from datetime import datetime
-    import shutil
-    import subprocess
-
-    data, playfield, backglass, fulldmd = pincabos_gpu_read_screens_config_for_apply()
-
-    cabinet_mode = bool(data.get("cabinet_mode", True))
-
-    playfield_orientation = str(data.get("playfield_orientation", "landscape")).strip().lower()
-    if playfield_orientation not in ("landscape", "portrait"):
-        playfield_orientation = "landscape"
-
-    playfield_rotation = str(data.get("playfield_rotation", "0")).strip()
-    if playfield_rotation not in ("0", "90", "180", "270"):
-        playfield_rotation = "0"
-
-    ini = pincabos_vpx_ini_path()
-    ini.parent.mkdir(parents=True, exist_ok=True)
-
-    backup = ""
-    if ini.exists():
-        backup = str(ini) + ".backup-screens-" + datetime.now().strftime("%Y%m%d-%H%M%S")
-        shutil.copy2(ini, backup)
-
-    lines = ini.read_text(errors="replace").splitlines() if ini.exists() else []
-
-    # Section de suivi PinCabOS. On ne force pas encore de clés VPX natives non validées.
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "managed_by", "PinCabOS GPU Screens")
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "mode", str(data.get("mode", "manual")))
-
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "playfield_id", str(playfield.get("id", "")))
-    lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "playfield_name", str(playfield.get("name", "")))
-    lines = pincabos_gpu_ini_set_key_local(
-        lines,
-        "PinCabOS.Screens",
-        "playfield_geometry",
-        f'{playfield.get("width")}x{playfield.get("height")}+{playfield.get("x")}+{playfield.get("y")}'
-    )
-
-    if backglass:
-        lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "backglass_id", str(backglass.get("id", "")))
-        lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "backglass_name", str(backglass.get("name", "")))
-        lines = pincabos_gpu_ini_set_key_local(
-            lines,
-            "PinCabOS.Screens",
-            "backglass_geometry",
-            f'{backglass.get("width")}x{backglass.get("height")}+{backglass.get("x")}+{backglass.get("y")}'
-        )
-    else:
-        lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "backglass_id", "")
-        lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "backglass_name", "")
-        lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "backglass_geometry", "")
-
-    if fulldmd:
-        lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "fulldmd_id", str(fulldmd.get("id", "")))
-        lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.Screens", "fulldmd_name", str(fulldmd.get("name", "")))
-        lines = pincabos_gpu_ini_set_key_local(
-            lines,
-            "PinCabOS.Screens",
-            "fulldmd_geometry",
-            f'{fulldmd.get("width")}x{fulldmd.get("height")}+{fulldmd.get("x")}+{fulldmd.get("y")}'
-        )
-
-        lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.FullDMD", "screenid", str(fulldmd.get("id", "")))
-        lines = pincabos_gpu_ini_set_key_local(
-            lines,
-            "PinCabOS.FullDMD",
-            "geometry",
-            f'{fulldmd.get("x")},{fulldmd.get("y")},{fulldmd.get("width")},{fulldmd.get("height")}'
-        )
-        lines = pincabos_gpu_ini_set_key_local(lines, "PinCabOS.FullDMD", "managed_by", "PinCabOS GPU Screens")
-
-    ini.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    subprocess.run(["/bin/chown", "pinball:pinball", str(ini)], timeout=5, check=False)
-
-    return f"""VPX / VPinballX.ini appliqué.
-
-Fichier:
-{ini}
-
-Backup:
-{backup or "aucun, fichier créé"}
-
-Sections écrites:
-[PinCabOS.Screens]
-[PinCabOS.FullDMD] si FullDMD est sélectionné
-
-Note:
-On écrit une section de suivi PinCabOS sécuritaire.
-On ne force pas encore de clés natives VPX tant qu’elles ne sont pas validées sur ton build Linux.
-"""
+    # PINCABOS_TOPOLOGIE_SOURCE_UNIQUE_V1 : idem VPinFE, une seule source.
+    return pincabos_gpu_rejouer_topologie("VPX")
 
 
 @app.route("/gpu/apply-vpinfe", methods=["POST"])
@@ -4971,7 +4827,7 @@ def load_dmd_calibration():
 
 def pincabos_ini_section_summary(path_str):
     path = Path(path_str)
-    wanted = {"PinCabOS.FullDMD", "PinCabOS.DMD", "PinCabOS.Screens", "Displays"}
+    wanted = {"pincabos.fulldmd", "pincabos.dmd", "pincabos.screens", "displays"}   # sans la casse (INI_UNIQUE_V1)
     if not path.exists():
         return f"ABSENT: {path}"
     lines = path.read_text(errors="replace").splitlines()
@@ -4981,7 +4837,7 @@ def pincabos_ini_section_summary(path_str):
         s = line.strip()
         if s.startswith("[") and s.endswith("]"):
             sec = s[1:-1]
-            keep = sec in wanted
+            keep = sec.strip().lower() in wanted
             if keep:
                 if out:
                     out.append("")
