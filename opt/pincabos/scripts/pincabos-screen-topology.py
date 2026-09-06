@@ -7,6 +7,13 @@ import re
 import subprocess
 import sys
 import tempfile
+try:
+    import pincabos_ini
+except ImportError:   # hors /opt (tests, depot) : le module vit a cote des outils
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "tools"))
+    import pincabos_ini
 from datetime import datetime, timezone
 from pathlib import Path
 # PINCABOS_PATHS_CONSUMER_V1
@@ -57,38 +64,13 @@ def restore_owner(path):
 
 
 def atomic_write(path, content, mode=None):
-    old = path.read_text(encoding="utf-8") if path.exists() else None
-    if old == content:
-        return False
+    # PINCABOS_INI_UNIQUE_V1 : ecriture atomique de l ecrivain unique (mode
+    # conserve, proprietaire du fichier conserve, rien si identique).
+    changed = pincabos_ini.ecrire_texte(path, content)
+    if changed and mode is not None:
+        os.chmod(path, mode)
+    return changed
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    old_stat = path.stat() if path.exists() else None
-    fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(path.parent))
-
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(content)
-            fh.flush()
-            os.fsync(fh.fileno())
-
-        if old_stat:
-            os.chmod(temp_name, old_stat.st_mode & 0o777)
-            try:
-                os.chown(temp_name, old_stat.st_uid, old_stat.st_gid)
-            except PermissionError:
-                pass
-        elif mode is not None:
-            os.chmod(temp_name, mode)
-
-        os.replace(temp_name, path)
-        restore_owner(path)
-    finally:
-        try:
-            os.unlink(temp_name)
-        except FileNotFoundError:
-            pass
-
-    return True
 
 
 def load_json(path, default):
@@ -339,68 +321,18 @@ def role_object(monitor, app_id, expected_edid):
 
 
 def update_section(text, section, values):
-    header = re.compile(
-        rf"(?mi)^[ \t]*\[{re.escape(section)}\][ \t]*$"
-    )
-
-    match = header.search(text)
-
-    if not match:
-        if not text.endswith("\n"):
-            text += "\n"
-
-        text += f"\n[{section}]\n"
-
-        for key, value in values.items():
-            text += f"{key} = {value}\n"
-
-        return text
-
-    start = match.end()
-    following = re.search(
-        r"(?m)^[ \t]*\[.+?\][ \t]*$",
-        text[start:],
-    )
-
-    end = start + following.start() if following else len(text)
-    block = text[start:end]
-
-    for key, value in values.items():
-        expression = re.compile(
-            rf"(?mi)^([ \t]*{re.escape(key)}[ \t]*=[ \t]*).*$"
-        )
-
-        block, count = expression.subn(
-            lambda found: found.group(1) + str(value),
-            block,
-        )
-
-        if count == 0:
-            if not block.endswith("\n"):
-                block += "\n"
-
-            block += f"{key} = {value}\n"
-
-    return text[:start] + block + text[end:]
+    # PINCABOS_INI_UNIQUE_V1 : l ecrivain INI unique pose les cles (casse et
+    # commentaires conserves, cle nouvelle en fin de section).
+    ini = pincabos_ini.Ini(text)
+    ini.poser_section(section, values)
+    return ini.texte()
 
 
 def update_global(text, key, value):
-    expression = re.compile(
-        rf"(?mi)^([ \t]*{re.escape(key)}[ \t]*=[ \t]*).*$"
-    )
-
-    output, count = expression.subn(
-        lambda found: found.group(1) + str(value),
-        text,
-    )
-
-    if count == 0:
-        if not output.endswith("\n"):
-            output += "\n"
-
-        output += f"{key} = {value}\n"
-
-    return output
+    # PINCABOS_INI_UNIQUE_V1 : la cle dans toutes les sections ou elle existe
+    ini = pincabos_ini.Ini(text)
+    ini.poser_partout(key, value)
+    return ini.texte()
 
 
 # PINCABOS_TOPOLOGY_CALIBRATIONS_V1

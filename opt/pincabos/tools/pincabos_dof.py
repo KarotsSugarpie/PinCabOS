@@ -16,6 +16,13 @@ import glob
 import importlib.util
 import json
 import re
+try:
+    import pincabos_ini
+except ImportError:   # hors /opt (tests, depot) : le module vit a cote des outils
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "tools"))
+    import pincabos_ini
 from datetime import datetime
 from pathlib import Path
 
@@ -81,35 +88,11 @@ def config_json(choix: dict, detectes: list) -> dict:
 
 # ---------------------------------------------------------------- interrupteurs
 def poser_cle_ini(texte: str, section: str, cle: str, valeur: str) -> str:
-    """Pose `cle = valeur` dans [section] (créée en fin de fichier si absente), sans rien d'autre."""
-    lines = texte.split("\n")
-    debut = fin = None
-    for i, l in enumerate(lines):
-        s = l.strip()
-        if s.startswith("[") and s.endswith("]"):
-            if debut is not None:
-                fin = i
-                break
-            if s[1:-1].strip().lower() == section.lower():
-                debut = i
-    if debut is None:
-        if lines and lines[-1].strip():
-            lines.append("")
-        lines += [f"[{section}]", f"{cle} = {valeur}"]
-        return "\n".join(lines)
-    if fin is None:
-        fin = len(lines)
-    for i in range(debut + 1, fin):
-        s = lines[i].strip()
-        if s and not s.startswith((";", "#")) and "=" in s and s.split("=", 1)[0].strip().lower() == cle.lower():
-            lines[i] = f"{cle} = {valeur}"
-            return "\n".join(lines)
-    # fin de section : avant les lignes vides qui la terminent
-    j = fin
-    while j > debut + 1 and not lines[j - 1].strip():
-        j -= 1
-    lines.insert(j, f"{cle} = {valeur}")
-    return "\n".join(lines)
+    """Pose `cle = valeur` dans [section] (créée en fin de fichier si absente), sans rien d'autre.
+    PINCABOS_INI_UNIQUE_V1 : délégué à l'écrivain INI unique."""
+    ini = pincabos_ini.Ini(texte)
+    ini.poser(section, cle, valeur)
+    return ini.texte()
 
 
 def appliquer_premier_demarrage(cfg: dict, vpx_ini: Path = VPX_INI, vpinfe_ini: Path = VPINFE_INI) -> list:

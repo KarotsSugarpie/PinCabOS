@@ -1,7 +1,13 @@
 from __future__ import annotations
 
-import configparser
 import html
+try:
+    import pincabos_ini
+except ImportError:   # hors /opt (tests, depot) : le module vit a cote des outils
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "tools"))
+    import pincabos_ini
 import json
 import re
 import subprocess
@@ -225,38 +231,23 @@ def apply_vpinfe() -> str:
     cfg = load_cfg()
     roles = cfg.get("roles", {})
 
-    cp = configparser.ConfigParser()
-    cp.optionxform = str.lower
-    if VPINFE_INI.exists():
-        cp.read(VPINFE_INI)
-
-    if not cp.has_section("Displays"):
-        cp.add_section("Displays")
-
+    # PINCABOS_INI_UNIQUE_V1 : l ecrivain INI unique pose les cles sans rien
+    # perdre du fichier (configparser le reecrivait entierement).
     pf_id = role_index(screens, roles.get("playfield", {}).get("output", ""))
     bg_id = role_index(screens, roles.get("backglass", {}).get("output", ""))
     fd_id = role_index(screens, roles.get("fulldmd", {}).get("output", ""))
-
-    cp.set("Displays", "tablescreenid", pf_id)
-    cp.set("Displays", "bgscreenid", bg_id)
-    cp.set("Displays", "fulldmdscreenid", fd_id)
-    cp.set("Displays", "dmdscreenid", fd_id)
-    cp.set("Displays", "cabmode", "true" if cfg.get("cabinet_mode", True) else "false")
-    cp.set("Displays", "tableorientation", str(cfg.get("playfield_orientation", "landscape")))
-    # PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation est appliquee par xrandr sur
-    # la sortie ; VPinFE dessine sur un ecran deja dans le bon sens et ne doit
-    # pas tourner une seconde fois (retourne + retourne = a l'envers).
-    cp.set("Displays", "tablerotation", "0")
-
-    if not cp.has_section("PinCabOS.Screens"):
-        cp.add_section("PinCabOS.Screens")
-    cp.set("PinCabOS.Screens", "playfield_id", pf_id)
-    cp.set("PinCabOS.Screens", "backglass_id", bg_id)
-    cp.set("PinCabOS.Screens", "fulldmd_id", fd_id)
-
-    VPINFE_INI.parent.mkdir(parents=True, exist_ok=True)
-    with VPINFE_INI.open("w") as f:
-        cp.write(f)
+    pincabos_ini.appliquer(VPINFE_INI, {
+        "Displays": {
+            "tablescreenid": pf_id, "bgscreenid": bg_id, "fulldmdscreenid": fd_id, "dmdscreenid": fd_id,
+            "cabmode": "true" if cfg.get("cabinet_mode", True) else "false",
+            "tableorientation": str(cfg.get("playfield_orientation", "landscape")),
+            # PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation est appliquee par xrandr sur
+            # la sortie ; VPinFE dessine sur un ecran deja dans le bon sens et ne doit
+            # pas tourner une seconde fois (retourne + retourne = a l'envers).
+            "tablerotation": "0",
+        },
+        "PinCabOS.Screens": {"playfield_id": pf_id, "backglass_id": bg_id, "fulldmd_id": fd_id},
+    })
 
     return f"GO: VPinFE mis à jour: {VPINFE_INI}"
 

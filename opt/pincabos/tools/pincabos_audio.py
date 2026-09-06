@@ -17,6 +17,13 @@ from __future__ import annotations
 
 import json
 import re
+try:
+    import pincabos_ini
+except ImportError:   # hors /opt (tests, depot) : le module vit a cote des outils
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "tools"))
+    import pincabos_ini
 import shutil
 import subprocess
 from datetime import datetime
@@ -301,37 +308,11 @@ def commentaire() -> str:
 
 
 def poser_cle(lines: list, section: str, cle: str, valeur: str) -> list:
-    """Même contrat que la page Audio : la clé sous un commentaire daté, un seul commentaire."""
-    com = commentaire()
-    debut = fin = None
-    for i, l in enumerate(lines):
-        s = l.strip()
-        if s.startswith("[") and s.endswith("]"):
-            if debut is not None:
-                fin = i
-                break
-            if s[1:-1].strip().lower() == section.lower():
-                debut = i
-    if debut is None:
-        if lines and lines[-1].strip():
-            lines.append("")
-        lines += [com, f"[{section}]", f"{cle} = {valeur}"]
-        return lines
-    if fin is None:
-        fin = len(lines)
-    for i in range(debut + 1, fin):
-        s = lines[i].strip()
-        if s and not s.startswith((";", "#")) and "=" in s and s.split("=", 1)[0].strip().lower() == cle.lower():
-            if i > 0 and "par PinCabOS fonction(" in lines[i - 1]:
-                lines[i - 1] = com
-            else:
-                lines.insert(i, com)
-                i += 1
-            lines[i] = f"{cle} = {valeur}"
-            return lines
-    lines.insert(fin, com)
-    lines.insert(fin + 1, f"{cle} = {valeur}")
-    return lines
+    """Même contrat que la page Audio : la clé sous un commentaire daté, un seul commentaire.
+    PINCABOS_INI_UNIQUE_V1 : délégué à l'écrivain INI unique."""
+    ini = pincabos_ini.Ini("\n".join(lines))
+    ini.poser(section, cle, valeur, commentaire())
+    return ini.texte().split("\n")
 
 
 def ecrire_vpx(texte: str, backglass: str, playfield: str, sound3d: str) -> str:
