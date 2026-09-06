@@ -74,6 +74,12 @@ PY
     done
 done
 
+# PINCABOS_TOPOLOGIE_VERROU_BOOT_V1 (cab de Yann, 06/09/2026 : ecran noir au 3e boot).
+# Le preflight prend LUI-MEME ce verrou (flock -w 15) : l appeler en le tenant le
+# faisait attendre 15 s pour rien, et pendant ce temps le preflight du boot
+# (pincabos-screen-topology-boot, flock -w 15) expirait -> exit 1 -> VPinFE,
+# qui l exige (Requires), ne demarrait pas. On rend le verrou avant.
+exec 9>&-
 if [[ -x "$PREFLIGHT" ]]; then
     "$PREFLIGHT" >/dev/null 2>&1 || true
 fi

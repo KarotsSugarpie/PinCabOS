@@ -1,6 +1,7 @@
 [Unit]
 Description=PinCabOS - reapplication de la topologie apres evenement ecran (hotplug)
-After=display-manager.service
+# PINCABOS_TOPOLOGIE_VERROU_BOOT_V1 : au boot, la topologie de demarrage passe d abord
+After=display-manager.service pincabos-screen-topology-boot.service
 ConditionPathExists=/opt/pincabos/config/screens
 StartLimitIntervalSec=30
 StartLimitBurst=3

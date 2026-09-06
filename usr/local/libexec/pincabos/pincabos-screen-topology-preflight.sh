@@ -24,7 +24,9 @@ for TICK in $(seq 1 360); do
   if grep -Eq '^[^[:space:]]+ connected( primary)? [0-9]+x[0-9]+' <<<"$XRANDR"; then
     log "X11 prêt après ${SECOND}s (tick ${TICK}) : préparation des rôles."
 
-    /usr/bin/flock -w 15 "$LOCK" "$ENGINE" --prepare
+    # PINCABOS_TOPOLOGIE_VERROU_BOOT_V1 : un verrou occupe (hotplug au boot) n est pas
+    # une panne ; on attend, et set -e ne doit pas tuer le preflight sur ce flock.
+    /usr/bin/flock -w 60 "$LOCK" "$ENGINE" --prepare || log "moteur non lance (verrou occupe ou echec) : nouvel essai."
 
     if grep -q "^PINCABOS_PLAYFIELD_AVAILABLE='1'$" "$ALIASES" 2>/dev/null; then
       log "topologie valide, VPinFE peut démarrer."
