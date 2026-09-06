@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Voile noir sur chaque ecran entre l arrivee de X et le premier rendu du frontend.
+"""Voile sur chaque ecran entre l arrivee de X et le premier rendu du frontend.
 
 PINCABOS_VOILE_ECRANS_V1
 
@@ -7,13 +7,22 @@ Chromium peint ses fenetres en blanc avant son premier rendu : dans le noir du
 cab, le playfield 4K « fusille les yeux » a chaque lancement (mesure sur le
 cab de Yann : un cliche entierement blanc 3 s apres le lancement du service,
 avec ou sans mode sombre force). Ce voile est une fenetre X override-redirect
-noire par ecran de screens.json, maintenue au-dessus de tout (XRaiseWindow a
+par ecran de screens.json, maintenue au-dessus de tout (XRaiseWindow a
 50 Hz : une fenetre Chromium qui apparait passe dessous en moins de 20 ms),
 retiree `--delai` secondes apres l apparition d une NOUVELLE fenetre
 « VPinFE Table » (xdotool ; celles d avant un redemarrage ne comptent pas), ou au plus tard a `--max` secondes. Jamais bloquant : sans X, sans
 libX11 ou sans screens.json, on couvre l ecran entier ou on sort.
 
-  pincabos-voile-ecrans [--delai 3.5] [--max 40] [--fenetre "VPinFE Table"]
+PINCABOS_VOILE_VISUELS_V1 (Yann, 06/09/2026 : « laisser le loading affiche tant que
+VPinFE n est pas pret ») : le voile n est plus noir, il prolonge le splash de
+demarrage. Chaque ecran recoit le visuel de la galerie qui lui revient
+(portrait sur le playfield, paysage ailleurs, memes images que Plymouth :
+/opt/pincabos/media/splash), decode par GdkPixbuf et pose en fond de fenetre
+(pixmap X : le serveur repeint seul). Le playfield d une dalle paysage recoit
+le portrait tourne de 270, haut de table a gauche, comme le splash. Sans
+GdkPixbuf ou sans visuel, le voile reste noir : rien ne bloque.
+
+  pincabos-voile-ecrans [--delai 3.5] [--max 40] [--fenetre "VPinFE Table"] [--noir]
 """
 from __future__ import annotations
 
@@ -21,15 +30,18 @@ import argparse
 import ctypes
 import json
 import os
+import random
 import re
 import subprocess
 import sys
 import time
 
 SCREENS = "/opt/pincabos/config/screens/screens.json"
+GALERIE = "/opt/pincabos/media/splash"
 ROLES = ("playfield", "backglass", "fulldmd", "topper")
 GEOMETRIE = re.compile(r"^(\d+)x(\d+)\+(-?\d+)\+(-?\d+)$")
 CW_OVERRIDE_REDIRECT = 1 << 9
+ZPIXMAP = 2
 
 
 class XSetWindowAttributes(ctypes.Structure):
@@ -44,7 +56,7 @@ class XSetWindowAttributes(ctypes.Structure):
 
 
 def geometries(texte: str | None) -> list:
-    """[(x, y, w, h)] des ecrans de screens.json (geometrie logique, apres xrandr)."""
+    """[(role, x, y, w, h)] des ecrans de screens.json (geometrie logique, apres xrandr)."""
     if not texte:
         return []
     try:
@@ -60,8 +72,61 @@ def geometries(texte: str | None) -> list:
         if m:
             w, h, x, y = (int(v) for v in m.groups())
             if w > 0 and h > 0:
-                out.append((x, y, w, h))
+                out.append((role, x, y, w, h))
     return out
+
+
+def genre_visuel(role: str, w: int, h: int) -> tuple:
+    """(genre de la source, rotation a lui appliquer) pour une dalle de geometrie X (w, h).
+
+    Playfield sur une dalle paysage : portrait tourne de 270 (haut de table a gauche,
+    PINCABOS_SPLASH_SENS_JOUEUR_V1) ; playfield deja portrait dans l espace X (dalle
+    tournee par xrandr) : portrait droit ; autres dalles : paysage droit, ou portrait
+    droit si la dalle est montee en portrait."""
+    if role == "playfield":
+        return ("portrait", 270) if w >= h else ("portrait", 0)
+    return ("paysage", 0) if w >= h else ("portrait", 0)
+
+
+def sources(genre: str, galerie: str = GALERIE) -> list:
+    import glob
+    return sorted(p for p in glob.glob(os.path.join(galerie, genre + "*"))
+                  if p.lower().endswith((".png", ".jpg", ".jpeg")))
+
+
+def bgrx(pixels: bytes, largeur: int, hauteur: int, rowstride: int, canaux: int) -> bytearray:
+    """Pixels GdkPixbuf (RGB ou RGBA, lignes de `rowstride` octets) -> BGRX 32 bits,
+    format ZPixmap d un serveur X 24 bits petit-boutiste."""
+    out = bytearray(largeur * hauteur * 4)
+    vue = memoryview(out)
+    for y in range(hauteur):
+        ligne = pixels[y * rowstride:y * rowstride + largeur * canaux]
+        dest = vue[y * largeur * 4:(y + 1) * largeur * 4]
+        dest[2::4] = ligne[0::canaux]
+        dest[1::4] = ligne[1::canaux]
+        dest[0::4] = ligne[2::canaux]
+    return out
+
+
+def composer(chemin: str, rotation: int, w: int, h: int):
+    """Pixbuf RGB w x h : le visuel tourne puis ajuste (bandes noires), centre."""
+    import gi
+    gi.require_version("GdkPixbuf", "2.0")
+    from gi.repository import GdkPixbuf
+    pb = GdkPixbuf.Pixbuf.new_from_file(chemin)
+    if rotation == 270:
+        pb = pb.rotate_simple(GdkPixbuf.PixbufRotation.CLOCKWISE)          # 270 anti-horaire
+    elif rotation == 90:
+        pb = pb.rotate_simple(GdkPixbuf.PixbufRotation.COUNTERCLOCKWISE)
+    elif rotation == 180:
+        pb = pb.rotate_simple(GdkPixbuf.PixbufRotation.UPSIDEDOWN)
+    echelle = min(w / pb.get_width(), h / pb.get_height())
+    sw, sh = max(1, round(pb.get_width() * echelle)), max(1, round(pb.get_height() * echelle))
+    petit = pb.scale_simple(sw, sh, GdkPixbuf.InterpType.BILINEAR)
+    fond = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, False, 8, w, h)
+    fond.fill(0x000000FF)
+    petit.copy_area(0, 0, sw, sh, fond, (w - sw) // 2, (h - sh) // 2)
+    return fond
 
 
 def fenetres_nommees(nom: str) -> set:
@@ -90,10 +155,26 @@ def x11():
     lib.XBlackPixel.argtypes = [ctypes.c_void_p, ctypes.c_int]
     lib.XDisplayWidth.argtypes = [ctypes.c_void_p, ctypes.c_int]
     lib.XDisplayHeight.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XDefaultDepth.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XDefaultVisual.restype = ctypes.c_void_p
+    lib.XDefaultVisual.argtypes = [ctypes.c_void_p, ctypes.c_int]
     lib.XCreateSimpleWindow.restype = ctypes.c_ulong
     lib.XCreateSimpleWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_int,
                                         ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_ulong, ctypes.c_ulong]
     lib.XChangeWindowAttributes.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_ulong, ctypes.POINTER(XSetWindowAttributes)]
+    lib.XCreatePixmap.restype = ctypes.c_ulong
+    lib.XCreatePixmap.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint]
+    lib.XFreePixmap.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+    lib.XCreateGC.restype = ctypes.c_void_p
+    lib.XCreateGC.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_void_p]
+    lib.XFreeGC.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    lib.XCreateImage.restype = ctypes.c_void_p
+    lib.XCreateImage.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_int, ctypes.c_int,
+                                 ctypes.c_char_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_int, ctypes.c_int]
+    lib.XPutImage.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_void_p, ctypes.c_void_p,
+                              ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint, ctypes.c_uint]
+    lib.XSetWindowBackgroundPixmap.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_ulong]
+    lib.XClearWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
     for f in ("XMapRaised", "XRaiseWindow", "XUnmapWindow", "XDestroyWindow"):
         getattr(lib, f).argtypes = [ctypes.c_void_p, ctypes.c_ulong]
     lib.XFlush.argtypes = [ctypes.c_void_p]
@@ -101,11 +182,42 @@ def x11():
     return lib
 
 
+def habiller(lib, dpy, ecran, win, role: str, w: int, h: int, hasard: random.Random, gardes: list) -> str:
+    """Pose le visuel en fond de la fenetre ; renvoie le nom du visuel, ou '' (voile noir)."""
+    if lib.XDefaultDepth(dpy, ecran) != 24:
+        return ""
+    genre, rotation = genre_visuel(role, w, h)
+    choix = sources(genre)
+    if not choix:
+        return ""
+    chemin = hasard.choice(choix)
+    try:
+        pb = composer(chemin, rotation, w, h)
+        donnees = bgrx(bytes(pb.get_pixels()), w, h, pb.get_rowstride(), pb.get_n_channels())
+    except Exception as exc:   # GdkPixbuf absent ou image illisible : voile noir
+        print(f"voile : visuel {os.path.basename(chemin)} non pose ({exc})")
+        return ""
+    tampon = ctypes.create_string_buffer(bytes(donnees), len(donnees))
+    gardes.append(tampon)                                    # XCreateImage garde le pointeur
+    image = lib.XCreateImage(dpy, lib.XDefaultVisual(dpy, ecran), 24, ZPIXMAP, 0, tampon, w, h, 32, 0)
+    if not image:
+        return ""
+    pixmap = lib.XCreatePixmap(dpy, win, w, h, 24)
+    gc = lib.XCreateGC(dpy, pixmap, 0, None)
+    lib.XPutImage(dpy, pixmap, gc, image, 0, 0, 0, 0, w, h)
+    lib.XFreeGC(dpy, gc)
+    lib.XSetWindowBackgroundPixmap(dpy, win, pixmap)
+    lib.XClearWindow(dpy, win)
+    lib.XFreePixmap(dpy, pixmap)                             # le fond garde sa reference
+    return os.path.basename(chemin)
+
+
 def main(argv) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--delai", type=float, default=3.5, help="secondes entre la fenetre du frontend et le retrait")
     p.add_argument("--max", type=float, default=40.0, help="duree maximale du voile")
     p.add_argument("--fenetre", default="VPinFE Table")
+    p.add_argument("--noir", action="store_true", help="voile noir, sans visuel")
     a = p.parse_args(argv[1:])
 
     try:
@@ -138,18 +250,23 @@ def main(argv) -> int:
     except OSError:
         geos = []
     if not geos:
-        geos = [(0, 0, lib.XDisplayWidth(dpy, ecran), lib.XDisplayHeight(dpy, ecran))]
+        geos = [("playfield", 0, 0, lib.XDisplayWidth(dpy, ecran), lib.XDisplayHeight(dpy, ecran))]
 
     attrs = XSetWindowAttributes()
     attrs.override_redirect = 1
     fenetres = []
-    for (x, y, w, h) in geos:
+    gardes = []
+    hasard = random.Random()
+    visuels = []
+    for (role, x, y, w, h) in geos:
         win = lib.XCreateSimpleWindow(dpy, racine, x, y, w, h, 0, noir, noir)
         lib.XChangeWindowAttributes(dpy, win, CW_OVERRIDE_REDIRECT, ctypes.byref(attrs))
+        if not a.noir:
+            visuels.append(habiller(lib, dpy, ecran, win, role, w, h, hasard, gardes) or "noir")
         lib.XMapRaised(dpy, win)
         fenetres.append(win)
     lib.XFlush(dpy)
-    print(f"voile : {len(fenetres)} ecran(s) couvert(s) {geos}")
+    print(f"voile : {len(fenetres)} ecran(s) couvert(s) {[(g[1], g[2], g[3], g[4]) for g in geos]} visuels {visuels}")
 
     debut = time.monotonic()
     vue = None
