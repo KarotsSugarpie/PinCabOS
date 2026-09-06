@@ -27,6 +27,7 @@ LIGHTDM_SH = Path(RACINE) / "opt/pincabos/tools/pincabos-screen-lightdm-safe.sh"
 HOTPLUG_SH = Path(RACINE) / "usr/local/libexec/pincabos/pincabos-screen-hotplug"
 SCREEN_PY = Path(RACINE) / "opt/pincabos/web/screen.py"
 APP_PY = Path(RACINE) / "opt/pincabos/web/app.py"
+GPU_PY = Path(RACINE) / "opt/pincabos/web/pincabos_webapp_gpu.py"  # page GPU (PINCABOS_WEBAPP_MODULES_V1)
 
 QUERY = """Screen 0: minimum 8 x 8, current 7680 x 2160, maximum 32767 x 32767
 HDMI-0 connected primary 3840x2160+0+0 (normal left inverted right x axis y axis) 708mm x 398mm
@@ -402,7 +403,8 @@ class Coherence(unittest.TestCase):
             self.assertNotIn('"inverted"', script.read_text(encoding="utf-8"), script.name)
 
     def test_app_py_n_envoie_plus_la_rotation_a_vpinfe(self):
-        s = APP_PY.read_text(encoding="utf-8")
+        self.assertNotIn('"Displays", "tablerotation", playfield_rotation)', APP_PY.read_text(encoding="utf-8"))
+        s = GPU_PY.read_text(encoding="utf-8")
         self.assertNotIn('"Displays", "tablerotation", playfield_rotation)', s)
         # PINCABOS_TOPOLOGIE_SOURCE_UNIQUE_V1 : la page GPU ne pose plus les cles VPinFE elle-meme,
         # seul le formulaire des roles manuels ecrit encore tablerotation = 0 ; la topologie le pose aussi.
