@@ -15,9 +15,8 @@ WEB = Path(RACINE) / "opt/pincabos/web"
 APP = WEB / "app.py"
 MOD = WEB / "pincabos_webapp_admin_pages.py"
 CORE = WEB / "pincabos_webapp_core.py"
-REEXPORTS = ("pincabos_admin_page", "pincabos_footer_supporters_inline_html", "ADMIN_LOGIN_USER", "ADMIN_LOGIN_PASS",
-             "PINCABOS_DEFAULT_ADMIN_USER", "PINCABOS_DEFAULT_ADMIN_PASS", "PINCABOS_DEFAULT_DEV_USER",
-             "PINCABOS_DEFAULT_DEV_PASS", "PINCABOS_ADMIN_CREDENTIALS_ARE_DEFAULT", "PINCABOS_ADMIN_UNREADABLE_SECRETS")
+IDENTIFIANTS = WEB / "pincabos_webapp_identifiants.py"
+SUPPORTERS = WEB / "pincabos_webapp_supporters.py"
 
 
 class PageAdminComposee(unittest.TestCase):
@@ -53,19 +52,17 @@ class PageAdminComposee(unittest.TestCase):
         self.assertIn("guard = pincabos_admin_require_login()", self.mod)
         self.assertIn("from pincabos_webapp_dev_admin import pincabos_admin_require_login", self.mod)
 
-    def test_identifiants_definis_dans_le_module_et_reexportes(self):
+    def test_identifiants_dans_leur_module_importes_par_dev_admin(self):
+        ident = IDENTIFIANTS.read_text(encoding="utf-8")
         for nom in ("ADMIN_LOGIN_USER = _pco_read_auth_value(", "ADMIN_LOGIN_PASS = _pco_read_auth_value(",
                     'PINCABOS_DEFAULT_ADMIN_USER = "admin"', "PINCABOS_ADMIN_CREDENTIALS_ARE_DEFAULT = not (ADMIN_LOGIN_USER and ADMIN_LOGIN_PASS)",
                     "PINCABOS_ADMIN_UNREADABLE_SECRETS = ["):
-            self.assertIn(nom, self.mod, nom)
-        i = self.app.index("from pincabos_webapp_admin_pages import (")
-        bloc = self.app[i:self.app.index(")", i)]
-        for nom in REEXPORTS:
-            self.assertIn(f"    {nom},\n", bloc, nom)
-        # dev_admin lit bien ces noms dans les globals qu'app.py lui passe
+            self.assertIn(nom, ident, nom)
+        self.assertNotIn("_pco_read_auth_value", self.mod)
+        self.assertNotIn("from pincabos_webapp_admin_pages import (", self.app, "plus de réexport : dev_admin importe lui-même")
         dev = (WEB / "pincabos_webapp_dev_admin.py").read_text(encoding="utf-8")
-        for nom in ("ADMIN_LOGIN_USER", "ADMIN_LOGIN_PASS", "PINCABOS_ADMIN_CREDENTIALS_ARE_DEFAULT", "pincabos_admin_page"):
-            self.assertRegex(dev, rf"\b{nom}\b")
+        self.assertIn("from pincabos_webapp_identifiants import (", dev)
+        self.assertIn("from pincabos_webapp_admin_pages import pincabos_admin_page as page_admin_composee", dev)
 
     def test_version_json_dans_le_noyau(self):
         core = CORE.read_text(encoding="utf-8")
@@ -75,10 +72,10 @@ class PageAdminComposee(unittest.TestCase):
         self.assertIn("from pincabos_webapp_core import esc, pincabos_version", self.mod)
 
     def test_pied_de_page_supporters_toujours_appele_par_page(self):
-        gabarit = WEB / "pincabos_webapp_gabarit.py"  # page() vit dans le gabarit depuis le lot 12
-        source_page = gabarit.read_text(encoding="utf-8") if gabarit.exists() else self.app
-        self.assertIn("supporters_html = pincabos_footer_supporters_inline_html()", source_page)
-        self.assertIn("def pincabos_footer_supporters_inline_html():", self.mod)
+        gabarit = (WEB / "pincabos_webapp_gabarit.py").read_text(encoding="utf-8")  # page() vit dans le gabarit depuis le lot 12
+        self.assertIn("supporters_html = pincabos_footer_supporters_inline_html()", gabarit)
+        self.assertIn("def pincabos_footer_supporters_inline_html():", SUPPORTERS.read_text(encoding="utf-8"))
+        self.assertIn("from pincabos_webapp_supporters import (", self.mod)
 
     def test_module_sain(self):
         ast.parse(self.mod)
@@ -87,7 +84,7 @@ class PageAdminComposee(unittest.TestCase):
         self.assertLess(self.app.index("pco_console_routes.register(app, page)"), i_reg)
         self.assertLess(i_reg, self.app.index("pco_vpxball_routes.register(app, page)"))
         # l'enregistrement des modules historiques (globals) vient après : dev_admin reçoit les réexports
-        self.assertLess(i_reg, self.app.index("_pco_module.register(app, globals())"))
+        self.assertLess(i_reg, self.app.index("_pco_module.register(app)"))
 
 
 if __name__ == "__main__":

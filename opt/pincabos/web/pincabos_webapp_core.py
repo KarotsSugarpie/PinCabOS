@@ -563,3 +563,41 @@ def pincabos_version():
         pass
 
     return default
+
+
+# ---- Configuration de la première exécution (PINCABOS_WEBAPP_AUTONOMIE_V1 : lue par le gabarit et le wizard) ----
+
+PINCABOS_FIRSTRUN_CFG = "/opt/pincabos/config/firstrun.json"
+
+
+def firstrun_default_cfg():
+    return {
+        "show_popup": True,
+        "network": False,
+        "gpu": False,
+        "screens": False,
+    }
+
+
+def firstrun_required_keys():
+    return ["network", "gpu", "screens"]
+
+
+def firstrun_load_cfg():
+    from pathlib import Path
+    import json
+
+    cfg = firstrun_default_cfg()
+    p = Path(PINCABOS_FIRSTRUN_CFG)
+
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(errors="replace"))
+            if isinstance(data, dict):
+                for key in cfg.keys():
+                    if key in data:
+                        cfg[key] = data[key]
+        except Exception:
+            pass
+
+    return cfg

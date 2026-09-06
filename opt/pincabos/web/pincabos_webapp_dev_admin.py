@@ -22,6 +22,30 @@ from pathlib import Path
 
 from flask import jsonify, redirect, request, send_file, session, url_for
 
+import urllib.parse
+import urllib.request
+
+from pincabos_webapp_admin import pco_admin_cmd_for_script, pco_admin_iframe_body
+from pincabos_webapp_core import (
+    esc,
+    pco_script,
+    pco_vpinfe_version_command,
+    pco_vpx_version_command,
+    pincabos_version,
+    run_cmd,
+    shlex_quote,
+)
+from pincabos_webapp_gabarit import page
+from pincabos_webapp_identifiants import (  # lus aussi par globals().get(...) dans ce module
+    ADMIN_LOGIN_PASS,
+    ADMIN_LOGIN_USER,
+    PINCABOS_ADMIN_CREDENTIALS_ARE_DEFAULT,
+    PINCABOS_ADMIN_UNREADABLE_SECRETS,
+    PINCABOS_DEFAULT_ADMIN_PASS,
+    PINCABOS_DEFAULT_DEV_PASS,
+    PINCABOS_DEFAULT_DEV_USER,
+)
+
 ROUTES: list[tuple[str, dict, object]] = []
 BEFORE_REQUESTS: list[object] = []
 AFTER_REQUESTS: list[object] = []
@@ -41,18 +65,9 @@ def after_request(func):
     AFTER_REQUESTS.append(func)
     return func
 
-def register(host_app, runtime_globals: dict):
-    """Bind shared helpers once, then register module-owned routes unchanged."""
-    protected = {'ROUTES', 'route', 'register', '__name__', '__file__', '__package__'}
-    for key, value in runtime_globals.items():
-        if key not in protected:
-            globals()[key] = value
-    # Publish moved helpers back to the host namespace for legacy core pages that
-    # still call them (for example page() -> firstrun_load_cfg()).
-    prefixes = ("audio_", "ssf_", "inputs_", "firstrun_", "pincabos_", "PINCABOS_", "AUDIO_")
-    for key, value in list(globals().items()):
-        if key.startswith(prefixes):
-            runtime_globals[key] = value
+def register(host_app, runtime_globals=None):
+    """Enregistre les routes et crochets du module. Autonome : ses dépendances sont importées en tête
+    (PINCABOS_WEBAPP_AUTONOMIE_V1) ; `runtime_globals` n'est plus lu."""
     for before_func in BEFORE_REQUESTS:
         host_app.before_request(before_func)
     for after_func in AFTER_REQUESTS:
@@ -1310,7 +1325,8 @@ def pincabos_admin_index():
         return pincabos_admin_login_body(next_path=next_path)
     if next_path:
         return redirect(next_path)
-    return pincabos_admin_page()
+    from pincabos_webapp_admin_pages import pincabos_admin_page as page_admin_composee  # différé : admin_pages importe ce module
+    return page_admin_composee()
 
 
 @route("/admin/logout")

@@ -101,6 +101,10 @@ def noms_definis(tree):
                     for e in ast.walk(t):
                         if isinstance(e, ast.Name):
                             definis.add(e.id)
+            elif isinstance(n, (ast.AnnAssign, ast.AugAssign)):
+                for e in ast.walk(n.target):
+                    if isinstance(e, ast.Name):
+                        definis.add(e.id)
             elif isinstance(n, (ast.Import, ast.ImportFrom)):
                 for a in n.names:
                     definis.add((a.asname or a.name).split(".")[0])
@@ -193,7 +197,8 @@ class Decoupage(unittest.TestCase):
                 # un usage de code : appel, clé de dict (app_globals["x"]), .get("x") ; pas un simple mot dans une chaîne
                 # (request.form.get("x") / request.args.get("x") sont des champs de formulaire, pas des helpers)
                 usage = re.compile(rf"(\b{nom}\(|\[\s*[\"']{nom}[\"']\s*\]|(?<!\.form)(?<!\.args)\.get\(\s*[\"']{nom}[\"'])")
-                consommateurs = [n for n, t in textes_autres.items() if usage.search(t)]
+                importe = re.compile(rf"(?m)^\s*from \w+ import [^\n]*\b{nom}\b|^\s+{nom},\s*$")  # import explicite (même différé) : pas besoin de réexport
+                consommateurs = [n for n, t in textes_autres.items() if usage.search(t) and not importe.search(t)]
                 if consommateurs and not re.search(rf"\b{nom}\b", self.app):
                     manquants.append((cle, nom, consommateurs))
         self.assertEqual(manquants, [], "à réexporter dans app.py après register()")
@@ -208,7 +213,7 @@ class Decoupage(unittest.TestCase):
                 self.assertNotIn(f"\ndef {nom}(", texte, (cle, nom))
 
     def test_enregistrement_apres_page_et_avant_les_enrobages(self):
-        i_page = self.app.index("from pincabos_webapp_gabarit import (")  # page() vit dans le gabarit (lot 12)
+        i_page = self.app.index("from pincabos_webapp_gabarit import page")  # page() vit dans le gabarit (lot 12)
         i_reg = self.app.index("pco_gpu_routes.register(app, page)")
         i_dof = self.app.index("pco_dof_routes.register(app, page)")
         i_systeme = self.app.index("pco_systeme_routes.register(app, page)")

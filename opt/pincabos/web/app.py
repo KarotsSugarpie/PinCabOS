@@ -126,48 +126,9 @@ import re
 import hashlib
 
 
-# PINCABOS_WEBAPP_MODULES_V1 : gabarit commun page() et ses helpers dans leur module ; réexportés (les modules
-# historiques lisent `page` dans les globals d'app.py, la redirection première exécution lit l'état d'achèvement).
-from pincabos_webapp_gabarit import (  # noqa: E402
-    page,
-    pincabos_firstrun_is_complete,
-    pincabos_webapp_screen_state,
-    webapp_screen_toggle_html,
-    PCO_WEBAPP_SCREEN_STATE_FILE,
-    safe_file_text,
-    pincabos_support_footer_html,
-)
-
-
-def pincabos_read_ini_lines(path):
-    path = Path(path)
-    if path.exists():
-        return path.read_text(errors="replace").splitlines()
-    return []
-
-
-def pincabos_write_ini_lines(path, lines):
-    # PINCABOS_INI_UNIQUE_V1 : ecriture atomique de l ecrivain unique (mode et proprietaire conserves)
-    pincabos_ini.ecrire_texte(path, "\n".join(lines).rstrip() + "\n")
-
-
-def pincabos_find_ini_section(lines, section):
-    # PINCABOS_INI_UNIQUE_V1 : bornes de la section par l ecrivain unique
-    return pincabos_ini.Ini("\n".join(lines)).bornes(section)
-
-
-def pincabos_set_ini_key_with_comment(lines, section, key, value, function_name):
-    # PINCABOS_INI_UNIQUE_V1 : la cle sous son commentaire date, un seul commentaire
-    ini = pincabos_ini.Ini("\n".join(lines))
-    ini.poser(section, key, value, pincabos_modified_comment(function_name))
-    return ini.lignes
-
-
-def pincabos_set_ini_section_with_comment(lines, section, values, function_name):
-    # PINCABOS_INI_UNIQUE_V1 : chaque cle sous son commentaire date
-    ini = pincabos_ini.Ini("\n".join(lines))
-    ini.poser_section(section, dict(values), pincabos_modified_comment(function_name))
-    return ini.lignes
+# PINCABOS_WEBAPP_MODULES_V1 : gabarit commun page() (passé aux modules par register(app, page)) et état
+# d'achèvement de la première exécution (redirection ci-dessous).
+from pincabos_webapp_gabarit import page, pincabos_firstrun_is_complete  # noqa: E402
 
 
 def pincabos_webapp_secret_key():
@@ -245,7 +206,7 @@ JOB_DIR.mkdir(parents=True, exist_ok=True)
 app.config["PINCABOS_IMPEXP_NATIVE_UI"] = True
 register_tools_routes(app, page)
 from pincabos_impexp import register_pincabos_impexp_routes
-register_pincabos_impexp_routes(app, globals())
+register_pincabos_impexp_routes(app)
 
 
 # === FIRST RUN WIZARD - PINCABOS END ===
@@ -304,29 +265,12 @@ def dashboard():
     return render_dashboard(page, esc, get_ip, service_status, pincabos_version)
 
 
-def screens_layout_text():
-    try:
-        f = Path("/opt/pincabos/config/screens/screens.json")
-        if f.exists():
-            return f.read_text(errors="replace")
-    except Exception as e:
-        return f"Erreur lecture screens.json: {e}"
-    return "Aucune auto-détection écran sauvegardée pour le moment."
-
-
 # PINCABOS_WEBAPP_MODULES_V1 : pages GPU / Écrans et DOF / Outputs dans leurs modules.
 import pincabos_webapp_gpu as pco_gpu_routes
 import pincabos_webapp_dof as pco_dof_routes
 
 pco_gpu_routes.register(app, page)
 pco_dof_routes.register(app, page)
-# Helpers GPU lus dans les globals d'app.py par pincabos_webapp_firstrun (runtime_globals,
-# actions de la première exécution) : réexportés ici, même nom, même objet.
-from pincabos_webapp_gpu import (  # noqa: E402
-    gpu_info_text,
-    pincabos_gpu_apply_config_to_vpinfe,
-    pincabos_gpu_apply_config_to_vpx,
-)
 
 
 # PINCABOS_WEBAPP_MODULES_V1 : contrôle des services, du processus VPX et versions dans leur module.
@@ -347,11 +291,6 @@ import pincabos_webapp_console as pco_console_routes
 pco_console_routes.register(app, page)
 
 
-AUDIO_VPX_INI = pincabos_vpx_ini_path()
-AUDIO_VPINFE_INI = pincabos_vpinfe_ini_path()
-AUDIO_BACKUP_DIR = Path("/opt/pincabos/backups/audio-ssf")
-
-
 # === PINCABOS AUDIO SYSTEM VOLUME BALANCE START ===
 
 
@@ -368,19 +307,6 @@ AUDIO_BACKUP_DIR = Path("/opt/pincabos/backups/audio-ssf")
 import pincabos_webapp_admin_pages as pco_admin_pages_routes
 
 pco_admin_pages_routes.register(app, page)
-# Lus dans les globals d'app.py par pincabos_webapp_dev_admin (runtime_globals) et par page() : réexportés, mêmes objets.
-from pincabos_webapp_admin_pages import (  # noqa: E402
-    pincabos_admin_page,
-    pincabos_footer_supporters_inline_html,
-    ADMIN_LOGIN_USER,
-    ADMIN_LOGIN_PASS,
-    PINCABOS_DEFAULT_ADMIN_USER,
-    PINCABOS_DEFAULT_ADMIN_PASS,
-    PINCABOS_DEFAULT_DEV_USER,
-    PINCABOS_DEFAULT_DEV_PASS,
-    PINCABOS_ADMIN_CREDENTIALS_ARE_DEFAULT,
-    PINCABOS_ADMIN_UNREADABLE_SECRETS,
-)
 
 
 # Stage5B.4B: legacy route disabled, real iframe route is pincabos_admin_frame_cleanup_dry_run.
@@ -406,8 +332,6 @@ pco_vpxball_routes.register(app, page)
 import pincabos_webapp_import as pco_import_routes
 
 pco_import_routes.register(app, page)
-# Lu dans les globals d'app.py par PinCabOS-ExplorerInstall (context_globals) : réexporté, même objet.
-from pincabos_webapp_import import pincabos_manifest_table_folder_from_archive  # noqa: E402
 
 
 # PINCABOS_WEBAPP_MODULES_V1 : gestion du stockage (USB, SMB) dans son module, une seule vue par chemin.
@@ -426,16 +350,6 @@ pco_commander_routes.register(app, page)
 import pincabos_webapp_export as pco_export_routes
 
 pco_export_routes.register(app, page)
-# Helpers d'export lus dans les globals d'app.py par pincabos_batch_transfer (app_globals[...])
-# et pincabos_webapp_exports (runtime_globals) : réexportés ici, même nom, même objet.
-from pincabos_webapp_export import (  # noqa: E402
-    pincabos_write_full_folder_export_manifest,
-    pincabos_zip_full_table_folder,
-    pincabos_export_safe_filename,
-    pincabos_detect_vpsid_for_export,
-    pincabos_table_export_dirs,
-    pincabos_export_should_exclude_relative,
-)
 
 
 # Stage5A.3: route legacy retirée pour éviter doublon avec pcos_update_api_status.
@@ -630,7 +544,7 @@ for _pco_module in (
     pco_exports_routes,
     pco_backupcfg_routes,
 ):
-    _pco_module.register(app, globals())
+    _pco_module.register(app)
 del _pco_module
 # === PINCABOS MODULAR ROUTES REGISTRATION END ===
 
@@ -713,7 +627,7 @@ try:
     register_fulldmd_autoarrange(app, page, esc)
 except Exception as _pincabos_fulldmd_autoarrange_error:
     try:
-        log(f"FullDMD AutoArrange routes unavailable: {_pincabos_fulldmd_autoarrange_error}")
+        print(f"WARN: FullDMD AutoArrange routes unavailable: {_pincabos_fulldmd_autoarrange_error}")
     except Exception:
         pass
 # PINCABOS_FULLDMD_AUTOARRANGE_WEB_V1_END
@@ -726,7 +640,7 @@ install_appearance_global(app)
 # PINCABOS_BATCH_TRANSFER_V1_REGISTER
 try:
     from pincabos_batch_transfer import register_pincabos_batch_transfer
-    register_pincabos_batch_transfer(app, globals())
+    register_pincabos_batch_transfer(app)
 except Exception:
     app.logger.exception("PinCabOS Batch Import/Export registration failed")
 
@@ -857,7 +771,6 @@ try:
         app=app,
         page=page,
         esc=esc,
-        context_globals=globals(),
     )
 except Exception as _pco_explorer_install_e:
     print("WARN: PinCabOS ExplorerInstall module load failed:", _pco_explorer_install_e)
@@ -890,9 +803,10 @@ except Exception as _pco_package_icon_e:
 # PINCABOS_EXPLORER_TABLE_TEST_CENTER_V1_REGISTER
 try:
     import pincabos_explorer_table_test as _pco_explorer_table_test
+    from pincabos_webapp_import import pincabos_detect_batch as _pco_detect_batch
     _pco_explorer_table_test.register(
         app,
-        detect_batch=globals().get("pincabos_detect_batch"),
+        detect_batch=_pco_detect_batch,
     )
 except Exception as _pco_explorer_table_test_error:
     print(

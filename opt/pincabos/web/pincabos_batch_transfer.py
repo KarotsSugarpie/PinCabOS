@@ -21,15 +21,24 @@ from pathlib import Path
 
 from flask import request
 
+from pincabos_webapp_core import esc, pincabos_vpx_tables_dir
+from pincabos_webapp_export import (
+    pincabos_detect_vpsid_for_export,
+    pincabos_export_safe_filename,
+    pincabos_export_should_exclude_relative,
+    pincabos_table_export_dirs,
+    pincabos_write_full_folder_export_manifest,
+    pincabos_zip_full_table_folder,
+)
+from pincabos_webapp_gabarit import page
 
-def register_pincabos_batch_transfer(app, app_globals):
-    page = app_globals["page"]
-    esc = app_globals["esc"]
-    tables_dir_fn = app_globals["pincabos_vpx_tables_dir"]
-    write_manifest_fn = app_globals["pincabos_write_full_folder_export_manifest"]
-    zip_table_fn = app_globals["pincabos_zip_full_table_folder"]
-    safe_filename_fn = app_globals["pincabos_export_safe_filename"]
-    detect_vpsid_fn = app_globals["pincabos_detect_vpsid_for_export"]
+
+def register_pincabos_batch_transfer(app, app_globals=None):
+    tables_dir_fn = pincabos_vpx_tables_dir
+    write_manifest_fn = pincabos_write_full_folder_export_manifest
+    zip_table_fn = pincabos_zip_full_table_folder
+    safe_filename_fn = pincabos_export_safe_filename
+    detect_vpsid_fn = pincabos_detect_vpsid_for_export
 
     LOCAL_EXPORTS = Path("/home/pinball/Exports")
     IMPORT_ROOT = Path("/opt/pincabos/uploads/batch-import")
@@ -206,7 +215,7 @@ def register_pincabos_batch_transfer(app, app_globals):
             current_path = Path(current)
             dirs[:] = [
                 name for name in dirs
-                if not app_globals["pincabos_export_should_exclude_relative"](
+                if not pincabos_export_should_exclude_relative(
                     (current_path / name).relative_to(table_dir)
                 )
             ]
@@ -215,7 +224,7 @@ def register_pincabos_batch_transfer(app, app_globals):
                 file_path = current_path / name
                 rel = file_path.relative_to(table_dir)
 
-                if app_globals["pincabos_export_should_exclude_relative"](rel):
+                if pincabos_export_should_exclude_relative(rel):
                     continue
 
                 try:

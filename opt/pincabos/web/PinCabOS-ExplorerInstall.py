@@ -83,7 +83,7 @@ def _safe_zip_members(zf):
 
 def _guess_table_folder(archive_path):
     # Utilise le moteur manifest existant de app.py si disponible.
-    fn = _CTX.get("pincabos_manifest_table_folder_from_archive")
+    from pincabos_webapp_import import pincabos_manifest_table_folder_from_archive as fn  # PINCABOS_WEBAPP_AUTONOMIE_V1
     if callable(fn):
         try:
             table_folder, _manifest = fn(Path(archive_path))

@@ -140,8 +140,6 @@ class EcrivainUnique(unittest.TestCase):
 
     DELEGUES = {
         "opt/pincabos/scripts/pincabos-screen-topology.py": ("update_section", "update_global", "atomic_write"),
-        "opt/pincabos/web/app.py": ("pincabos_write_ini_lines", "pincabos_find_ini_section",
-                                    "pincabos_set_ini_key_with_comment", "pincabos_set_ini_section_with_comment"),
         "opt/pincabos/web/pincabos_webapp_vpxball.py": ("vpx_ballcab_find_section", "vpx_simple_ball_find_section"),
         "opt/pincabos/web/pincabos_webapp_gpu.py": ("set_ini_key", "pincabos_gpu_ini_set_key_local"),
         "opt/pincabos/web/pincabos_webapp_dmd.py": ("pincabos_set_ini_key_plain",),

@@ -15,17 +15,19 @@ from pathlib import Path
 
 from flask import request
 
+from pincabos_webapp_core import pincabos_vpx_tables_dir
+from pincabos_webapp_gabarit import page
+
 
 MARKER = "PINCABOS_IMPEXP_NATIVE_V1"
 
 
-def register_pincabos_impexp_routes(app, app_globals):
+def register_pincabos_impexp_routes(app, app_globals=None):
     if app.config.get("PINCABOS_IMPEXP_NATIVE_V1_REGISTERED"):
         return
     app.config["PINCABOS_IMPEXP_NATIVE_V1_REGISTERED"] = True
 
-    page = app_globals["page"]
-    tables_dir_fn = app_globals["pincabos_vpx_tables_dir"]
+    tables_dir_fn = pincabos_vpx_tables_dir
 
     def esc(value):
         return html.escape("" if value is None else str(value), quote=True)

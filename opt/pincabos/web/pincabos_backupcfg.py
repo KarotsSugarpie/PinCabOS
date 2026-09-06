@@ -15,6 +15,8 @@ from pathlib import Path
 
 from flask import jsonify, redirect, request, send_file, session
 
+from pincabos_webapp_gabarit import page
+
 ROUTES: list[tuple[str, dict, object]] = []
 
 
@@ -25,11 +27,9 @@ def route(rule: str, **options):
     return decorator
 
 
-def register(host_app, runtime_globals: dict):
-    protected = {"ROUTES", "route", "register", "__name__", "__file__", "__package__"}
-    for key, value in runtime_globals.items():
-        if key not in protected:
-            globals()[key] = value
+def register(host_app, runtime_globals=None):
+    """Enregistre les routes et crochets du module. Autonome : ses dépendances sont importées en tête
+    (PINCABOS_WEBAPP_AUTONOMIE_V1) ; `runtime_globals` n'est plus lu."""
     for rule, options, view_func in ROUTES:
         host_app.add_url_rule(rule, endpoint=view_func.__name__, view_func=view_func, **options)
 
