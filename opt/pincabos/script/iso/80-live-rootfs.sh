@@ -194,9 +194,14 @@ cp "$ROOTFS_DIR/boot/initrd.img-$LIVE_KVER" "$ISO_DIR/casper/initrd"
 if [ -f "$ROOTFS_DIR/boot/vmlinuz-$LIVE_KVER" ]; then
   cp "$ROOTFS_DIR/boot/vmlinuz-$LIVE_KVER" "$ISO_DIR/casper/vmlinuz"
 fi
-lsinitramfs "$ISO_DIR/casper/initrd" | grep -q "themes/pincabos/pincabos.script" \
+# PINCABOS_ISO_GREP_SANS_SIGPIPE_V1 : sous `set -o pipefail`, `lsinitramfs | grep -q` rend
+# 141 (grep quitte a la premiere ligne, lsinitramfs recoit SIGPIPE) alors que le plugin est
+# bien la : « Plugin script.so absent » sur le banc, trois fois, avec un initrd correct. La
+# liste est prise une fois, les tests se font dessus.
+INITRD_LISTE="$(lsinitramfs "$ISO_DIR/casper/initrd")"
+grep -q "themes/pincabos/pincabos.script" <<<"$INITRD_LISTE" \
   || die "Theme pincabos absent de l initrd live"
-lsinitramfs "$ISO_DIR/casper/initrd" | grep -q "plymouth/script.so" \
+grep -q "plymouth/script.so" <<<"$INITRD_LISTE" \
   || die "Plugin script.so absent de l initrd live"
 echo "OK: initrd live regenere avec plymouth+casper ($LIVE_KVER), theme pincabos verifie"
 
