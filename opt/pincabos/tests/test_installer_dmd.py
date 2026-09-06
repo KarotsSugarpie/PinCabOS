@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _charge import charger, RACINE
+from _charge import charger, RACINE, texte_installateur
 
 R = Path(RACINE)
 dm = charger("opt/pincabos/installer-gui/dmd.py", "pco_installer_dmd")
@@ -161,7 +161,7 @@ class Assistant(unittest.TestCase):
 
 class Integration(unittest.TestCase):
     def test_iso_sh(self):
-        s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         self.assertIn("apply_target_dmd() {", s)
         self.assertIn("  apply_target_network\n  apply_target_dmd\n", s)
         self.assertIn('"$TARGET/opt/pincabos/config/zedmd.json"', s)

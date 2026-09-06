@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _charge import RACINE
+from _charge import RACINE, texte_installateur
 
 R = Path(RACINE)
 sys.path.insert(0, str(R / "opt/pincabos/tools"))
@@ -91,7 +91,7 @@ class Pose(unittest.TestCase):
 
 class Integration(unittest.TestCase):
     def test_iso_pose_les_modeles_dans_la_cible(self):
-        s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         self.assertIn("apply_target_home_templates() {", s)
         self.assertIn('local outil="$TARGET/opt/pincabos/tools/pincabos_home_templates.py"', s)
         self.assertIn('python3 "$outil" apply --root "$TARGET"', s)

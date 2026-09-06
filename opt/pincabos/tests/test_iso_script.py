@@ -14,14 +14,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _charge import RACINE
+from _charge import RACINE, texte_installateur, texte_fichier_livre
 
 ISO = os.path.join(RACINE, "opt/pincabos/script/iso.sh")
 
 
 def _texte():
-    with open(ISO, encoding="utf-8", errors="ignore") as f:
-        return f.read()
+    return texte_installateur()  # iso.sh + fichiers livres de l installateur
 
 
 def _bloc_verify():
@@ -110,7 +109,7 @@ class ModeleLive(unittest.TestCase):
     """PINCABOS_ISO_MODELE_LIVE_V1 : iso.sh --live confie l ISO a iso-live.sh."""
 
     def setUp(self):
-        self.s = (Path(RACINE) / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        self.s = texte_installateur()
 
     def test_le_modele_live_est_le_seul(self):
         # PINCABOS_ISO_MODELE_LIVE_V2 : le classique (base Ubuntu + payload en morceaux) est retire
@@ -122,7 +121,7 @@ class ModeleLive(unittest.TestCase):
             self.assertNotIn(reste, self.s, reste)
 
     def test_helper_une_seule_forme_de_payload(self):
-        bloc = self.s[self.s.index("<<'PINCBOS_PAYLOAD_HELPER'"):self.s.index("\nPINCBOS_PAYLOAD_HELPER\n")]
+        bloc = texte_fichier_livre("pincabos-install-payload")  # PINCABOS_INSTALLEUR_FICHIERS_V1
         self.assertIn("PINCABOS_LIVE_SQUASHFS_V1", bloc)  # contrat lu par le banc (681) et iso-live.sh
         self.assertIn('[ -f "$LIVE_SQUASHFS" ] || { echo "ERROR: live squashfs missing', bloc)
         self.assertIn('unsquashfs -f -d "$TARGET" "$LIVE_SQUASHFS"', bloc)
@@ -153,7 +152,7 @@ class FichiersVivants(unittest.TestCase):
     """PINCABOS_KEEP_PATHS_V2 : ce qui est propre au cab survit a la mise a jour."""
 
     def test_liste_de_conservation(self):
-        s = Path(RACINE, "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         bloc = s.split("PCO_KEEP_PATHS=(")[1].split("\n)\n")[0]   # une parenthese dans un commentaire ne ferme pas le tableau
         for p in ("opt/pincabos/config/screens", "home/pinball/.config/vpinfe/vpinfe.ini",
                   "home/pinball/.local/share/VPinballX/10.8/directoutputconfig", "home/pinball/.config/pincabos",
@@ -167,7 +166,7 @@ class LienVpx(unittest.TestCase):
     """PINCABOS_VPX_LINK_V1 : ~/vpx existe sur la cible et a l execution."""
 
     def test_cible_et_filet(self):
-        s = Path(RACINE, "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         self.assertIn("ensure_target_vpx_link() {", s)
         self.assertLess(s.index("  ensure_target_vpx_link\n"), s.index("  apply_target_identity\n"))
         self.assertIn('ln -sfn "$(basename "$plus_recent")" "$h/vpx"', s)
@@ -197,3 +196,33 @@ class RepertoireTemporaire(unittest.TestCase):
         self.assertTrue(motif.search("./opt/pincabos/tmp/pr43/worktree/home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"))
         self.assertTrue(motif.search("./opt/pincabos/tmp"))
         self.assertFalse(motif.search("./opt/pincabos/tools/pincabos-vps"))
+
+
+class FichiersLivres(unittest.TestCase):
+    """PINCABOS_INSTALLEUR_FICHIERS_V1 : moteur, helper, attente et unite tty sont des fichiers, installes par iso.sh."""
+
+    def test_iso_installe_les_fichiers_et_ne_les_ecrit_plus(self):
+        s = open(ISO, encoding="utf-8").read()
+        for delim in ("PINCBOS_PAYLOAD_HELPER", "PINCBOS_LIVE_INSTALLER", "PINCABOS_LIVE_WAIT", "PINCBOS_SERVICE"):
+            self.assertNotIn(delim, s, delim)
+        self.assertIn('INSTALLER_SRC="$(dirname "$(readlink -f "$0")")/installer"', s)
+        for f, dest in (("pincabos-install-payload", '"$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh"'),
+                        ("pincabos-live-installer", '"$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer"'),
+                        ("pincabos-live-installer-wait", '"$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-wait"'),
+                        ("pincabos-live-installer-tty.service", '"$ROOTFS_DIR/etc/systemd/system/pincabos-live-installer-tty.service"')):
+            self.assertIn(f'"$INSTALLER_SRC/{f}" {dest}', s, f)
+            self.assertTrue(os.path.exists(os.path.join(RACINE, "opt/pincabos/script/installer", f)), f)
+
+    def test_fichiers_livres_executables_et_syntaxe(self):
+        import subprocess
+        for f in ("pincabos-install-payload", "pincabos-live-installer", "pincabos-live-installer-wait"):
+            chemin = os.path.join(RACINE, "opt/pincabos/script/installer", f)
+            self.assertTrue(os.access(chemin, os.X_OK), f)
+            self.assertEqual(subprocess.run(["bash", "-n", chemin], capture_output=True, text=True).returncode, 0, f)
+        moteur = texte_fichier_livre("pincabos-live-installer")
+        self.assertIn("upgrade_install()", moteur)  # contrats lus par le banc (683)
+        self.assertIn("PCO_KEEP_PATHS", moteur)
+        helper = texte_fichier_livre("pincabos-install-payload")
+        self.assertIn("PINCABOS_LIVE_SQUASHFS_V1", helper)
+        self.assertNotIn("-no-progress", helper)
+        self.assertIn("ExecStart=/usr/local/sbin/pincabos-installer-dispatch", texte_fichier_livre("pincabos-live-installer-tty.service"))

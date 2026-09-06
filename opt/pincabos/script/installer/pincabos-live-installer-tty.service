@@ -1,0 +1,23 @@
+[Unit]
+Description=PinCabOS installer launcher on tty1
+After=local-fs.target
+Before=getty.target
+ConditionPathExists=/usr/local/sbin/pincabos-installer-dispatch
+
+[Service]
+Type=simple
+Environment=TERM=linux
+ExecStartPre=-/usr/bin/chvt 1
+ExecStart=/usr/local/sbin/pincabos-installer-dispatch
+StandardInput=tty-force
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Restart=no
+SendSIGHUP=yes
+
+[Install]
+WantedBy=multi-user.target

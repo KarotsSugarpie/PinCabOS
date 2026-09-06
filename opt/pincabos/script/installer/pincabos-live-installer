@@ -1,0 +1,2486 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Mode reponses (GUI ou install automatisee) : les variables PCO_ANS_*
+# court-circuitent les prompts ; le moteur reste identique ensuite.
+if [ -n "${PCO_ANSWERS:-}" ] && [ -f "$PCO_ANSWERS" ]; then
+  . "$PCO_ANSWERS"
+  echo "TRACE gui-answers charges (lang=${PCO_ANS_LANG:-?})"
+fi
+
+# === PINCABOS_LIVE_INSTALLER_TTY_THEME_V1 ===
+
+if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ]; then
+  ORANGE=$'\033[38;5;208m'
+  PURPLE=$'\033[38;5;129m'
+  DARKBLUE=$'\033[38;5;20m'
+  CYAN=$'\033[36m'
+  GREEN=$'\033[32m'
+  YELLOW=$'\033[33m'
+  RED=$'\033[31m'
+  BLUE=$'\033[34m'
+  WHITE=$'\033[97m'
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  NC=$'\033[0m'
+else
+  ORANGE=''
+  PURPLE=''
+  DARKBLUE=''
+  CYAN=''
+  GREEN=''
+  YELLOW=''
+  RED=''
+  BLUE=''
+  WHITE=''
+  BOLD=''
+  DIM=''
+  NC=''
+fi
+
+pco_hr() {
+  printf '%b\n' \
+    "${ORANGE}────────────────────────────────────────────────────────────────${NC}"
+}
+
+pco_logo() {
+  printf '\n'
+  pco_hr
+
+  printf '%b\n' \
+    "${ORANGE}██████╗ ██╗███╗   ██╗ ██████╗ █████╗ ██████╗  ██████╗ ███████╗${NC}" \
+    "${ORANGE}██╔══██╗██║████╗  ██║██╔════╝██╔══██╗██╔══██╗██╔═══██╗██╔════╝${NC}" \
+    "${ORANGE}██████╔╝██║██╔██╗ ██║██║     ███████║██████╔╝██║   ██║███████╗${NC}" \
+    "${ORANGE}██╔═══╝ ██║██║╚██╗██║██║     ██╔══██║██╔══██╗██║   ██║╚════██║${NC}" \
+    "${ORANGE}██║     ██║██║ ╚████║╚██████╗██║  ██║██████╔╝╚██████╔╝███████║${NC}" \
+    "${DARKBLUE}╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚══════╝${NC}"
+
+  pco_hr
+
+  printf '\n%b\n' \
+    "${CYAN}${BOLD}Ultimate VPinball Linux Cabinet System${NC}"
+
+  printf '%b\n' \
+    "${PURPLE}Created by Karots Sugarpie${NC}"
+
+  printf '\n'
+}
+
+pco_title() {
+  if [ -t 1 ]; then
+    printf '\033c'
+  elif command -v clear >/dev/null 2>&1; then
+    clear 2>/dev/null || true
+  fi
+
+  pco_logo
+
+  printf '%b\n' \
+    "${CYAN}${BOLD}              PINCABOS LIVE SYSTEM INSTALLER${NC}"
+
+  printf '%b\n\n' \
+    "${DIM}Installation automatique de PinCabOS sur disque${NC}"
+}
+
+pco_step() {
+  local label="${2:-$1}"
+
+  printf '\n%b\n' \
+    "${CYAN}─► ${BOLD}${label}${NC}${CYAN} ◄────────────────────────────────────────${NC}"
+}
+
+pco_go() {
+  printf '%b\n' "${GREEN}GO [√]${NC} $*"
+}
+
+# PINCABOS_LIVE_INSTALLER_GREEN_GO_V1
+
+pco_warn() {
+  printf '%b\n' "${YELLOW}WARN [!]${NC} $*"
+}
+
+pco_info() {
+  printf '%b\n' "${BLUE}INFO${NC} $*"
+}
+
+pco_error() {
+  printf '%b\n' "${RED}NOGO [***]${NC} $*" >&2
+}
+
+pco_prompt() {
+  local prompt="$1"
+
+  printf '%b%s%b ' \
+    "${BOLD}${WHITE}" \
+    "$prompt" \
+    "${NC}" >&2
+}
+
+pco_title
+
+
+if grep -qw "pincabos.rescue=1" /proc/cmdline 2>/dev/null; then
+  :
+  pco_hr
+  echo " PinCabOS V8.1G — Rescue Shell"
+  pco_hr
+  echo
+  echo "Type 'pincabos-live-installer' to launch the installer."
+  echo
+  exec /bin/bash -l
+fi
+
+clear
+pco_hr
+echo " PinCabOS Beta Installer"
+pco_hr
+echo
+echo "PinCabOS installation media ready."
+echo
+
+if [ "$(id -u)" -ne 0 ]; then
+  exec sudo -E "$0" "$@"
+fi
+
+PAYLOAD_DIR="/cdrom/pincabos-payload"
+TARGET="/target"
+MIN_FREE_MIB="${PINCABOS_DUALBOOT_MIN_FREE_MIB:-32768}"
+
+
+# ==============================================================
+# PINCABOS_INSTALLER_REGIONAL_SETUP_V2_ALL_REGIONS
+#
+# Tous les choix sont obtenus dynamiquement depuis Ubuntu/XKB.
+# Aucun pays, clavier ou timezone n'est limité à une liste codée en dur.
+#
+
+REG_LOCALE="fr_CA.UTF-8"
+REG_LANGUAGE="fr_CA:fr"
+REG_LOCALE_LABEL="fr_CA.UTF-8"
+
+REG_XKB_LAYOUT="ca"
+REG_XKB_VARIANT=""
+REG_KEYBOARD_LABEL="ca"
+
+REG_TIMEZONE="America/Montreal"
+REG_FBROTATE=0
+REG_ORIENT_LABEL="Landscape (no rotation)"
+# PINCABOS_ORIENTATION_INSTALLER_V1
+
+PCO_SELECTED=""
+PCO_SELECTED_LABEL=""
+
+pco_choose_list() {
+    local title="$1"
+    local source_file="$2"
+
+    local PAGE_SIZE=20
+    local PAGE=0
+    local FILTER="${3:-}"
+    local CHOICE=""
+    local SEARCH=""
+    local TMP_FILTER=""
+
+    while true; do
+        TMP_FILTER="$(mktemp)"
+
+        if [ -n "$FILTER" ]; then
+            grep -iF -- "$FILTER" "$source_file" \
+                > "$TMP_FILTER" || true
+        else
+            cat "$source_file" > "$TMP_FILTER"
+        fi
+
+        mapfile -t PCO_ITEMS < "$TMP_FILTER"
+        rm -f "$TMP_FILTER"
+
+        local TOTAL="${#PCO_ITEMS[@]}"
+
+        if [ "$TOTAL" -eq 0 ]; then
+            echo
+            pco_warn "No entry matches: $FILTER"
+            FILTER=""
+            PAGE=0
+            continue
+        fi
+
+        local PAGES=$(( (TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
+
+        [ "$PAGE" -lt "$PAGES" ] || PAGE=$((PAGES - 1))
+        [ "$PAGE" -ge 0 ] || PAGE=0
+
+        local START=$((PAGE * PAGE_SIZE))
+        local END=$((START + PAGE_SIZE))
+
+        [ "$END" -le "$TOTAL" ] || END="$TOTAL"
+
+        echo
+        pco_hr
+        echo " $title"
+        pco_hr
+        echo
+        echo " $(t entries) : $TOTAL"
+        echo " $(t page)    : $((PAGE + 1)) / $PAGES"
+
+        if [ -n "$FILTER" ]; then
+            echo " $(t filter)  : $FILTER"
+        fi
+
+        echo
+
+        local IDX
+        local NUM=1
+
+        for ((IDX=START; IDX<END; IDX++)); do
+            local LINE="${PCO_ITEMS[$IDX]}"
+            local VALUE="${LINE%%|*}"
+            local LABEL="${LINE#*|}"
+
+            printf "  [%2d] %-22s %s\n" \
+                "$NUM" \
+                "$VALUE" \
+                "$LABEL"
+
+            NUM=$((NUM + 1))
+        done
+
+        echo
+        echo "  $(t next_page)"
+        echo "  $(t prev_page)"
+        echo "  $(t search_filter)"
+        echo "  $(t clear_search)"
+        echo
+
+        pco_prompt "$(t choice): "
+        read -r CHOICE
+
+        case "$CHOICE" in
+            n|N)
+                if [ "$((PAGE + 1))" -lt "$PAGES" ]; then
+                    PAGE=$((PAGE + 1))
+                fi
+                ;;
+
+            p|P)
+                if [ "$PAGE" -gt 0 ]; then
+                    PAGE=$((PAGE - 1))
+                fi
+                ;;
+
+            s|S)
+                echo
+                pco_prompt "$(t search): "
+                read -r SEARCH
+                FILTER="$SEARCH"
+                PAGE=0
+                ;;
+
+            c|C)
+                FILTER=""
+                PAGE=0
+                ;;
+
+            *)
+                if [[ "$CHOICE" =~ ^[0-9]+$ ]]; then
+                    local LOCAL_INDEX=$((CHOICE - 1))
+
+                    if [ "$LOCAL_INDEX" -ge 0 ] &&
+                       [ "$LOCAL_INDEX" -lt "$((END - START))" ]; then
+
+                        local ABS_INDEX=$((START + LOCAL_INDEX))
+                        local SELECTED="${PCO_ITEMS[$ABS_INDEX]}"
+
+                        PCO_SELECTED="${SELECTED%%|*}"
+                        PCO_SELECTED_LABEL="${SELECTED#*|}"
+
+                        return 0
+                    fi
+                fi
+
+                pco_warn "Invalid choice."
+                ;;
+        esac
+    done
+}
+
+pco_build_locale_catalog() {
+    local OUT="$1"
+
+    : > "$OUT"
+
+    if [ -f /usr/share/i18n/SUPPORTED ]; then
+        awk '
+            $2 == "UTF-8" {
+                print $1 "|" $1
+            }
+        ' /usr/share/i18n/SUPPORTED \
+            | sort -u \
+            > "$OUT"
+    fi
+
+    if [ ! -s "$OUT" ]; then
+        locale -a 2>/dev/null \
+            | grep -Ei 'utf[-]?8' \
+            | sort -u \
+            | awk '{print $0 "|" $0}' \
+            > "$OUT" || true
+    fi
+
+    #
+    # Garantir les principales locales même si l'image Live
+    # expose une liste incomplète.
+    #
+    for LOC in \
+        fr_CA.UTF-8 \
+        en_CA.UTF-8 \
+        en_US.UTF-8 \
+        fr_FR.UTF-8
+    do
+        grep -q "^${LOC}|" "$OUT" 2>/dev/null ||
+            printf '%s|%s\n' "$LOC" "$LOC" >> "$OUT"
+    done
+
+    sort -u -o "$OUT" "$OUT"
+}
+
+pco_build_keyboard_catalog() {
+    local OUT="$1"
+
+    : > "$OUT"
+
+    local RULES=""
+
+    for CANDIDATE in \
+        /usr/share/X11/xkb/rules/base.lst \
+        /usr/share/X11/xkb/rules/evdev.lst
+    do
+        if [ -f "$CANDIDATE" ]; then
+            RULES="$CANDIDATE"
+            break
+        fi
+    done
+
+    if [ -n "$RULES" ]; then
+        awk '
+            /^! layout/ {
+                active=1
+                next
+            }
+
+            /^!/ {
+                if (active) exit
+            }
+
+            active && NF {
+                code=$1
+                $1=""
+                sub(/^[[:space:]]+/, "", $0)
+                print code "|" $0
+            }
+        ' "$RULES" \
+            | sort -u \
+            > "$OUT"
+    fi
+
+    if [ ! -s "$OUT" ] &&
+       command -v localectl >/dev/null 2>&1; then
+
+        localectl list-x11-keymap-layouts \
+            --no-pager 2>/dev/null \
+            | sort -u \
+            | awk '{print $0 "|" $0}' \
+            > "$OUT" || true
+    fi
+
+    [ -s "$OUT" ] || {
+        printf '%s\n' \
+            'us|English (US)' \
+            'ca|Canada' \
+            'fr|France' \
+            'gb|United Kingdom' \
+            > "$OUT"
+    }
+}
+
+pco_build_keyboard_variant_catalog() {
+    local LAYOUT="$1"
+    local OUT="$2"
+
+    : > "$OUT"
+
+    #
+    # Option par défaut toujours disponible.
+    #
+    echo '|Default / no variant' > "$OUT"
+
+    if command -v localectl >/dev/null 2>&1; then
+        localectl list-x11-keymap-variants \
+            "$LAYOUT" \
+            --no-pager 2>/dev/null \
+            | grep -v '^$' \
+            | sort -u \
+            | awk '{print $0 "|" $0}' \
+            >> "$OUT" || true
+    fi
+
+    #
+    # Fallback base.lst / evdev.lst.
+    #
+    if [ "$(wc -l < "$OUT")" -le 1 ]; then
+        local RULES=""
+
+        for CANDIDATE in \
+            /usr/share/X11/xkb/rules/base.lst \
+            /usr/share/X11/xkb/rules/evdev.lst
+        do
+            if [ -f "$CANDIDATE" ]; then
+                RULES="$CANDIDATE"
+                break
+            fi
+        done
+
+        if [ -n "$RULES" ]; then
+            awk -v wanted="$LAYOUT" '
+                /^! variant/ {
+                    active=1
+                    next
+                }
+
+                /^!/ {
+                    if (active) exit
+                }
+
+                active && NF {
+                    variant=$1
+
+                    line=$0
+
+                    if (
+                        line ~ ("[[:space:]]" wanted ":") ||
+                        line ~ ("^" variant "[[:space:]]+" wanted ":")
+                    ) {
+                        desc=line
+                        sub(/^[^[:space:]]+[[:space:]]+/, "", desc)
+                        print variant "|" desc
+                    }
+                }
+            ' "$RULES" \
+                | sort -u \
+                >> "$OUT" || true
+        fi
+    fi
+
+    sort -u -o "$OUT" "$OUT"
+}
+
+pco_build_timezone_catalog() {
+    local OUT="$1"
+
+    : > "$OUT"
+
+    if command -v timedatectl >/dev/null 2>&1; then
+        timedatectl list-timezones \
+            --no-pager 2>/dev/null \
+            | grep '/' \
+            | sort -u \
+            | awk '{print $0 "|" $0}' \
+            > "$OUT" || true
+    fi
+
+    if [ ! -s "$OUT" ] &&
+       [ -f /usr/share/zoneinfo/zone.tab ]; then
+
+        awk '
+            !/^#/ && NF >= 3 {
+                print $3 "|" $3
+            }
+        ' /usr/share/zoneinfo/zone.tab \
+            | sort -u \
+            > "$OUT"
+    fi
+
+    grep -q '^UTC|' "$OUT" 2>/dev/null ||
+        echo 'UTC|UTC' >> "$OUT"
+
+    sort -u -o "$OUT" "$OUT"
+}
+
+apply_live_keyboard() {
+    echo
+    pco_step "Applying keyboard to live installer"
+
+    mkdir -p /etc/default
+
+    cat > /etc/default/keyboard <<EOF
+XKBMODEL="pc105"
+XKBLAYOUT="$REG_XKB_LAYOUT"
+XKBVARIANT="$REG_XKB_VARIANT"
+XKBOPTIONS=""
+BACKSPACE="guess"
+EOF
+
+    if command -v setupcon >/dev/null 2>&1; then
+        if setupcon --keyboard-only >/dev/null 2>&1; then
+            pco_go "Live keyboard applied: $REG_KEYBOARD_LABEL"
+            return 0
+        fi
+    fi
+
+    if command -v ckbcomp >/dev/null 2>&1 &&
+       command -v loadkeys >/dev/null 2>&1; then
+
+        if [ -n "$REG_XKB_VARIANT" ]; then
+            if ckbcomp \
+                "$REG_XKB_LAYOUT" \
+                "$REG_XKB_VARIANT" \
+                2>/dev/null \
+                | loadkeys >/dev/null 2>&1; then
+
+                pco_go "Live keyboard applied"
+                return 0
+            fi
+        else
+            if ckbcomp \
+                "$REG_XKB_LAYOUT" \
+                2>/dev/null \
+                | loadkeys >/dev/null 2>&1; then
+
+                pco_go "Live keyboard applied"
+                return 0
+            fi
+        fi
+    fi
+
+    pco_warn "Live keyboard could not be changed."
+    echo "The selected keyboard will still be installed on the target."
+}
+
+regional_setup() {
+    local LOCALES
+    local KEYBOARDS
+    local VARIANTS
+    local TIMEZONES
+    local BASE_LOCALE
+    local LANG_CODE
+    local CHOICE
+
+
+    # ------------------------------------------------------------------
+    # i18n : catalogue de messages + choix de langue (premier ecran)
+    # ------------------------------------------------------------------
+    declare -gA MSG_en MSG_fr MSG_de MSG_it MSG_es
+
+    MSG_en=( [installer]="PinCabOS Installer"
+        [choice]="Choice" [search]="Search"
+        [regional_title]="PinCabOS Regional Setup"
+        [regional_intro1]="All available UTF-8 locales, XKB keyboard layouts"
+        [regional_intro2]="and timezones can be selected."
+        [tip_search]="TIP: use 's' in a list to search."
+        [next_page]="n = next page" [prev_page]="p = previous page"
+        [search_filter]="s = search/filter" [clear_search]="c = clear search"
+        [entries]="Entries" [page]="Page" [filter]="Filter"
+        [menu_locale]="Language / Region — all UTF-8 locales"
+        [menu_keyboard]="Keyboard layout — all XKB layouts"
+        [menu_variant]="Keyboard variant" [menu_timezone]="Timezone — all regions"
+        [orient_title]="Screen orientation"
+        [orient_1]="Landscape (no rotation)" [orient_2]="Portrait — 90 degrees clockwise"
+        [orient_3]="Portrait — 90 degrees counter-clockwise" [orient_4]="Upside down — 180 degrees"
+        [recap_title]="Regional configuration"
+        [recap_continue]="Continue" [recap_change]="Change"
+        [mode_title]="PinCabOS install mode"
+        [mode_up]="Update an existing PinCabOS (keep tables and settings)" [mode_upb]="Reinstalls over an existing install. Tables, media and screen/audio/network settings are kept."
+        [disks_upgrade]="Available target disks — UPDATE AN EXISTING INSTALL"
+        [up_scan]="Looking for an existing PinCabOS installation"
+        [up_found]="Existing installation found, settings will be kept"
+        [up_none]="No PinCabOS installation found on this disk"
+        [up_saved]="Settings saved"
+        [up_restored]="Settings restored"
+        [mode_1]="Erase a full disk and install PinCabOS" [mode_1b]="Recommended for a dedicated pincab."
+        [mode_2]="Install PinCabOS into existing unallocated space" [mode_2b]="Dualboot mode. Does NOT resize existing partitions."
+        [mode_3]="Rescue shell" [mode_4]="Reboot"
+        [disks_full]="Available target disks — FULL ERASE MODE"
+        [disks_dual]="Available target disks — DUALBOOT FREE SPACE MODE"
+        [disk_selected]="Selected disk:" [disk_options]="Options: number = select disk, s = shell, r = refresh, q = reboot"
+        [erase_warn]="ALL DATA WILL BE ERASED ON:" [confirm_prompt]="Type INSTALL PINCABOS to continue:"
+        [invalid]="Invalid choice." [cancelled]="Cancelled." [out_of_range]="Selection out of range."
+        [no_disk]="No installable disk found."
+        [done_ok]="PinCabOS installation completed successfully."
+        [done_remove]="Remove the ISO/USB media, then reboot."
+        [done_reboot]="Press ENTER to reboot now, or CTRL+C to stay in live session..." )
+
+    MSG_fr=( [installer]="Installateur PinCabOS"
+        [choice]="Choix" [search]="Recherche"
+        [regional_title]="Configuration régionale PinCabOS"
+        [regional_intro1]="Toutes les locales UTF-8, dispositions clavier XKB"
+        [regional_intro2]="et fuseaux horaires sont disponibles."
+        [tip_search]="ASTUCE : tapez 's' dans une liste pour rechercher."
+        [next_page]="n = page suivante" [prev_page]="p = page précédente"
+        [search_filter]="s = rechercher/filtrer" [clear_search]="c = effacer la recherche"
+        [entries]="Entrées" [page]="Page" [filter]="Filtre"
+        [menu_locale]="Langue / Région — locales UTF-8"
+        [menu_keyboard]="Disposition clavier — XKB"
+        [menu_variant]="Variante clavier" [menu_timezone]="Fuseau horaire"
+        [orient_title]="Orientation de l'écran"
+        [orient_1]="Paysage (aucune rotation)" [orient_2]="Portrait — 90 degrés horaire"
+        [orient_3]="Portrait — 90 degrés antihoraire" [orient_4]="Retourné — 180 degrés"
+        [recap_title]="Configuration régionale"
+        [recap_continue]="Continuer" [recap_change]="Modifier"
+        [mode_title]="Mode d'installation PinCabOS"
+        [mode_up]="Mettre à jour un PinCabOS existant (conserver tables et réglages)" [mode_upb]="Réinstalle par-dessus une installation existante. Tables, médias et réglages écrans/audio/réseau sont conservés."
+        [disks_upgrade]="Disques cibles disponibles — MISE À JOUR"
+        [up_scan]="Recherche d'une installation PinCabOS existante"
+        [up_found]="Installation existante trouvée, les réglages seront conservés"
+        [up_none]="Aucune installation PinCabOS sur ce disque"
+        [up_saved]="Réglages sauvegardés"
+        [up_restored]="Réglages restaurés"
+        [mode_1]="Effacer un disque entier et installer PinCabOS" [mode_1b]="Recommandé pour un pincab dédié."
+        [mode_2]="Installer dans l'espace non alloué existant" [mode_2b]="Mode dualboot. Ne redimensionne AUCUNE partition."
+        [mode_3]="Console de secours" [mode_4]="Redémarrer"
+        [disks_full]="Disques cibles disponibles — EFFACEMENT TOTAL"
+        [disks_dual]="Disques cibles disponibles — MODE DUALBOOT"
+        [disk_selected]="Disque sélectionné :" [disk_options]="Options : numéro = choisir, s = shell, r = actualiser, q = redémarrer"
+        [erase_warn]="TOUTES LES DONNÉES SERONT EFFACÉES SUR :" [confirm_prompt]="Tapez INSTALL PINCABOS pour continuer :"
+        [invalid]="Choix invalide." [cancelled]="Annulé." [out_of_range]="Sélection hors limites."
+        [no_disk]="Aucun disque installable trouvé."
+        [done_ok]="Installation de PinCabOS terminée avec succès."
+        [done_remove]="Retirez le média ISO/USB, puis redémarrez."
+        [done_reboot]="Appuyez sur ENTRÉE pour redémarrer, ou CTRL+C pour rester en session live..." )
+
+    MSG_de=( [installer]="PinCabOS-Installer"
+        [choice]="Auswahl" [search]="Suche"
+        [regional_title]="PinCabOS Regionale Einrichtung"
+        [regional_intro1]="Alle UTF-8-Locales, XKB-Tastaturlayouts"
+        [regional_intro2]="und Zeitzonen stehen zur Auswahl."
+        [tip_search]="TIPP: 's' in einer Liste tippen, um zu suchen."
+        [next_page]="n = nächste Seite" [prev_page]="p = vorherige Seite"
+        [search_filter]="s = suchen/filtern" [clear_search]="c = Suche löschen"
+        [entries]="Einträge" [page]="Seite" [filter]="Filter"
+        [menu_locale]="Sprache / Region — UTF-8-Locales"
+        [menu_keyboard]="Tastaturlayout — XKB"
+        [menu_variant]="Tastaturvariante" [menu_timezone]="Zeitzone"
+        [orient_title]="Bildschirmausrichtung"
+        [orient_1]="Querformat (keine Drehung)" [orient_2]="Hochformat — 90 Grad im Uhrzeigersinn"
+        [orient_3]="Hochformat — 90 Grad gegen Uhrzeigersinn" [orient_4]="Umgedreht — 180 Grad"
+        [recap_title]="Regionale Konfiguration"
+        [recap_continue]="Weiter" [recap_change]="Ändern"
+        [mode_title]="PinCabOS-Installationsmodus"
+        [mode_1]="Gesamte Festplatte löschen und PinCabOS installieren" [mode_1b]="Empfohlen für einen dedizierten Pincab."
+        [mode_up]="Vorhandenes PinCabOS aktualisieren (Tische und Einstellungen behalten)" [mode_upb]="Installiert ueber eine bestehende Installation. Tische, Medien und Bildschirm-/Audio-/Netzwerkeinstellungen bleiben erhalten."
+        [disks_upgrade]="Verfuegbare Ziellaufwerke — AKTUALISIERUNG"
+        [up_scan]="Suche nach vorhandener PinCabOS-Installation"
+        [up_found]="Vorhandene Installation gefunden, Einstellungen bleiben erhalten"
+        [up_none]="Keine PinCabOS-Installation auf diesem Laufwerk"
+        [up_saved]="Einstellungen gesichert"
+        [up_restored]="Einstellungen wiederhergestellt"
+        [mode_2]="In vorhandenen unpartitionierten Bereich installieren" [mode_2b]="Dualboot-Modus. Partitionen werden NICHT verkleinert."
+        [mode_3]="Rettungskonsole" [mode_4]="Neu starten"
+        [disks_full]="Verfügbare Ziellaufwerke — VOLLSTÄNDIGES LÖSCHEN"
+        [disks_dual]="Verfügbare Ziellaufwerke — DUALBOOT-MODUS"
+        [disk_selected]="Gewähltes Laufwerk:" [disk_options]="Optionen: Nummer = wählen, s = Shell, r = aktualisieren, q = Neustart"
+        [erase_warn]="ALLE DATEN WERDEN GELÖSCHT AUF:" [confirm_prompt]="INSTALL PINCABOS eingeben, um fortzufahren:"
+        [invalid]="Ungültige Auswahl." [cancelled]="Abgebrochen." [out_of_range]="Auswahl außerhalb des Bereichs."
+        [no_disk]="Kein installierbares Laufwerk gefunden."
+        [done_ok]="PinCabOS-Installation erfolgreich abgeschlossen."
+        [done_remove]="ISO/USB-Medium entfernen, dann neu starten."
+        [done_reboot]="ENTER zum Neustart, oder CTRL+C für die Live-Sitzung..." )
+
+    MSG_it=( [installer]="Installatore PinCabOS"
+        [choice]="Scelta" [search]="Ricerca"
+        [regional_title]="Configurazione regionale PinCabOS"
+        [regional_intro1]="Tutte le locale UTF-8, le tastiere XKB"
+        [regional_intro2]="e i fusi orari sono disponibili."
+        [tip_search]="SUGGERIMENTO: digita 's' in un elenco per cercare."
+        [next_page]="n = pagina successiva" [prev_page]="p = pagina precedente"
+        [search_filter]="s = cerca/filtra" [clear_search]="c = cancella ricerca"
+        [entries]="Voci" [page]="Pagina" [filter]="Filtro"
+        [menu_locale]="Lingua / Regione — locale UTF-8"
+        [menu_keyboard]="Layout tastiera — XKB"
+        [menu_variant]="Variante tastiera" [menu_timezone]="Fuso orario"
+        [orient_title]="Orientamento dello schermo"
+        [orient_1]="Orizzontale (nessuna rotazione)" [orient_2]="Verticale — 90 gradi orario"
+        [orient_3]="Verticale — 90 gradi antiorario" [orient_4]="Capovolto — 180 gradi"
+        [recap_title]="Configurazione regionale"
+        [recap_continue]="Continua" [recap_change]="Modifica"
+        [mode_title]="Modalità di installazione PinCabOS"
+        [mode_1]="Cancella un intero disco e installa PinCabOS" [mode_1b]="Consigliato per un pincab dedicato."
+        [mode_up]="Aggiorna un PinCabOS esistente (mantieni tavoli e impostazioni)" [mode_upb]="Reinstalla sopra un'installazione esistente. Tavoli, media e impostazioni schermi/audio/rete sono mantenuti."
+        [disks_upgrade]="Dischi di destinazione — AGGIORNAMENTO"
+        [up_scan]="Ricerca di un'installazione PinCabOS esistente"
+        [up_found]="Installazione esistente trovata, le impostazioni saranno mantenute"
+        [up_none]="Nessuna installazione PinCabOS su questo disco"
+        [up_saved]="Impostazioni salvate"
+        [up_restored]="Impostazioni ripristinate"
+        [mode_2]="Installa nello spazio non allocato esistente" [mode_2b]="Modalità dualboot. NON ridimensiona le partizioni."
+        [mode_3]="Console di ripristino" [mode_4]="Riavvia"
+        [disks_full]="Dischi di destinazione — CANCELLAZIONE TOTALE"
+        [disks_dual]="Dischi di destinazione — MODALITÀ DUALBOOT"
+        [disk_selected]="Disco selezionato:" [disk_options]="Opzioni: numero = seleziona, s = shell, r = aggiorna, q = riavvia"
+        [erase_warn]="TUTTI I DATI SARANNO CANCELLATI SU:" [confirm_prompt]="Digita INSTALL PINCABOS per continuare:"
+        [invalid]="Scelta non valida." [cancelled]="Annullato." [out_of_range]="Selezione fuori intervallo."
+        [no_disk]="Nessun disco installabile trovato."
+        [done_ok]="Installazione di PinCabOS completata con successo."
+        [done_remove]="Rimuovi il supporto ISO/USB, poi riavvia."
+        [done_reboot]="Premi INVIO per riavviare, o CTRL+C per restare in sessione live..." )
+
+    MSG_es=( [installer]="Instalador PinCabOS"
+        [choice]="Opción" [search]="Búsqueda"
+        [regional_title]="Configuración regional PinCabOS"
+        [regional_intro1]="Todas las locales UTF-8, teclados XKB"
+        [regional_intro2]="y zonas horarias están disponibles."
+        [tip_search]="CONSEJO: escribe 's' en una lista para buscar."
+        [next_page]="n = página siguiente" [prev_page]="p = página anterior"
+        [search_filter]="s = buscar/filtrar" [clear_search]="c = borrar búsqueda"
+        [entries]="Entradas" [page]="Página" [filter]="Filtro"
+        [menu_locale]="Idioma / Región — locales UTF-8"
+        [menu_keyboard]="Distribución de teclado — XKB"
+        [menu_variant]="Variante de teclado" [menu_timezone]="Zona horaria"
+        [orient_title]="Orientación de la pantalla"
+        [orient_1]="Horizontal (sin rotación)" [orient_2]="Vertical — 90 grados horario"
+        [orient_3]="Vertical — 90 grados antihorario" [orient_4]="Invertido — 180 grados"
+        [recap_title]="Configuración regional"
+        [recap_continue]="Continuar" [recap_change]="Cambiar"
+        [mode_title]="Modo de instalación PinCabOS"
+        [mode_1]="Borrar un disco completo e instalar PinCabOS" [mode_1b]="Recomendado para un pincab dedicado."
+        [mode_up]="Actualizar un PinCabOS existente (conservar mesas y ajustes)" [mode_upb]="Reinstala sobre una instalacion existente. Mesas, medios y ajustes de pantallas/audio/red se conservan."
+        [disks_upgrade]="Discos de destino — ACTUALIZACION"
+        [up_scan]="Buscando una instalacion PinCabOS existente"
+        [up_found]="Instalacion existente encontrada, se conservaran los ajustes"
+        [up_none]="No hay instalacion PinCabOS en este disco"
+        [up_saved]="Ajustes guardados"
+        [up_restored]="Ajustes restaurados"
+        [mode_2]="Instalar en el espacio no asignado existente" [mode_2b]="Modo dualboot. NO redimensiona particiones."
+        [mode_3]="Consola de rescate" [mode_4]="Reiniciar"
+        [disks_full]="Discos de destino — BORRADO TOTAL"
+        [disks_dual]="Discos de destino — MODO DUALBOOT"
+        [disk_selected]="Disco seleccionado:" [disk_options]="Opciones: número = elegir, s = shell, r = actualizar, q = reiniciar"
+        [erase_warn]="TODOS LOS DATOS SERÁN BORRADOS EN:" [confirm_prompt]="Escribe INSTALL PINCABOS para continuar:"
+        [invalid]="Opción no válida." [cancelled]="Cancelado." [out_of_range]="Selección fuera de rango."
+        [no_disk]="No se encontró ningún disco instalable."
+        [done_ok]="Instalación de PinCabOS completada con éxito."
+        [done_remove]="Retira el medio ISO/USB y reinicia."
+        [done_reboot]="Pulsa INTRO para reiniciar, o CTRL+C para la sesión live..." )
+
+    PCO_LANG="en"
+    PCO_LOC_PREFIX=""
+    PCO_TZ_HINT=""
+
+    t() {
+        local -n _cat="MSG_${PCO_LANG}"
+        local _v="${_cat[$1]:-}"
+        if [ -n "$_v" ]; then printf '%s' "$_v"; else printf '%s' "${MSG_en[$1]:-$1}"; fi
+    }
+
+    pco_choose_language() {
+        if [ -n "${PCO_ANS_LANG:-}" ]; then
+            case "$PCO_ANS_LANG" in
+                fr) PCO_LANG=fr; PCO_LOC_PREFIX=fr; PCO_TZ_HINT=Paris ;;
+                de) PCO_LANG=de; PCO_LOC_PREFIX=de; PCO_TZ_HINT=Berlin ;;
+                it) PCO_LANG=it; PCO_LOC_PREFIX=it; PCO_TZ_HINT=Rome ;;
+                es) PCO_LANG=es; PCO_LOC_PREFIX=es; PCO_TZ_HINT=Madrid ;;
+                *)  PCO_LANG=en; PCO_LOC_PREFIX=en; PCO_TZ_HINT=New_York ;;
+            esac
+            return
+        fi
+        while true; do
+            echo
+            pco_hr
+            echo " PinCabOS Installer"
+            pco_hr
+            echo
+            echo "  [1] Français    [2] English    [3] Deutsch"
+            echo "  [4] Italiano    [5] Español"
+            echo
+            pco_prompt "Choice / Choix: "
+            read -r _PCO_L
+            case "$_PCO_L" in
+                1) PCO_LANG=fr; PCO_LOC_PREFIX=fr; PCO_TZ_HINT=Paris ;;
+                2) PCO_LANG=en; PCO_LOC_PREFIX=en; PCO_TZ_HINT=New_York ;;
+                3) PCO_LANG=de; PCO_LOC_PREFIX=de; PCO_TZ_HINT=Berlin ;;
+                4) PCO_LANG=it; PCO_LOC_PREFIX=it; PCO_TZ_HINT=Rome ;;
+                5) PCO_LANG=es; PCO_LOC_PREFIX=es; PCO_TZ_HINT=Madrid ;;
+                *) continue ;;
+            esac
+            break
+        done
+    }
+
+    LOCALES="$(mktemp)"
+    KEYBOARDS="$(mktemp)"
+    VARIANTS="$(mktemp)"
+    TIMEZONES="$(mktemp)"
+
+    echo "TRACE catalogues: locales..."
+    pco_build_locale_catalog "$LOCALES"
+    echo "TRACE catalogues: claviers..."
+    pco_build_keyboard_catalog "$KEYBOARDS"
+    echo "TRACE catalogues: fuseaux..."
+    pco_build_timezone_catalog "$TIMEZONES"
+    echo "TRACE catalogues: OK"
+
+    pco_choose_language
+
+    while true; do
+
+        if [ -n "${PCO_ANS_LOCALE:-}" ]; then
+            REG_LOCALE="$PCO_ANS_LOCALE"
+            REG_LOCALE_LABEL="$PCO_ANS_LOCALE"
+            BASE_LOCALE="${REG_LOCALE%%.*}"
+            REG_XKB_LAYOUT="${PCO_ANS_XKB:-us}"
+            REG_XKB_VARIANT="${PCO_ANS_XKB_VARIANT:-}"
+            REG_KEYBOARD_LABEL="$REG_XKB_LAYOUT ${REG_XKB_VARIANT:-}"
+            REG_TIMEZONE="${PCO_ANS_TZ:-UTC}"
+            case "${PCO_ANS_ORIENT:-1}" in
+                2) REG_FBROTATE=1; REG_ORIENT_LABEL="Portrait 90 clockwise" ;;
+                3) REG_FBROTATE=3; REG_ORIENT_LABEL="Portrait 90 counter-clockwise" ;;
+                4) REG_FBROTATE=2; REG_ORIENT_LABEL="Upside down 180" ;;
+                *) REG_FBROTATE=0; REG_ORIENT_LABEL="Landscape" ;;
+            esac
+            pco_go "Regional configuration accepted"
+            break
+        fi
+
+        echo
+        pco_hr
+        echo " $(t regional_title)"
+        pco_hr
+        echo
+        echo "$(t regional_intro1)"
+        echo "$(t regional_intro2)"
+        echo
+        echo "$(t tip_search)"
+        echo
+        echo "Examples:"
+        echo "  Locale   search: fr_CA"
+        echo "  Keyboard search: Canada"
+        echo "  Timezone search: Montreal"
+        echo
+
+        #
+        # Locale / Region
+        #
+        pco_choose_list \
+            "$(t menu_locale)" \
+            "$LOCALES" \
+            "$PCO_LOC_PREFIX"
+
+        REG_LOCALE="$PCO_SELECTED"
+        REG_LOCALE_LABEL="$PCO_SELECTED_LABEL"
+
+        BASE_LOCALE="${REG_LOCALE%%.*}"
+        LANG_CODE="${BASE_LOCALE%%_*}"
+
+        REG_LANGUAGE="${BASE_LOCALE}:${LANG_CODE}"
+
+        #
+        # Keyboard layout
+        #
+        pco_choose_list \
+            "$(t menu_keyboard)" \
+            "$KEYBOARDS" \
+            "$LANG_CODE"
+
+        REG_XKB_LAYOUT="$PCO_SELECTED"
+        REG_KEYBOARD_LABEL="$PCO_SELECTED_LABEL"
+
+        #
+        # Keyboard variant
+        #
+        pco_build_keyboard_variant_catalog \
+            "$REG_XKB_LAYOUT" \
+            "$VARIANTS"
+
+        pco_choose_list \
+            "$(t menu_variant) — $REG_XKB_LAYOUT" \
+            "$VARIANTS"
+
+        REG_XKB_VARIANT="$PCO_SELECTED"
+
+        if [ -n "$PCO_SELECTED_LABEL" ] &&
+           [ "$PCO_SELECTED_LABEL" != "Default / no variant" ]; then
+
+            REG_KEYBOARD_LABEL="$REG_KEYBOARD_LABEL / $PCO_SELECTED_LABEL"
+        fi
+
+        #
+        # Change keyboard immediately.
+        #
+        apply_live_keyboard
+
+        #
+        # Timezone — all regions.
+        #
+        pco_choose_list \
+            "$(t menu_timezone)" \
+            "$TIMEZONES" \
+            "$PCO_TZ_HINT"
+
+        REG_TIMEZONE="$PCO_SELECTED"
+
+        # Screen orientation for cabinet display / boot splash.
+        echo
+        pco_hr
+        echo " $(t orient_title)"
+        pco_hr
+        echo
+        echo "  [1] $(t orient_1)"
+        echo "  [2] $(t orient_2)"
+        echo "  [3] $(t orient_3)"
+        echo "  [4] $(t orient_4)"
+        echo
+
+        while true; do
+            pco_prompt "$(t choice): "
+            read -r CHOICE
+            case "$CHOICE" in
+                1) REG_FBROTATE=0; REG_ORIENT_LABEL="Landscape"; break ;;
+                2) REG_FBROTATE=1; REG_ORIENT_LABEL="Portrait 90 clockwise"; break ;;
+                3) REG_FBROTATE=3; REG_ORIENT_LABEL="Portrait 90 counter-clockwise"; break ;;
+                4) REG_FBROTATE=2; REG_ORIENT_LABEL="Upside down 180"; break ;;
+                *) pco_warn "Invalid choice." ;;
+            esac
+        done
+
+        echo
+        pco_hr
+        echo " $(t recap_title)"
+        pco_hr
+        echo
+        echo " Language : $REG_LOCALE_LABEL"
+        echo " Locale   : $REG_LOCALE"
+        echo " Keyboard : $REG_KEYBOARD_LABEL"
+        echo " XKB      : $REG_XKB_LAYOUT ${REG_XKB_VARIANT:-}"
+        echo " Timezone : $REG_TIMEZONE"
+        echo " Screen   : $REG_ORIENT_LABEL"
+        echo
+        echo "  [1] $(t recap_continue)"
+        echo "  [2] $(t recap_change)"
+        echo
+
+        pco_prompt "$(t choice): "
+        read -r CHOICE
+
+        case "$CHOICE" in
+            1)
+                pco_go "Regional configuration accepted"
+                break
+                ;;
+
+            2)
+                continue
+                ;;
+
+            *)
+                pco_warn "Invalid choice."
+                ;;
+        esac
+    done
+
+    rm -f \
+        "$LOCALES" \
+        "$KEYBOARDS" \
+        "$VARIANTS" \
+        "$TIMEZONES"
+}
+
+
+refresh_target_initrd_for_orientation() {
+    [ "${REG_FBROTATE:-0}" != "0" ] || return 0
+    # PINCABOS_SPLASH_CIBLE_V1 : deja fait par pincabos-splash-sync (theme + initrd)
+    if [ "${PCO_TARGET_INITRD_FRESH:-0}" = "1" ]; then
+        pco_go "Target initrd already regenerated with the splash of the installed cab"
+        return 0
+    fi
+    pco_step "Regenerating target initrd (oriented splash must live in initrd)"
+    for d in /proc /sys /dev; do
+        mount --bind "$d" "$TARGET$d" 2>/dev/null || true
+    done
+    if chroot "$TARGET" sh -c 'command -v dracut >/dev/null 2>&1'; then
+        chroot "$TARGET" dracut --regenerate-all --force || pco_warn "dracut regen failed"
+    elif chroot "$TARGET" sh -c 'command -v update-initramfs >/dev/null 2>&1'; then
+        chroot "$TARGET" update-initramfs -u -k all || pco_warn "update-initramfs failed"
+    else
+        pco_warn "no initrd tool found in target"
+    fi
+    for d in /dev /sys /proc; do
+        umount "$TARGET$d" 2>/dev/null || true
+    done
+    pco_go "Target initrd regenerated with oriented splash"
+}
+
+apply_target_network() {
+    # PINCABOS_INSTALLEUR_RESEAU_V1 : ce que la session d'installation a configure
+    # (profils NetworkManager dans netplan 90-NM-*.yaml, cles Wi-Fi comprises)
+    # part sur la cible. Les fichiers netplan tiers de la cible qui definissent
+    # encore ces interfaces sont debarrasses de leur section (sinon netplan
+    # fusionne dhcp4: true avec le profil : IP fixe = DHCP + adresse fixe).
+    local fichier="${PCO_ANS_NETWORK_FILE:-}"
+    local dossier="${PCO_ANS_NETPLAN_DIR:-}"
+    [ -n "$fichier" ] && [ -s "$fichier" ] || return 0
+    echo
+    pco_step "Applying network chosen in the installer to the target"
+    install -d -m 0755 "$TARGET/etc/netplan"
+    local n=0 poses=""
+    if [ -n "$dossier" ] && [ -d "$dossier" ]; then
+        for f in "$dossier"/90-NM-*.yaml; do
+            [ -f "$f" ] || continue
+            install -m 0600 "$f" "$TARGET/etc/netplan/$(basename "$f")"
+            poses="$poses $(basename "$f")"
+            n=$((n + 1))
+        done
+    fi
+    local outil="$TARGET/opt/pincabos/tools/pincabos_network.py"
+    for iface in $(python3 -c 'import json,sys;print(" ".join(i.get("device","") for i in json.load(open(sys.argv[1])).get("interfaces",[])))' "$fichier" 2>/dev/null); do
+        [ -f "$outil" ] && python3 "$outil" netplan-takeover "$iface" --root "$TARGET" || true
+    done
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    local iface f
+    if [ "$n" -gt 0 ]; then
+        # PINCABOS_INSTALLEUR_RESEAU_V2 : sur une interface que la session a
+        # configuree, son profil est le seul. Un autre 90-NM-*.yaml de la cible
+        # (mise a jour : ancien profil du cab remis par la restauration) serait
+        # en concurrence au demarrage.
+        for iface in $(python3 -c 'import json,sys;print(" ".join(i.get("device","") for i in json.load(open(sys.argv[1])).get("interfaces",[])))' "$fichier" 2>/dev/null); do
+            for f in "$TARGET"/etc/netplan/90-NM-*.yaml; do
+                [ -f "$f" ] || continue
+                case " $poses " in *" $(basename "$f") "*) continue ;; esac
+                if grep -qE "^[[:space:]]+(${iface}:|name:[[:space:]]*\"?${iface}\"?)[[:space:]]*$" "$f"; then
+                    rm -f "$f"
+                    pco_go "older NetworkManager profile of $iface removed from the target: $(basename "$f")"
+                fi
+            done
+        done
+        date -Is > "$TARGET/opt/pincabos/flags/network-installer.done"
+        pco_go "network profiles installed ($n netplan file(s)), first boot keeps the installer's choice"
+        return 0
+    fi
+    # PINCABOS_INSTALLEUR_RESEAU_V2 : DHCP laisse tel quel dans la session = aucun
+    # profil persiste (NetworkManager garde sa connexion automatique en memoire).
+    # Le drapeau ne doit alors pas etre pose : il faisait sauter le DHCP generique
+    # du premier demarrage et la cible demarrait sans reseau (Alpha 3.77).
+    rm -f "$TARGET/opt/pincabos/flags/network-installer.done"
+    local eth
+    eth=$(python3 -c 'import json,sys;print(" ".join(i.get("device","") for i in json.load(open(sys.argv[1])).get("interfaces",[]) if i.get("type","")=="ethernet"))' "$fichier" 2>/dev/null)
+    if [ -n "$eth" ] && ! ls "$TARGET"/etc/netplan/*.yaml >/dev/null 2>&1; then
+        # Cible sans aucun fichier netplan (installation neuve, ou cab mis a jour
+        # apres 3.77) : DHCP tout de suite sur les interfaces ethernet de la session.
+        {
+            echo "network:"
+            echo "  version: 2"
+            echo "  renderer: NetworkManager"
+            echo "  ethernets:"
+            for iface in $eth; do
+                printf '    %s:\n      dhcp4: true\n      dhcp6: true\n      optional: true\n' "$iface"
+            done
+        } > "$TARGET/etc/netplan/01-pincabos-dhcp.yaml"
+        chmod 600 "$TARGET/etc/netplan/01-pincabos-dhcp.yaml"
+        pco_go "no network profile persisted in the session: DHCP netplan written for$(printf ' %s' $eth)"
+        return 0
+    fi
+    pco_go "no network profile persisted in the session: the target keeps its own network (generic DHCP at first boot)"
+}
+
+apply_target_dmd() {
+    # PINCABOS_INSTALLEUR_DMD_V1 : sans full DMD, l'assistant a produit le
+    # zedmd.json (ZeDMD USB/Wi-Fi, PIN2DMD ou aucun). Pose sur la cible, puis
+    # pincabos-zedmd (l'unique ecrivain des sections DMD des INI) l'applique
+    # dans le chroot ; le premier demarrage le rejoue si les INI manquaient
+    # encore (pincabos-dmd-installer.service, drapeau dmd-installer.pending).
+    local src="${PCO_ANS_DMD_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying DMD hardware chosen in the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "DMD file missing or empty: $src (DMD page on the cab will do it)"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/zedmd.json"
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    date -Is > "$TARGET/opt/pincabos/flags/dmd-installer.pending"
+    if [ -x "$TARGET/opt/pincabos/tools/pincabos-zedmd" ]; then
+        chroot "$TARGET" runuser -u pinball -- /opt/pincabos/tools/pincabos-zedmd apply 2>&1 | sed 's/^/    /' || true
+    fi
+    pco_go "zedmd.json installed (mode: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("mode","off"))' "$src" 2>/dev/null || echo '?'))"
+}
+
+apply_target_audio() {
+    # PINCABOS_INSTALLEUR_SON_DOF_V1 : l assistant a choisi les sorties ALSA, le
+    # mode VPX et le volume. audio-router.json (source de la page Audio) part sur
+    # la cible ; le premier demarrage (pincabos-installer-firstboot) le traduit en
+    # noms de sorties VPX et en volume de la session PipeWire.
+    local src="${PCO_ANS_AUDIO_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying audio chosen in the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "audio file missing or empty: $src (Audio page on the cab will do it)"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/audio-router.json"
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    date -Is > "$TARGET/opt/pincabos/flags/audio-installer.pending"
+    pco_go "audio-router.json installed (playfield: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("playfield_device",""))' "$src" 2>/dev/null || echo '?'))"
+}
+
+apply_target_dof() {
+    # PINCABOS_INSTALLEUR_SON_DOF_V1 : DOF active ou non, cartes vues. Le premier
+    # demarrage pose [Plugin.DOF] Enable (VPX) et [DOF] enabledof (VPinFE).
+    local src="${PCO_ANS_DOF_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying DOF choice from the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "DOF file missing or empty: $src"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config/dof"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/dof/installer.json"
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    date -Is > "$TARGET/opt/pincabos/flags/dof-installer.pending"
+    pco_go "dof/installer.json installed (enabled: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("enabled"))' "$src" 2>/dev/null || echo '?'))"
+}
+
+apply_target_toys() {
+    # PINCABOS_INSTALLEUR_TOYS_V1 : controleurs de rubans declares (matrice ou
+    # rubans) = inventaire de la page /dof/hardware. Le premier demarrage genere
+    # cabinet.xml avec dof-cabinet (pincabos-dof apply-toys-firstboot).
+    local src="${PCO_ANS_TOYS_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying toys / LED controllers from the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "toys file missing or empty: $src"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config/dof"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/dof/hardware-inventory.json"
+    install -d -m 0755 "$TARGET/opt/pincabos/flags"
+    date -Is > "$TARGET/opt/pincabos/flags/toys-installer.pending"
+    pco_go "hardware-inventory.json installed ($(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1])).get("devices",[])))' "$src" 2>/dev/null || echo '?') controller(s))"
+}
+
+apply_target_screens() {
+    # PINCABOS_INSTALLEUR_ECRANS_V1 : l'etape Ecrans de l'assistant a produit
+    # screens.json (roles, geometrie, rotation) et les liaisons role -> EDID.
+    # Poses sur la cible, ils font du premier demarrage un cab deja regle :
+    # topologie (roles par EDID), rotation physique (lot 0), VPinFE, VPX, splash.
+    local src="${PCO_ANS_SCREENS_FILE:-}"
+    local liaisons="${PCO_ANS_BINDINGS_FILE:-}"
+    [ -n "$src" ] || return 0
+    echo
+    pco_step "Applying screens chosen in the installer to the target"
+    if [ ! -s "$src" ]; then
+        pco_warn "screens file missing or empty: $src (first boot will auto-detect)"
+        return 0
+    fi
+    install -d -o 1000 -g 1000 -m 0775 "$TARGET/opt/pincabos/config/screens"
+    install -o 1000 -g 1000 -m 0664 "$src" "$TARGET/opt/pincabos/config/screens/screens.json"
+    if [ -n "$liaisons" ] && [ -s "$liaisons" ]; then
+        install -o 1000 -g 1000 -m 0664 "$liaisons" "$TARGET/opt/pincabos/config/screens/display-role-bindings.json"
+    fi
+    pco_go "screens.json and EDID bindings installed (playfield rotation: $(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("playfield_rotation","0"))' "$src" 2>/dev/null || echo '?'))"
+
+    # PINCABOS_INSTALLEUR_CALIBRATIONS_V1 : les rectangles FullDMD / DMD viennent de la
+    # disposition choisie ; ceux du cab source (dans l'image) sont retires, pas herites.
+    local cal="${PCO_ANS_CALIBRATIONS_FILE:-}"
+    rm -f "$TARGET/opt/pincabos/config/fulldmd-calibration.json" "$TARGET/opt/pincabos/config/dmd-calibration.json" \
+          "$TARGET/opt/pincabos/config/display-aliases.env" "$TARGET/opt/pincabos/config/fulldmd-background.env"
+    if [ -n "$cal" ] && [ -s "$cal" ]; then
+        python3 - "$cal" "$TARGET/opt/pincabos/config" <<'PY'
+import json, sys, datetime
+cal = json.load(open(sys.argv[1])); cfg = sys.argv[2]
+meta = {"modified_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "modified_by": "PinCabOS installer"}
+for nom, cle in (("fulldmd-calibration.json", "fulldmd"), ("dmd-calibration.json", "dmd")):
+    d = cal.get(cle)
+    if d:
+        d = dict(d, _pincabos_meta=meta)
+        json.dump(d, open(cfg + "/" + nom, "w"), indent=2, ensure_ascii=False)
+        print("  " + nom + " : " + d["geometry_x11"] + " (ecran " + str(d["screen_id"]) + ")")
+PY
+        chown 1000:1000 "$TARGET/opt/pincabos/config/fulldmd-calibration.json" "$TARGET/opt/pincabos/config/dmd-calibration.json" 2>/dev/null || true
+        pco_go "FullDMD / DMD windows derived from the chosen layout"
+    fi
+
+    # PINCABOS_SPLASH_CIBLE_V1 : le premier demarrage montre deja les galeries
+    # du cab installe (playfield reconnu a sa resolution, rotation choisie), pas
+    # le theme du media ; pincabos-splash-sync regenere lui-meme l initrd cible.
+    if [ -x "$TARGET/usr/local/sbin/pincabos-splash-sync" ]; then
+        local d
+        for d in /proc /sys /dev; do mount --bind "$d" "$TARGET$d" 2>/dev/null || true; done
+        if chroot "$TARGET" /usr/local/sbin/pincabos-splash-sync --force; then
+            PCO_TARGET_INITRD_FRESH=1
+            pco_go "Boot splash of the installed cab generated (galleries, per-screen)"
+        else
+            pco_warn "splash sync on target failed (first boot will regenerate it)"
+        fi
+        for d in /dev /sys /proc; do umount "$TARGET$d" 2>/dev/null || true; done
+    fi
+}
+
+ensure_target_vpx_link() {
+    # PINCABOS_VPX_LINK_V1 : toute la chaine de lancement passe par /home/pinball/vpx
+    # (pincabos-paths.sh). Une image sans ce lien (vu le 05/09 : bundle 5231 nu)
+    # installe un cab qui ne lance aucune table. On pointe le bundle le plus recent.
+    local h="$TARGET/home/pinball" plus_recent
+    [ -d "$h" ] || return 0
+    if [ ! -e "$h/vpx" ] || [ ! -x "$h/vpx/VPinballX_BGFX" ]; then
+        plus_recent="$(ls -d "$h"/VPinballX_BGFX-*/ 2>/dev/null | sort -V | tail -1)"
+        if [ -n "$plus_recent" ]; then
+            ln -sfn "$(basename "$plus_recent")" "$h/vpx"
+            chown -h 1000:1000 "$h/vpx" 2>/dev/null || true
+            pco_go "VPX link created: ~/vpx -> $(basename "$plus_recent")"
+        else
+            pco_warn "no VPinballX_BGFX bundle in the image: ~/vpx not created"
+        fi
+    fi
+}
+
+apply_target_home_templates() {
+    # PINCABOS_MODELES_JOUEUR_V1 : ce que PinCabOS attend dans le compte du joueur
+    # (vpinfe.ini, bases de depart, theme Revolution, tableau de bord, unites
+    # PipeWire, ini VPX de reference et DOF, gamecontrollerdb) vit dans
+    # /opt/pincabos/templates/home et n est plus porte par l image du compte.
+    # Pose ce qui manque, n ecrase jamais un fichier deja la (mise a jour).
+    local outil="$TARGET/opt/pincabos/tools/pincabos_home_templates.py"
+    [ -f "$outil" ] || { pco_warn "player templates tool missing in the image"; return 0; }
+    echo
+    pco_step "Placing PinCabOS player templates in the target account"
+    if python3 "$outil" apply --root "$TARGET"; then
+        pco_go "player templates placed (existing files kept)"
+    else
+        pco_warn "player templates: see messages above"
+    fi
+}
+
+apply_target_identity() {
+    echo
+    pco_step "Applying PinCabOS identity to installed system (os-release, issue, GRUB_DISTRIBUTOR)"
+    # PINCABOS_IDENTITE_V1 : le systeme s'appelle PinCabOS partout ou un humain
+    # le lit ; ID=ubuntu et les depots ne bougent pas. update-grub et l'entree
+    # UEFI sont poses par les etapes GRUB de l'installateur (bootloader-id=PinCabOS).
+    if [ -f "$TARGET/opt/pincabos/tools/pincabos_identity.py" ]; then
+        python3 "$TARGET/opt/pincabos/tools/pincabos_identity.py" apply --root "$TARGET" --no-grub \
+            || pco_warn "identity apply failed (non fatal)"
+    else
+        pco_warn "pincabos_identity.py missing in target, identity skipped"
+    fi
+    pco_go "PinCabOS identity applied"
+}
+
+apply_target_orientation() {
+    echo
+    pco_step "Applying screen orientation to installed PinCabOS"
+
+    local N="${REG_FBROTATE:-0}"
+    local GRUBF="$TARGET/etc/default/grub"
+
+    case "$N" in
+        0|1|2|3) ;;
+        *) pco_error "Invalid fbcon rotation value: $N"; return 1 ;;
+    esac
+
+    # 1) Console/kernel rotation. Remove any previous value first.
+    if [ -f "$GRUBF" ]; then
+        sed -i -E 's/[[:space:]]*fbcon=rotate:[0-3]//g' "$GRUBF"
+
+        if [ "$N" != "0" ]; then
+            if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' "$GRUBF"; then
+                sed -i -E \
+                    "s/^(GRUB_CMDLINE_LINUX_DEFAULT=\")(.*)(\")[[:space:]]*$/\\1\\2 fbcon=rotate:$N\\3/" \
+                    "$GRUBF"
+            else
+                printf 'GRUB_CMDLINE_LINUX_DEFAULT="fbcon=rotate:%s"\n' "$N" >> "$GRUBF"
+            fi
+        fi
+    else
+        pco_warn "target /etc/default/grub missing — console rotation skipped"
+    fi
+
+    # 2) Rotation-aware PinCabOS Plymouth splash.
+    local THEME="$TARGET/usr/share/plymouth/themes/pincabos/pincabos.script"
+    if [ -f "$THEME" ] && [ "$N" != "0" ]; then
+        local DEG=0
+        [ "$N" = "1" ] && DEG=90
+        [ "$N" = "2" ] && DEG=180
+        [ "$N" = "3" ] && DEG=270
+
+        [ -f "$THEME.pcosorig" ] || cp "$THEME" "$THEME.pcosorig"
+
+        cat > "$THEME" <<'PLYSCRIPT'
+# PinCabOS rotation-aware splash v6 (installer-generated)
+# PINCABOS_SPLASH_INSTALLER_PER_SCREEN_V1
+#
+# Une illustration par ecran, a la taille de cet ecran, et la rotation ne
+# s'applique qu'a la sortie primaire — le playfield. Plymouth ouvre une
+# surface par sortie video et les fait toutes partir de l'origine : dessiner
+# sans indice recopiait sur le fronton un visuel calcule pour le playfield.
+#
+# Des que les ecrans sont configures, pincabos-splash-sync remplace ce theme
+# par une version qui connait la resolution de chaque role.
+#
+# La barre est posee en coordonnees ECRAN (jamais de Rotate() sur la barre :
+# Rotate recadre dans le canevas d origine et transforme la barre en pastille).
+rot = __ROT_DEG__;
+PI = 3.14159265358979;
+pf = 0;
+
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+bg0 = Image("pincabos.png");
+iw = bg0.GetWidth();
+ih = bg0.GetHeight();
+
+fonds = [];
+i = 0;
+while (i < 8) {
+    sw = Window.GetWidth(i);
+    if (sw > 0) {
+        sh = Window.GetHeight(i);
+        ox = Window.GetX(i);
+        oy = Window.GetY(i);
+
+        r = 0;
+        if (i == pf) r = rot;
+        if (r == 90 || r == 270) { lw = sh; lh = sw; } else { lw = sw; lh = sh; }
+
+        scale = lw / iw;
+        if (ih * scale > lh) scale = lh / ih;
+        img = bg0.Scale(iw * scale, ih * scale);
+        if (r != 0) img = img.Rotate(r * PI / 180);
+
+        fonds[i] = Sprite(img);
+        fonds[i].SetX(ox + (sw - img.GetWidth()) / 2);
+        fonds[i].SetY(oy + (sh - img.GetHeight()) / 2);
+        fonds[i].SetZ(-100);
+
+        if (i == pf) {
+            pf_ox = ox; pf_oy = oy;
+            pf_sw = sw; pf_sh = sh;
+            pf_lw = lw; pf_lh = lh;
+            pf_bw = iw * scale; pf_bh = ih * scale;
+        }
+    }
+    i++;
+}
+
+sw = pf_sw; sh = pf_sh;
+lw = pf_lw; lh = pf_lh;
+bw = pf_bw; bh = pf_bh;
+
+bar_width = bw * 0.193;
+bar_height = 6;
+bar_lx = (lw - bw) / 2 + (bw - bar_width) / 2;
+bar_ly = (lh - bh) / 2 + bh * 0.728;
+
+box_image = Image("progress_box.png");
+bar_image = Image("progress_bar.png");
+
+box_sprite = Sprite();
+box_sprite.SetZ(10);
+if (rot == 0) {
+    box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
+    box_sprite.SetX(pf_ox + bar_lx); box_sprite.SetY(pf_oy + bar_ly);
+}
+if (rot == 180) {
+    box_sprite.SetImage(box_image.Scale(bar_width, bar_height));
+    box_sprite.SetX(pf_ox + sw - bar_lx - bar_width); box_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
+}
+if (rot == 90) {
+    box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
+    box_sprite.SetX(pf_ox + sw - bar_ly - bar_height); box_sprite.SetY(pf_oy + bar_lx);
+}
+if (rot == 270) {
+    box_sprite.SetImage(box_image.Scale(bar_height, bar_width));
+    box_sprite.SetX(pf_ox + bar_ly); box_sprite.SetY(pf_oy + sh - bar_lx - bar_width);
+}
+
+bar_sprite = Sprite();
+bar_sprite.SetZ(11);
+
+progress_target = 0;
+progress_shown = 0;
+tick = 0;
+
+fun refresh_callback() {
+    tick++;
+    creep = tick / 1500;
+    if (creep > 0.95) creep = 0.95;
+    target = progress_target;
+    if (target < creep) target = creep;
+    progress_shown = progress_shown + (target - progress_shown) * 0.08;
+    cw = bar_width * progress_shown;
+    if (cw < 1) cw = 1;
+    if (rot == 0) {
+        bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
+        bar_sprite.SetX(pf_ox + bar_lx); bar_sprite.SetY(pf_oy + bar_ly);
+    }
+    if (rot == 180) {
+        bar_sprite.SetImage(bar_image.Scale(cw, bar_height));
+        bar_sprite.SetX(pf_ox + sw - bar_lx - cw); bar_sprite.SetY(pf_oy + sh - bar_ly - bar_height);
+    }
+    if (rot == 90) {
+        bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
+        bar_sprite.SetX(pf_ox + sw - bar_ly - bar_height); bar_sprite.SetY(pf_oy + bar_lx);
+    }
+    if (rot == 270) {
+        bar_sprite.SetImage(bar_image.Scale(bar_height, cw));
+        bar_sprite.SetX(pf_ox + bar_ly); bar_sprite.SetY(pf_oy + sh - bar_lx - cw);
+    }
+}
+
+fun boot_progress_callback(duration, progress) {
+    if (progress < 0) progress = 0;
+    if (progress > 1) progress = 1;
+    progress_target = progress;
+}
+
+Plymouth.SetBootProgressFunction(boot_progress_callback);
+Plymouth.SetRefreshFunction(refresh_callback);
+PLYSCRIPT
+        sed -i "s/__ROT_DEG__/$DEG/" "$THEME"
+        pco_go "Plymouth splash rotated: $DEG degrees"
+    fi
+
+    # 3) Persistent PinCabOS record.
+    mkdir -p "$TARGET/etc/pincabos"
+    printf 'PINCABOS_FBCON_ROTATE="%s"\nPINCABOS_ORIENT_LABEL="%s"\n' \
+        "$N" "${REG_ORIENT_LABEL:-Landscape}" \
+        > "$TARGET/etc/pincabos/orientation.conf"
+    chmod 0644 "$TARGET/etc/pincabos/orientation.conf"
+
+    pco_go "Orientation installed: ${REG_ORIENT_LABEL:-Landscape}"
+}
+
+apply_target_regional() {
+    echo
+    pco_step "Applying regional settings to installed PinCabOS"
+
+    [ -d "$TARGET/etc" ] || {
+        pco_error "target /etc missing"
+        return 1
+    }
+
+    mkdir -p \
+        "$TARGET/etc/default" \
+        "$TARGET/etc/pincabos"
+
+    #
+    # Keyboard
+    #
+    cat > "$TARGET/etc/default/keyboard" <<EOF
+XKBMODEL="pc105"
+XKBLAYOUT="$REG_XKB_LAYOUT"
+XKBVARIANT="$REG_XKB_VARIANT"
+XKBOPTIONS=""
+BACKSPACE="guess"
+EOF
+
+    # PINCABOS_X11_KEYBOARD_V1
+    # Le serveur X ignore /etc/default/keyboard des qu'un InputClass existe :
+    # le payload en embarque un, fige sur la disposition du cabinet de BUILD.
+    # Sans cette ecriture, l'installation se fait dans la bonne disposition
+    # puis la session graphique repasse en QWERTY.
+    mkdir -p "$TARGET/etc/X11/xorg.conf.d"
+    cat > "$TARGET/etc/X11/xorg.conf.d/00-pincabos-keyboard.conf" <<EOF
+# Managed by PinCabOS Keyboard widget.
+Section "InputClass"
+    Identifier "pincabos-keyboard-layout"
+    MatchIsKeyboard "on"
+    Option "XkbModel" "pc105"
+    Option "XkbLayout" "$REG_XKB_LAYOUT"
+    Option "XkbVariant" "$REG_XKB_VARIANT"
+    Option "XkbOptions" ""
+EndSection
+EOF
+    chmod 0644 "$TARGET/etc/X11/xorg.conf.d/00-pincabos-keyboard.conf"
+
+    #
+    # Locale
+    #
+    cat > "$TARGET/etc/default/locale" <<EOF
+LANG=$REG_LOCALE
+LANGUAGE=$REG_LANGUAGE
+EOF
+
+    cat > "$TARGET/etc/locale.conf" <<EOF
+LANG=$REG_LOCALE
+LANGUAGE=$REG_LANGUAGE
+EOF
+
+    touch "$TARGET/etc/locale.gen"
+
+    #
+    # Ensure exactly the selected locale is enabled.
+    #
+    if grep -Eq \
+        "^[#[:space:]]*${REG_LOCALE}[[:space:]]+UTF-8" \
+        "$TARGET/etc/locale.gen"; then
+
+        sed -i -E \
+            "s|^[#[:space:]]*(${REG_LOCALE}[[:space:]]+UTF-8).*$|\1|" \
+            "$TARGET/etc/locale.gen"
+    else
+        printf '%s UTF-8\n' "$REG_LOCALE" \
+            >> "$TARGET/etc/locale.gen"
+    fi
+
+    if [ -x "$TARGET/usr/sbin/locale-gen" ]; then
+        chroot "$TARGET" /usr/sbin/locale-gen "$REG_LOCALE" || {
+            pco_warn "locale-gen returned an error."
+        }
+    else
+        pco_warn "locale-gen not present in installed target."
+    fi
+
+    if [ -x "$TARGET/usr/sbin/update-locale" ]; then
+        chroot "$TARGET" /usr/sbin/update-locale \
+            "LANG=$REG_LOCALE" \
+            "LANGUAGE=$REG_LANGUAGE" || true
+    fi
+
+    #
+    # Timezone
+    #
+    if [ ! -e "$TARGET/usr/share/zoneinfo/$REG_TIMEZONE" ]; then
+        pco_error "Timezone unavailable in target: $REG_TIMEZONE"
+        return 1
+    fi
+
+    ln -sfn \
+        "/usr/share/zoneinfo/$REG_TIMEZONE" \
+        "$TARGET/etc/localtime"
+
+    printf '%s\n' "$REG_TIMEZONE" \
+        > "$TARGET/etc/timezone"
+
+    #
+    # PinCabOS persistent record.
+    #
+    cat > "$TARGET/etc/pincabos/regional.conf" <<EOF
+PINCABOS_LOCALE="$REG_LOCALE"
+PINCABOS_LANGUAGE="$REG_LANGUAGE"
+PINCABOS_KEYBOARD_LAYOUT="$REG_XKB_LAYOUT"
+PINCABOS_KEYBOARD_VARIANT="$REG_XKB_VARIANT"
+PINCABOS_TIMEZONE="$REG_TIMEZONE"
+EOF
+
+    chmod 644 \
+        "$TARGET/etc/default/keyboard" \
+        "$TARGET/etc/default/locale" \
+        "$TARGET/etc/locale.conf" \
+        "$TARGET/etc/timezone" \
+        "$TARGET/etc/pincabos/regional.conf"
+
+    # PINCABOS_COLLECTION_I18N_V1
+    # Collection livree par l'image, renommee dans la langue choisie.
+    PCO_FAV_NAME="Favorites"
+    case "${REG_LOCALE%%_*}" in
+        fr) PCO_FAV_NAME="Favoris" ;;
+        de) PCO_FAV_NAME="Favoriten" ;;
+        it) PCO_FAV_NAME="Preferiti" ;;
+        es) PCO_FAV_NAME="Favoritos" ;;
+    esac
+    PCO_COLLECTIONS="$TARGET/home/pinball/.config/vpinfe/collections.ini"
+    if [ "$PCO_FAV_NAME" != "Favorites" ] && [ -f "$PCO_COLLECTIONS" ]; then
+        sed -i "s|^\[Favorites\]$|[$PCO_FAV_NAME]|" "$PCO_COLLECTIONS"
+    fi
+
+    echo
+    pco_go "Regional settings installed"
+    echo " Locale   : $REG_LOCALE"
+    echo " Keyboard : $REG_XKB_LAYOUT ${REG_XKB_VARIANT:-}"
+    echo " Timezone : $REG_TIMEZONE"
+}
+
+
+check_payload() {
+  pco_step "Live media payload check"
+
+  test -d "$PAYLOAD_DIR" || {
+    pco_error "payload directory not found: $PAYLOAD_DIR"
+    ls -lah /cdrom 2>/dev/null || true
+    exit 1
+  }
+
+  test -x "$PAYLOAD_DIR/pincabos-v8.1g-install-cab-payload-to-target.sh" || {
+    pco_error "install helper missing or not executable"
+    exit 1
+  }
+
+  # PINCABOS_LIVE_SQUASHFS_V1 — same two shapes as the deployment helper.
+  if [ -f "$PAYLOAD_DIR/../casper/filesystem.squashfs" ]; then
+    echo "Live squashfs detected, already verified by casper at boot."
+    ( cd "$PAYLOAD_DIR" && sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256 )
+  else
+    (
+      cd "$PAYLOAD_DIR"
+      sha256sum -c pincabos-rootfs-cab-v8.1g.parts.sha256
+      sha256sum -c pincabos-plymouth-theme-overlay-v8.1g.sha256
+    )
+  fi
+
+  echo
+  pco_go "payload checksums valid"
+}
+
+choose_disk() {
+  local title="$1"
+  local CHOICE IDX
+
+  if [ -n "${PCO_ANS_DISK:-}" ] && [ -b "$PCO_ANS_DISK" ]; then
+    DISK="$PCO_ANS_DISK"
+    return
+  fi
+
+  while true; do
+    echo
+    pco_step "$title"
+    echo
+
+    mapfile -t DISKS < <(lsblk -dpno NAME,TYPE | awk '$2=="disk"{print $1}' | grep -Ev '/dev/loop|/dev/sr|/dev/ram' || true)
+
+    if [ "${#DISKS[@]}" -eq 0 ]; then
+      echo "$(t no_disk)"
+      echo "Options: r = retry, s = shell, q = reboot"
+      pco_prompt "> "
+      read -r CHOICE
+      case "$CHOICE" in
+        r|R) continue ;;
+        s|S) bash ;;
+        q|Q) reboot ;;
+      esac
+      continue
+    fi
+
+    local i=1
+    for d in "${DISKS[@]}"; do
+      echo "  [$i] $(lsblk -dpno NAME,SIZE,MODEL "$d")"
+      i=$((i+1))
+    done
+
+    echo
+    echo "$(t disk_options)"
+    pco_prompt "$(t choice): "
+    read -r CHOICE
+
+    case "$CHOICE" in
+      s|S) bash; continue ;;
+      r|R) continue ;;
+      q|Q) reboot ;;
+    esac
+
+    [[ "$CHOICE" =~ ^[0-9]+$ ]] || {
+      echo "$(t invalid)"
+      continue
+    }
+
+    IDX=$((CHOICE-1))
+    if [ "$IDX" -lt 0 ] || [ "$IDX" -ge "${#DISKS[@]}" ]; then
+      echo "$(t out_of_range)"
+      continue
+    fi
+
+    DISK="${DISKS[$IDX]}"
+    return 0
+  done
+}
+
+part_paths_for_disk() {
+  local disk="$1"
+
+  if [[ "$disk" =~ nvme|mmcblk ]]; then
+    EFI_PART="${disk}p1"
+    ROOT_PART="${disk}p2"
+  else
+    EFI_PART="${disk}1"
+    ROOT_PART="${disk}2"
+  fi
+}
+
+unmount_disk_mounts() {
+  local disk="$1"
+
+  while IFS= read -r mp; do
+    [ -n "$mp" ] && umount -R "$mp" 2>/dev/null || true
+  done < <(lsblk -rpno MOUNTPOINT "$disk" | awk 'NF')
+}
+
+prepare_target_mount() {
+  umount -R "$TARGET" 2>/dev/null || true
+  rm -rf "$TARGET"
+  mkdir -p "$TARGET"
+}
+
+# PINCABOS_TARGET_RW_GUARD_V1
+target_mount_options() {
+  findmnt -rn -o OPTIONS --target "$TARGET" 2>/dev/null || true
+}
+
+target_is_rw() {
+  local options
+  options="$(target_mount_options)"
+  case ",$options," in
+    *,rw,*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+target_write_probe() {
+  local probe="$TARGET/.pincabos-rw-probe-$$"
+  if ! (
+    umask 077
+    printf 'PinCabOS write probe\n' > "$probe"
+    sync "$probe" 2>/dev/null || sync
+    rm -f "$probe"
+  ) 2>/dev/null; then
+    rm -f "$probe" 2>/dev/null || true
+    return 1
+  fi
+  return 0
+}
+
+verify_target_rw() {
+  mountpoint -q "$TARGET" || {
+    pco_error "Target root is not mounted: $TARGET"
+    return 1
+  }
+
+  if ! target_is_rw; then
+    pco_warn "Target root is not RW; attempting one remount read-write"
+    mount -o remount,rw "$TARGET" 2>/dev/null || true
+  fi
+
+  target_is_rw || {
+    pco_error "Target root remains read-only"
+    findmnt -T "$TARGET" -o SOURCE,TARGET,FSTYPE,OPTIONS 2>/dev/null || true
+    return 1
+  }
+
+  target_write_probe || {
+    pco_error "Target root write probe failed"
+    findmnt -T "$TARGET" -o SOURCE,TARGET,FSTYPE,OPTIONS 2>/dev/null || true
+    return 1
+  }
+
+  pco_go "Target root mounted RW and write-tested"
+}
+
+show_target_storage_diagnostics() {
+  echo
+  pco_step "Target storage diagnostics"
+  findmnt -T "$TARGET" -o SOURCE,TARGET,FSTYPE,OPTIONS 2>/dev/null || true
+  lsblk -o NAME,TYPE,SIZE,FSTYPE,FSUSE%,MOUNTPOINTS,MODEL "$DISK" 2>/dev/null || true
+  echo
+  echo "Recent kernel storage/filesystem messages:"
+  dmesg 2>/dev/null \
+    | grep -Ei 'EXT4-fs|I/O error|Buffer I/O|blk_update_request|read-only|remount|nvme|ata[0-9].*(error|reset|failed)' \
+    | tail -120 || true
+}
+
+recover_fresh_target_filesystem_once() {
+  local mode="$1"
+  local fsck_rc=0
+
+  if [ "$mode" = "upgrade" ]; then
+    pco_error "Automatic filesystem repair is disabled in upgrade mode"
+    return 1
+  fi
+
+  pco_warn "Target became read-only/unwritable during install."
+  pco_warn "One automatic ext4 repair + payload retry will be attempted."
+
+  sync || true
+  umount -R "$TARGET" 2>/dev/null || true
+  mountpoint -q "$TARGET" && {
+    pco_error "Unable to unmount target for filesystem repair"
+    return 1
+  }
+
+  set +e
+  e2fsck -fy "$ROOT_PART"
+  fsck_rc="$?"
+  set -e
+
+  case "$fsck_rc" in
+    0|1) ;;
+    *)
+      pco_error "e2fsck failed or requires reboot (code $fsck_rc)"
+      return 1
+      ;;
+  esac
+
+  prepare_target_mount
+  mount -o rw "$ROOT_PART" "$TARGET" || {
+    pco_error "Unable to remount repaired root filesystem"
+    return 1
+  }
+  verify_target_rw || return 1
+
+  mkdir -p "$TARGET/boot/efi"
+  mount "$EFI_PART" "$TARGET/boot/efi" || {
+    pco_error "Unable to remount EFI partition after filesystem repair"
+    return 1
+  }
+  mountpoint -q "$TARGET/boot/efi" || {
+    pco_error "EFI partition is not mounted after filesystem repair"
+    return 1
+  }
+
+  pco_go "Target filesystem repaired, remounted and ready for one retry"
+}
+
+write_fstab() {
+  local root_part="$1"
+  local efi_part="$2"
+
+  echo
+  pco_step "Writing correct fstab"
+
+  ROOT_UUID="$(blkid -s UUID -o value "$root_part")"
+  EFI_UUID="$(blkid -s UUID -o value "$efi_part")"
+
+  cat >"$TARGET/etc/fstab" <<FSTAB
+# PinCabOS generated fstab
+UUID=$ROOT_UUID / ext4 defaults,noatime 0 1
+UUID=$EFI_UUID /boot/efi vfat umask=0077 0 1
+FSTAB
+
+  cat "$TARGET/etc/fstab"
+
+  test -s "$TARGET/etc/fstab"
+  grep -q '^UUID=.* / ext4 ' "$TARGET/etc/fstab"
+  grep -q '^UUID=.* /boot/efi vfat ' "$TARGET/etc/fstab"
+
+  pco_go "fstab écrit et UUID validés"
+}
+
+mount_chroot_dirs() {
+  mountpoint -q "$TARGET/dev"  || mount --bind /dev  "$TARGET/dev"
+  mountpoint -q "$TARGET/proc" || mount --bind /proc "$TARGET/proc"
+  mountpoint -q "$TARGET/sys"  || mount --bind /sys  "$TARGET/sys"
+  mountpoint -q "$TARGET/run"  || mount --bind /run  "$TARGET/run"
+}
+
+install_payload() {
+  local mode="$1"
+  local payload_rc=0
+  local retry_done=0
+
+  echo
+  pco_step "Installing PinCabOS payload"
+
+  verify_target_rw || {
+    show_target_storage_diagnostics
+    return 1
+  }
+
+  set +e
+  PINCABOS_INSTALL_MODE="$mode" \
+    "$PAYLOAD_DIR/pincabos-v8.1g-install-cab-payload-to-target.sh" "$TARGET" "$PAYLOAD_DIR"
+  payload_rc="$?"
+  set -e
+
+  if [ "$payload_rc" -ne 0 ]; then
+    pco_error "Payload extraction/install failed (code $payload_rc)"
+    show_target_storage_diagnostics
+
+    if [ "$mode" != "upgrade" ] && { ! target_is_rw || ! target_write_probe; }; then
+      if recover_fresh_target_filesystem_once "$mode"; then
+        retry_done=1
+        echo
+        pco_step "Retrying PinCabOS payload once after ext4 repair"
+        set +e
+        PINCABOS_INSTALL_MODE="$mode" \
+          "$PAYLOAD_DIR/pincabos-v8.1g-install-cab-payload-to-target.sh" "$TARGET" "$PAYLOAD_DIR"
+        payload_rc="$?"
+        set -e
+      fi
+    fi
+  fi
+
+  if [ "$payload_rc" -ne 0 ]; then
+    pco_error "Payload install failed permanently (code $payload_rc, retry=$retry_done)"
+    show_target_storage_diagnostics
+    return "$payload_rc"
+  fi
+
+  verify_target_rw || {
+    show_target_storage_diagnostics
+    return 1
+  }
+
+  apply_target_regional
+  apply_target_orientation
+  ensure_target_vpx_link
+  apply_target_home_templates
+  apply_target_identity
+  apply_target_screens
+  apply_target_network
+  apply_target_dmd
+  apply_target_audio
+  apply_target_dof
+  apply_target_toys
+  refresh_target_initrd_for_orientation
+
+  test -f "$TARGET/etc/pincabos/orientation.conf"
+  test -d "$TARGET/opt/pincabos"
+  test -d "$TARGET/home/pinball/vpinfe"
+  ls "$TARGET"/boot/vmlinuz-* >/dev/null
+  ls "$TARGET"/boot/initrd.img-* >/dev/null
+
+  pco_go "Payload PinCabOS installé et vérifié"
+}
+
+final_boot_refresh() {
+  local mode="$1"
+
+  echo
+  pco_step "Final boot refresh"
+
+  mount_chroot_dirs
+
+  mountpoint -q "$TARGET/dev"
+  mountpoint -q "$TARGET/proc"
+  mountpoint -q "$TARGET/sys"
+  mountpoint -q "$TARGET/run"
+
+  pco_go "Environnement chroot monté"
+
+  # Do not run update-initramfs here. It is deferred to first real boot.
+  ls "$TARGET"/boot/initrd.img-* >/dev/null
+  ls "$TARGET"/boot/vmlinuz-* >/dev/null
+
+  pco_go "Kernel et initramfs présents"
+
+  if chroot "$TARGET" update-grub; then
+    pco_go "Configuration GRUB générée"
+  else
+    pco_warn "update-grub a retourné un avertissement"
+  fi
+
+  chroot "$TARGET" grub-install \
+    --target=x86_64-efi \
+    --efi-directory=/boot/efi \
+    --bootloader-id=PinCabOS \
+    --recheck
+
+  pco_go "Chargeur EFI PinCabOS installé"
+
+  if [ "$mode" = "full" ]; then
+    if chroot "$TARGET" grub-install \
+      --target=x86_64-efi \
+      --efi-directory=/boot/efi \
+      --bootloader-id=PinCabOS \
+      --removable \
+      --recheck
+    then
+      pco_go "Fallback EFI amovible installé"
+    else
+      pco_warn "Fallback EFI amovible non installé"
+    fi
+  else
+    pco_info "Dualboot : fallback EFI amovible ignoré"
+  fi
+
+  pco_go "Démarrage EFI finalisé"
+}
+
+full_disk_install() {
+  choose_disk "$(t disks_full)"
+
+  echo
+  echo "$(t disk_selected)"
+  lsblk -dpno NAME,SIZE,MODEL "$DISK"
+  echo
+  pco_warn "$(t erase_warn) $DISK"
+  echo
+  pco_prompt "$(t confirm_prompt) "
+  if [ -n "${PCO_ANS_DISK:-}" ]; then CONFIRM="INSTALL PINCABOS"; echo "$CONFIRM"; else read -r CONFIRM; fi
+
+  [ "$CONFIRM" = "INSTALL PINCABOS" ] || {
+    echo "$(t cancelled)"
+    exit 1
+  }
+
+  echo
+  pco_step "Unmounting target disk partitions"
+  unmount_disk_mounts "$DISK"
+  pco_go "Partitions existantes démontées"
+
+  echo
+  pco_step "Partitioning disk GPT"
+  wipefs -a "$DISK" || true
+  sgdisk --zap-all "$DISK" || true
+  partprobe "$DISK" || true
+  sleep 2
+
+  parted -s "$DISK" mklabel gpt
+  parted -s "$DISK" mkpart ESP fat32 1MiB 551MiB
+  parted -s "$DISK" set 1 esp on
+  parted -s "$DISK" mkpart primary ext4 551MiB 100%
+
+  partprobe "$DISK"
+  udevadm settle
+  sleep 2
+
+  part_paths_for_disk "$DISK"
+
+  test -b "$EFI_PART" || { echo "ERROR: missing EFI partition: $EFI_PART"; exit 1; }
+  test -b "$ROOT_PART" || { echo "ERROR: missing root partition: $ROOT_PART"; exit 1; }
+
+  pco_go "Table GPT et partitions EFI/root créées"
+
+  echo
+  pco_step "Formatting partitions"
+  mkfs.vfat -F 32 -n PCOS_EFI "$EFI_PART"
+  mkfs.ext4 -F -L rootfs "$ROOT_PART"
+
+  [ "$(blkid -s TYPE -o value "$EFI_PART")" = "vfat" ]
+  [ "$(blkid -s TYPE -o value "$ROOT_PART")" = "ext4" ]
+
+  pco_go "Partitions EFI et root formatées"
+
+  echo
+  pco_step "Mounting target"
+  prepare_target_mount
+  mount -o rw "$ROOT_PART" "$TARGET"
+  verify_target_rw
+  mkdir -p "$TARGET/boot/efi"
+  mount "$EFI_PART" "$TARGET/boot/efi"
+
+  mountpoint -q "$TARGET"
+  mountpoint -q "$TARGET/boot/efi"
+
+  pco_go "Partitions root et EFI montées (root RW vérifiée)"
+
+  install_payload "full"
+  write_fstab "$ROOT_PART" "$EFI_PART"
+  final_boot_refresh "full"
+}
+
+# Settings kept across an update. Deliberately excludes locale, keyboard,
+# timezone and orientation: the wizard asks for those every time, restoring
+# them would silently undo the user's fresh choices.
+PCO_KEEP_PATHS=(
+  # Display identity of THIS machine. The payload deliberately wipes it so a
+  # fresh install redetects its own screens; on an update that would throw away
+  # the user's own configuration. screens.json is the source of truth here:
+  # the topology engine and the launch policies resync vpinfe.ini and
+  # VPinballX.ini from it, so
+  # losing it is enough to have backglass and fulldmd swap places at next boot.
+  "opt/pincabos/config/screens"
+  "opt/pincabos/config/display-aliases.env"
+  "opt/pincabos/state/screens-apply-last-success.flag"
+  "var/lib/pincabos/hardware-autoconfig.done"
+  "etc/X11/xorg.conf"
+  "etc/X11/xorg.conf.d"
+  # screen roles and window placement, as applied to the frontends
+  "home/pinball/.config/vpinfe/vpinfe.ini"
+  "home/pinball/.local/share/VPinballX/10.8/VPinballX.ini"
+  "home/pinball/.vpinball/VPinballX.ini"
+  "home/pinball/.pincabos/vpx/VPinballX.ini"
+  # audio (volume and mute intent replayed at session start)
+  "home/pinball/.config/pincabos/audio-volume-widget.json"
+  # PINCABOS_KEEP_AUDIO_SURROUND_V1
+  # audio: multichannel mode and pin retask, replayed at boot. Without this an
+  # update drops the cabinet back to stereo and the SSF silently stops.
+  "opt/pincabos/config/audio/surround.json"
+  # PINCABOS_KEEP_AUDIO_LEGACY_V1
+  # Le payload efface ces quatre-la pour qu'une installation NEUVE n'herite
+  # pas de l'audio de la machine de construction. En mise a jour ce sont les
+  # reglages de l'utilisateur : routage SSF, peripheriques, effets Commander.
+  "opt/pincabos/config/audio-router.json"
+  "opt/pincabos/config/audio.json"
+  "opt/pincabos/config/audio-ssf.json"
+  "opt/pincabos/config/ssf-commander.json"
+  # PINCABOS_KEEP_INVENTORY_V1
+  # What the MACHINE learned and no image can hand back. This list comes from
+  # an inventory of what the system stores, not from what we remembered.
+  # I/O board: pairing and its cache, which rescanning does not reproduce
+  "opt/pincabos/config/dudescab"
+  # feedback: DOF api key, and the key bindings of Inputs Commander
+  "opt/pincabos/config/dof"
+  "opt/pincabos/config/inputs-commander.json"
+  # calibrations: measured on this cabinet, on these panels
+  "opt/pincabos/config/dmd-calibration.json"
+  "opt/pincabos/config/fulldmd-calibration.json"
+  "opt/pincabos/config/fulldmd-background.env"
+  # credentials and certificates
+  "opt/pincabos/config/admin-login.txt"
+  "opt/pincabos/config/pki"
+  # webapp: theme and where its windows go on this cabinet
+  "opt/pincabos/config/webapp-appearance"
+  "opt/pincabos/config/webapp-screen-targets.conf"
+  "opt/pincabos/config/webapp-screen-autostart.conf"
+  # media sources the user added
+  "opt/pincabos/config/media-hunter"
+  # launcher rules the user edited (the file says so in its own name)
+  "opt/pincabos/config/hybrid-launcher"
+  # network: PinCabOS netplan file and NetworkManager profiles (Wi-Fi keys)
+  "etc/netplan/99-pincabos-network.yaml"
+  "etc/NetworkManager/system-connections"
+  # media and databases the user has accumulated
+  "var/lib/pincabos/media-hunter"
+  "home/pinball/.config/vpinfe/vpsdb.json"
+  "home/pinball/.config/vpinfe/roms.json"
+  "home/pinball/.config/vpinfe/collections.ini"
+  # dashboard arrangement
+  "home/pinball/.config/pincabos/dashboard-layout.json"
+  "home/pinball/.config/pincabos/dashboard-mode.json"
+  "home/pinball/.config/pincabos/dashboard-layout-simple.json"
+  "home/pinball/.config/pincabos/dashboard-layout-pro.json"
+  # preferences changed from the WebApp and release state of this machine
+  "opt/pincabos/config/sample-tables.json"
+  "opt/pincabos/config/gitpush-release-sequence.json"
+  # cab identity
+  "etc/pincabos/system-name.conf"
+  # PINCABOS_KEEP_PATHS_V2 (05/09/2026, revue avec Karots) : l image du media est
+  # le rootfs entier d un cab source ; a la mise a jour (unsquashfs -f) tout
+  # fichier present dans l image ecrase celui du cab. Ce qui est propre au cab
+  # et que l image porte aussi doit donc etre mis de cote :
+  "home/pinball/.local/share/VPinballX/10.8/directoutputconfig"
+  "home/pinball/.config/monitors.xml"
+  "home/pinball/.config/pincabos"
+  "home/pinball/.ssh"
+  "opt/pincabos/config/zedmd.json"
+  "opt/pincabos/config/splash.json"
+  "opt/pincabos/config/fulldmd-style.conf"
+  "opt/pincabos/config/admin-password.txt"
+  "opt/pincabos/config/dev-login.txt"
+  "opt/pincabos/config/dev-password.txt"
+  "opt/pincabos/config/webserver-webpass.secret"
+  "opt/pincabos/config/pincabos-paths.json"
+  "opt/pincabos/flags"
+  "etc/netplan"
+  "etc/ssh"
+  "etc/machine-id"
+  "var/lib/NetworkManager"
+)
+
+PCO_KEEP_DIR="/run/pincabos-keep"
+
+save_user_settings() {
+  rm -rf "$PCO_KEEP_DIR"
+  mkdir -p "$PCO_KEEP_DIR"
+
+  # PINCABOS_KEEP_SPACE_CHECK_V1
+  # /run est en memoire vive, et deux entrees de la liste n'ont pas de borne
+  # connue : les medias et la base VPSdb. On mesure avant de copier, et on
+  # refuse en annoncant le chiffre plutot que d'echouer au milieu sur un cp.
+  local besoin=0 dispo=0 p taille
+  for p in "${PCO_KEEP_PATHS[@]}"; do
+    [ -e "$TARGET/$p" ] || continue
+    taille="$(du -sk --apparent-size "$TARGET/$p" 2>/dev/null | cut -f1)"
+    besoin=$((besoin + ${taille:-0}))
+  done
+  dispo="$(df -Pk "$PCO_KEEP_DIR" | awk 'NR==2 {print $4}')"
+  # Marge : /run sert aussi au reste du systeme pendant l'installation.
+  if [ "$besoin" -gt 0 ] && [ $((besoin + 65536)) -gt "${dispo:-0}" ]; then
+    pco_error "Not enough room in $PCO_KEEP_DIR to set your settings aside: $((besoin / 1024)) MB needed, $((${dispo:-0} / 1024)) MB free. Nothing has been touched."
+    return 1
+  fi
+
+  local kept=0 p
+  for p in "${PCO_KEEP_PATHS[@]}"; do
+    [ -e "$TARGET/$p" ] || continue
+    mkdir -p "$PCO_KEEP_DIR/$(dirname "$p")"
+    cp -a "$TARGET/$p" "$PCO_KEEP_DIR/$p"
+    kept=$((kept + 1))
+  done
+  pco_go "$(t up_saved) ($kept)"
+}
+
+restore_user_settings() {
+  local restored=0 p
+  for p in "${PCO_KEEP_PATHS[@]}"; do
+    [ -e "$PCO_KEEP_DIR/$p" ] || continue
+    mkdir -p "$TARGET/$(dirname "$p")"
+    if [ -d "$PCO_KEEP_DIR/$p" ] && [ ! -L "$PCO_KEEP_DIR/$p" ]; then
+      # PINCABOS_KEEP_MERGE_V1 : un dossier est fusionne. Les fichiers du cab
+      # remplacent ceux de l'image, mais ce que l'installateur vient d'ecrire
+      # dans la cible reste (drapeaux dmd/reseau/son, profils netplan de la
+      # session) : rm -rf les effacait a chaque mise a jour.
+      mkdir -p "$TARGET/$p"
+      cp -a "$PCO_KEEP_DIR/$p/." "$TARGET/$p/"
+    else
+      rm -rf "$TARGET/$p"
+      cp -a "$PCO_KEEP_DIR/$p" "$TARGET/$p"
+    fi
+    restored=$((restored + 1))
+  done
+  # Owners are not carried by the archive: give the pinball files back.
+  if [ -d "$TARGET/home/pinball" ]; then
+    chroot "$TARGET" chown -R pinball:pinball /home/pinball/.config 2>/dev/null || true
+  fi
+  rm -rf "$PCO_KEEP_DIR"
+  pco_go "$(t up_restored) ($restored)"
+}
+
+upgrade_install() {
+  choose_disk "$(t disks_upgrade)"
+  part_paths_for_disk "$DISK"
+
+  echo
+  pco_step "$(t up_scan)"
+  [ -b "$ROOT_PART" ] || { pco_error "$(t up_none)"; return 1; }
+
+  unmount_disk_mounts "$DISK"
+  prepare_target_mount
+  mount -o rw "$ROOT_PART" "$TARGET" || { pco_error "$(t up_none)"; return 1; }
+  verify_target_rw || {
+    show_target_storage_diagnostics
+    umount -R "$TARGET" 2>/dev/null || true
+    return 1
+  }
+
+  # An update must not be able to wipe a stranger's disk: refuse anything that
+  # is not recognisably a PinCabOS root.
+  if [ ! -d "$TARGET/opt/pincabos" ] || [ ! -d "$TARGET/home/pinball" ]; then
+    umount -R "$TARGET" 2>/dev/null || true
+    pco_error "$(t up_none)"
+    return 1
+  fi
+  pco_go "$(t up_found)"
+
+  mkdir -p "$TARGET/boot/efi"
+  if [ -b "$EFI_PART" ]; then
+    mount "$EFI_PART" "$TARGET/boot/efi" || true
+  fi
+  mountpoint -q "$TARGET/boot/efi" || {
+    umount -R "$TARGET" 2>/dev/null || true
+    pco_error "EFI partition not mounted, aborting update"
+    return 1
+  }
+
+  save_user_settings
+  # unsquashfs -f overwrites in place: system files are refreshed, everything
+  # outside the image (tables, media next to them) is left alone.
+  install_payload "upgrade"
+  restore_user_settings
+  # PINCABOS_INSTALLEUR_RESEAU_V2 : la restauration ramene les profils netplan et
+  # les drapeaux du cab ; le choix reseau fait dans l'installateur est rejoue.
+  apply_target_network
+  write_fstab "$ROOT_PART" "$EFI_PART"
+  final_boot_refresh "upgrade"
+}
+
+find_efi_partition() {
+  local disk="$1"
+
+  lsblk -rpno NAME,FSTYPE,PARTTYPE "$disk" \
+    | awk 'tolower($3)=="c12a7328-f81f-11d2-ba4b-00a0c93ec93b"{print $1; exit}'
+
+  return 0
+}
+
+list_free_spaces() {
+  local disk="$1"
+
+  parted -m "$disk" unit MiB print free \
+    | awk -F: -v min="$MIN_FREE_MIB" '
+      /free/ {
+        start=$2
+        end=$3
+        size=$4
+        gsub(/MiB/,"",start)
+        gsub(/MiB/,"",end)
+        gsub(/MiB/,"",size)
+        if ((size+0) >= min) {
+          printf "%.2f|%.2f|%.2f\n", start, end, size
+        }
+      }
+    '
+}
+
+dualboot_install() {
+  choose_disk "$(t disks_dual)"
+
+  echo
+  echo "$(t disk_selected)"
+  lsblk -dpno NAME,SIZE,MODEL "$DISK"
+  echo
+  echo "Dualboot mode will NOT resize partitions."
+  echo "It only uses existing unallocated/free space on the selected disk."
+  echo
+
+  EFI_PART="$(find_efi_partition "$DISK" || true)"
+
+  if [ -z "$EFI_PART" ]; then
+    pco_error "no existing EFI System Partition found on $DISK."
+    echo "Dualboot mode requires an existing EFI partition on the same disk."
+    exit 1
+  fi
+
+  echo "Existing EFI partition found:"
+  lsblk -rpno NAME,SIZE,FSTYPE,PARTLABEL "$EFI_PART" || true
+
+  mapfile -t FREE_SPACES < <(list_free_spaces "$DISK")
+
+  if [ "${#FREE_SPACES[@]}" -eq 0 ]; then
+    echo
+    pco_error "no unallocated space >= ${MIN_FREE_MIB}MiB found on $DISK."
+    echo "Create unallocated space first, then rerun this installer."
+    echo "No existing partition was modified."
+    exit 1
+  fi
+
+  echo
+  echo "Available unallocated spaces:"
+  local i=1 row start end size gib
+  for row in "${FREE_SPACES[@]}"; do
+    IFS='|' read -r start end size <<<"$row"
+    gib="$(awk -v m="$size" 'BEGIN { printf "%.1f", m/1024 }')"
+    echo "  [$i] start=${start}MiB end=${end}MiB size=${gib}GiB"
+    i=$((i+1))
+  done
+
+  echo
+  pco_prompt "Select free space number: "
+  read -r FREE_CHOICE
+
+  [[ "$FREE_CHOICE" =~ ^[0-9]+$ ]] || {
+    echo "$(t invalid)"
+    exit 1
+  }
+
+  FREE_IDX=$((FREE_CHOICE-1))
+  if [ "$FREE_IDX" -lt 0 ] || [ "$FREE_IDX" -ge "${#FREE_SPACES[@]}" ]; then
+    echo "$(t out_of_range)"
+    exit 1
+  fi
+
+  IFS='|' read -r START_MIB END_MIB SIZE_MIB <<<"${FREE_SPACES[$FREE_IDX]}"
+  END_SAFE_MIB="$(awk -v e="$END_MIB" 'BEGIN { printf "%.2f", e-1 }')"
+
+  echo
+  pco_warn ""
+  echo "This will create a new PinCabOS ext4 partition only in this free space:"
+  echo "  Disk:  $DISK"
+  echo "  Start: ${START_MIB}MiB"
+  echo "  End:   ${END_SAFE_MIB}MiB"
+  echo "  EFI:   $EFI_PART will be reused, NOT formatted"
+  echo
+  pco_prompt "Type INSTALL PINCABOS DUALBOOT to continue: "
+  if [ -n "${PCO_ANS_DISK:-}" ]; then CONFIRM="INSTALL PINCABOS DUALBOOT"; echo "$CONFIRM"; else read -r CONFIRM; fi
+
+  [ "$CONFIRM" = "INSTALL PINCABOS DUALBOOT" ] || {
+    echo "$(t cancelled)"
+    exit 1
+  }
+
+  echo
+  pco_step "Creating PinCabOS root partition in free space"
+  parted -s "$DISK" unit MiB mkpart PINCABOS_ROOT ext4 "${START_MIB}MiB" "${END_SAFE_MIB}MiB"
+  partprobe "$DISK"
+  udevadm settle
+  sleep 2
+
+  ROOT_PART="$(lsblk -rpno NAME,PARTLABEL "$DISK" | awk '$2=="PINCABOS_ROOT"{print $1}' | tail -n1)"
+
+  if [ -z "$ROOT_PART" ] || [ ! -b "$ROOT_PART" ]; then
+    pco_error "could not locate new PINCABOS_ROOT partition."
+    lsblk -rpno NAME,SIZE,FSTYPE,PARTLABEL "$DISK"
+    exit 1
+  fi
+
+  pco_go "Partition PinCabOS créée dans l’espace libre"
+
+  echo
+  echo "New PinCabOS root partition:"
+  lsblk -rpno NAME,SIZE,FSTYPE,PARTLABEL "$ROOT_PART" || true
+
+  echo
+  pco_step "Formatting PinCabOS root only"
+  mkfs.ext4 -F -L rootfs "$ROOT_PART"
+
+  [ "$(blkid -s TYPE -o value "$ROOT_PART")" = "ext4" ]
+
+  pco_go "Partition PinCabOS formatée en ext4"
+
+  echo
+  pco_step "Mounting target"
+  prepare_target_mount
+  mount -o rw "$ROOT_PART" "$TARGET"
+  verify_target_rw
+  mkdir -p "$TARGET/boot/efi"
+  mount "$EFI_PART" "$TARGET/boot/efi"
+
+  mountpoint -q "$TARGET"
+  mountpoint -q "$TARGET/boot/efi"
+
+  pco_go "Partitions root et EFI montées (root RW vérifiée)"
+
+  install_payload "dualboot"
+  write_fstab "$ROOT_PART" "$EFI_PART"
+  final_boot_refresh "dualboot"
+}
+
+check_payload
+
+regional_setup
+
+while true; do
+  echo
+  pco_hr
+  echo " $(t mode_title)"
+  pco_hr
+  echo
+  echo "  [1] $(t mode_1)"
+  echo "      $(t mode_1b)"
+  echo
+  echo "  [2] $(t mode_2)"
+  echo "      $(t mode_2b)"
+  echo
+  echo "  [3] $(t mode_up)"
+  echo "      $(t mode_upb)"
+  echo
+  echo "  [4] $(t mode_3)"
+  echo
+  echo "  [5] $(t mode_4)"
+  echo
+  pco_prompt "$(t choice): "
+  if [ -n "${PCO_ANS_MODE:-}" ]; then MODE="$PCO_ANS_MODE"; echo "$MODE"; else read -r MODE; fi
+
+  case "$MODE" in
+    1) full_disk_install; break ;;
+    2) dualboot_install; break ;;
+    3) upgrade_install && break ;;
+    4) bash ;;
+    5) reboot ;;
+    *) echo "$(t invalid)" ;;
+  esac
+done
+
+echo
+pco_step "Final validation"
+find "$TARGET/boot" -maxdepth 2 -type f | sort | sed -n '1,120p'
+ls -lah "$TARGET/lib/modules"
+cat "$TARGET/etc/fstab"
+grep -R "quiet splash\|PinCabOS\|pincabos\|plymouth" \
+  "$TARGET/etc/default/grub" \
+  "$TARGET/etc/plymouth/plymouthd.conf" \
+  "$TARGET/boot/grub/grub.cfg" \
+  2>/dev/null || true
+
+test -s "$TARGET/etc/fstab"
+test -d "$TARGET/boot/efi"
+ls "$TARGET"/boot/vmlinuz-* >/dev/null
+ls "$TARGET"/boot/initrd.img-* >/dev/null
+test -d "$TARGET/opt/pincabos"
+
+pco_go "Validation finale du système installé réussie"
+
+echo
+pco_hr
+pco_go "$(t done_ok)"
+pco_warn "$(t done_remove)"
+pco_hr
+if [ -n "${PCO_ANSWERS:-}" ]; then
+  pco_go "PINCABOS_INSTALL_COMPLETE"
+  exit 0
+fi
+pco_prompt "$(t done_reboot)"
+read -r
+reboot

@@ -18,7 +18,12 @@ import re
 import sys
 from pathlib import Path
 
-MOTEUR = Path(__file__).resolve().parents[1] / "script/iso.sh"
+# PINCABOS_INSTALLEUR_FICHIERS_V1 : le moteur d'installation est un fichier livre
+# (script/installer/pincabos-live-installer) ; repli sur iso.sh pour les anciennes branches.
+_SCRIPT = Path(__file__).resolve().parents[1] / "script"
+MOTEUR = _SCRIPT / "installer/pincabos-live-installer"
+if not MOTEUR.exists():
+    MOTEUR = _SCRIPT / "iso.sh"
 
 # Ce que l'image sait refaire : gabarits, politiques, manifestes, caches. Leur
 # absence de la liste est deliberee, pas un oubli.

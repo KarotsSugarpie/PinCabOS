@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _charge import RACINE, charger
+from _charge import RACINE, charger, texte_installateur
 
 R = Path(RACINE)
 
@@ -107,7 +107,7 @@ class PriseEnMainHorsLigne(unittest.TestCase):
 
 class Integration(unittest.TestCase):
     def test_iso_sh(self):
-        s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+        s = texte_installateur()
         self.assertIn("apply_target_network() {", s)
         self.assertIn("  apply_target_screens\n  apply_target_network\n  apply_target_dmd\n  apply_target_audio\n  apply_target_dof\n  apply_target_toys\n  refresh_target_initrd_for_orientation\n", s)
         self.assertIn('netplan-takeover "$iface" --root "$TARGET"', s)
@@ -127,7 +127,7 @@ class Integration(unittest.TestCase):
 
 
 def _fonction_iso(nom):
-    s = (R / "opt/pincabos/script/iso.sh").read_text(encoding="utf-8")
+    s = texte_installateur()
     a = s.index(f"\n{nom}() {{\n") + 1
     b = s.index("\n}\n", a) + 3
     return s[a:b]
