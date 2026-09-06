@@ -41,6 +41,17 @@ class Source(unittest.TestCase):
                 self.assertNotRegex(l, r"-C / ", f"{e} : {l}")
                 self.assertNotRegex(l, r"(^|\s)(test|ls|cat|find) (-[a-z]+ )*/(boot|lib|etc|usr)\b", f"{e} : {l}")
 
+    def test_modele_vpx_sans_carte_audio(self):
+        # PINCABOS_ISO_AUDIO_PRIVACY_MODELE_V1 : execution reelle du lot B sur VM : l archive refusee
+        # a cause du modele de #204 (SoundDevice = Built-in Audio Analog Stereo)
+        m = (R / "opt/pincabos/templates/home/.local/share/VPinballX/10.8/VPinballX.ini").read_text(encoding="utf-8", errors="replace")
+        for l in m.splitlines():
+            if re.match(r"^\s*(SoundDevice|SoundDeviceBG)\s*=", l):
+                self.assertEqual(l.split("=", 1)[1].strip(), "", l)
+        s40 = (D / "40-payload.sh").read_text(encoding="utf-8")
+        self.assertIn('source_root / "opt/pincabos/templates/home/.local/share/VPinballX"', s40)
+        self.assertIn("--exclude='./opt/pincabos/templates/home/.local/share/VPinballX/*/VPinballX.ini'", s40)
+
     def test_orchestrateur_source(self):
         s = ISO.read_text(encoding="utf-8")
         self.assertIn('--source) SOURCE="${2:-}"; shift ;;', s)
