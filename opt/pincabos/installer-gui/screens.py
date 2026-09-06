@@ -422,33 +422,49 @@ def code_orient(rotation: int) -> str:
 # ---------------------------------------------------------------- identification
 DECOR = Path(__file__).resolve().parent / "decor.py"
 GALERIE_DECOR = Path("/opt/pincabos/media/splash")
+# PINCABOS_INSTALLEUR_DECOR_ROLES_V1 (Yann, 06/09/2026) : un visuel par role, livre avec
+# l assistant (installer-gui/static/decor/<role>.jpg) : la dalle dit elle-meme ce qu elle est.
+DECOR_ROLES = Path(__file__).resolve().parent / "static" / "decor"
 
 
-def images_decor(monitors: list, roles: dict, galerie: Path = GALERIE_DECOR, tirage=None) -> dict:
-    """PINCABOS_INSTALLEUR_DECOR_V1 : un visuel paysage de la galerie pour chaque dalle qui n'est pas le playfield."""
+def visuel_de_role(role: str, dossier: Path = DECOR_ROLES) -> Path | None:
+    for ext in (".jpg", ".png", ".jpeg", ".webp"):
+        p = dossier / f"{role}{ext}"
+        if p.is_file():
+            return p
+    return None
+
+
+def images_decor(monitors: list, roles: dict, galerie: Path = GALERIE_DECOR, tirage=None, decor: Path = DECOR_ROLES) -> dict:
+    """PINCABOS_INSTALLEUR_DECOR_V1 : chaque dalle qui n'est pas le playfield recoit un visuel :
+    celui de son role s il existe (DECOR_ROLES_V1), sinon un paysage de la galerie."""
     import random
     paysages = sorted(p for p in galerie.glob("paysage*") if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
-    if not paysages:
-        return {}
     tirage = tirage or random.Random()
     pf = roles.get("playfield") or ""
+    role_de = {nom: role for role, nom in roles.items() if nom}
     out = {}
     for m in monitors:
         if m["name"] == pf:
             continue
-        out[m["name"]] = str(tirage.choice(paysages))
+        visuel = visuel_de_role(role_de.get(m["name"], ""), decor) if role_de.get(m["name"]) else None
+        if visuel is not None:
+            out[m["name"]] = str(visuel)
+        elif paysages:
+            out[m["name"]] = str(tirage.choice(paysages))
     return out
 
 
-def libelles_decor(monitors: list, roles: dict, libelles: dict | None) -> dict:
+def libelles_decor(monitors: list, roles: dict, libelles: dict | None, decor: Path = DECOR_ROLES) -> dict:
     """PINCABOS_INSTALLEUR_DECOR_ROLE_V1 : {connecteur: ROLE} pour chaque dalle secondaire
-    qui porte un role ; une dalle sans role n a pas d etiquette."""
+    qui porte un role sans visuel dedie (le visuel de role nomme deja la dalle) ;
+    une dalle sans role n a pas d etiquette."""
     libelles = libelles or {"backglass": "Backglass", "fulldmd": "Full DMD", "topper": "Topper"}
     role_de = {nom: role for role, nom in roles.items() if nom}
     out = {}
     for m in monitors:
         role = role_de.get(m["name"], "")
-        if role and role != "playfield":
+        if role and role != "playfield" and visuel_de_role(role, decor) is None:
             out[m["name"]] = str(libelles.get(role, role)).upper()
     return out
 

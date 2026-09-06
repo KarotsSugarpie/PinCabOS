@@ -22,6 +22,7 @@ appeler `apply`.
   set '<json>'      Enregistre la configuration (appele via sudo par la page web)
   apply             Config -> les deux INI (imprime RESTART_VPINFE=1 si vpinfe.ini a change)
   test [secondes]   Affiche une mire sur le ZeDMD via le bridge libdmdutil de VPinFE
+  image <fichier> [secondes]   Affiche une image ajustee a la matrice (ZeDMD)
 
 Regles :
   - VPX (plugin DMDUtil) sait chercher lui-meme le ZeDMD USB : device vide = auto.
@@ -461,6 +462,67 @@ def status():
     return out
 
 
+# --- image -------------------------------------------------------------------
+def image(chemin, seconds):
+    """PINCABOS_ZEDMD_IMAGE_V1 : affiche une image (ajustee a la matrice, bandes noires)
+    pendant `seconds` secondes, via le bridge libdmdutil de VPinFE (ZeDMD seulement)."""
+    if not os.path.isfile(chemin):
+        print(f"ERREUR: image absente : {chemin}")
+        return 2
+    cfg = load_config()
+    if cfg["mode"] == "off":
+        print("ERREUR: DMD LED desactive dans la configuration")
+        return 2
+    if cfg["mode"] == "pin2dmd":
+        print("ERREUR: image indisponible pour le PIN2DMD (le bridge de VPinFE n'a pas PIN2DMD) — "
+              "lancer une table pour verifier")
+        return 2
+    errors = validate(cfg)
+    if errors:
+        for e in errors:
+            print("ERREUR: " + e)
+        return 2
+    if cfg["mode"] == "usb" and not cfg["device"]:
+        cands = [d for d in detect() if d["candidate"]]
+        if len(cands) != 1:
+            print("ERREUR: en USB 'auto', l image a besoin d un port explicite "
+                  f"({len(cands)} candidat(s) detecte(s))")
+            return 2
+        cfg["device"] = cands[0]["device"]
+    sys.path.insert(0, VPINFE_DMDUTIL_DIR)
+    os.environ["LD_LIBRARY_PATH"] = VPINFE_DMDUTIL_DIR + ":" + os.environ.get("LD_LIBRARY_PATH", "")
+    try:
+        from libdmdutil_wrapper import DMDController, load_image_frame  # noqa: E402
+    except Exception as exc:
+        print(f"ERREUR: bridge libdmdutil de VPinFE indisponible ({exc})")
+        return 3
+    dmd = DMDController(
+        host=cfg["wifi_addr"] if cfg["mode"] == "wifi" else None,
+        device=cfg["device"] if cfg["mode"] == "usb" else None,
+        brightness=cfg["brightness"],
+    )
+    try:
+        info = dmd.load()
+        print(f"connecte : {info.width}x{info.height} (HD={info.has_hd_display})")
+        trame = load_image_frame(chemin, info.width, info.height, fit_mode="contain")
+        import time
+        deadline = time.time() + max(1, seconds)
+        while time.time() < deadline:
+            dmd.send_rgb_frame(trame.rgb_bytes)
+            time.sleep(0.5)
+        dmd.clear()
+        print(f"image envoyee ({os.path.basename(chemin)}), ecran efface")
+        return 0
+    except Exception as exc:
+        print(f"ERREUR: {exc}")
+        return 1
+    finally:
+        try:
+            dmd.unload()
+        except Exception:
+            pass
+
+
 # --- test --------------------------------------------------------------------
 def test(seconds):
     cfg = load_config()
@@ -548,6 +610,15 @@ def main(argv):
         save_config(cfg)
         print("configuration enregistree : " + json.dumps(cfg, ensure_ascii=False))
         return 0
+    if cmd == "image":
+        if len(args) < 2:
+            print("usage : pincabos-zedmd image <fichier> [secondes]")
+            return 2
+        try:
+            secondes = int(args[2]) if len(args) > 2 else 5
+        except ValueError:
+            secondes = 5
+        return image(args[1], secondes)
     if cmd == "test":
         try:
             seconds = float(argv[2]) if len(argv) > 2 else 4.0
