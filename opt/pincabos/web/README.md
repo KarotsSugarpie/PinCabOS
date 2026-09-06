@@ -28,7 +28,7 @@ l’ordre de `app.run()`, la protection CSRF et l’état First Run GPU.
   `pincabos_webapp_exports.py` : modules fonctionnels extraits.
 - `pincabos_webapp_security.py` : protection CSRF des actions sensibles.
 - `pincabos_dashboard_lobby.py` et `pincabos_webapp_dashboard_control.py` : Dashboard.
-- `PinCabOS-AboutHelp.py`, `PinCabOS-NtwkDRV.py`,
+- `PinCabOS-AboutHelp.py`,
   `PinCabOS-ExplorerInstall.py`, `PinCabOS-PackageIcon.py` : modules dynamiques.
 
 ## Dépendance Import ZIP
