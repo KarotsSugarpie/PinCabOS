@@ -1420,6 +1420,13 @@ import pincabos_webapp_dof as pco_dof_routes
 
 pco_gpu_routes.register(app, page)
 pco_dof_routes.register(app, page)
+# Helpers GPU lus dans les globals d'app.py par pincabos_webapp_firstrun (runtime_globals,
+# actions de la première exécution) : réexportés ici, même nom, même objet.
+from pincabos_webapp_gpu import (  # noqa: E402
+    gpu_info_text,
+    pincabos_gpu_apply_config_to_vpinfe,
+    pincabos_gpu_apply_config_to_vpx,
+)
 
 
 @app.route("/service-control", methods=["POST"])
