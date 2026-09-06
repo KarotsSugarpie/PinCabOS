@@ -162,7 +162,7 @@
     "install_refused": "Installation refusée :",
     "progress_start": "Préparation",
     "screens_roles_title": "Une dalle, un rôle",
-    "screens_roles_hint": "Le numéro affiché sur chaque dalle est celui de sa carte ci-dessous.",
+    "screens_roles_hint": "Le numéro affiché sur chaque dalle est celui de sa carte ci-dessous. Après le test, chaque dalle affiche son rôle en toutes lettres.",
     "screens_changed": "Disposition modifiée : appliquez-la à nouveau.",
     "screens_next_hint": "Appliquez d'abord la disposition",
     "screens_dalle": "dalle",
@@ -190,7 +190,8 @@
     "snd_speakers_hint2": "Chaque bouton fait parler un seul haut-parleur (la voix annonce le canal en anglais). Vérifiez que c'est bien celui-là qui parle.",
     "snd_speakers_hint6": "Mode 6 canaux : chaque bouton fait parler un seul haut-parleur (voix en anglais). Si la sortie refuse 6 canaux, elle est stéréo : choisissez un mode 2 canaux ou une autre sortie.",
     "snd_speakers_hint8": "Mode 7.1 : 8 haut-parleurs — avant = fronton, latéraux = lockbar, arrière = fond du cab, centre + caisson = basses. Il faut une sortie 7.1 (sur une carte 5.1 : prise line-in retaskée en sortie latérale) ou une sortie backbox séparée pour le fronton.",
-    "snd_speaker_ok": "Joué sur :"
+    "snd_speaker_ok": "Joué sur :",
+    "screens_swap": "⇄ Inverser backglass et full DMD"
   },
   "en": {
     "choose_lang": "Choose your language",
@@ -355,7 +356,7 @@
     "install_refused": "Installation refused:",
     "progress_start": "Preparing",
     "screens_roles_title": "One panel, one role",
-    "screens_roles_hint": "The number shown on each panel is the one on its card below.",
+    "screens_roles_hint": "The number shown on each panel is the one on its card below. After the test, each panel shows its role in full.",
     "screens_changed": "Layout changed: apply it again.",
     "screens_next_hint": "Apply the layout first",
     "screens_dalle": "panel",
@@ -383,7 +384,8 @@
     "snd_speakers_hint2": "Each button makes a single speaker talk (the voice names the channel). Check that the right one speaks.",
     "snd_speakers_hint6": "6-channel mode: each button makes a single speaker talk. If the output refuses 6 channels it is stereo: pick a 2-channel mode or another output.",
     "snd_speakers_hint8": "7.1 mode: 8 speakers — front = backbox, side = lockbar, rear = back of the cab, center + LFE = bass. Needs a 7.1 output (on a 5.1 card: line-in jack retasked as side output) or a separate backbox output.",
-    "snd_speaker_ok": "Played on:"
+    "snd_speaker_ok": "Played on:",
+    "screens_swap": "⇄ Swap backglass and full DMD"
   },
   "de": {
     "choose_lang": "Sprache auswählen",
@@ -548,7 +550,7 @@
     "install_refused": "Installation abgelehnt:",
     "progress_start": "Vorbereitung",
     "screens_roles_title": "Ein Bildschirm, eine Rolle",
-    "screens_roles_hint": "Die Nummer auf jedem Bildschirm ist die seiner Karte unten.",
+    "screens_roles_hint": "Die Nummer auf jedem Bildschirm ist die seiner Karte unten. Nach dem Test zeigt jeder Bildschirm seine Rolle im Klartext.",
     "screens_changed": "Anordnung geändert: erneut anwenden.",
     "screens_next_hint": "Zuerst die Anordnung anwenden",
     "screens_dalle": "Bildschirm",
@@ -576,7 +578,8 @@
     "snd_speakers_hint2": "Jede Taste lässt einen einzelnen Lautsprecher sprechen (die Stimme nennt den Kanal auf Englisch). Prüfen Sie, dass der richtige spricht.",
     "snd_speakers_hint6": "6-Kanal-Modus: jede Taste lässt einen einzelnen Lautsprecher sprechen. Lehnt der Ausgang 6 Kanäle ab, ist er Stereo: 2-Kanal-Modus oder anderen Ausgang wählen.",
     "snd_speakers_hint8": "7.1-Modus: 8 Lautsprecher — vorne = Backbox, seitlich = Lockbar, hinten = Cab-Rückseite, Center + LFE = Bass. Braucht einen 7.1-Ausgang (bei einer 5.1-Karte: Line-In-Buchse als Seitenausgang umbelegt) oder einen separaten Backbox-Ausgang.",
-    "snd_speaker_ok": "Gespielt auf:"
+    "snd_speaker_ok": "Gespielt auf:",
+    "screens_swap": "⇄ Backglass und Full DMD tauschen"
   },
   "it": {
     "choose_lang": "Scegli la tua lingua",
@@ -741,7 +744,7 @@
     "install_refused": "Installazione rifiutata:",
     "progress_start": "Preparazione",
     "screens_roles_title": "Uno schermo, un ruolo",
-    "screens_roles_hint": "Il numero mostrato su ogni schermo è quello della sua scheda qui sotto.",
+    "screens_roles_hint": "Il numero mostrato su ogni schermo è quello della sua scheda qui sotto. Dopo il test, ogni schermo mostra il suo ruolo per esteso.",
     "screens_changed": "Disposizione modificata: applicala di nuovo.",
     "screens_next_hint": "Applica prima la disposizione",
     "screens_dalle": "schermo",
@@ -769,7 +772,8 @@
     "snd_speakers_hint2": "Ogni pulsante fa parlare un solo altoparlante (la voce dice il canale in inglese). Verifica che parli quello giusto.",
     "snd_speakers_hint6": "Modalità 6 canali: ogni pulsante fa parlare un solo altoparlante. Se l'uscita rifiuta 6 canali è stereo: scegli una modalità a 2 canali o un'altra uscita.",
     "snd_speakers_hint8": "Modalità 7.1: 8 altoparlanti — anteriori = backbox, laterali = lockbar, posteriori = fondo del cab, centro + LFE = bassi. Serve un'uscita 7.1 (su una scheda 5.1: presa line-in riassegnata come uscita laterale) o un'uscita backbox separata.",
-    "snd_speaker_ok": "Riprodotto su:"
+    "snd_speaker_ok": "Riprodotto su:",
+    "screens_swap": "⇄ Scambia backglass e full DMD"
   },
   "es": {
     "choose_lang": "Elige tu idioma",
@@ -934,7 +938,7 @@
     "install_refused": "Instalación rechazada:",
     "progress_start": "Preparando",
     "screens_roles_title": "Una pantalla, un rol",
-    "screens_roles_hint": "El número mostrado en cada pantalla es el de su tarjeta abajo.",
+    "screens_roles_hint": "El número mostrado en cada pantalla es el de su tarjeta abajo. Tras la prueba, cada pantalla muestra su función con todas las letras.",
     "screens_changed": "Disposición modificada: aplícala de nuevo.",
     "screens_next_hint": "Aplica primero la disposición",
     "screens_dalle": "pantalla",
@@ -962,6 +966,7 @@
     "snd_speakers_hint2": "Cada botón hace hablar a un solo altavoz (la voz dice el canal en inglés). Comprueba que hable el correcto.",
     "snd_speakers_hint6": "Modo 6 canales: cada botón hace hablar a un solo altavoz. Si la salida rechaza 6 canales es estéreo: elige un modo de 2 canales u otra salida.",
     "snd_speakers_hint8": "Modo 7.1: 8 altavoces — delanteros = backbox, laterales = lockbar, traseros = fondo del cab, centro + LFE = graves. Requiere una salida 7.1 (en una tarjeta 5.1: toma line-in reasignada como salida lateral) o una salida backbox separada.",
-    "snd_speaker_ok": "Reproducido en:"
+    "snd_speaker_ok": "Reproducido en:",
+    "screens_swap": "⇄ Intercambiar backglass y full DMD"
   }
 }

@@ -220,7 +220,8 @@ button{
   <div class="card" style="margin-bottom:14px">
     <div class="row" style="margin-bottom:6px;justify-content:space-between">
       <div style="display:flex;gap:12px;align-items:center"><span class="stepno">2</span><label data-i18n="screens_roles_title"></label></div>
-      <button type="button" class="ghost small" id="btn-identify" onclick="identifyScreens()" data-i18n="identify"></button></div>
+      <div style="display:flex;gap:8px"><button type="button" class="ghost small" id="btn-swap" onclick="swapBgDmd()" data-i18n="screens_swap"></button>
+      <button type="button" class="ghost small" id="btn-identify" onclick="identifyScreens()" data-i18n="identify"></button></div></div>
     <div class="hint" style="margin:0 0 10px" data-i18n="screens_roles_hint"></div>
     <div class="grid screens" id="screen-list"></div>
   </div>
@@ -474,6 +475,7 @@ function loadScreens(){
 function roleOf(name){return ROLE_KEYS.find(r=>S.screens.roles[r]===name)||""}
 function renderScreens(){
   const box=document.getElementById("screen-list");box.innerHTML="";
+  const sw=document.getElementById("btn-swap");if(sw)sw.style.display=(S.screens.roles.backglass&&S.screens.roles.fulldmd)?"":"none";
   screensMon.forEach(m=>{
     const el=document.createElement("div");el.className="scr"+(roleOf(m.name)==="playfield"?" sel":"");
     const opts=[["",t("role_none")]].concat(usedRoles().map(r=>[r,t("role_"+r)]))
@@ -512,7 +514,7 @@ function applyScreens(){
   if(!S.screens.roles.playfield){setScreensStatus("screens_need_pf",false);return}
   if(missingRoles().length){refreshScreensStatus();return}
   const btn=document.getElementById("btn-apply");btn.disabled=true;setScreensStatus("screens_applying",false);
-  fetch("/api/screens/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(S.screens)})
+  fetch("/api/screens/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...S.screens,labels:roleLabels()})})
   .then(r=>r.json()).then(d=>{btn.disabled=false;
     if(d.ok){screensApplied=screensKey();setScreensStatus("screens_applied",true,resumeDisposition());identifyScreens()}
     else{screensApplied="";setScreensStatus("screens_failed",false,(d.erreurs||[]).join(" ; "))}})
@@ -684,9 +686,16 @@ function renderWifi(){
     netStatus("net_applying",false);
     fetch("/api/network/wifi-join",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json()).then(d=>{
       netStatus(d.ok?"net_applied":"net_failed",d.ok,(d.journal||[]).join(" ; "));if(d.ok)loadNetwork(false)}).catch(()=>netStatus("net_failed",false))}}
+function roleLabels(){const l={};ROLE_KEYS.forEach(r=>l[r]=t("role_"+r));return l}
+// PINCABOS_INSTALLEUR_DECOR_ROLE_V1 : backglass et full DMD enregistres a l envers sur le cab
+// de Yann sans que rien ne le montre ; un bouton les inverse, le test le rend visible.
+function swapBgDmd(){
+  const r=S.screens.roles;if(!r.backglass||!r.fulldmd)return;
+  [r.backglass,r.fulldmd]=[r.fulldmd,r.backglass];
+  renderScreens();refreshScreensStatus()}
 function identifyScreens(){
   const btn=document.getElementById("btn-identify");btn.disabled=true;
-  const labels={};ROLE_KEYS.forEach(r=>labels[r]=t("role_"+r));
+  const labels=roleLabels();
   fetch("/api/screens/identify",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({roles:S.screens.roles,seconds:6,labels})}).catch(()=>{}).finally(()=>setTimeout(()=>btn.disabled=false,6500))}
 

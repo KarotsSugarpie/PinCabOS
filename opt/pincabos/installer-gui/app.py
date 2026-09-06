@@ -181,7 +181,8 @@ def screens_apply():
     if res.get("ok"):
         # PINCABOS_INSTALLEUR_DECOR_V1 : backglass, full DMD, topper habilles des visuels de la galerie
         try:
-            res["decor"] = pco_screens.lancer_decor(mons, roles)
+            libelles = a.get("labels") if isinstance(a.get("labels"), dict) else None
+            res["decor"] = pco_screens.lancer_decor(mons, roles, libelles=libelles)
         except Exception as exc:
             res["decor"] = {"ok": False, "erreur": str(exc)}
         try:
