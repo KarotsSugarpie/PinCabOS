@@ -2768,6 +2768,8 @@ pco_vpxball_routes.register(app, page)
 import pincabos_webapp_import as pco_import_routes
 
 pco_import_routes.register(app, page)
+# Lu dans les globals d'app.py par PinCabOS-ExplorerInstall (context_globals) : réexporté, même objet.
+from pincabos_webapp_import import pincabos_manifest_table_folder_from_archive  # noqa: E402
 
 
 @app.route("/tools/external-disks")
