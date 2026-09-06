@@ -70,6 +70,10 @@ APT_FORCE_OPTS=(
 
 # cache apt persistant entre les builds (les .deb survivent au menage)
 mkdir -p "$CACHE_DIR/apt-archives"
+# PINCABOS_ISO_APT_CACHE_MOUNTPOINT_V1 : le payload exclut ./var/cache/* ; le point de
+# montage n existe donc pas dans le rootfs live (« mount point does not exist », vu a
+# l execution reelle sur VM). apt le recreerait de toute facon.
+mkdir -p "$ROOTFS_DIR/var/cache/apt/archives/partial"
 mount --bind "$CACHE_DIR/apt-archives" "$ROOTFS_DIR/var/cache/apt/archives"
 chroot "$ROOTFS_DIR" apt-get "${APT_FORCE_OPTS[@]}" update
 DEBIAN_FRONTEND=noninteractive chroot "$ROOTFS_DIR" apt-get "${APT_FORCE_OPTS[@]}" install -y \

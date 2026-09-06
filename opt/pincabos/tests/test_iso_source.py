@@ -52,6 +52,12 @@ class Source(unittest.TestCase):
         self.assertIn('source_root / "opt/pincabos/templates/home/.local/share/VPinballX"', s40)
         self.assertIn("--exclude='./opt/pincabos/templates/home/.local/share/VPinballX/*/VPinballX.ini'", s40)
 
+    def test_point_de_montage_du_cache_apt(self):
+        # PINCABOS_ISO_APT_CACHE_MOUNTPOINT_V1 : var/cache/* est exclu du payload
+        s80 = (D / "80-live-rootfs.sh").read_text(encoding="utf-8")
+        self.assertLess(s80.index('mkdir -p "$ROOTFS_DIR/var/cache/apt/archives/partial"'),
+                        s80.index('mount --bind "$CACHE_DIR/apt-archives"'))
+
     def test_orchestrateur_source(self):
         s = ISO.read_text(encoding="utf-8")
         self.assertIn('--source) SOURCE="${2:-}"; shift ;;', s)
