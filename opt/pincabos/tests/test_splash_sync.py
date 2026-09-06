@@ -190,20 +190,25 @@ class Theme(unittest.TestCase):
         self.assertEqual(t.count("{"), t.count("}"))
         self.assertNotIn("{{", t)
 
-    def test_barre_sur_la_tempo_du_splash(self):
-        # PINCABOS_SPLASH_BARRE_TEMPO_V1 : barre pleine a la fin de la tempo, pas en 3 s (Yann : « ne defile pas »)
-        with tempfile.TemporaryDirectory() as d:
-            j = Path(d, "splash.json")
-            self.assertEqual(ss.duree_barre(j), 13)                      # absent : tempo par defaut 15 - 2
-            j.write_text('{"hold_until_uptime": 20}', encoding="utf-8")
-            self.assertEqual(ss.duree_barre(j), 18)
-            j.write_text('{"hold_until_uptime": 3}', encoding="utf-8")
-            self.assertEqual(ss.duree_barre(j), 4)                       # plancher
-        t = ss.theme(ECRANS_YANN, 0, dict(self.IMAGES, duree_barre=13))
-        self.assertIn("ticks_barre = 650;", t)
-        self.assertIn("progress_shown = tick / ticks_barre;", t)
-        self.assertNotIn("creep = tick / 600", t)
-        self.assertNotIn("target = progress_target", t)
+    def test_variables_du_voile_declarees_au_niveau_global(self):
+        # PINCABOS_SPLASH_GLOBALES_V1 : une variable assignee d abord dans une fonction est locale
+        # (Plymouth script) ; le voile du playfield lisait des NULL et n etait jamais pose.
+        t = ss.theme(ECRANS_YANN, 0, self.IMAGES)
+        tete = t.split("fun placer()")[0]
+        for v in ("pf_sw", "pf_sh", "pf_iw", "pf_ih", "pf_ox", "pf_oy", "bar_width", "bar_lx", "bar_ly", "sw", "sh"):
+            self.assertRegex(tete, rf"(^|\n|; ){v} = 0;", v)
+
+    def test_barre_a_vitesse_constante_sans_temporisation(self):
+        # PINCABOS_SPLASH_BARRE_TEMPO_V2 : plus de tempo du splash (Yann 06/09) ; barre pleine en 8 s,
+        # ou plus vite si Plymouth annonce plus avance ; jamais en arriere.
+        self.assertEqual(ss.duree_barre(), 8)
+        self.assertFalse(hasattr(ss, "SPLASH_JSON"))
+        t = ss.theme(ECRANS_YANN, 0, self.IMAGES)
+        self.assertIn("ticks_barre = 400;", t)
+        self.assertIn("p = tick / ticks_barre;", t)
+        self.assertIn("if (progress_target > p) p = progress_target;", t)
+        self.assertIn("if (p > progress_shown) progress_shown = p;", t)
+        self.assertNotIn("hold_until_uptime", t)
 
     def test_barre_repliquee_sur_les_autres_dalles(self):
         # PINCABOS_SPLASH_BARRE_PARTOUT_V1 : masque noir opaque, decouvert au meme rythme partout
@@ -250,22 +255,16 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class Tempo(unittest.TestCase):
-    """PINCABOS_SPLASH_TEMPO_V1 : le splash respire avant le gestionnaire d affichage."""
+class SansTempo(unittest.TestCase):
+    """PINCABOS_SPLASH_BARRE_TEMPO_V2 : le splash ne retient plus le gestionnaire d affichage."""
 
-    def test_unite(self):
-        u = (R / "etc/systemd/system/pincabos-splash-hold.service").read_text(encoding="utf-8")
-        self.assertIn("Before=display-manager.service lightdm.service", u)
-        self.assertIn("ConditionPathExists=!/etc/pincabos-live", u)
-        self.assertTrue((R / "etc/systemd/system/graphical.target.wants/pincabos-splash-hold.service").is_symlink())
-
-    def test_script(self):
-        s = (R / "usr/local/sbin/pincabos-splash-hold").read_text(encoding="utf-8")
-        self.assertIn("hold_until_uptime", s)
-        self.assertIn('get("hold_until_uptime", 15)', s)
-        self.assertIn("plymouth --ping", s)
-        import subprocess
-        self.assertEqual(subprocess.run(["bash", "-n", str(R / "usr/local/sbin/pincabos-splash-hold")]).returncode, 0)
+    def test_plus_de_retenue(self):
+        self.assertFalse((R / "etc/systemd/system/pincabos-splash-hold.service").exists())
+        self.assertFalse((R / "etc/systemd/system/graphical.target.wants/pincabos-splash-hold.service").is_symlink())
+        self.assertFalse((R / "usr/local/sbin/pincabos-splash-hold").exists())
+        s = (R / "usr/local/sbin/pincabos-splash-sync").read_text(encoding="utf-8")
+        self.assertNotIn("hold_until_uptime", s)
+        self.assertNotIn("splash.json", s)
 
 
 class Backboard(unittest.TestCase):
