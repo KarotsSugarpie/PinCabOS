@@ -24,15 +24,16 @@ echo "=== 5) Build lean PinCabOS payload from current cabinet ==="
   echo "/opt/pincabos/logs"
   echo "/var/tmp, /var/crash, /var/cache, /var/log, apt archives, journals"
   echo
-  findmnt /
+  echo "Source: $PCO_ISO_SOURCE"
+  findmnt "$PCO_ISO_SOURCE" || true
   echo
-  ls -lah /boot/vmlinuz-* /boot/initrd.img-* 2>/dev/null || true
+  ls -lah "$SRC"/boot/vmlinuz-* "$SRC"/boot/initrd.img-* 2>/dev/null || true
   echo
-  ls -lah /lib/modules
+  ls -lah "$SRC/lib/modules"
   echo
-  cat /etc/default/grub
+  cat "$SRC/etc/default/grub"
   echo
-  find /usr/share/plymouth/themes/pincabos -maxdepth 2 -type f | sort
+  find "$SRC/usr/share/plymouth/themes/pincabos" -maxdepth 2 -type f | sort
 } > "$MANIFEST"
 
 sed -n '1,140p' "$MANIFEST"
@@ -57,7 +58,8 @@ mkdir -p \
 
 python3 - \
   "$AUDIO_SANITIZE_STAGE/__PINCABOS_AUDIO_SANITIZED__" \
-  "$AUDIO_SANITIZE_LIST" <<'PINCABOS_AUDIO_PRIVACY_PY'
+  "$AUDIO_SANITIZE_LIST" \
+  "$PCO_ISO_SOURCE" <<'PINCABOS_AUDIO_PRIVACY_PY'
 from pathlib import Path
 import os
 import re
@@ -66,6 +68,7 @@ import sys
 
 stage = Path(sys.argv[1])
 list_file = Path(sys.argv[2])
+source_root = Path(sys.argv[3] if len(sys.argv) > 3 else "/")   # PINCABOS_ISO_SOURCE_V1
 
 sources = []
 
@@ -74,9 +77,9 @@ roots = [
     # ~/.local/share/VPinballX/10.8 n'est plus qu'un lien vers ce dossier, et
     # rglob ne suit pas les liens : sans cette racine le fichier reel partait
     # dans la photo avec les noms de cartes audio du master (garde audio).
-    Path("/home/pinball/.pincabos/vpx"),
-    Path("/home/pinball/.local/share/VPinballX"),
-    Path("/home/pinball/.vpinball"),
+    source_root / "home/pinball/.pincabos/vpx",
+    source_root / "home/pinball/.local/share/VPinballX",
+    source_root / "home/pinball/.vpinball",
 ]
 
 for root in roots:
@@ -104,7 +107,7 @@ hardware_audio_key = re.compile(
 archive_members = []
 
 for source in sorted(set(sources)):
-    relative = source.relative_to("/")
+    relative = source.relative_to(source_root)
 
     destination = stage / relative
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -413,7 +416,7 @@ tar \
   --transform='s#^\./__PINCABOS_AUDIO_SANITIZED__/#./#' \
   --transform='s#^\./__PINCABOS_VPXTOOL_EMBEDDED__$#.#' \
   --transform='s#^\./__PINCABOS_VPXTOOL_EMBEDDED__/#./#' \
-  -C / . \
+  -C "$PCO_ISO_SOURCE" . \
   -C "$AUDIO_SANITIZE_STAGE" -T "$AUDIO_SANITIZE_LIST" \
   -C "$VPXTOOL_STAGE" \
     ./__PINCABOS_VPXTOOL_EMBEDDED__/opt/pincabos/apps/vpxtool \

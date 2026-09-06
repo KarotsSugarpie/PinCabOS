@@ -68,6 +68,18 @@ OVERLAY="$PAYLOAD_FULL/pincabos-plymouth-theme-overlay-v8.1g.tar.zst"
 MANIFEST="$PAYLOAD_FULL/pincabos-rootfs-cab-v8.1g.manifest.txt"
 VPXTOOL_MANIFEST="/opt/pincabos/update/vpxtool-release.json"
 
+# PINCABOS_ISO_SOURCE_V1 (lot D) : le systeme photographie. Par defaut le cab courant
+# (/) ; avec `iso.sh --source DIR`, un rootfs prepare par build-master.sh (le meme que
+# le banc : /root/pco-master), sans cab physique ni GPU. SRC est vide pour / (les
+# chemins "$SRC/boot" restent valides), sinon le dossier sans barre finale.
+PCO_ISO_SOURCE="${PCO_ISO_SOURCE:-/}"
+case "$PCO_ISO_SOURCE" in
+  /) SRC="" ;;
+  *) SRC="${PCO_ISO_SOURCE%/}" ;;
+esac
+# le manifeste vpxtool epingle par la source, si elle en porte un (sinon celui de l hote)
+[ -f "$SRC/opt/pincabos/update/vpxtool-release.json" ] && VPXTOOL_MANIFEST="$SRC/opt/pincabos/update/vpxtool-release.json"
+
 # PINCABOS_ISO_ETAPES_V1 : ce qu une etape calcule et qu une autre relit (avant : une
 # variable du meme shell). Ecrit par pco_etat_ecrire VAR, relu ici par chaque etape.
 ETAT_ENV="$WORK/iso-etat.env"
