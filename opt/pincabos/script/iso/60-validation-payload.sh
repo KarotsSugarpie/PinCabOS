@@ -7,16 +7,19 @@ trap cleanup_mounts EXIT
 [ -n "${VPXTOOL_VERSION:-}" ] || die "VPXTOOL_VERSION absente de $ETAT_ENV : relancer l etape 40"
 echo
 echo "=== 7) Validate payload exclusions and boot contents ==="
+# PINCABOS_ISO_GREP_SANS_SIGPIPE_V1 : `tar -tf | grep -q` sous pipefail rend l etat de tar
+# (SIGPIPE) et non celui de grep : un contenu exclu pouvait passer inapercu. Liste prise une fois.
+ARCHIVE_LISTE="$(tar -I zstd -tf "$ARCHIVE")"
 tar -I zstd -tf "$ARCHIVE" \
   | grep -E '^./boot/(vmlinuz|initrd.img|grub)|^./lib/modules/' \
   | sed -n '1,120p'
 
-if tar -I zstd -tf "$ARCHIVE" | grep -q '^./home/pinball/Tables/'; then
+if grep -q '^./home/pinball/Tables/' <<<"$ARCHIVE_LISTE"; then
   die "Tables included in payload"
 fi
 echo "OK: Tables excluded"
 
-if tar -I zstd -tf "$ARCHIVE" | grep -q '^./opt/pincabos/build/'; then
+if grep -q '^./opt/pincabos/build/' <<<"$ARCHIVE_LISTE"; then
   die "/opt/pincabos/build included in payload"
 fi
 echo "OK: /opt/pincabos/build excluded"
@@ -37,21 +40,21 @@ echo "OK: /opt/pincabos/tmp excluded"
 echo "OK: script/web backups excluded"
 
 
-if tar -I zstd -tf "$ARCHIVE" | grep -Eq '^\./swap\.img$|^\./swapfile$'; then
+if grep -Eq '^\./swap\.img$|^\./swapfile$' <<<"$ARCHIVE_LISTE"; then
   echo "Bad swap entries:"
   tar -I zstd -tf "$ARCHIVE" | grep -E '^\./swap\.img$|^\./swapfile$' | sed -n '1,80p'
   die "swap included in payload"
 fi
 echo "OK: swap excluded"
 
-if tar -I zstd -tf "$ARCHIVE" | grep -Eq '/(venv|\.venv|virtualenv)(/|$)'; then
+if grep -Eq '/(venv|\.venv|virtualenv)(/|$)' <<<"$ARCHIVE_LISTE"; then
   echo "NOTICE: venv/virtualenv entries present in payload; allowed for WebApp runtime"
   tar -I zstd -tf "$ARCHIVE" | grep -E '/(venv|\.venv|virtualenv)(/|$)' | sed -n '1,80p'
 else
   echo "NOTICE: no venv/virtualenv entries found; WebApp must use system Python or fallback"
 fi
 
-if tar -I zstd -tf "$ARCHIVE" | grep -q '^./root/pincabos-v8'; then
+if grep -q '^./root/pincabos-v8' <<<"$ARCHIVE_LISTE"; then
   die "old /root payload included"
 fi
 echo "OK: old root payloads excluded"
