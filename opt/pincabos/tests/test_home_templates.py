@@ -105,9 +105,11 @@ class Integration(unittest.TestCase):
     def test_prefixe_en_attente_dans_l_updater(self):
         sys.path.insert(0, str(R / "opt/pincabos/update"))
         import pincabos_updates as up
-        self.assertIn("opt/pincabos/templates/", up.PENDING_PREFIXES)
+        # deuxieme temps de la regle des deux releases : le parc connait le prefixe depuis 4.04, les fichiers partent
+        self.assertNotIn("opt/pincabos/templates/", up.PENDING_PREFIXES)
         self.assertTrue(up.allowed("opt/pincabos/templates/home/.config/vpinfe/vpinfe.ini"))
-        self.assertFalse(up.allowed_for_build("opt/pincabos/templates/home/.config/vpinfe/vpinfe.ini"), "prefixe en attente : pas encore embarque")
+        self.assertTrue(up.allowed_for_build("opt/pincabos/templates/home/.config/vpinfe/vpinfe.ini"))
+        self.assertFalse(up.allowed("opt/pincabos/templates/home/.config/vpinfe/__pycache__/x.pyc"))
 
 
 if __name__ == "__main__":
