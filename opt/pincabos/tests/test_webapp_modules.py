@@ -24,6 +24,7 @@ MODULES = {
     "dof": WEB / "pincabos_webapp_dof.py",
     "dmd": WEB / "pincabos_webapp_dmd.py",
     "console": WEB / "pincabos_webapp_console.py",
+    "vpxball": WEB / "pincabos_webapp_vpxball.py",
 }
 ROUTES = {
     "gpu": {
@@ -44,6 +45,11 @@ ROUTES = {
     "console": {
         "/console", "/console/", "/root-password", "/network/wifi-hotspot", "/network/wifi-hotspot-stop",
         "/toggle-webapp-screen", "/launch-webapp-screen", "/close-webapp-screen",
+    },
+    "vpxball": {
+        "/tools/vpx-ball-cabinet", "/tools/vpx-ball-cabinet/images.json", "/tools/vpx-ball-cabinet/image-preview",
+        "/tools/vpx-ball-cabinet/validate", "/tools/vpx-ball-cabinet/apply", "/tools/vpx-ball-simple/apply",
+        "/userdata/UserBalls/<kind>/<path:filename>",
     },
 }
 HELPERS = ("esc", "run_cmd", "shlex_quote", "service_status",
@@ -101,6 +107,11 @@ def noms_libres(texte):
         for e in ast.walk(n):
             if isinstance(e, ast.Name) and isinstance(e.ctx, ast.Load) and e.id not in loc and not hasattr(builtins, e.id):
                 libres.add(e.id)
+    for n in tree.body:  # niveau module : une constante calculée avec un nom absent casse l'import du module
+        if not isinstance(n, (ast.FunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom, ast.Try)):
+            for e in ast.walk(n):
+                if isinstance(e, ast.Name) and isinstance(e.ctx, ast.Load) and not hasattr(builtins, e.id):
+                    libres.add(e.id)
     return libres - definis
 
 
@@ -153,12 +164,14 @@ class Decoupage(unittest.TestCase):
         i_dof = self.app.index("pco_dof_routes.register(app, page)")
         i_dmd = self.app.index("pco_dmd_routes.register(app, page)")
         i_console = self.app.index("pco_console_routes.register(app, page)")
+        i_vpxball = self.app.index("pco_vpxball_routes.register(app, page)")
         i_wrap = self.app.index("def _pco_dashboard_plus_final_install_wrapper")
         self.assertLess(i_page, i_reg)
         self.assertLess(i_reg, i_dof)
         self.assertLess(i_dof, i_dmd)
         self.assertLess(i_dmd, i_console)
-        self.assertLess(i_console, i_wrap)
+        self.assertLess(i_console, i_vpxball)
+        self.assertLess(i_vpxball, i_wrap)
 
     def test_register_pose_page_et_le_blueprint(self):
         for cle, texte in self.textes.items():
@@ -185,11 +198,13 @@ class Chargement(unittest.TestCase):
             import pincabos_webapp_dof as dof
             import pincabos_webapp_dmd as dmd
             import pincabos_webapp_console as console
+            import pincabos_webapp_vpxball as vpxball
             app = flask.Flask("test")
             gpu.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dof.register(app, lambda t, b: f"<p>{t}</p>{b}")
             dmd.register(app, lambda t, b: f"<p>{t}</p>{b}")
             console.register(app, lambda t, b: f"<p>{t}</p>{b}")
+            vpxball.register(app, lambda t, b: f"<p>{t}</p>{b}")
             regles = {r.rule for r in app.url_map.iter_rules()}
             for attendues in ROUTES.values():
                 self.assertTrue(attendues <= regles, attendues - regles)
@@ -197,6 +212,7 @@ class Chargement(unittest.TestCase):
             self.assertIn("dof.dof_page", app.view_functions)
             self.assertIn("dmd.fulldmd_page", app.view_functions)
             self.assertIn("console.console_page", app.view_functions)
+            self.assertIn("vpxball.tools_vpx_ball_cabinet", app.view_functions)
             self.assertEqual(gpu.page("x", "y"), "<p>x</p>y")  # page posée par register
             self.assertEqual(dof.page("x", "y"), "<p>x</p>y")
         finally:
