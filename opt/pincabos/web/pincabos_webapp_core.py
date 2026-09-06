@@ -329,9 +329,6 @@ def pco_systemctl_cmd(action: str, service: str) -> list[str]:
     return ["/usr/bin/sudo", "/usr/bin/systemctl", action, pco_service(service)]
 
 
-
-
-
 def pco_run(cmd: Sequence[str], timeout: int = 8) -> subprocess.CompletedProcess[str]:
     return subprocess.run(list(cmd), capture_output=True, text=True, timeout=timeout)
 
@@ -423,16 +420,6 @@ def pco_vpinfe_version_command() -> str:
 def pco_launch_webapp_screen_command(screen_id: int, url: str = "http://127.0.0.1/") -> str:
     script = shlex.quote(str(pco_script("launch_webapp_screen")))
     return f"sleep 1; /usr/bin/sudo {script} {int(screen_id)} {shlex.quote(str(url))}"
-
-
-def pco_smb_mount_helper_command(source: str, mount_point: str | Path, cred_file: str | Path) -> str:
-    script = shlex.quote(str(pco_script("smb_mount_helper")))
-    return (
-        f"sudo {script} "
-        f"{shlex.quote(str(source))} "
-        f"{shlex.quote(str(mount_point))} "
-        f"{shlex.quote(str(cred_file))}"
-    )
 
 
 # ---- Helpers partagés par app.py et les modules de pages (PINCABOS_WEBAPP_MODULES_V1) ----

@@ -15,7 +15,7 @@ WEB = Path(RACINE) / "opt/pincabos/web"
 APP = WEB / "app.py"
 MOD = WEB / "pincabos_webapp_gabarit.py"
 NOMS = ("page", "pincabos_firstrun_is_complete", "pincabos_webapp_screen_state", "webapp_screen_toggle_html",
-        "PCO_WEBAPP_SCREEN_STATE_FILE", "safe_file_text", "pincabos_support_footer_html")
+        "PCO_WEBAPP_SCREEN_STATE_FILE", "pincabos_support_footer_html")  # safe_file_text : retiré au lot 13 (sans appelant)
 
 
 class Gabarit(unittest.TestCase):
