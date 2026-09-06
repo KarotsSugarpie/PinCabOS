@@ -25,8 +25,21 @@ def charger(rel, nom):
 # PINCABOS_INSTALLEUR_FICHIERS_V1 : le moteur d installation, le helper de payload,
 # l attente et l unite tty sont des fichiers livres (opt/pincabos/script/installer/).
 # Les tests qui verifiaient « ce qu iso.sh installe » lisent l ensemble, iso.sh d abord.
+# PINCABOS_ISO_ETAPES_V1 : iso.sh est un orchestrateur ; les sections sont des etapes
+# (opt/pincabos/script/iso/NN-*.sh, 00-lib.sh d abord), lues ici a la suite d iso.sh.
 FICHIERS_INSTALLATEUR = (
     "opt/pincabos/script/iso.sh",
+    "opt/pincabos/script/iso/00-lib.sh",
+    "opt/pincabos/script/iso/10-audit-nettoyage.sh",
+    "opt/pincabos/script/iso/20-outils-hote.sh",
+    "opt/pincabos/script/iso/30-source.sh",
+    "opt/pincabos/script/iso/40-payload.sh",
+    "opt/pincabos/script/iso/50-plymouth-overlay.sh",
+    "opt/pincabos/script/iso/60-validation-payload.sh",
+    "opt/pincabos/script/iso/70-helper.sh",
+    "opt/pincabos/script/iso/80-live-rootfs.sh",
+    "opt/pincabos/script/iso/90-iso.sh",
+    "opt/pincabos/script/iso/95-publication.sh",
     "opt/pincabos/script/installer/pincabos-install-payload",
     "opt/pincabos/script/installer/pincabos-live-installer",
     "opt/pincabos/script/installer/pincabos-live-installer-wait",

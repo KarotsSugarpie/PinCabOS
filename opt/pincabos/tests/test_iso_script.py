@@ -202,10 +202,11 @@ class FichiersLivres(unittest.TestCase):
     """PINCABOS_INSTALLEUR_FICHIERS_V1 : moteur, helper, attente et unite tty sont des fichiers, installes par iso.sh."""
 
     def test_iso_installe_les_fichiers_et_ne_les_ecrit_plus(self):
-        s = open(ISO, encoding="utf-8").read()
+        # PINCABOS_ISO_ETAPES_V1 : iso.sh orchestre, les sections sont des etapes (texte_installateur les lit)
+        s = texte_installateur()
         for delim in ("PINCBOS_PAYLOAD_HELPER", "PINCBOS_LIVE_INSTALLER", "PINCABOS_LIVE_WAIT", "PINCBOS_SERVICE"):
             self.assertNotIn(delim, s, delim)
-        self.assertIn('INSTALLER_SRC="$(dirname "$(readlink -f "$0")")/installer"', s)
+        self.assertIn('INSTALLER_SRC="${PCO_ISO_SCRIPT_DIR:-$(dirname "$(readlink -f "$0")")}/installer"', s)
         for f, dest in (("pincabos-install-payload", '"$PAYLOAD_FULL/pincabos-v8.1g-install-cab-payload-to-target.sh"'),
                         ("pincabos-live-installer", '"$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer"'),
                         ("pincabos-live-installer-wait", '"$ROOTFS_DIR/usr/local/sbin/pincabos-live-installer-wait"'),

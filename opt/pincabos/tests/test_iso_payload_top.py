@@ -13,7 +13,8 @@ from pathlib import Path
 from _charge import RACINE
 
 TOOL = Path(RACINE) / "opt/pincabos/tools/pincabos-iso-payload-top"
-ISO = Path(RACINE) / "opt/pincabos/script/iso.sh"
+ISO = Path(RACINE) / "opt/pincabos/script/iso/40-payload.sh"   # PINCABOS_ISO_ETAPES_V1 : la commande tar est dans l etape 40
+ORCHESTRATEUR = Path(RACINE) / "opt/pincabos/script/iso.sh"
 
 
 def fichier(chemin: Path, mo: float):
@@ -66,6 +67,12 @@ class PayloadTop(unittest.TestCase):
         r = self.lancer("--depth", "1", "--top", "5")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertRegex(r.stdout, r"\n *[0-9]+ Mo  usr\n")
+
+    def test_iso_sh_orchestrateur_redirige_vers_l_etape_40(self):
+        # PINCABOS_ISO_ETAPES_V1 : --iso iso.sh (l ancien reflexe) doit encore marcher
+        r = subprocess.run(["bash", str(TOOL), "--root", str(self.root), "--iso", str(ORCHESTRATEUR)], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("40-payload.sh", r.stdout.splitlines()[0])
 
     def test_erreurs_claires(self):
         r = subprocess.run(["bash", str(TOOL), "--root", "/chemin/absent"], capture_output=True, text=True)
