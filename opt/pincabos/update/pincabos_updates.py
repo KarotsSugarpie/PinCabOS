@@ -185,9 +185,6 @@ def sha256(path):
 # les cabinets encore en 3.43 ou moins.
 PENDING_PREFIXES = (
     'opt/pincabos/launchers/',
-    # PINCABOS_MODELES_JOUEUR_V1 (06/09/2026) : modeles du compte du joueur ;
-    # l ISO les porte des maintenant, l OTA a la release suivante.
-    'opt/pincabos/templates/',
     # PINCABOS_SPLASH_FROM_SCREENS_V3 : 'opt/pincabos/media/splash/' a attendu ici
     # en 3.69 ; le parc connait le prefixe depuis, les visuels partent maintenant.
 )
@@ -217,6 +214,8 @@ def allowed(rel):
       # paysage, fonds GRUB). Prefixe en attente d abord (PENDING_PREFIXES), les
       # fichiers partent a la release suivante : la CI le verifie.
       'opt/pincabos/media/splash/',
+      # PINCABOS_MODELES_JOUEUR_V1 : modeles du compte du joueur (en attente en 4.04, livres depuis)
+      'opt/pincabos/templates/',
       'usr/local/bin/pincabos-','usr/local/sbin/pincabos-',
       'usr/local/lib/pincabos/','usr/local/libexec/pincabos/',
     )
