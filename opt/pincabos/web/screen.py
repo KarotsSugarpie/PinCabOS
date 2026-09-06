@@ -1,13 +1,6 @@
 from __future__ import annotations
 
 import html
-try:
-    import pincabos_ini
-except ImportError:   # hors /opt (tests, depot) : le module vit a cote des outils
-    import sys as _sys
-    from pathlib import Path as _Path
-    _sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "tools"))
-    import pincabos_ini
 import json
 import re
 import subprocess
@@ -225,45 +218,26 @@ def role_index(screens: list[dict], output: str) -> str:
     return ""
 
 
+TOPOLOGIE = Path("/opt/pincabos/scripts/pincabos-screen-topology.py")
+
+
+def topologie_depuis_screens_json() -> str:
+    """PINCABOS_TOPOLOGIE_SOURCE_UNIQUE_V1 : la page n'écrit plus de clés INI ; screens.json
+    est la vérité, la topologie (seule à poser les sections d'affichage de VPinFE et VPX)
+    adopte les rôles choisis et prépare les deux INI en une passe."""
+    rc, out = run_cmd(["/usr/bin/sudo", "-n", "/usr/bin/python3", str(TOPOLOGIE), "--adopt-current-roles"], timeout=60)
+    queue = "\n".join(out.strip().splitlines()[-4:])
+    if rc != 0:
+        return f"NOGO: topologie (code {rc})\n{queue}"
+    return f"GO: screens.json appliqué par la topologie à VPinFE et VPX\n{queue}"
+
+
 def apply_vpinfe() -> str:
-    raw = xrandr_query()
-    screens = parse_xrandr(raw)
-    cfg = load_cfg()
-    roles = cfg.get("roles", {})
-
-    # PINCABOS_INI_UNIQUE_V1 : l ecrivain INI unique pose les cles sans rien
-    # perdre du fichier (configparser le reecrivait entierement).
-    pf_id = role_index(screens, roles.get("playfield", {}).get("output", ""))
-    bg_id = role_index(screens, roles.get("backglass", {}).get("output", ""))
-    fd_id = role_index(screens, roles.get("fulldmd", {}).get("output", ""))
-    pincabos_ini.appliquer(VPINFE_INI, {
-        "Displays": {
-            "tablescreenid": pf_id, "bgscreenid": bg_id, "fulldmdscreenid": fd_id, "dmdscreenid": fd_id,
-            "cabmode": "true" if cfg.get("cabinet_mode", True) else "false",
-            "tableorientation": str(cfg.get("playfield_orientation", "landscape")),
-            # PINCABOS_ROTATION_PHYSIQUE_V1 : la rotation est appliquee par xrandr sur
-            # la sortie ; VPinFE dessine sur un ecran deja dans le bon sens et ne doit
-            # pas tourner une seconde fois (retourne + retourne = a l'envers).
-            "tablerotation": "0",
-        },
-        "PinCabOS.Screens": {"playfield_id": pf_id, "backglass_id": bg_id, "fulldmd_id": fd_id},
-    })
-
-    return f"GO: VPinFE mis à jour: {VPINFE_INI}"
+    return topologie_depuis_screens_json()
 
 
 def apply_vpx() -> str:
-    # Essaie d'abord la fonction existante app.py, si elle est chargée.
-    for modname in ("app", "__main__"):
-        mod = sys.modules.get(modname)
-        fn = getattr(mod, "pincabos_gpu_apply_config_to_vpx", None) if mod else None
-        if callable(fn):
-            try:
-                return str(fn())
-            except Exception as e:
-                return f"NOGO: fonction app.py pincabos_gpu_apply_config_to_vpx a échoué: {e}"
-
-    return "WARN: fonction VPX existante non trouvée dans app.py; screens.json a été sauvegardé seulement."
+    return topologie_depuis_screens_json()
 
 
 def page_wrap(title: str, body: str):

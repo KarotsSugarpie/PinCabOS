@@ -116,5 +116,60 @@ class EcritureIni(unittest.TestCase):
         self.assertEqual(une, deux)
 
 
+class SourceUnique(unittest.TestCase):
+    """PINCABOS_TOPOLOGIE_SOURCE_UNIQUE_V1 : apply_consumers pose mode cabinet, orientation,
+    rotation (toujours 0 pour VPinFE) et le suivi PinCabOs.Screens depuis screens.json."""
+
+    def setUp(self):
+        import tempfile, json
+        from pathlib import Path
+        self.tmp = Path(tempfile.mkdtemp())
+        self.sauve = {k: getattr(topo, k) for k in ("SCREENS", "VPINFE", "VPX", "CAL_FULLDMD", "CAL_DMD")}
+        topo.SCREENS = self.tmp / "screens.json"
+        topo.VPINFE = self.tmp / "vpinfe.ini"
+        topo.VPX = self.tmp / "VPinballX.ini"
+        topo.CAL_FULLDMD = self.tmp / "fulldmd.json"
+        topo.CAL_DMD = self.tmp / "dmd.json"
+        topo.VPINFE.write_text("[Displays]\ncabmode = false\ntablerotation = 270\n\n[Autre]\nk = v\n", encoding="utf-8")
+        topo.VPX.write_text("[Player]\nBGSet = 1\n", encoding="utf-8")
+        self.json = json
+
+    def tearDown(self):
+        import shutil
+        for k, v in self.sauve.items():
+            setattr(topo, k, v)
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def roles(self):
+        def r(name, sid, dispo=True):
+            return {"available": dispo, "screen_id": sid, "name": name, "edid_sha256": "x" + name}
+        return {"playfield": r("HDMI-0", 0), "backglass": r("DP-0", 1), "fulldmd": r("DP-2", 2), "topper": r("", None, False)}
+
+    def test_mode_cabinet_orientation_rotation_depuis_screens_json(self):
+        topo.SCREENS.write_text(self.json.dumps({"cabinet_mode": True, "playfield_orientation": "landscape", "playfield_rotation": "180"}), encoding="utf-8")
+        topo.apply_consumers(self.roles())
+        fe = topo.VPINFE.read_text(encoding="utf-8")
+        self.assertIn("cabmode = true\n", fe)
+        self.assertIn("tableorientation = landscape\n", fe)
+        self.assertIn("tablerotation = 0\n", fe, "VPinFE recoit toujours 0 (rotation physique par xrandr)")
+        self.assertIn("tablescreenid = 0\n", fe); self.assertIn("bgscreenid = 1\n", fe); self.assertIn("fulldmdscreenid = 2\n", fe)
+        self.assertIn("[Autre]\nk = v", fe, "le reste du fichier est conserve")
+        self.assertIn("playfield_rotation = 180", fe); self.assertIn("managed_by = PinCabOS topology", fe)
+        self.assertIn("playfield_name = HDMI-0", fe); self.assertIn("fulldmd_name = DP-2", fe)
+        vpx = topo.VPX.read_text(encoding="utf-8")
+        self.assertIn("BackglassOutput = 1", vpx); self.assertIn("ScoreViewOutput = 1", vpx); self.assertIn("cabinet_mode = true", vpx)
+
+    def test_sans_screens_json_valeurs_par_defaut(self):
+        topo.apply_consumers(self.roles())
+        fe = topo.VPINFE.read_text(encoding="utf-8")
+        self.assertIn("cabmode = true\n", fe); self.assertIn("tableorientation = landscape\n", fe); self.assertIn("playfield_rotation = 0", fe)
+
+    def test_mode_bureau(self):
+        topo.SCREENS.write_text(self.json.dumps({"cabinet_mode": False, "playfield_orientation": "portrait"}), encoding="utf-8")
+        topo.apply_consumers(self.roles())
+        fe = topo.VPINFE.read_text(encoding="utf-8")
+        self.assertIn("cabmode = false\n", fe); self.assertIn("tableorientation = portrait\n", fe)
+
+
 if __name__ == "__main__":
     unittest.main()
