@@ -575,3 +575,65 @@ class Integration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+INSTALLER = Path(RACINE) / "opt/pincabos/installer-gui"
+
+
+class IdentifyXinerama(unittest.TestCase):
+    """PINCABOS_INSTALLEUR_IDENTIFY_XINERAMA_V1 : le badge va sur la dalle qui porte la
+    geometrie, retrouvee dans l ordre Xinerama (= moniteur N d openbox), pas au i-ieme
+    moniteur GTK (ordre RandR : DP-2 avant DP-0 sur le cab de Yann -> badges croises)."""
+    XDPY = ("  XINERAMA version 1.1 opcode: 143\n  head #0: 3840x2160 @ 0,0\n"
+            "  head #1: 1920x1080 @ 3840,0\n  head #2: 1920x1080 @ 5760,0\n")
+
+    def _module(self, nom):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(nom, INSTALLER / f"{nom}.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_heads_et_numero(self):
+        idf = self._module("identify")
+        heads = idf.heads_xinerama(self.XDPY)
+        self.assertEqual(heads, [(0, 0, 3840, 2160), (3840, 0, 1920, 1080), (5760, 0, 1920, 1080)])
+        # ordre GTK du cab : HDMI-0, DP-2 (5760), DP-0 (3840) -> le badge de DP-2 va au moniteur 3
+        self.assertEqual(idf.numero_openbox((5760, 0, 1920, 1080), heads, 2), 3)
+        self.assertEqual(idf.numero_openbox((3840, 0, 1920, 1080), heads, 3), 2)
+        self.assertEqual(idf.numero_openbox((0, 0, 3840, 2160), heads, 1), 1)
+        self.assertEqual(idf.numero_openbox((9999, 0, 1, 1), heads, 4), 4)   # inconnue : index GTK
+        self.assertEqual(idf.heads_xinerama(""), [])
+        self.assertEqual(idf.lire_heads(run=lambda *a, **k: (_ for _ in ()).throw(OSError("x"))), [])
+        s = (INSTALLER / "identify.py").read_text(encoding="utf-8")
+        self.assertIn("numero_openbox((geo.x, geo.y, geo.width, geo.height), heads, i + 1)", s)
+        self.assertNotIn("TITRE.format(n=i + 1)", s)
+
+    def test_decor_affiche_le_role(self):
+        # PINCABOS_INSTALLEUR_DECOR_ROLE_V1
+        mons = [{"name": "HDMI-0"}, {"name": "DP-0"}, {"name": "DP-2"}, {"name": "DP-4"}]
+        roles = {"playfield": "HDMI-0", "backglass": "DP-2", "fulldmd": "DP-0", "topper": ""}
+        self.assertEqual(sc.libelles_decor(mons, roles, {"backglass": "Backglass", "fulldmd": "Full DMD"}),
+                         {"DP-2": "BACKGLASS", "DP-0": "FULL DMD"})
+        self.assertEqual(sc.libelles_decor(mons, roles, None)["DP-0"], "FULL DMD")
+        s = (INSTALLER / "screens.py").read_text(encoding="utf-8")
+        self.assertIn('"--labels", json.dumps(etiquettes)', s)
+        d = (INSTALLER / "decor.py").read_text(encoding="utf-8")
+        self.assertIn("Gtk.Overlay()", d)
+        self.assertIn('ap.add_argument("--labels"', d)
+        a = (INSTALLER / "app.py").read_text(encoding="utf-8")
+        self.assertIn("pco_screens.lancer_decor(mons, roles, libelles=libelles)", a)
+
+    def test_bouton_inversion_et_i18n(self):
+        w = (INSTALLER / "templates/wizard.html").read_text(encoding="utf-8")
+        self.assertIn('id="btn-swap" onclick="swapBgDmd()" data-i18n="screens_swap"', w)
+        self.assertIn("[r.backglass,r.fulldmd]=[r.fulldmd,r.backglass]", w)
+        self.assertIn("body:JSON.stringify({...S.screens,labels:roleLabels()})", w)
+        i18n = json.loads((INSTALLER / "i18n.json").read_text(encoding="utf-8"))
+        for lang in ("fr", "en", "de", "it", "es"):
+            self.assertIn("screens_swap", i18n[lang], lang)
+            self.assertNotEqual(i18n[lang]["screens_roles_hint"], i18n["fr"]["screens_roles_hint"] if lang != "fr" else "")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -440,8 +440,22 @@ def images_decor(monitors: list, roles: dict, galerie: Path = GALERIE_DECOR, tir
     return out
 
 
-def lancer_decor(monitors: list, roles: dict, run_dir: Path = Path("/run/pincabos")) -> dict:
-    """Pose (ou repose) les fonds des dalles secondaires ; le precedent decor est arrete."""
+def libelles_decor(monitors: list, roles: dict, libelles: dict | None) -> dict:
+    """PINCABOS_INSTALLEUR_DECOR_ROLE_V1 : {connecteur: ROLE} pour chaque dalle secondaire
+    qui porte un role ; une dalle sans role n a pas d etiquette."""
+    libelles = libelles or {"backglass": "Backglass", "fulldmd": "Full DMD", "topper": "Topper"}
+    role_de = {nom: role for role, nom in roles.items() if nom}
+    out = {}
+    for m in monitors:
+        role = role_de.get(m["name"], "")
+        if role and role != "playfield":
+            out[m["name"]] = str(libelles.get(role, role)).upper()
+    return out
+
+
+def lancer_decor(monitors: list, roles: dict, run_dir: Path = Path("/run/pincabos"), libelles: dict | None = None) -> dict:
+    """Pose (ou repose) les fonds des dalles secondaires, chacune avec son role en
+    toutes lettres ; le precedent decor est arrete."""
     import signal
     import subprocess
     pid_file = run_dir / "decor.pid"
@@ -453,11 +467,12 @@ def lancer_decor(monitors: list, roles: dict, run_dir: Path = Path("/run/pincabo
     if not images or not DECOR.exists():
         return {"ok": False, "dalles": 0}
     env = dict(os.environ, DISPLAY=DISPLAY)
-    p = subprocess.Popen(["python3", str(DECOR), "--monitors", json.dumps(images)], env=env,
+    etiquettes = libelles_decor(monitors, roles, libelles)
+    p = subprocess.Popen(["python3", str(DECOR), "--monitors", json.dumps(images), "--labels", json.dumps(etiquettes)], env=env,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     run_dir.mkdir(parents=True, exist_ok=True)
     pid_file.write_text(str(p.pid), encoding="utf-8")
-    return {"ok": True, "dalles": len(images), "images": images}
+    return {"ok": True, "dalles": len(images), "images": images, "labels": etiquettes}
 
 
 def identifier(monitors: list, roles: dict, secondes: int = 6, run=executer, libelles: dict | None = None) -> dict:
